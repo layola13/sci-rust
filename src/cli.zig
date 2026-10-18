@@ -595,6 +595,11 @@ const CompileOptions = struct {
     sab_selected_test_names: []const []const u8 = &.{},
     sab_skip_verify: bool = false,
     target_triple: ?[]const u8 = null,
+    // sci-rust Rust edition switches (default: legacy mutable behavior).
+    default_immutable: bool = false,
+    rust_strict_mut: bool = false,
+    rust_copy_elision: bool = false,
+    rust_edition: bool = false,
 };
 
 const TestCommandOptions = struct {
@@ -1255,6 +1260,10 @@ fn writeCompileOptionsHelp(writer: anytype) !void {
     try writer.writeAll("  --allow-read[=list]            Allow filesystem reads for reviewed packages\n");
     try writer.writeAll("  --allow-write[=list]           Allow filesystem writes for reviewed packages\n");
     try writer.writeAll("  --allow-run[=list]             Allow process execution for reviewed packages\n");
+    try writer.writeAll("  --default-immutable            Rust edition: alloc defaults to Active|Immutable\n");
+    try writer.writeAll("  --rust-strict-mut              Rust edition: require explicit &mut for exclusive borrow\n");
+    try writer.writeAll("  --rust-copy-elision            Rust edition: scalar Copy values skip release tracking\n");
+    try writer.writeAll("  --edition rust                 Enable full Rust edition (all three switches above)\n");
 }
 
 fn writeBuildOptionsHelp(writer: anytype, artifact: []const u8, include_incremental: bool) !void {
@@ -4378,6 +4387,42 @@ fn consumeCompileOption(arg: []const u8, args: []const []const u8, index: *usize
         options.auto_approve_requested = true;
         return true;
     }
+    if (std.mem.eql(u8, arg, "--default-immutable")) {
+        options.default_immutable = true;
+        return true;
+    }
+    if (std.mem.eql(u8, arg, "--rust-strict-mut")) {
+        options.rust_strict_mut = true;
+        return true;
+    }
+    if (std.mem.eql(u8, arg, "--rust-copy-elision")) {
+        options.rust_copy_elision = true;
+        return true;
+    }
+    if (std.mem.startsWith(u8, arg, "--edition=")) {
+        const edition = arg["--edition=".len..];
+        if (std.mem.eql(u8, edition, "rust") or std.mem.eql(u8, edition, "2024-rust") or std.mem.eql(u8, edition, "rust-edition")) {
+            options.rust_edition = true;
+            options.default_immutable = true;
+            options.rust_strict_mut = true;
+            options.rust_copy_elision = true;
+            return true;
+        }
+        return false;
+    }
+    if (std.mem.eql(u8, arg, "--edition")) {
+        if (index.* + 1 >= args.len) return false;
+        const edition = args[index.* + 1];
+        if (std.mem.eql(u8, edition, "rust") or std.mem.eql(u8, edition, "2024-rust") or std.mem.eql(u8, edition, "rust-edition")) {
+            options.rust_edition = true;
+            options.default_immutable = true;
+            options.rust_strict_mut = true;
+            options.rust_copy_elision = true;
+            index.* += 1;
+            return true;
+        }
+        return false;
+    }
     return false;
 }
 
@@ -5395,6 +5440,9 @@ fn compileSource(allocator: std.mem.Allocator, source_path: []const u8, options:
             .predecoded_symbol_names = flat.symbols.names.items,
             .predecoded_function_sigs = flat.function_sigs,
             .check_exit_leaks = options.sab_selected_test_names.len == 0,
+            .default_immutable = options.default_immutable,
+            .rust_strict_mut = options.rust_strict_mut,
+            .rust_copy_elision = options.rust_copy_elision,
         });
         const verify_ns = if (verify_start) |start| elapsedNs(start) else null;
         if (options.profile) {
@@ -5526,7 +5574,7 @@ fn compileSource(allocator: std.mem.Allocator, source_path: []const u8, options:
         metrics.cache = .{ .kind = "verdict", .hit = true };
         return .{ .ok = .{ .flat = flat, .verified = trusted, .metrics = metrics } };
     }
-    const verified = try referee.verifyWithOptions(allocator, flat.instructions, flat.const_decls, .{ .jobs = options.jobs, .package_grants = package_grants, .stage_reporter = verifier_stage_reporter });
+    const verified = try referee.verifyWithOptions(allocator, flat.instructions, flat.const_decls, .{ .jobs = options.jobs, .package_grants = package_grants, .stage_reporter = verifier_stage_reporter, .default_immutable = options.default_immutable, .rust_strict_mut = options.rust_strict_mut, .rust_copy_elision = options.rust_copy_elision });
     const verify_ns = if (verify_start) |start| elapsedNs(start) else 0;
     if (memory_metrics) |*memory| {
         memory.updatePeak(verifier_stage_context.peak_rss_bytes);
@@ -7800,6 +7848,9 @@ fn compileSourceForCheck(allocator: std.mem.Allocator, source_path: []const u8, 
         .jobs = options.jobs,
         .package_grants = package_grants,
         .stage_reporter = null,
+        .default_immutable = options.default_immutable,
+        .rust_strict_mut = options.rust_strict_mut,
+        .rust_copy_elision = options.rust_copy_elision,
     });
     const verify_ns = if (verify_start) |start| elapsedNs(start) else 0;
     return switch (verified) {

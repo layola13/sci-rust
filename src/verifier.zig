@@ -85,6 +85,10 @@ pub const VerifyOptions = struct {
     predecoded_symbol_names: []const []const u8 = &.{},
     predecoded_function_sigs: []const sig.FunctionSig = &.{},
     check_exit_leaks: bool = true,
+    // Rust edition (sci-rust): default-immutable + strict &mut + Copy elision.
+    default_immutable: bool = false,
+    rust_strict_mut: bool = false,
+    rust_copy_elision: bool = false,
 };
 
 pub const VerifyStageReporter = struct {
@@ -207,6 +211,9 @@ const ParallelVerifyContext = struct {
     workers: []ParallelVerifyWorker,
     requested_jobs: ?usize,
     check_exit_leaks: bool,
+    default_immutable: bool = false,
+    rust_strict_mut: bool = false,
+    rust_copy_elision: bool = false,
     next_chunk: std.atomic.Value(usize),
 };
 
@@ -3083,8 +3090,16 @@ fn verifyBody(
     check_exit_leaks: bool,
     package_grants: []const pkg_manifest.RequireEntry,
     sax_context: ?SaxValidationContext,
+    default_immutable: bool,
+    rust_strict_mut: bool,
+    rust_copy_elision: bool,
 ) !VerifyBodyResult {
     std.debug.assert(classified_lines.len == instructions.len);
+    // P0.1: switches are threaded through; P0.3 activates default_immutable
+    // semantics in alloc/load handlers.
+    _ = default_immutable;
+    _ = rust_strict_mut;
+    _ = rust_copy_elision;
     var sig_index = sig_index_start;
     var state: []u16 = &.{};
     var flags: []u8 = &.{};
@@ -4195,6 +4210,9 @@ fn verifyWorker(context: *ParallelVerifyContext, worker_index: usize) void {
             context.check_exit_leaks and chunk_index + 1 == context.chunks.len,
             context.package_grants,
             context.sax_context,
+            context.default_immutable,
+            context.rust_strict_mut,
+            context.rust_copy_elision,
         ) catch |err| {
             job.err = err;
             return;
@@ -4214,11 +4232,14 @@ fn verifyParallel(
     chunks: []const ParallelFunctionChunk,
     requested_jobs: ?usize,
     check_exit_leaks: bool,
+    default_immutable: bool,
+    rust_strict_mut: bool,
+    rust_copy_elision: bool,
     stage_reporter: ?VerifyStageReporter,
 ) !VerifyBodyResult {
     const worker_count = chooseVerifyWorkerCount(requested_jobs, chunks.len);
     if (worker_count <= 1) {
-        return verifyBody(allocator, instructions, classified_lines, const_decls, metadata, 0, check_exit_leaks, package_grants, sax_context);
+        return verifyBody(allocator, instructions, classified_lines, const_decls, metadata, 0, check_exit_leaks, package_grants, sax_context, default_immutable, rust_strict_mut, rust_copy_elision);
     }
 
     if (stage_reporter) |reporter| reporter.report("parallel_start", worker_count, chunks.len);
@@ -4253,6 +4274,9 @@ fn verifyParallel(
         .workers = workers,
         .requested_jobs = requested_jobs,
         .check_exit_leaks = check_exit_leaks,
+        .default_immutable = default_immutable,
+        .rust_strict_mut = rust_strict_mut,
+        .rust_copy_elision = rust_copy_elision,
         .next_chunk = std.atomic.Value(usize).init(0),
     };
     _ = context.allocator;
@@ -4406,10 +4430,10 @@ pub fn verifyWithOptions(
     const worker_count = chooseVerifyWorkerCount(options.jobs, chunks.len);
 
     const body_result = if (worker_count > 1 and chunks.len > 0) blk: {
-        const parallel = try verifyParallel(allocator, instructions, classified_lines, const_decls, &metadata, options.package_grants, options.sax_context, chunks, options.jobs, options.check_exit_leaks, options.stage_reporter);
+        const parallel = try verifyParallel(allocator, instructions, classified_lines, const_decls, &metadata, options.package_grants, options.sax_context, chunks, options.jobs, options.check_exit_leaks, options.default_immutable, options.rust_strict_mut, options.rust_copy_elision, options.stage_reporter);
         break :blk parallel;
     } else blk: {
-        const serial = try verifyBody(allocator, instructions, classified_lines, const_decls, &metadata, 0, options.check_exit_leaks, options.package_grants, options.sax_context);
+        const serial = try verifyBody(allocator, instructions, classified_lines, const_decls, &metadata, 0, options.check_exit_leaks, options.package_grants, options.sax_context, options.default_immutable, options.rust_strict_mut, options.rust_copy_elision);
         if (options.stage_reporter) |reporter| reporter.report("after_body", instructions.len, instructions.len);
         break :blk serial;
     };
