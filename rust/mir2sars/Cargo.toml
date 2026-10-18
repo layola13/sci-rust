@@ -1,0 +1,13 @@
+[package]
+name = "mir2sars"
+version = "0.1.0"
+edition = "2021"
+description = "MIR (text/JSON) -> SAR source backend. Vendored from sarust rsc/mir2sa (binary-only crate, see VENDOR.md); default output is .sars."
+
+[[bin]]
+name = "mir2sars"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

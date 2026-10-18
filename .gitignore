@@ -114,3 +114,6 @@ sa_std.lib.obj
 /.pi/
 AGENTS.md
 cxu.code-workspace
+
+# rust/mir2sars build output (vendored Rust工程产物不上库)
+/rust/target/
