@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "shadow/registry/index.sars"
+
+@const RESULT_OK = utf8:"227\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 227 - Mod Shadowing Prevention
+// The registry fans out into left/right branches whose layout names collide.
+
+@main() -> i32:
+L_ENTRY:
+    total = call @shadow_registry_value()
+    ok = eq total, 227
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

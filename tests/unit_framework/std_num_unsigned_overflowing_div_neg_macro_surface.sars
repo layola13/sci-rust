@@ -1,0 +1,87 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ %out_acc, %prev_acc, %value, %expected
+    __test_unsigned_overflowing_div_neg_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_unsigned_overflowing_div_neg_eq_%out_acc
+    !__test_unsigned_overflowing_div_neg_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std unsigned primitive overflowing div rem euclid and neg macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_OVERFLOWING_DIV u8_div_value, u8_div_over, 5, 2
+    EXPAND NUM_U16_OVERFLOWING_DIV u16_div_value, u16_div_over, 1000, 30
+    EXPAND NUM_U32_OVERFLOWING_DIV u32_div_value, u32_div_over, 1000000000, 10
+    EXPAND NUM_U64_OVERFLOWING_DIV u64_div_value, u64_div_over, 1000000000000, 10
+    EXPAND NUM_USIZE_OVERFLOWING_DIV usize_div_value, usize_div_over, 1000000000000, 10
+
+    EXPAND NUM_U8_OVERFLOWING_REM u8_rem_value, u8_rem_over, 5, 2
+    EXPAND NUM_U16_OVERFLOWING_REM u16_rem_value, u16_rem_over, 1000, 30
+    EXPAND NUM_U32_OVERFLOWING_REM u32_rem_value, u32_rem_over, 1000000001, 10
+    EXPAND NUM_U64_OVERFLOWING_REM u64_rem_value, u64_rem_over, 1000000000001, 10
+    EXPAND NUM_USIZE_OVERFLOWING_REM usize_rem_value, usize_rem_over, 1000000000001, 10
+
+    EXPAND NUM_U8_OVERFLOWING_DIV_EUCLID u8_div_euclid_value, u8_div_euclid_over, 5, 2
+    EXPAND NUM_U16_OVERFLOWING_REM_EUCLID u16_rem_euclid_value, u16_rem_euclid_over, 1000, 30
+    EXPAND NUM_U32_OVERFLOWING_DIV_EUCLID u32_div_euclid_value, u32_div_euclid_over, 1000000000, 10
+    EXPAND NUM_U64_OVERFLOWING_REM_EUCLID u64_rem_euclid_value, u64_rem_euclid_over, 1000000000001, 10
+    EXPAND NUM_USIZE_OVERFLOWING_DIV_EUCLID usize_div_euclid_value, usize_div_euclid_over, 1000000000000, 10
+
+    EXPAND NUM_U8_OVERFLOWING_NEG u8_neg_zero_value, u8_neg_zero_over, 0
+    EXPAND NUM_U8_OVERFLOWING_NEG u8_neg_value, u8_neg_over, 2
+    EXPAND NUM_U16_OVERFLOWING_NEG u16_neg_value, u16_neg_over, 2
+    EXPAND NUM_U32_OVERFLOWING_NEG u32_neg_value, u32_neg_over, 2
+    EXPAND NUM_U64_OVERFLOWING_NEG u64_neg_value, u64_neg_over, 2
+    EXPAND NUM_USIZE_OVERFLOWING_NEG usize_neg_value, usize_neg_over, 2
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_01, acc_00, u8_div_value, 2
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_02, acc_01, u8_div_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_03, acc_02, u16_div_value, 33
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_04, acc_03, u16_div_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_05, acc_04, u32_div_value, 100000000
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_06, acc_05, u32_div_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_07, acc_06, u64_div_value, 100000000000
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_08, acc_07, u64_div_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_09, acc_08, usize_div_value, 100000000000
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_10, acc_09, usize_div_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_11, acc_10, u8_rem_value, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_12, acc_11, u8_rem_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_13, acc_12, u16_rem_value, 10
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_14, acc_13, u16_rem_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_15, acc_14, u32_rem_value, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_16, acc_15, u32_rem_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_17, acc_16, u64_rem_value, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_18, acc_17, u64_rem_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_19, acc_18, usize_rem_value, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_20, acc_19, usize_rem_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_21, acc_20, u8_div_euclid_value, 2
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_22, acc_21, u8_div_euclid_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_23, acc_22, u16_rem_euclid_value, 10
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_24, acc_23, u16_rem_euclid_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_25, acc_24, u32_div_euclid_value, 100000000
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_26, acc_25, u32_div_euclid_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_27, acc_26, u64_rem_euclid_value, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_28, acc_27, u64_rem_euclid_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_29, acc_28, usize_div_euclid_value, 100000000000
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_30, acc_29, usize_div_euclid_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_31, acc_30, u8_neg_zero_value, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_32, acc_31, u8_neg_zero_over, 0
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_33, acc_32, u8_neg_value, 254
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_34, acc_33, u8_neg_over, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_35, acc_34, u16_neg_value, 65534
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_36, acc_35, u16_neg_over, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_37, acc_36, u32_neg_value, 4294967294
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_38, acc_37, u32_neg_over, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_39, acc_38, u64_neg_value, 18446744073709551614
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_40, acc_39, u64_neg_over, 1
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_41, acc_40, usize_neg_value, 18446744073709551614
+    EXPAND TEST_UNSIGNED_OVERFLOWING_DIV_NEG_EQ acc_42, acc_41, usize_neg_over, 1
+    br acc_42 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_42
+    panic(10653)
+
+L_PASS:
+    !acc_42
+    return 0

@@ -1,0 +1,30 @@
+@import "sa_std/sync/atomic.sars"
+@import "sa_std/sync/atomic.sal"
+
+@test "sa_std atomic u64 load store"():
+L_ENTRY:
+    atom = stack_alloc AtomicU64_SIZE
+    EXPAND ATOMIC_U64_INIT atom, 0
+    EXPAND ATOMIC_U64_STORE atom, 42, seq_cst
+    EXPAND ATOMIC_U64_LOAD v, atom, seq_cst
+    EXPAND ATOMIC_U64_FETCH_ADD old, atom, 8, seq_cst
+    EXPAND ATOMIC_U64_LOAD v2, atom, seq_cst
+    a = eq v, 42
+    b = eq old, 42
+    c = eq v2, 50
+    ok01 = and a, b
+    ok = and ok01, c
+    !v
+    !old
+    !v2
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10936)

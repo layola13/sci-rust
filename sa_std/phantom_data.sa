@@ -1,3 +1,0 @@
-// Public PhantomData marker facade over marker.sa.
-@import "marker.sal"
-@import "marker.sa"

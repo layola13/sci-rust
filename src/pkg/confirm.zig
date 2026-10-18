@@ -122,7 +122,7 @@ test "confirm blocks high risk package until exact URL is typed" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "call @sys_net_tx(*BUF, 4)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "call @sys_net_tx(*BUF, 4)\n" });
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, "pkg", std.testing.allocator);
     defer std.testing.allocator.free(root);
 
@@ -150,7 +150,7 @@ test "confirm rejects missing tty and auto approve bypasses" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "call @sys_net_tx(*BUF, 4)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "call @sys_net_tx(*BUF, 4)\n" });
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, "pkg", std.testing.allocator);
     defer std.testing.allocator.free(root);
 

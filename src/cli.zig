@@ -2694,7 +2694,7 @@ fn normalizeSkillPathAlloc(allocator: std.mem.Allocator, path: []const u8) ![]u8
 fn isSaStdSurfaceFile(path: []const u8) bool {
     if (std.mem.eql(u8, std.fs.path.basename(path), "sa.mod")) return true;
     const ext = std.fs.path.extension(path);
-    return std.mem.eql(u8, ext, ".sa") or
+    return std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sal") or
         std.mem.eql(u8, ext, ".sai");
@@ -2966,12 +2966,12 @@ fn appendPermissionSummary(
 
 fn pluginInterfaceFileCandidate(path: []const u8) bool {
     const base = std.fs.path.basename(path);
-    if (std.mem.eql(u8, base, "expanded.sa")) return false;
+    if (std.mem.eql(u8, base, "expanded.sars")) return false;
     if (std.mem.eql(u8, base, "expanded.sars")) return false;
     if (std.mem.startsWith(u8, base, "tmp_")) return false;
     if (std.mem.startsWith(u8, base, "_tmp")) return false;
     const ext = std.fs.path.extension(path);
-    return std.mem.eql(u8, ext, ".sa") or
+    return std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sal") or
         std.mem.eql(u8, ext, ".sai");
@@ -3333,8 +3333,8 @@ fn skillsCommand(allocator: std.mem.Allocator, writer: anytype, json_mode: bool)
         .{ .name = "project lifecycle", .summary = "Rust-like project setup and local builds", .items = &.{
             "init [path]",
             "pkg install",
-            "build src/main.sa",
-            "run src/main.sa",
+            "build src/main.sars",
+            "run src/main.sars",
             "test <file>",
         } },
         .{ .name = "std runtime", .summary = "Current Zig-backed facade surface", .items = &.{
@@ -3590,7 +3590,7 @@ fn parseDaemonArgv(allocator: std.mem.Allocator, request: []const u8) ![]const [
         return try list.toOwnedSlice();
     }
 
-    // Document-style: {"op":"build","file":"x.sa","args":["--json"]}
+    // Document-style: {"op":"build","file":"x.sars","args":["--json"]}
     const op = daemon_cancel.parseJsonStrField(request, "\"op\"") orelse return error.InvalidRequest;
     var list = std.array_list.Managed([]const u8).init(allocator);
     errdefer {
@@ -4188,7 +4188,7 @@ fn globalCacheRoot(allocator: std.mem.Allocator, identity: []const u8, ref: []co
     defer allocator.free(home);
     const leaf = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ identity, ref });
     defer allocator.free(leaf);
-    return try std.fs.path.join(allocator, &.{ home, ".sa", "pkg", leaf });
+    return try std.fs.path.join(allocator, &.{ home, ".sars", "pkg", leaf });
 }
 
 fn resolvePackageAuditRoot(
@@ -5139,9 +5139,9 @@ fn stdRootFromEnv(allocator: std.mem.Allocator) ![]u8 {
 
     const required_files = [_][]const u8{
         "io/print.sai",
-        "core/sa_core.sa",
-        "core/result.sa",
-        "core/option.sa",
+        "core/sa_core.sars",
+        "core/result.sars",
+        "core/option.sars",
     };
     for (required_files) |rel| {
         const probe_path = try std.fs.path.join(allocator, &.{ env_root, rel });
@@ -9182,7 +9182,7 @@ test "source tree hash cache reuses mtime size digest without reloading unchange
     try tdir.makePath("sa_std/core");
 
     {
-        var file = try tdir.createFile("main.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@import "sa_std/core/cache_probe.sai"
@@ -9204,7 +9204,7 @@ test "source tree hash cache reuses mtime size digest without reloading unchange
 
     test_source_tree_load_count = 0;
     var first_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &first_hasher, &.{}, &.{}, project_root, std_root, false, "main.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &first_hasher, &.{}, &.{}, project_root, std_root, false, "main.sars");
     var first_digest: [32]u8 = undefined;
     first_hasher.final(&first_digest);
     try std.testing.expectEqual(@as(usize, 1), test_source_tree_load_count);
@@ -9215,7 +9215,7 @@ test "source tree hash cache reuses mtime size digest without reloading unchange
     try std.testing.expect(warmed_import.owned_source == null);
 
     var second_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &second_hasher, &.{}, &.{}, project_root, std_root, false, "main.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &second_hasher, &.{}, &.{}, project_root, std_root, false, "main.sars");
     var second_digest: [32]u8 = undefined;
     second_hasher.final(&second_digest);
     try std.testing.expectEqual(@as(usize, 1), test_source_tree_load_count);
@@ -9228,7 +9228,7 @@ test "source tree hash cache reuses mtime size digest without reloading unchange
     }
 
     var third_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &third_hasher, &.{}, &.{}, project_root, std_root, false, "main.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &third_hasher, &.{}, &.{}, project_root, std_root, false, "main.sars");
     var third_digest: [32]u8 = undefined;
     third_hasher.final(&third_digest);
     try std.testing.expect(test_source_tree_load_count > 1);
@@ -9247,10 +9247,10 @@ test "source tree hash missing import returns PackageNotResolved without ownersh
 
     try tdir.makePath("sa_std/core");
     {
-        var file = try tdir.createFile("main.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
-            \\@import "missing.sa"
+            \\@import "missing.sars"
             \\@main() -> i32:
             \\return 0
             \\
@@ -9265,7 +9265,7 @@ test "source tree hash missing import returns PackageNotResolved without ownersh
     var hasher = std.crypto.hash.sha2.Sha256.init(.{});
     try std.testing.expectError(
         error.PackageNotResolved,
-        hashResolvedSourceTree(std.testing.allocator, &hasher, &.{}, &.{}, project_root, std_root, false, "main.sa"),
+        hashResolvedSourceTree(std.testing.allocator, &hasher, &.{}, &.{}, project_root, std_root, false, "main.sars"),
     );
 }
 
@@ -9284,7 +9284,7 @@ test "source tree hash cache LRU is opt-in" {
     defer original_cwd.setAsCwd() catch {};
 
     {
-        var file = try tdir.createFile("a.sa", .{ .truncate = true });
+        var file = try tdir.createFile("a.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@main() -> i32:
@@ -9293,7 +9293,7 @@ test "source tree hash cache LRU is opt-in" {
         );
     }
     {
-        var file = try tdir.createFile("b.sa", .{ .truncate = true });
+        var file = try tdir.createFile("b.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@main() -> i32:
@@ -9307,32 +9307,32 @@ test "source tree hash cache LRU is opt-in" {
 
     test_source_tree_load_count = 0;
     var first_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &first_hasher, &.{}, &.{}, project_root, project_root, false, "a.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &first_hasher, &.{}, &.{}, project_root, project_root, false, "a.sars");
     try std.testing.expectEqual(@as(usize, 1), test_source_tree_load_count);
 
     var second_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &second_hasher, &.{}, &.{}, project_root, project_root, false, "b.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &second_hasher, &.{}, &.{}, project_root, project_root, false, "b.sars");
     try std.testing.expectEqual(@as(usize, 2), test_source_tree_load_count);
 
     var second_hit_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &second_hit_hasher, &.{}, &.{}, project_root, project_root, false, "b.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &second_hit_hasher, &.{}, &.{}, project_root, project_root, false, "b.sars");
     try std.testing.expectEqual(@as(usize, 2), test_source_tree_load_count);
 
     var first_again_hasher = std.crypto.hash.sha2.Sha256.init(.{});
-    try hashResolvedSourceTree(std.testing.allocator, &first_again_hasher, &.{}, &.{}, project_root, project_root, false, "a.sa");
+    try hashResolvedSourceTree(std.testing.allocator, &first_again_hasher, &.{}, &.{}, project_root, project_root, false, "a.sars");
     try std.testing.expectEqual(@as(usize, 3), test_source_tree_load_count);
 }
 
 test "flatten error mapping keeps import resolution and unsupported type hints specific" {
     const import_source =
-        \\@import "missing.sa"
+        \\@import "missing.sars"
         \\@main() -> i32:
         \\    return 0
     ;
-    const import_report = trapFromFlattenError("/tmp/import.sa", import_source, error.PackageNotResolved, 1);
+    const import_report = trapFromFlattenError("/tmp/import.sars", import_source, error.PackageNotResolved, 1);
     try std.testing.expectEqual(trap.Trap.import_resolution_failed, import_report.trap);
     try std.testing.expectEqual(@as(u32, 1050), import_report.trap_code.?);
-    try std.testing.expectEqualStrings("/tmp/import.sa", import_report.file.?);
+    try std.testing.expectEqualStrings("/tmp/import.sars", import_report.file.?);
     try std.testing.expectEqualStrings("import path could not be resolved", import_report.message);
     try std.testing.expectEqualStrings("check the import path, package identity, local vendor tree, and package cache", import_report.hint.?);
     try std.testing.expectEqualStrings("pin-import", import_report.repair_action.?);
@@ -9341,9 +9341,9 @@ test "flatten error mapping keeps import resolution and unsupported type hints s
         \\@test "probe":
         \\    point = call @support_make_point(10, 20)
     ;
-    const type_report = trapFromFlattenError("/tmp/type.sa", type_source, error.UnsupportedType, 2);
+    const type_report = trapFromFlattenError("/tmp/type.sars", type_source, error.UnsupportedType, 2);
     try std.testing.expectEqual(trap.Trap.unsupported_type, type_report.trap);
-    try std.testing.expectEqualStrings("/tmp/type.sa", type_report.file.?);
+    try std.testing.expectEqualStrings("/tmp/type.sars", type_report.file.?);
     try std.testing.expectEqualStrings("unsupported type annotation during flattening", type_report.message);
     try std.testing.expectEqualStrings("inspect the callee declaration referenced by this call site; the unsupported annotation is usually in the imported signature", type_report.hint.?);
 }
@@ -9353,9 +9353,9 @@ test "duplicate definition trap gets a repair hint" {
         \\#def X = 1
         \\#def X = 2
     ;
-    const report = trapFromFlattenError("/tmp/dup.sa", source, error.DuplicateDef, 2);
+    const report = trapFromFlattenError("/tmp/dup.sars", source, error.DuplicateDef, 2);
     try std.testing.expectEqual(trap.Trap.duplicate_def, report.trap);
-    try std.testing.expectEqualStrings("/tmp/dup.sa", report.file.?);
+    try std.testing.expectEqualStrings("/tmp/dup.sars", report.file.?);
     try std.testing.expectEqualStrings("rename-def", report.repair_action.?);
     try std.testing.expectEqualStrings("change one of the conflicting names or namespace the symbol", report.repair_hint.?);
     try std.testing.expectEqualStrings("high", report.repair_confidence.?);
@@ -9425,9 +9425,9 @@ test "check --emit-sab roundtrips through compileSource without text fallback" {
         \\    x = add 40, 2
         \\    return x
     ;
-    try tdir.writeFile(.{ .sub_path = "rt.sa", .data = sa_source });
+    try tdir.writeFile(.{ .sub_path = "rt.sars", .data = sa_source });
 
-    var compiled_sa = try compileSource(std.testing.allocator, "rt.sa", .{});
+    var compiled_sa = try compileSource(std.testing.allocator, "rt.sars", .{});
     var ok_sa = switch (compiled_sa) {
         .ok => |*ok| ok,
         .trap => return error.TestUnexpectedResult,

@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/string.sa"
+@import "sa_std/string.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,8 +12,8 @@
 下面的完整 SA 程序展示了如何初始化、追加内容、取字符和计算长度并最后释放堆内垃圾的完整链路：
 
 ```sa
-@import "sa_std/string.sa"
-@import "sa_std/core/slice.sa"
+@import "sa_std/string.sars"
+@import "sa_std/core/slice.sars"
 
 @main() -> i32:
 L_ENTRY:

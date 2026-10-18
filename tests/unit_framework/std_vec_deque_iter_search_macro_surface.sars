@@ -1,0 +1,227 @@
+@import "sa_std/vec_deque.sars"
+
+@vec_deque_iter_ge_40(value: u64) -> u64:
+L_ENTRY:
+    out = uge value, 40
+    !value
+    return out
+
+@vec_deque_iter_gt_45(value: u64) -> u64:
+L_ENTRY:
+    out = ugt value, 45
+    !value
+    return out
+
+@vec_deque_iter_lt_50(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 50
+    !value
+    return out
+
+@vec_deque_iter_try_until_40(value: u64, &out_match: ptr) -> u64:
+L_ENTRY:
+    fail = eq value, 40
+    br fail -> L_TRY_FIND_FAIL, L_TRY_FIND_CONTINUE
+L_TRY_FIND_CONTINUE:
+    matched = eq value, 50
+    store out_match+0, matched as u64
+    !matched
+    !fail
+    !out_match
+    !value
+    return 1
+L_TRY_FIND_FAIL:
+    !fail
+    !out_match
+    !value
+    return 0
+
+@vec_deque_iter_map_50(value: u64, &out_mapped: ptr) -> u64:
+L_ENTRY:
+    found = eq value, 50
+    br found -> L_FIND_MAP_SOME, L_FIND_MAP_NONE
+L_FIND_MAP_SOME:
+    mapped = mul value, 10
+    store out_mapped+0, mapped as u64
+    !mapped
+    !found
+    !out_mapped
+    !value
+    return 1
+L_FIND_MAP_NONE:
+    !found
+    !out_mapped
+    !value
+    return 0
+
+@test "sa_std vec_deque iterator search predicate macro surface"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 40
+    EXPAND VEC_DEQUE_TRY_POP_FRONT pop_ok, pop_value, deque
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 50
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 60
+
+    EXPAND VEC_DEQUE_ITER_U64 find_iter, find_backing, deque
+    EXPAND VEC_DEQUE_ITER_FIND_U64 find_has, find_value, find_iter, @vec_deque_iter_ge_40
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 find_tail_has, find_tail, find_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 try_iter, try_backing, deque
+    EXPAND VEC_DEQUE_ITER_TRY_FIND_U64 try_ok, try_has, try_value, try_iter, @vec_deque_iter_try_until_40
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 try_tail_has, try_tail, try_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 map_iter, map_backing, deque
+    EXPAND VEC_DEQUE_ITER_FIND_MAP_U64 map_has, map_value, map_iter, @vec_deque_iter_map_50
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 map_tail_has, map_tail, map_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 pos_iter, pos_backing, deque
+    EXPAND VEC_DEQUE_ITER_POSITION_U64 pos_has, pos_index, pos_iter, @vec_deque_iter_ge_40
+    EXPAND VEC_DEQUE_ITER_RPOSITION_U64 rpos_has, rpos_index, pos_iter, @vec_deque_iter_gt_45
+
+    EXPAND VEC_DEQUE_ITER_U64 rfind_iter, rfind_backing, deque
+    EXPAND VEC_DEQUE_ITER_RFIND_U64 rfind_has, rfind_value, rfind_iter, @vec_deque_iter_ge_40
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_LEN_U64 rfind_remaining, rfind_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 any_iter, any_backing, deque
+    EXPAND VEC_DEQUE_ITER_ANY_U64 any_value, any_iter, @vec_deque_iter_gt_45
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 any_tail_has, any_tail, any_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 all_iter, all_backing, deque
+    EXPAND VEC_DEQUE_ITER_ALL_U64 all_value, all_iter, @vec_deque_iter_lt_50
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 all_tail_has, all_tail, all_iter
+
+    EXPAND VEC_DEQUE_INTO_ITER_U64 into_iter, into_backing, deque
+    EXPAND VEC_DEQUE_INTO_ITER_FIND_U64 into_find_has, into_find_value, into_iter, @vec_deque_iter_ge_40
+    EXPAND VEC_DEQUE_INTO_ITER_RFIND_U64 into_rfind_has, into_rfind_value, into_iter, @vec_deque_iter_gt_45
+    EXPAND VEC_DEQUE_INTO_ITER_ANY_U64 into_any, into_iter, @vec_deque_iter_gt_45
+    EXPAND VEC_DEQUE_IS_EMPTY deque_empty, deque
+
+    EXPAND VEC_FREE find_backing
+    EXPAND VEC_FREE try_backing
+    EXPAND VEC_FREE map_backing
+    EXPAND VEC_FREE pos_backing
+    EXPAND VEC_FREE rfind_backing
+    EXPAND VEC_FREE any_backing
+    EXPAND VEC_FREE all_backing
+    EXPAND VEC_FREE into_backing
+    EXPAND VEC_DEQUE_FREE deque
+
+    ok = eq pop_ok, 1
+    check = eq pop_value, 10
+    ok = and ok, check
+    check = eq find_has, 1
+    ok = and ok, check
+    check = eq find_value, 40
+    ok = and ok, check
+    check = eq find_tail_has, 1
+    ok = and ok, check
+    check = eq find_tail, 50
+    ok = and ok, check
+    check = eq try_ok, 0
+    ok = and ok, check
+    check = eq try_has, 0
+    ok = and ok, check
+    check = eq try_tail_has, 1
+    ok = and ok, check
+    check = eq try_tail, 50
+    ok = and ok, check
+    check = eq map_has, 1
+    ok = and ok, check
+    check = eq map_value, 500
+    ok = and ok, check
+    check = eq map_tail_has, 1
+    ok = and ok, check
+    check = eq map_tail, 60
+    ok = and ok, check
+    check = eq pos_has, 1
+    ok = and ok, check
+    check = eq pos_index, 2
+    ok = and ok, check
+    check = eq rpos_has, 1
+    ok = and ok, check
+    check = eq rpos_index, 1
+    ok = and ok, check
+    check = eq rfind_has, 1
+    ok = and ok, check
+    check = eq rfind_value, 60
+    ok = and ok, check
+    check = eq rfind_remaining, 4
+    ok = and ok, check
+    check = eq any_value, 1
+    ok = and ok, check
+    check = eq any_tail_has, 1
+    ok = and ok, check
+    check = eq any_tail, 60
+    ok = and ok, check
+    check = eq all_value, 0
+    ok = and ok, check
+    check = eq all_tail_has, 1
+    ok = and ok, check
+    check = eq all_tail, 60
+    ok = and ok, check
+    check = eq into_find_has, 1
+    ok = and ok, check
+    check = eq into_find_value, 40
+    ok = and ok, check
+    check = eq into_rfind_has, 1
+    ok = and ok, check
+    check = eq into_rfind_value, 60
+    ok = and ok, check
+    check = eq into_any, 1
+    ok = and ok, check
+    check = eq deque_empty, 1
+    ok = and ok, check
+
+    !pop_ok
+    !pop_value
+    !find_has
+    !find_value
+    !find_tail_has
+    !find_tail
+    !try_ok
+    !try_has
+    !try_value
+    !try_tail_has
+    !try_tail
+    !map_has
+    !map_value
+    !map_tail_has
+    !map_tail
+    !pos_has
+    !pos_index
+    !rpos_has
+    !rpos_index
+    !rfind_has
+    !rfind_value
+    !rfind_remaining
+    !any_value
+    !any_tail_has
+    !any_tail
+    !all_value
+    !all_tail_has
+    !all_tail
+    !into_find_has
+    !into_find_value
+    !into_rfind_has
+    !into_rfind_value
+    !into_any
+    !deque_empty
+    !check
+    !find_iter
+    !try_iter
+    !map_iter
+    !pos_iter
+    !rfind_iter
+    !any_iter
+    !all_iter
+    !into_iter
+    br ok -> L_VEC_DEQUE_ITER_SEARCH_OK, L_VEC_DEQUE_ITER_SEARCH_FAIL
+L_VEC_DEQUE_ITER_SEARCH_FAIL:
+    !ok
+    panic(10789)
+L_VEC_DEQUE_ITER_SEARCH_OK:
+    !ok
+    return

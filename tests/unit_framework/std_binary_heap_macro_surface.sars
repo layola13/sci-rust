@@ -1,0 +1,863 @@
+@import "sa_std/collections/binary_heap.sars"
+@import "sa_std/vec.sars"
+
+@binary_heap_keep_even(value: u64) -> u64:
+L_ENTRY:
+    low = and value, 1
+    keep = eq low, 0
+    !low
+    !value
+    return keep
+
+@test "sa_std binary_heap capacity macros"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_WITH_CAPACITY heap, 3
+    EXPAND BINARY_HEAP_CAPACITY cap0, heap
+    EXPAND BINARY_HEAP_LEN len0, heap
+    EXPAND BINARY_HEAP_IS_EMPTY empty0, heap
+    EXPAND BINARY_HEAP_RESERVE heap, 20
+    EXPAND BINARY_HEAP_CAPACITY cap_after_reserve, heap
+    EXPAND BINARY_HEAP_TRY_RESERVE try_reserve_ok, heap, 4
+    EXPAND BINARY_HEAP_RESERVE_EXACT heap, 40
+    EXPAND BINARY_HEAP_CAPACITY cap_after_reserve_exact, heap
+    EXPAND BINARY_HEAP_TRY_RESERVE_EXACT try_reserve_exact_ok, heap, 5
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_PUSH heap, 9
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_LEN len1, heap
+    EXPAND BINARY_HEAP_AS_SLICE heap_slice, heap
+    EXPAND SLICE_GET_LEN heap_slice_len, heap_slice
+    EXPAND BINARY_HEAP_AS_MUT_SLICE heap_mut_slice, heap
+    EXPAND SLICE_GET_LEN heap_mut_slice_len, heap_mut_slice
+    EXPAND BINARY_HEAP_SHRINK_TO heap, 2
+    EXPAND BINARY_HEAP_CAPACITY cap_after_shrink_to_len, heap
+    EXPAND BINARY_HEAP_RESERVE_EXACT heap, 10
+    EXPAND BINARY_HEAP_SHRINK_TO heap, 5
+    EXPAND BINARY_HEAP_CAPACITY cap_after_shrink_to_min, heap
+    EXPAND BINARY_HEAP_SHRINK_TO_FIT heap
+    EXPAND BINARY_HEAP_CAPACITY cap_after_shrink, heap
+    EXPAND BINARY_HEAP_PEEK peek0, heap
+    EXPAND BINARY_HEAP_TRY_PEEK_MUT_PTR peek_mut_ok, peek_mut_ptr, heap
+    store peek_mut_ptr+0, 11 as u64
+    EXPAND BINARY_HEAP_PEEK peek_after_mut, heap
+    EXPAND BINARY_HEAP_TRY_POP ok0, pop0, heap
+    EXPAND BINARY_HEAP_TRY_POP ok1, pop1, heap
+    EXPAND BINARY_HEAP_TRY_POP ok2, pop2, heap
+    EXPAND BINARY_HEAP_TRY_POP ok_empty, empty_value, heap
+    EXPAND BINARY_HEAP_LEN len2, heap
+    EXPAND BINARY_HEAP_SHRINK_TO_FIT heap
+    EXPAND BINARY_HEAP_CAPACITY cap_after_empty_shrink, heap
+    EXPAND BINARY_HEAP_PUSH heap, 2
+    EXPAND BINARY_HEAP_CAPACITY cap_after_reinsert, heap
+    EXPAND BINARY_HEAP_TRY_POP ok3, pop3, heap
+    EXPAND BINARY_HEAP_FREE heap
+    EXPAND BINARY_HEAP_WITH_CAPACITY zero_heap, 0
+    EXPAND BINARY_HEAP_CAPACITY zero_cap, zero_heap
+    EXPAND BINARY_HEAP_IS_EMPTY zero_empty, zero_heap
+    EXPAND BINARY_HEAP_FREE zero_heap
+    EXPAND BINARY_HEAP_TRY_WITH_CAPACITY try_new_ok, try_new_heap, 2
+    EXPAND BINARY_HEAP_CAPACITY try_new_cap, try_new_heap
+    EXPAND BINARY_HEAP_FREE try_new_heap
+
+    ok_cap0 = eq cap0, 8
+    ok_len0 = eq len0, 0
+    ok_empty0 = eq empty0, 1
+    ok_cap_after_reserve = eq cap_after_reserve, 32
+    ok_try_reserve = eq try_reserve_ok, 1
+    ok_cap_after_reserve_exact = eq cap_after_reserve_exact, 40
+    ok_try_reserve_exact = eq try_reserve_exact_ok, 1
+    ok_len1 = eq len1, 3
+    ok_heap_slice_len = eq heap_slice_len, 3
+    ok_heap_mut_slice_len = eq heap_mut_slice_len, 3
+    ok_cap_after_shrink_to_len = eq cap_after_shrink_to_len, 3
+    ok_cap_after_shrink_to_min = eq cap_after_shrink_to_min, 5
+    ok_cap_after_shrink = eq cap_after_shrink, 3
+    ok_peek0 = eq peek0, 9
+    ok_peek_mut = eq peek_mut_ok, 1
+    ok_peek_after_mut = eq peek_after_mut, 11
+    ok_ok0 = eq ok0, 1
+    ok_pop0 = eq pop0, 11
+    ok_ok1 = eq ok1, 1
+    ok_pop1 = eq pop1, 4
+    ok_ok2 = eq ok2, 1
+    ok_pop2 = eq pop2, 1
+    ok_empty_ok = eq ok_empty, 0
+    ok_empty_value = eq empty_value, 0
+    ok_len2 = eq len2, 0
+    ok_cap_after_empty_shrink = eq cap_after_empty_shrink, 0
+    ok_cap_after_reinsert = eq cap_after_reinsert, 8
+    ok_ok3 = eq ok3, 1
+    ok_pop3 = eq pop3, 2
+    ok_zero_cap = eq zero_cap, 0
+    ok_zero_empty = eq zero_empty, 1
+    ok_try_new = eq try_new_ok, 1
+    ok_try_new_cap = eq try_new_cap, 8
+    ok01 = and ok_cap0, ok_len0
+    ok02 = and ok01, ok_empty0
+    ok03 = and ok02, ok_cap_after_reserve
+    ok04 = and ok03, ok_try_reserve
+    ok05 = and ok04, ok_cap_after_reserve_exact
+    ok06 = and ok05, ok_try_reserve_exact
+    ok07 = and ok06, ok_len1
+    ok08 = and ok07, ok_heap_slice_len
+    ok09 = and ok08, ok_heap_mut_slice_len
+    ok10 = and ok09, ok_cap_after_shrink_to_len
+    ok11 = and ok10, ok_cap_after_shrink_to_min
+    ok12 = and ok11, ok_cap_after_shrink
+    ok13 = and ok12, ok_peek0
+    ok14 = and ok13, ok_peek_mut
+    ok15 = and ok14, ok_peek_after_mut
+    ok16 = and ok15, ok_ok0
+    ok17 = and ok16, ok_pop0
+    ok18 = and ok17, ok_ok1
+    ok19 = and ok18, ok_pop1
+    ok20 = and ok19, ok_ok2
+    ok21 = and ok20, ok_pop2
+    ok22 = and ok21, ok_empty_ok
+    ok23 = and ok22, ok_empty_value
+    ok24 = and ok23, ok_len2
+    ok25 = and ok24, ok_cap_after_empty_shrink
+    ok26 = and ok25, ok_cap_after_reinsert
+    ok27 = and ok26, ok_ok3
+    ok28 = and ok27, ok_pop3
+    ok29 = and ok28, ok_zero_cap
+    ok30 = and ok29, ok_zero_empty
+    ok31 = and ok30, ok_try_new
+    ok = and ok31, ok_try_new_cap
+    !cap0
+    !len0
+    !empty0
+    !cap_after_reserve
+    !try_reserve_ok
+    !cap_after_reserve_exact
+    !try_reserve_exact_ok
+    !len1
+    !heap_slice_len
+    !heap_mut_slice_len
+    !cap_after_shrink_to_len
+    !cap_after_shrink_to_min
+    !cap_after_shrink
+    !peek0
+    !peek_mut_ok
+    !peek_mut_ptr
+    !peek_after_mut
+    !ok0
+    !pop0
+    !ok1
+    !pop1
+    !ok2
+    !pop2
+    !ok_empty
+    !empty_value
+    !len2
+    !cap_after_empty_shrink
+    !cap_after_reinsert
+    !ok3
+    !pop3
+    !zero_cap
+    !zero_empty
+    !try_new_ok
+    !try_new_cap
+    !ok_cap0
+    !ok_len0
+    !ok_empty0
+    !ok_cap_after_reserve
+    !ok_try_reserve
+    !ok_cap_after_reserve_exact
+    !ok_try_reserve_exact
+    !ok_len1
+    !ok_heap_slice_len
+    !ok_heap_mut_slice_len
+    !ok_cap_after_shrink_to_len
+    !ok_cap_after_shrink_to_min
+    !ok_cap_after_shrink
+    !ok_peek0
+    !ok_peek_mut
+    !ok_peek_after_mut
+    !ok_ok0
+    !ok_pop0
+    !ok_ok1
+    !ok_pop1
+    !ok_ok2
+    !ok_pop2
+    !ok_empty_ok
+    !ok_empty_value
+    !ok_len2
+    !ok_cap_after_empty_shrink
+    !ok_cap_after_reinsert
+    !ok_ok3
+    !ok_pop3
+    !ok_zero_cap
+    !ok_zero_empty
+    !ok_try_new
+    !ok_try_new_cap
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !heap_mut_slice
+    !heap_slice
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(906)
+
+L_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap append macro"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_NEW other
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_PUSH heap, 9
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH other, 7
+    EXPAND BINARY_HEAP_PUSH other, 5
+    EXPAND BINARY_HEAP_APPEND heap, other
+    EXPAND BINARY_HEAP_LEN len_heap, heap
+    EXPAND BINARY_HEAP_LEN len_other, other
+    EXPAND BINARY_HEAP_IS_EMPTY other_empty, other
+    EXPAND BINARY_HEAP_TRY_POP ok0, pop0, heap
+    EXPAND BINARY_HEAP_TRY_POP ok1, pop1, heap
+    EXPAND BINARY_HEAP_TRY_POP ok2, pop2, heap
+    EXPAND BINARY_HEAP_TRY_POP ok3, pop3, heap
+    EXPAND BINARY_HEAP_TRY_POP ok4, pop4, heap
+    EXPAND BINARY_HEAP_TRY_POP ok_empty, empty_value, heap
+    EXPAND BINARY_HEAP_FREE other
+    EXPAND BINARY_HEAP_FREE heap
+
+    ok_len_heap = eq len_heap, 5
+    ok_len_other = eq len_other, 0
+    ok_other_empty = eq other_empty, 1
+    ok_ok0 = eq ok0, 1
+    ok_pop0 = eq pop0, 9
+    ok_ok1 = eq ok1, 1
+    ok_pop1 = eq pop1, 7
+    ok_ok2 = eq ok2, 1
+    ok_pop2 = eq pop2, 5
+    ok_ok3 = eq ok3, 1
+    ok_pop3 = eq pop3, 4
+    ok_ok4 = eq ok4, 1
+    ok_pop4 = eq pop4, 1
+    ok_empty_ok = eq ok_empty, 0
+    ok_empty_value = eq empty_value, 0
+    ok01 = and ok_len_heap, ok_len_other
+    ok02 = and ok01, ok_other_empty
+    ok03 = and ok02, ok_ok0
+    ok04 = and ok03, ok_pop0
+    ok05 = and ok04, ok_ok1
+    ok06 = and ok05, ok_pop1
+    ok07 = and ok06, ok_ok2
+    ok08 = and ok07, ok_pop2
+    ok09 = and ok08, ok_ok3
+    ok10 = and ok09, ok_pop3
+    ok11 = and ok10, ok_ok4
+    ok12 = and ok11, ok_pop4
+    ok13 = and ok12, ok_empty_ok
+    ok = and ok13, ok_empty_value
+    !len_heap
+    !len_other
+    !other_empty
+    !ok0
+    !pop0
+    !ok1
+    !pop1
+    !ok2
+    !pop2
+    !ok3
+    !pop3
+    !ok4
+    !pop4
+    !ok_empty
+    !empty_value
+    !ok_len_heap
+    !ok_len_other
+    !ok_other_empty
+    !ok_ok0
+    !ok_pop0
+    !ok_ok1
+    !ok_pop1
+    !ok_ok2
+    !ok_pop2
+    !ok_ok3
+    !ok_pop3
+    !ok_ok4
+    !ok_pop4
+    !ok_empty_ok
+    !ok_empty_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    br ok -> L_APPEND_OK, L_APPEND_FAIL
+
+L_APPEND_FAIL:
+    !ok
+    panic(907)
+
+L_APPEND_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap retain macro"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_PUSH heap, 9
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH heap, 8
+    EXPAND BINARY_HEAP_PUSH heap, 2
+    EXPAND BINARY_HEAP_RETAIN_U64 retain_len, heap, @binary_heap_keep_even
+    EXPAND BINARY_HEAP_LEN len_after_retain, heap
+    EXPAND BINARY_HEAP_PEEK peek_after_retain, heap
+    EXPAND BINARY_HEAP_TRY_POP ok0, pop0, heap
+    EXPAND BINARY_HEAP_TRY_POP ok1, pop1, heap
+    EXPAND BINARY_HEAP_TRY_POP ok2, pop2, heap
+    EXPAND BINARY_HEAP_TRY_POP ok_empty, pop_empty, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_RETAIN_U64 empty_retain_len, empty_heap, @binary_heap_keep_even
+    EXPAND BINARY_HEAP_LEN empty_len, empty_heap
+    EXPAND BINARY_HEAP_FREE empty_heap
+
+    ok_retain_len = eq retain_len, 3
+    ok_len_after_retain = eq len_after_retain, 3
+    ok_peek_after_retain = eq peek_after_retain, 8
+    ok_ok0 = eq ok0, 1
+    ok_pop0 = eq pop0, 8
+    ok_ok1 = eq ok1, 1
+    ok_pop1 = eq pop1, 4
+    ok_ok2 = eq ok2, 1
+    ok_pop2 = eq pop2, 2
+    ok_empty_ok = eq ok_empty, 0
+    ok_pop_empty = eq pop_empty, 0
+    ok_empty_retain_len = eq empty_retain_len, 0
+    ok_empty_len = eq empty_len, 0
+    ok01 = and ok_retain_len, ok_len_after_retain
+    ok02 = and ok01, ok_peek_after_retain
+    ok03 = and ok02, ok_ok0
+    ok04 = and ok03, ok_pop0
+    ok05 = and ok04, ok_ok1
+    ok06 = and ok05, ok_pop1
+    ok07 = and ok06, ok_ok2
+    ok08 = and ok07, ok_pop2
+    ok09 = and ok08, ok_empty_ok
+    ok10 = and ok09, ok_pop_empty
+    ok11 = and ok10, ok_empty_retain_len
+    ok = and ok11, ok_empty_len
+    !retain_len
+    !len_after_retain
+    !peek_after_retain
+    !ok0
+    !pop0
+    !ok1
+    !pop1
+    !ok2
+    !pop2
+    !ok_empty
+    !pop_empty
+    !empty_retain_len
+    !empty_len
+    !ok_retain_len
+    !ok_len_after_retain
+    !ok_peek_after_retain
+    !ok_ok0
+    !ok_pop0
+    !ok_ok1
+    !ok_pop1
+    !ok_ok2
+    !ok_pop2
+    !ok_empty_ok
+    !ok_pop_empty
+    !ok_empty_retain_len
+    !ok_empty_len
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    br ok -> L_RETAIN_OK, L_RETAIN_FAIL
+
+L_RETAIN_FAIL:
+    !ok
+    panic(909)
+
+L_RETAIN_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap peek mut set macro"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_TRY_PEEK_MUT_SET_U64 empty_ok, empty_old, heap, 5
+    EXPAND BINARY_HEAP_PUSH heap, 9
+    EXPAND BINARY_HEAP_PUSH heap, 7
+    EXPAND BINARY_HEAP_PUSH heap, 5
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_TRY_PEEK_MUT_SET_U64 set_ok, old_top, heap, 3
+    EXPAND BINARY_HEAP_PEEK peek_after_low_set, heap
+    EXPAND BINARY_HEAP_TRY_POP pop_ok0, pop0, heap
+    EXPAND BINARY_HEAP_TRY_POP pop_ok1, pop1, heap
+    EXPAND BINARY_HEAP_PEEK_MUT_SET_U64 old_top2, heap, 12
+    EXPAND BINARY_HEAP_TRY_POP pop_ok2, pop2, heap
+    EXPAND BINARY_HEAP_TRY_POP pop_ok3, pop3, heap
+    EXPAND BINARY_HEAP_TRY_POP pop_empty_ok, pop_empty, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    ok_empty_ok = eq empty_ok, 0
+    ok_empty_old = eq empty_old, 0
+    ok_set_ok = eq set_ok, 1
+    ok_old_top = eq old_top, 9
+    ok_peek_after_low_set = eq peek_after_low_set, 7
+    ok_pop_ok0 = eq pop_ok0, 1
+    ok_pop0 = eq pop0, 7
+    ok_pop_ok1 = eq pop_ok1, 1
+    ok_pop1 = eq pop1, 5
+    ok_old_top2 = eq old_top2, 3
+    ok_pop_ok2 = eq pop_ok2, 1
+    ok_pop2 = eq pop2, 12
+    ok_pop_ok3 = eq pop_ok3, 1
+    ok_pop3 = eq pop3, 1
+    ok_pop_empty_ok = eq pop_empty_ok, 0
+    ok_pop_empty = eq pop_empty, 0
+    ok01 = and ok_empty_ok, ok_empty_old
+    ok02 = and ok01, ok_set_ok
+    ok03 = and ok02, ok_old_top
+    ok04 = and ok03, ok_peek_after_low_set
+    ok05 = and ok04, ok_pop_ok0
+    ok06 = and ok05, ok_pop0
+    ok07 = and ok06, ok_pop_ok1
+    ok08 = and ok07, ok_pop1
+    ok09 = and ok08, ok_old_top2
+    ok10 = and ok09, ok_pop_ok2
+    ok11 = and ok10, ok_pop2
+    ok12 = and ok11, ok_pop_ok3
+    ok13 = and ok12, ok_pop3
+    ok14 = and ok13, ok_pop_empty_ok
+    ok = and ok14, ok_pop_empty
+    !empty_ok
+    !empty_old
+    !set_ok
+    !old_top
+    !peek_after_low_set
+    !pop_ok0
+    !pop0
+    !pop_ok1
+    !pop1
+    !old_top2
+    !pop_ok2
+    !pop2
+    !pop_ok3
+    !pop3
+    !pop_empty_ok
+    !pop_empty
+    !ok_empty_ok
+    !ok_empty_old
+    !ok_set_ok
+    !ok_old_top
+    !ok_peek_after_low_set
+    !ok_pop_ok0
+    !ok_pop0
+    !ok_pop_ok1
+    !ok_pop1
+    !ok_old_top2
+    !ok_pop_ok2
+    !ok_pop2
+    !ok_pop_ok3
+    !ok_pop3
+    !ok_pop_empty_ok
+    !ok_pop_empty
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    br ok -> L_PEEK_SET_OK, L_PEEK_SET_FAIL
+
+L_PEEK_SET_FAIL:
+    !ok
+    panic(915)
+
+L_PEEK_SET_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap drain macro"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_PUSH heap, 9
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_DRAIN drain_vec, heap
+    EXPAND VEC_LEN drain_len, drain_vec
+    EXPAND VEC_CONTAINS_U64 has_9, drain_vec, 9
+    EXPAND VEC_CONTAINS_U64 has_4, drain_vec, 4
+    EXPAND VEC_CONTAINS_U64 has_1, drain_vec, 1
+    EXPAND BINARY_HEAP_LEN len_after_drain, heap
+    EXPAND BINARY_HEAP_IS_EMPTY empty_after_drain, heap
+    EXPAND BINARY_HEAP_PUSH heap, 6
+    EXPAND BINARY_HEAP_LEN len_after_reuse, heap
+    EXPAND BINARY_HEAP_TRY_POP reuse_ok, reuse_value, heap
+    EXPAND VEC_FREE drain_vec
+    EXPAND BINARY_HEAP_FREE heap
+
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_DRAIN empty_vec, empty_heap
+    EXPAND VEC_LEN empty_vec_len, empty_vec
+    EXPAND BINARY_HEAP_LEN empty_heap_len, empty_heap
+    EXPAND VEC_FREE empty_vec
+    EXPAND BINARY_HEAP_FREE empty_heap
+
+    ok_drain_len = eq drain_len, 3
+    ok_has_9 = eq has_9, 1
+    ok_has_4 = eq has_4, 1
+    ok_has_1 = eq has_1, 1
+    ok_len_after_drain = eq len_after_drain, 0
+    ok_empty_after_drain = eq empty_after_drain, 1
+    ok_len_after_reuse = eq len_after_reuse, 1
+    ok_reuse_ok = eq reuse_ok, 1
+    ok_reuse_value = eq reuse_value, 6
+    ok_empty_vec_len = eq empty_vec_len, 0
+    ok_empty_heap_len = eq empty_heap_len, 0
+    ok01 = and ok_drain_len, ok_has_9
+    ok02 = and ok01, ok_has_4
+    ok03 = and ok02, ok_has_1
+    ok04 = and ok03, ok_len_after_drain
+    ok05 = and ok04, ok_empty_after_drain
+    ok06 = and ok05, ok_len_after_reuse
+    ok07 = and ok06, ok_reuse_ok
+    ok08 = and ok07, ok_reuse_value
+    ok09 = and ok08, ok_empty_vec_len
+    ok = and ok09, ok_empty_heap_len
+    !drain_len
+    !has_9
+    !has_4
+    !has_1
+    !len_after_drain
+    !empty_after_drain
+    !len_after_reuse
+    !reuse_ok
+    !reuse_value
+    !empty_vec_len
+    !empty_heap_len
+    !ok_drain_len
+    !ok_has_9
+    !ok_has_4
+    !ok_has_1
+    !ok_len_after_drain
+    !ok_empty_after_drain
+    !ok_len_after_reuse
+    !ok_reuse_ok
+    !ok_reuse_value
+    !ok_empty_vec_len
+    !ok_empty_heap_len
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    br ok -> L_DRAIN_OK, L_DRAIN_FAIL
+
+L_DRAIN_FAIL:
+    !ok
+    panic(914)
+
+L_DRAIN_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap vec conversion macros"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW raw_heap
+    EXPAND BINARY_HEAP_PUSH raw_heap, 6
+    EXPAND BINARY_HEAP_PUSH raw_heap, 2
+    EXPAND BINARY_HEAP_INTO_VEC raw_vec, raw_heap
+    EXPAND VEC_LEN raw_vec_len, raw_vec
+    EXPAND VEC_CAPACITY raw_vec_cap, raw_vec
+    EXPAND VEC_TRY_GET_U64 raw_first_ok, raw_first, raw_vec, 0
+    EXPAND VEC_FREE raw_vec
+
+    EXPAND BINARY_HEAP_NEW sorted_heap
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 4
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 9
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 1
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 7
+    EXPAND BINARY_HEAP_INTO_SORTED_VEC sorted_vec, sorted_heap
+    EXPAND VEC_LEN sorted_len, sorted_vec
+    EXPAND VEC_GET_U64 sorted0, sorted_vec, 0
+    EXPAND VEC_GET_U64 sorted1, sorted_vec, 1
+    EXPAND VEC_GET_U64 sorted2, sorted_vec, 2
+    EXPAND VEC_GET_U64 sorted3, sorted_vec, 3
+    EXPAND VEC_FREE sorted_vec
+
+    ok_raw_len = eq raw_vec_len, 2
+    ok_raw_cap = eq raw_vec_cap, 8
+    ok_raw_first_ok = eq raw_first_ok, 1
+    ok_raw_first = eq raw_first, 6
+    ok_sorted_len = eq sorted_len, 4
+    ok_sorted0 = eq sorted0, 1
+    ok_sorted1 = eq sorted1, 4
+    ok_sorted2 = eq sorted2, 7
+    ok_sorted3 = eq sorted3, 9
+    ok01 = and ok_raw_len, ok_raw_cap
+    ok02 = and ok01, ok_raw_first_ok
+    ok03 = and ok02, ok_raw_first
+    ok04 = and ok03, ok_sorted_len
+    ok05 = and ok04, ok_sorted0
+    ok06 = and ok05, ok_sorted1
+    ok07 = and ok06, ok_sorted2
+    ok = and ok07, ok_sorted3
+    !raw_vec_len
+    !raw_vec_cap
+    !raw_first_ok
+    !raw_first
+    !sorted_len
+    !sorted0
+    !sorted1
+    !sorted2
+    !sorted3
+    !ok_raw_len
+    !ok_raw_cap
+    !ok_raw_first_ok
+    !ok_raw_first
+    !ok_sorted_len
+    !ok_sorted0
+    !ok_sorted1
+    !ok_sorted2
+    !ok_sorted3
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    br ok -> L_VEC_OK, L_VEC_FAIL
+
+L_VEC_FAIL:
+    !ok
+    panic(908)
+
+L_VEC_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap u64/try_peek/pop/extra_capacity aliases"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_TRY_PEEK emp_tok, emp_tv, empty_heap
+    emp_tok_ok = eq emp_tok, 0
+    emp_tv_ok = eq emp_tv, 0
+    EXPAND BINARY_HEAP_EXTRA_CAPACITY emp_ec, empty_heap
+    ec_zero_ok = eq emp_ec, BinaryHeap_INITIAL_CAP
+    EXPAND BINARY_HEAP_FREE empty_heap
+
+    EXPAND BINARY_HEAP_WITH_CAPACITY heap, 3
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 5
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 42
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 7
+    EXPAND BINARY_HEAP_PEEK_U64 peek0_v, heap
+    EXPAND BINARY_HEAP_TRY_PEEK_U64 peek_tok, peek0_v_again, heap
+    EXPAND BINARY_HEAP_TRY_PEEK peek0_ok, peek0_v_check, heap
+    peek0_v_ok = eq peek0_v, 42
+    peek0_v_again_ok = eq peek0_v_again, 42
+    peek0_ok_ok = eq peek0_ok, 1
+    peek0_v_check_ok = eq peek0_v_check, 42
+    EXPAND BINARY_HEAP_LEN len_before_pop, heap
+    EXPAND BINARY_HEAP_CAPACITY cap_before_pop, heap
+    EXPAND BINARY_HEAP_EXTRA_CAPACITY ec_before_pop, heap
+    expected_ec_before_pop = sub cap_before_pop, len_before_pop
+    ec_before_pop_ok = eq ec_before_pop, expected_ec_before_pop
+    EXPAND BINARY_HEAP_POP min_pop, heap
+    min_pop_ok = eq min_pop, 42
+    EXPAND BINARY_HEAP_POP_U64 next_pop, heap
+    next_pop_ok = eq next_pop, 7
+    EXPAND BINARY_HEAP_LEN len_after_pops, heap
+    len_after_pops_ok = eq len_after_pops, 1
+    EXPAND BINARY_HEAP_FREE heap
+
+    ok = and emp_tok_ok, emp_tv_ok
+    ok = and ok, ec_zero_ok
+    ok = and ok, peek0_v_ok
+    ok = and ok, peek0_v_again_ok
+    ok = and ok, peek0_ok_ok
+    ok = and ok, peek0_v_check_ok
+    ok = and ok, ec_before_pop_ok
+    ok = and ok, min_pop_ok
+    ok = and ok, next_pop_ok
+    ok = and ok, len_after_pops_ok
+
+    !emp_tok
+    !emp_tv
+    !emp_ec
+    !peek0_v
+    !peek0_v_again
+    !peek_tok
+    !peek0_ok
+    !peek0_v_check
+    !len_before_pop
+    !cap_before_pop
+    !ec_before_pop
+    !expected_ec_before_pop
+    !min_pop
+    !next_pop
+    !len_after_pops
+    !emp_tok_ok
+    !emp_tv_ok
+    !ec_zero_ok
+    !peek0_v_ok
+    !peek0_v_again_ok
+    !peek0_ok_ok
+    !peek0_v_check_ok
+    !ec_before_pop_ok
+    !min_pop_ok
+    !next_pop_ok
+    !len_after_pops_ok
+    br ok -> L_BINARY_HEAP_ALIAS_OK, L_BINARY_HEAP_ALIAS_FAIL
+
+L_BINARY_HEAP_ALIAS_FAIL:
+    !ok
+    panic(916)
+
+L_BINARY_HEAP_ALIAS_OK:
+    !ok
+    return
+
+@test "sa_std binary_heap from/lit constructors"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_LIT3 heap, 1, 7, 3
+    EXPAND BINARY_HEAP_LEN len0, heap
+    len0_ok = eq len0, 3
+    EXPAND BINARY_HEAP_PEEK_U64 peek0, heap
+    peek0_ok = eq peek0, 7
+
+    EXPAND VEC_NEW src
+    EXPAND VEC_PUSH_U64 src, 2
+    EXPAND VEC_PUSH_U64 src, 9
+    EXPAND VEC_PUSH_U64 src, 4
+    EXPAND BINARY_HEAP_FROM_VEC_U64 heap2, src
+    EXPAND BINARY_HEAP_LEN len1, heap2
+    len1_ok = eq len1, 3
+    EXPAND BINARY_HEAP_PEEK_U64 peek1, heap2
+    peek1_ok = eq peek1, 9
+
+    EXPAND BINARY_HEAP_EXTEND_FROM_VEC_U64 heap, src
+    EXPAND BINARY_HEAP_LEN len2, heap
+    len2_ok = eq len2, 6
+    EXPAND BINARY_HEAP_PEEK_U64 peek2, heap
+    peek2_ok = eq peek2, 9
+
+    EXPAND BINARY_HEAP_FREE heap
+    EXPAND BINARY_HEAP_FREE heap2
+    EXPAND VEC_FREE src
+
+    ok = and len0_ok, peek0_ok
+    ok = and ok, len1_ok
+    ok = and ok, peek1_ok
+    ok = and ok, len2_ok
+    ok = and ok, peek2_ok
+
+    !len0
+    !peek0
+    !len1
+    !peek1
+    !len2
+    !peek2
+    !len0_ok
+    !peek0_ok
+    !len1_ok
+    !peek1_ok
+    !len2_ok
+    !peek2_ok
+    br ok -> L_BINARY_HEAP_FROM_OK, L_BINARY_HEAP_FROM_FAIL
+
+L_BINARY_HEAP_FROM_FAIL:
+    !ok
+    panic(917)
+
+L_BINARY_HEAP_FROM_OK:
+    !ok
+    return
+
+
+@test "sa_std binary_heap default alias"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_DEFAULT heap
+    EXPAND BINARY_HEAP_LEN len0, heap
+    EXPAND BINARY_HEAP_IS_EMPTY empty0, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    ok_len = eq len0, 0
+    ok_empty = eq empty0, 1
+    ok = and ok_len, ok_empty
+
+    !len0
+    !empty0
+    !ok_len
+    !ok_empty
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10435)
+L_OK:
+    !ok
+    return

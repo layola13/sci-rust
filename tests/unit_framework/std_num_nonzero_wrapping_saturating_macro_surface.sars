@@ -1,0 +1,38 @@
+@import "sa_std/num.sars"
+@import "sa_std/num.sal"
+
+@test "sa_std nonzero wrapping saturating new get"():
+L_ENTRY:
+    nz = stack_alloc NonZeroU64_SIZE
+    EXPAND NONZERO_U64_NEW ok, nz, 5
+    EXPAND NONZERO_U64_GET n, nz
+    w = stack_alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_NEW w, 10
+    EXPAND WRAPPING_U64_GET wv, w
+    s = stack_alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_NEW s, 3
+    EXPAND SATURATING_U64_GET sv, s
+    a = eq ok, 1
+    b = eq n, 5
+    c = eq wv, 10
+    d = eq sv, 3
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok_all = and ok02, d
+    !ok
+    !n
+    !wv
+    !sv
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok_all -> L_OK, L_FAIL
+L_OK:
+    !ok_all
+    return 0
+L_FAIL:
+    !ok_all
+    panic(10970)

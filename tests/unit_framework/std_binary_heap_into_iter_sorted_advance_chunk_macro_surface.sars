@@ -1,0 +1,220 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap into_iter_sorted advance and chunk macro surface"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW advance_heap
+    EXPAND BINARY_HEAP_PUSH_U64 advance_heap, 1
+    EXPAND BINARY_HEAP_PUSH_U64 advance_heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 advance_heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 advance_heap, 6
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 advance_iter, advance_backing, advance_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_BY advance_ok, advance_remaining, advance_iter, 2
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 advance_next_has, advance_next, advance_iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_LEN_U64 advance_len_after, advance_iter
+    EXPAND VEC_LEN advance_backing_len, advance_backing
+
+    EXPAND BINARY_HEAP_NEW short_heap
+    EXPAND BINARY_HEAP_PUSH_U64 short_heap, 8
+    EXPAND BINARY_HEAP_PUSH_U64 short_heap, 3
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 short_iter, short_backing, short_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_BY short_ok, short_remaining, short_iter, 5
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_LEN_U64 short_len_after, short_iter
+
+    EXPAND BINARY_HEAP_NEW zero_advance_heap
+    EXPAND BINARY_HEAP_PUSH_U64 zero_advance_heap, 7
+    EXPAND BINARY_HEAP_PUSH_U64 zero_advance_heap, 2
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 zero_advance_iter, zero_advance_backing, zero_advance_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_BY zero_advance_ok, zero_advance_remaining, zero_advance_iter, 0
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 zero_advance_next_has, zero_advance_next, zero_advance_iter
+
+    EXPAND BINARY_HEAP_NEW chunk_heap
+    EXPAND BINARY_HEAP_PUSH_U64 chunk_heap, 1
+    EXPAND BINARY_HEAP_PUSH_U64 chunk_heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 chunk_heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 chunk_heap, 6
+    chunk_buf = stack_alloc 32
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 chunk_iter, chunk_backing, chunk_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_TRY_NEXT_CHUNK_U64 chunk_ok, chunk_filled, chunk_iter, chunk_buf, 4
+    chunk_0 = load chunk_buf+0 as u64
+    chunk_1 = load chunk_buf+8 as u64
+    chunk_2 = load chunk_buf+16 as u64
+    chunk_3 = load chunk_buf+24 as u64
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_IS_EMPTY_U64 chunk_empty, chunk_iter
+
+    EXPAND BINARY_HEAP_NEW short_chunk_heap
+    EXPAND BINARY_HEAP_PUSH_U64 short_chunk_heap, 3
+    EXPAND BINARY_HEAP_PUSH_U64 short_chunk_heap, 8
+    EXPAND BINARY_HEAP_PUSH_U64 short_chunk_heap, 5
+    short_chunk_buf = stack_alloc 24
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 short_chunk_iter, short_chunk_backing, short_chunk_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_BY short_chunk_skip_ok, short_chunk_skip_remaining, short_chunk_iter, 2
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_TRY_NEXT_CHUNK_U64 short_chunk_ok, short_chunk_filled, short_chunk_iter, short_chunk_buf, 3
+    short_chunk_0 = load short_chunk_buf+0 as u64
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_IS_EMPTY_U64 short_chunk_empty, short_chunk_iter
+
+    EXPAND BINARY_HEAP_NEW zero_chunk_heap
+    EXPAND BINARY_HEAP_PUSH_U64 zero_chunk_heap, 1
+    EXPAND BINARY_HEAP_PUSH_U64 zero_chunk_heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 zero_chunk_heap, 4
+    zero_chunk_buf = stack_alloc 8
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 zero_chunk_iter, zero_chunk_backing, zero_chunk_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 zero_first_has, zero_first, zero_chunk_iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_TRY_NEXT_CHUNK_U64 zero_chunk_ok, zero_chunk_filled, zero_chunk_iter, zero_chunk_buf, 0
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_LEN_U64 zero_chunk_remaining, zero_chunk_iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 zero_next_has, zero_next, zero_chunk_iter
+
+    EXPAND VEC_FREE advance_backing
+    EXPAND VEC_FREE short_backing
+    EXPAND VEC_FREE zero_advance_backing
+    EXPAND VEC_FREE chunk_backing
+    EXPAND VEC_FREE short_chunk_backing
+    EXPAND VEC_FREE zero_chunk_backing
+
+    ok_advance_ok = eq advance_ok, 1
+    ok_advance_remaining = eq advance_remaining, 0
+    ok_advance_next_has = eq advance_next_has, 1
+    ok_advance_next = eq advance_next, 4
+    ok_advance_len_after = eq advance_len_after, 1
+    ok_advance_backing_len = eq advance_backing_len, 4
+    ok_short_ok = eq short_ok, 0
+    ok_short_remaining = eq short_remaining, 3
+    ok_short_len_after = eq short_len_after, 0
+    ok_zero_advance_ok = eq zero_advance_ok, 1
+    ok_zero_advance_remaining = eq zero_advance_remaining, 0
+    ok_zero_advance_next_has = eq zero_advance_next_has, 1
+    ok_zero_advance_next = eq zero_advance_next, 7
+    ok_chunk_ok = eq chunk_ok, 1
+    ok_chunk_filled = eq chunk_filled, 4
+    ok_chunk_0 = eq chunk_0, 9
+    ok_chunk_1 = eq chunk_1, 6
+    ok_chunk_2 = eq chunk_2, 4
+    ok_chunk_3 = eq chunk_3, 1
+    ok_chunk_empty = eq chunk_empty, 1
+    ok_short_chunk_skip_ok = eq short_chunk_skip_ok, 1
+    ok_short_chunk_skip_remaining = eq short_chunk_skip_remaining, 0
+    ok_short_chunk_ok = eq short_chunk_ok, 0
+    ok_short_chunk_filled = eq short_chunk_filled, 1
+    ok_short_chunk_0 = eq short_chunk_0, 3
+    ok_short_chunk_empty = eq short_chunk_empty, 1
+    ok_zero_first_has = eq zero_first_has, 1
+    ok_zero_first = eq zero_first, 9
+    ok_zero_chunk_ok = eq zero_chunk_ok, 1
+    ok_zero_chunk_filled = eq zero_chunk_filled, 0
+    ok_zero_chunk_remaining = eq zero_chunk_remaining, 2
+    ok_zero_next_has = eq zero_next_has, 1
+    ok_zero_next = eq zero_next, 4
+
+    ok = and ok_advance_ok, ok_advance_remaining
+    ok = and ok, ok_advance_next_has
+    ok = and ok, ok_advance_next
+    ok = and ok, ok_advance_len_after
+    ok = and ok, ok_advance_backing_len
+    ok = and ok, ok_short_ok
+    ok = and ok, ok_short_remaining
+    ok = and ok, ok_short_len_after
+    ok = and ok, ok_zero_advance_ok
+    ok = and ok, ok_zero_advance_remaining
+    ok = and ok, ok_zero_advance_next_has
+    ok = and ok, ok_zero_advance_next
+    ok = and ok, ok_chunk_ok
+    ok = and ok, ok_chunk_filled
+    ok = and ok, ok_chunk_0
+    ok = and ok, ok_chunk_1
+    ok = and ok, ok_chunk_2
+    ok = and ok, ok_chunk_3
+    ok = and ok, ok_chunk_empty
+    ok = and ok, ok_short_chunk_skip_ok
+    ok = and ok, ok_short_chunk_skip_remaining
+    ok = and ok, ok_short_chunk_ok
+    ok = and ok, ok_short_chunk_filled
+    ok = and ok, ok_short_chunk_0
+    ok = and ok, ok_short_chunk_empty
+    ok = and ok, ok_zero_first_has
+    ok = and ok, ok_zero_first
+    ok = and ok, ok_zero_chunk_ok
+    ok = and ok, ok_zero_chunk_filled
+    ok = and ok, ok_zero_chunk_remaining
+    ok = and ok, ok_zero_next_has
+    ok = and ok, ok_zero_next
+
+    !advance_ok
+    !advance_remaining
+    !advance_next_has
+    !advance_next
+    !advance_len_after
+    !advance_backing_len
+    !short_ok
+    !short_remaining
+    !short_len_after
+    !zero_advance_ok
+    !zero_advance_remaining
+    !zero_advance_next_has
+    !zero_advance_next
+    !chunk_ok
+    !chunk_filled
+    !chunk_0
+    !chunk_1
+    !chunk_2
+    !chunk_3
+    !chunk_empty
+    !short_chunk_skip_ok
+    !short_chunk_skip_remaining
+    !short_chunk_ok
+    !short_chunk_filled
+    !short_chunk_0
+    !short_chunk_empty
+    !zero_first_has
+    !zero_first
+    !zero_chunk_ok
+    !zero_chunk_filled
+    !zero_chunk_remaining
+    !zero_next_has
+    !zero_next
+    !ok_advance_ok
+    !ok_advance_remaining
+    !ok_advance_next_has
+    !ok_advance_next
+    !ok_advance_len_after
+    !ok_advance_backing_len
+    !ok_short_ok
+    !ok_short_remaining
+    !ok_short_len_after
+    !ok_zero_advance_ok
+    !ok_zero_advance_remaining
+    !ok_zero_advance_next_has
+    !ok_zero_advance_next
+    !ok_chunk_ok
+    !ok_chunk_filled
+    !ok_chunk_0
+    !ok_chunk_1
+    !ok_chunk_2
+    !ok_chunk_3
+    !ok_chunk_empty
+    !ok_short_chunk_skip_ok
+    !ok_short_chunk_skip_remaining
+    !ok_short_chunk_ok
+    !ok_short_chunk_filled
+    !ok_short_chunk_0
+    !ok_short_chunk_empty
+    !ok_zero_first_has
+    !ok_zero_first
+    !ok_zero_chunk_ok
+    !ok_zero_chunk_filled
+    !ok_zero_chunk_remaining
+    !ok_zero_next_has
+    !ok_zero_next
+    !advance_iter
+    !short_iter
+    !zero_advance_iter
+    !chunk_iter
+    !short_chunk_iter
+    !zero_chunk_iter
+    br ok -> L_BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_CHUNK_OK, L_BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_CHUNK_FAIL
+
+L_BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_CHUNK_FAIL:
+    !ok
+    panic(10773)
+
+L_BINARY_HEAP_INTO_ITER_SORTED_ADVANCE_CHUNK_OK:
+    !ok
+    return

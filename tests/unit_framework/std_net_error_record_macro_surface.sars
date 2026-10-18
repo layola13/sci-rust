@@ -1,0 +1,35 @@
+@import "sa_std/net.sars"
+
+@test "sa_std Rust-style network error record"():
+L_ENTRY:
+    net_error = stack_alloc SaNetError_SIZE
+    EXPAND NET_ERROR_NEW net_error, SA_NET_ERROR_CODE_CONNECTION_REFUSED, SA_NET_ERROR_PLATFORM_POSIX, 111, SA_NET_STATUS_NET
+    EXPAND NET_ERROR_KIND kind, net_error
+    EXPAND NET_ERROR_PLATFORM_OF platform, net_error
+    EXPAND NET_ERROR_RAW_OS_ERROR has_raw, raw, net_error
+    EXPAND NET_ERROR_STATUS status, net_error
+    EXPAND NET_ERROR_IS_OK is_ok, net_error
+
+    kind_ok = eq kind, SA_NET_ERROR_CODE_CONNECTION_REFUSED
+    platform_ok = eq platform, SA_NET_ERROR_PLATFORM_POSIX
+    has_raw_ok = eq has_raw, 1
+    raw_ok = eq raw, 111
+    status_ok = eq status, SA_NET_STATUS_NET
+    is_error = eq is_ok, 0
+    ok1 = and kind_ok, platform_ok
+    ok2 = and has_raw_ok, raw_ok
+    ok3 = and status_ok, is_error
+    ok12 = and ok1, ok2
+    ok = and ok12, ok3
+    br ok -> L_NO_RAW, L_FAIL
+L_NO_RAW:
+    EXPAND NET_ERROR_NEW net_error, SA_NET_ERROR_CODE_INVALID_ARGUMENT, SA_NET_ERROR_PLATFORM_NONE, 0, SA_NET_STATUS_INVALID_ARGUMENT
+    EXPAND NET_ERROR_RAW_OS_ERROR no_raw_has, no_raw, net_error
+    no_raw_has_ok = eq no_raw_has, 0
+    no_raw_zero = eq no_raw, 0
+    final_ok = and no_raw_has_ok, no_raw_zero
+    br final_ok -> L_PASS, L_FAIL
+L_FAIL:
+    panic(10621)
+L_PASS:
+    return 0

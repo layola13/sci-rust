@@ -1,0 +1,121 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec iterator macro surface"():
+L_ENTRY:
+    EXPAND VEC_NEW vec
+    EXPAND VEC_PUSH_U64 vec, 10
+    EXPAND VEC_PUSH_U64 vec, 20
+    EXPAND VEC_PUSH_U64 vec, 30
+    EXPAND VEC_PUSH_U64 vec, 40
+
+    EXPAND VEC_ITER_U64 iter, vec
+    EXPAND ITER_NEXT_U64 first_ok, first, iter
+    EXPAND ITER_LEN iter_len_after_next, iter
+
+    EXPAND VEC_ITER_MUT_U64 iter_mut, vec
+    EXPAND ITER_NEXT_U64 mut_first_ok, mut_first, iter_mut
+
+    EXPAND VEC_REF_INTO_ITER_U64 ref_iter, vec
+    EXPAND ITER_NEXT_BACK_U64 ref_back_ok, ref_back, ref_iter
+
+    EXPAND VEC_MUT_REF_INTO_ITER_U64 mut_ref_iter, vec
+    EXPAND ITER_NEXT_U64 mut_ref_first_ok, mut_ref_first, mut_ref_iter
+    EXPAND ITER_NEXT_BACK_U64 mut_ref_back_ok, mut_ref_back, mut_ref_iter
+    EXPAND ITER_LEN mut_ref_len, mut_ref_iter
+
+    EXPAND VEC_ITER_DEFAULT_U64 default_iter
+    EXPAND ITER_LEN default_len, default_iter
+    EXPAND ITER_NEXT_U64 default_next_ok, default_next, default_iter
+    EXPAND ITER_IS_EMPTY default_empty, default_iter
+
+    EXPAND VEC_LEN vec_len_after_iters, vec
+    EXPAND VEC_GET_U64 vec_second_after_iters, vec, 1
+    EXPAND VEC_FREE vec
+
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 10
+    ok_iter_len = eq iter_len_after_next, 3
+    ok_mut_first_flag = eq mut_first_ok, 1
+    ok_mut_first = eq mut_first, 10
+    ok_ref_back_flag = eq ref_back_ok, 1
+    ok_ref_back = eq ref_back, 40
+    ok_mut_ref_first_flag = eq mut_ref_first_ok, 1
+    ok_mut_ref_first = eq mut_ref_first, 10
+    ok_mut_ref_back_flag = eq mut_ref_back_ok, 1
+    ok_mut_ref_back = eq mut_ref_back, 40
+    ok_mut_ref_len = eq mut_ref_len, 2
+    ok_default_len = eq default_len, 0
+    ok_default_next_flag = eq default_next_ok, 0
+    ok_default_next = eq default_next, 0
+    ok_default_empty = eq default_empty, 1
+    ok_vec_len = eq vec_len_after_iters, 4
+    ok_vec_second = eq vec_second_after_iters, 20
+
+    ok = and ok_first_flag, ok_first
+    ok = and ok, ok_iter_len
+    ok = and ok, ok_mut_first_flag
+    ok = and ok, ok_mut_first
+    ok = and ok, ok_ref_back_flag
+    ok = and ok, ok_ref_back
+    ok = and ok, ok_mut_ref_first_flag
+    ok = and ok, ok_mut_ref_first
+    ok = and ok, ok_mut_ref_back_flag
+    ok = and ok, ok_mut_ref_back
+    ok = and ok, ok_mut_ref_len
+    ok = and ok, ok_default_len
+    ok = and ok, ok_default_next_flag
+    ok = and ok, ok_default_next
+    ok = and ok, ok_default_empty
+    ok = and ok, ok_vec_len
+    ok = and ok, ok_vec_second
+
+    !first_ok
+    !first
+    !iter_len_after_next
+    !mut_first_ok
+    !mut_first
+    !ref_back_ok
+    !ref_back
+    !mut_ref_first_ok
+    !mut_ref_first
+    !mut_ref_back_ok
+    !mut_ref_back
+    !mut_ref_len
+    !default_len
+    !default_next_ok
+    !default_next
+    !default_empty
+    !vec_len_after_iters
+    !vec_second_after_iters
+    !ok_first_flag
+    !ok_first
+    !ok_iter_len
+    !ok_mut_first_flag
+    !ok_mut_first
+    !ok_ref_back_flag
+    !ok_ref_back
+    !ok_mut_ref_first_flag
+    !ok_mut_ref_first
+    !ok_mut_ref_back_flag
+    !ok_mut_ref_back
+    !ok_mut_ref_len
+    !ok_default_len
+    !ok_default_next_flag
+    !ok_default_next
+    !ok_default_empty
+    !ok_vec_len
+    !ok_vec_second
+    !iter
+    !iter_mut
+    !ref_iter
+    !mut_ref_iter
+    !default_iter
+    br ok -> L_VEC_ITER_OK, L_VEC_ITER_FAIL
+
+L_VEC_ITER_FAIL:
+    !ok
+    panic(10706)
+
+L_VEC_ITER_OK:
+    !ok
+    return

@@ -146,13 +146,13 @@ fn manifestPathForRoot(allocator: std.mem.Allocator, root_path: []const u8) ![]u
 }
 
 fn sourcePathForRoot(allocator: std.mem.Allocator, root_path: []const u8) ![]u8 {
-    const src_path = try pathJoinAlloc(allocator, &.{ root_path, "src", "main.sa" });
+    const src_path = try pathJoinAlloc(allocator, &.{ root_path, "src", "main.sars" });
     if (pathExists(src_path)) return src_path;
     allocator.free(src_path);
     const src_sars = try pathJoinAlloc(allocator, &.{ root_path, "src", "main.sars" });
     if (pathExists(src_sars)) return src_sars;
     allocator.free(src_sars);
-    const fallback = try pathJoinAlloc(allocator, &.{ root_path, "main.sa" });
+    const fallback = try pathJoinAlloc(allocator, &.{ root_path, "main.sars" });
     if (pathExists(fallback)) return fallback;
     allocator.free(fallback);
     const fallback_sars = try pathJoinAlloc(allocator, &.{ root_path, "main.sars" });
@@ -477,9 +477,9 @@ test "workspace resolver selects default member by package name" {
         \\
         \\require github.com/acme/app @v1 sha256:2222222222222222222222222222222222222222222222222222222222222222
     });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/app/src/main.sa", .data = "@main() -> i32:\nreturn 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/app/src/main.sars", .data = "@main() -> i32:\nreturn 0\n" });
     try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/sa.mod", .data = "package \"tool\"\n" });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/src/main.sa", .data = "@main() -> i32:\nreturn 1\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/src/main.sars", .data = "@main() -> i32:\nreturn 1\n" });
 
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(root);
@@ -494,7 +494,7 @@ test "workspace resolver selects default member by package name" {
 
     const source_path = try selectedSourcePath(std.testing.allocator, &resolved);
     defer std.testing.allocator.free(source_path);
-    try std.testing.expect(std.mem.endsWith(u8, source_path, "members/app/src/main.sa"));
+    try std.testing.expect(std.mem.endsWith(u8, source_path, "members/app/src/main.sars"));
 }
 
 test "workspace resolver selects explicit member by relative path" {
@@ -509,7 +509,7 @@ test "workspace resolver selects explicit member by relative path" {
         \\}
     });
     try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/sa.mod", .data = "package \"tool\"\n" });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/src/main.sa", .data = "@main() -> i32:\nreturn 1\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/src/main.sars", .data = "@main() -> i32:\nreturn 1\n" });
 
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(root);
@@ -541,9 +541,9 @@ test "workspace resolver climbs from member manifest to ancestor workspace root"
         \\
         \\require github.com/acme/app @v1 sha256:2222222222222222222222222222222222222222222222222222222222222222
     });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/app/src/main.sa", .data = "@main() -> i32:\nreturn 7\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/app/src/main.sars", .data = "@main() -> i32:\nreturn 7\n" });
     try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/sa.mod", .data = "package \"tool\"\n" });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/src/main.sa", .data = "@main() -> i32:\nreturn 9\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "members/tool/src/main.sars", .data = "@main() -> i32:\nreturn 9\n" });
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};

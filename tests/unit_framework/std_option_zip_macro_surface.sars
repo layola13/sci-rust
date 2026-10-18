@@ -1,0 +1,111 @@
+@import "sa_std/core/option.sars"
+@import "sa_std/cmp.sal"
+@import "sa_std/char.sal"
+
+@test "sa_std Option zip unzip pair layout and constants"():
+L_ENTRY:
+    EXPAND OPTION_NEW_SOME opt_a, 42
+    EXPAND OPTION_NEW_SOME opt_b, 99
+
+    EXPAND OPTION_ZIP_U64 pair, opt_a, opt_b
+
+    pair_tag = load pair+OptionPairU64_tag as u64
+    pair_v1 = load pair+OptionPairU64_value1 as u64
+    pair_v2 = load pair+OptionPairU64_value2 as u64
+
+    ok_tag = eq pair_tag, Option_SOME
+    ok_v1 = eq pair_v1, 42
+    ok_v2 = eq pair_v2, 99
+
+    EXPAND OPTION_UNZIP_TO_U64 unz_a, unz_b, pair
+    unz_a_tag = load unz_a+Option_tag as u64
+    unz_a_val = load unz_a+Option_value as u64
+    unz_b_tag = load unz_b+Option_tag as u64
+    unz_b_val = load unz_b+Option_value as u64
+
+    ok_unz_a_tag = eq unz_a_tag, Option_SOME
+    ok_unz_a_val = eq unz_a_val, 42
+    ok_unz_b_tag = eq unz_b_tag, Option_SOME
+    ok_unz_b_val = eq unz_b_val, 99
+
+    ok_size = eq OptionPairU64_SIZE, 24
+    ok_offset1 = eq OptionPairU64_value1, 8
+    ok_offset2 = eq OptionPairU64_value2, 16
+
+    ok_char_min = eq CHAR_MIN, 0
+    ok_char_max = eq CHAR_MAX, 1114111
+    ok_ord_min = eq CMP_ORDERING_MIN, -1
+    ok_ord_max = eq CMP_ORDERING_MAX, 1
+
+    c01 = and ok_tag, ok_v1
+    c02 = and c01, ok_v2
+    c03 = and c02, ok_unz_a_tag
+    c04 = and c03, ok_unz_a_val
+    c05 = and c04, ok_unz_b_tag
+    c06 = and c05, ok_unz_b_val
+    c07 = and c06, ok_size
+    c08 = and c07, ok_offset1
+    c09 = and c08, ok_offset2
+    c10 = and c09, ok_char_min
+    c11 = and c10, ok_char_max
+    c12 = and c11, ok_ord_min
+    c13 = and c12, ok_ord_max
+
+    !pair_tag
+    !pair_v1
+    !pair_v2
+    !unz_a_tag
+    !unz_a_val
+    !unz_b_tag
+    !unz_b_val
+    !unz_a
+    !unz_b
+    !pair
+    !opt_a
+    !opt_b
+
+    br c13 -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10471)
+
+L_PASS:
+    return 0
+
+@test "sa_std Option zip both-none and one-side cases"():
+L_ENTRY:
+    EXPAND OPTION_NEW_NONE none_a
+    EXPAND OPTION_NEW_NONE none_b
+    EXPAND OPTION_ZIP_U64 pair_nn, none_a, none_b
+    nn_tag = load pair_nn+OptionPairU64_tag as u64
+    ok_nn = eq nn_tag, Option_NONE
+
+    EXPAND OPTION_NEW_SOME some_a, 7
+    EXPAND OPTION_ZIP_U64 pair_sn, some_a, none_b
+    sn_tag = load pair_sn+OptionPairU64_tag as u64
+    ok_sn = eq sn_tag, Option_NONE
+
+    EXPAND OPTION_ZIP_U64 pair_ns, none_a, some_a
+    ns_tag = load pair_ns+OptionPairU64_tag as u64
+    ok_ns = eq ns_tag, Option_NONE
+
+    c01 = and ok_nn, ok_sn
+    c02 = and c01, ok_ns
+
+    !nn_tag
+    !sn_tag
+    !ns_tag
+    !pair_nn
+    !pair_sn
+    !pair_ns
+    !none_a
+    !none_b
+    !some_a
+
+    br c02 -> L_PASS2, L_FAIL2
+
+L_FAIL2:
+    panic(10472)
+
+L_PASS2:
+    return 0

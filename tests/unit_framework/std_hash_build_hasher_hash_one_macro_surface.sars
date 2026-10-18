@@ -1,0 +1,74 @@
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std build hasher hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U64 one_u64, builder, 7
+    manual_u64_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD manual_u64_hasher, builder
+    EXPAND DEFAULT_HASHER_WRITE_U64 manual_u64_hasher, 7
+    EXPAND DEFAULT_HASHER_FINISH manual_u64, manual_u64_hasher
+
+    bytes_data = alloc 4
+    store bytes_data+0, 114 as u8
+    store bytes_data+1, 117 as u8
+    store bytes_data+2, 115 as u8
+    store bytes_data+3, 116 as u8
+    bytes_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW bytes_slice, bytes_data, 4
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_STR one_str, builder, bytes_slice
+    EXPAND HASH_STR manual_str, bytes_slice
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SLICE_U8 one_slice_u8, builder, bytes_slice
+    EXPAND HASH_SLICE_U8 manual_slice_u8, bytes_slice
+
+    nums_data = alloc 24
+    store nums_data+0, 3 as u64
+    store nums_data+8, 5 as u64
+    store nums_data+16, 8 as u64
+    nums_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW nums_slice, nums_data, 3
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SLICE_U64 one_slice_u64, builder, nums_slice
+    EXPAND SLICE_HASH_U64 manual_slice_u64, nums_slice
+
+    ok_u64 = eq one_u64, manual_u64
+    ok_str = eq one_str, manual_str
+    ok_slice_u8 = eq one_slice_u8, manual_slice_u8
+    ok_slice_u64 = eq one_slice_u64, manual_slice_u64
+    ok_str_domain = ne one_str, one_slice_u8
+    c01 = and ok_u64, ok_str
+    c02 = and c01, ok_slice_u8
+    c03 = and c02, ok_slice_u64
+    ok = and c03, ok_str_domain
+
+    !builder
+    !one_u64
+    !manual_u64
+    !one_str
+    !manual_str
+    !one_slice_u8
+    !manual_slice_u8
+    !one_slice_u64
+    !manual_slice_u64
+    !ok_u64
+    !ok_str
+    !ok_slice_u8
+    !ok_slice_u64
+    !ok_str_domain
+    !c01
+    !c02
+    !c03
+    !bytes_slice
+    !bytes_data
+    !nums_slice
+    !nums_data
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10529)
+
+L_PASS:
+    !ok
+    return 0

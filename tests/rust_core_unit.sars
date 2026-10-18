@@ -1,0 +1,1184 @@
+@import "../sa_std/core/sa_core.sars"
+@import "../sa_std/core/option.sal"
+@import "../sa_std/core/option.sars"
+@import "../sa_std/core/result.sal"
+@import "../sa_std/core/result.sars"
+@import "../sa_std/core/bit.sars"
+@import "../sa_std/core/loop.sars"
+@import "../sa_std/core/control.sars"
+@import "../sa_std/core/hash.sars"
+@import "../sa_std/core/cleanup.sars"
+@import "../sa_std/netx.sars"
+
+@const TEST_TRAIT_OBJECT_VT = vtable { call = @demo_trait_object_call }
+@const TEST_WAKER_VT = vtable { clone = @demo_waker_clone, wake = @demo_waker_wake, wake_by_ref = @demo_waker_wake_by_ref, drop = @demo_waker_drop }
+
+#def TestDyn_SIZE = 16
+#def TestDyn_DATA = +0
+#def TestDyn_VTABLE = +8
+#def TestWaker_SIZE = 16
+#def TestWaker_DATA = +0
+#def TestWaker_VTABLE = +8
+#def TestPair_SIZE = 32
+#def TestPair_A = +0
+#def TestPair_B = +8
+#def TestPair_C = +16
+#def TestPair_D = +24
+
+@demo_trait_object_call(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestDyn_DATA as i32
+    result = add value, 3
+    !value
+    !self
+    return result
+
+@demo_waker_clone(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestWaker_DATA as i32
+    !self
+    return value
+
+@demo_waker_wake(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestWaker_DATA as i32
+    result = add value, 1
+    !value
+    !self
+    return result
+
+@demo_waker_wake_by_ref(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestWaker_DATA as i32
+    result = add value, 2
+    !value
+    !self
+    return result
+
+@demo_waker_drop(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 0
+
+@double_u64(x: u64) -> u64:
+L_ENTRY:
+    y = add x, x
+    !x
+    return y
+
+@option_unwrap_or_return_probe(opt: ptr) -> u64:
+L_ENTRY:
+    EXPAND OPTION_UNWRAP_OR_RETURN value, opt, 9
+    !opt
+    return value
+
+@result_map_ok_probe(res: ptr) -> u64:
+L_ENTRY:
+    EXPAND RESULT_MAP_OK mapped, res, @double_u64
+    !res
+    return mapped
+
+@result_return_err_probe(err: u64) -> ptr:
+L_ENTRY:
+    res = alloc Result_SIZE
+    EXPAND RESULT_RETURN_ERR res, err
+
+@try_result_probe(res: ptr) -> ptr:
+L_ENTRY:
+    EXPAND TRY_RESULT value, res
+    out = alloc Result_SIZE
+    EXPAND RESULT_SET_OK out, value
+    !res
+    return out
+
+@try_result_return_probe(res: ptr) -> ptr:
+L_ENTRY:
+    EXPAND TRY_RESULT_RETURN value, res
+    out = alloc Result_SIZE
+    EXPAND RESULT_SET_OK out, value
+    !res
+    return out
+
+@try_option_probe(opt: ptr) -> ptr:
+L_ENTRY:
+    EXPAND TRY_OPTION value, opt
+    out = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME out, value
+    !opt
+    return out
+
+@try_option_return_probe(opt: ptr) -> ptr:
+L_ENTRY:
+    EXPAND TRY_OPTION_RETURN value, opt
+    out = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME out, value
+    !opt
+    return out
+
+@drop_probe(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestDyn_DATA as i32
+    !self
+    return value
+
+@box_probe(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+Box_value as u64
+    result = add value, 1
+    !self
+    !value
+    return result
+
+@arc_cleanup(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+ArcBox_data as u64
+    !self
+    !value
+    return 0
+
+@test "rwlock reader and writer state transitions"():
+L_ENTRY:
+    lock = alloc RwLock_SIZE
+    store lock+RwLock_readers, 0 as i32
+    store lock+RwLock_writing, 0 as i32
+    EXPAND RWLOCK_TRY_READ read_ok, read_guard, lock, L_READ_FAIL
+
+L_READ_OK:
+    readers = load lock+RwLock_readers as i32
+    ok1 = eq readers, 1
+    EXPAND RWLOCK_TRY_WRITE write_ok, write_guard, lock, L_WRITE_FAIL
+
+L_WRITE_OK:
+    trap = add 0, 0
+    !trap
+    return
+
+L_WRITE_FAIL:
+    EXPAND RWLOCK_RELEASE_READ lock
+    after_read = load lock+RwLock_readers as i32
+    ok2 = eq after_read, 0
+    EXPAND RWLOCK_TRY_WRITE write_ok2, write_guard2, lock, L_WRITE_FAIL2
+
+L_WRITE_OK2:
+    writer = load lock+RwLock_writing as i32
+    ok3 = eq writer, 1
+    EXPAND RWLOCK_RELEASE_WRITE lock
+    after_write = load lock+RwLock_writing as i32
+    ok4 = eq after_write, 0
+    !after_read
+    !after_write
+    !readers
+    !writer
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !read_guard
+    !write_guard
+    !write_guard2
+    !read_ok
+    !write_ok
+    !write_ok2
+    !lock
+    return
+
+L_READ_FAIL:
+    trap_read = add 0, 0
+    !trap_read
+    return
+
+L_WRITE_FAIL2:
+    trap_write = add 0, 0
+    !trap_write
+    return
+
+@test "derive struct copy and equality"():
+L_ENTRY:
+    left = alloc TestPair_SIZE
+    right = alloc TestPair_SIZE
+    store left+TestPair_A, 1 as u64
+    store left+TestPair_B, 2 as u64
+    store left+TestPair_C, 3 as u64
+    store left+TestPair_D, 4 as u64
+    EXPAND STRUCT_COPY right, left, TestPair_A, TestPair_B, TestPair_C, TestPair_D
+    EXPAND STRUCT_EQ_FIELD ok_a, left, right, TestPair_A
+    EXPAND STRUCT_EQ_FIELD ok_b, left, right, TestPair_B
+    EXPAND STRUCT_EQ_FIELD ok_c, left, right, TestPair_C
+    EXPAND STRUCT_EQ_FIELD ok_d, left, right, TestPair_D
+    EXPAND STRUCT_EQ4 ok_all, left, right, TestPair_A, TestPair_B, TestPair_C, TestPair_D
+    copied_a = load right+TestPair_A as u64
+    copied_d = load right+TestPair_D as u64
+    ok1 = eq copied_a, 1
+    ok2 = eq copied_d, 4
+    ok3 = eq ok_a, 1
+    ok4 = eq ok_b, 1
+    ok5 = eq ok_c, 1
+    ok6 = eq ok_d, 1
+    ok7 = eq ok_all, 1
+    !copied_a
+    !copied_d
+    !ok_a
+    !ok_b
+    !ok_c
+    !ok_d
+    !ok_all
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !ok7
+    !left
+    !right
+    return
+
+@test "derive copy field helper copies a single field"():
+L_ENTRY:
+    src = alloc TestPair_SIZE
+    dst = alloc TestPair_SIZE
+    store src+TestPair_A, 41 as u64
+    store src+TestPair_B, 0 as u64
+    store dst+TestPair_A, 0 as u64
+    store dst+TestPair_B, 9 as u64
+    EXPAND STRUCT_COPY_FIELD dst, src, TestPair_A, TestPair_A
+    copied = load dst+TestPair_A as u64
+    untouched = load dst+TestPair_B as u64
+    ok1 = eq copied, 41
+    ok2 = eq untouched, 9
+    !copied
+    !untouched
+    !ok1
+    !ok2
+    !src
+    !dst
+    return
+
+@test "derive field access and pointer helpers"():
+L_ENTRY:
+    slot = alloc TestPair_SIZE
+    EXPAND STRUCT_NEW pair, TestPair_SIZE
+    EXPAND FIELD_SET pair, TestPair_A, 17
+    EXPAND FIELD_SET pair, TestPair_B, 23
+    EXPAND FIELD_GET got_a, pair, TestPair_A
+    EXPAND FIELD_GET got_b, pair, TestPair_B
+    EXPAND PTR_FIELD ptr_a, pair, TestPair_A
+    pair_ptr = load pair+TestPair_A as u64
+    ok1 = eq got_a, 17
+    ok2 = eq got_b, 23
+    ok3 = ne ptr_a, 0
+    ok4 = eq pair_ptr, 17
+    ok01 = and ok1, ok2
+    ok02 = and ok01, ok3
+    ok = and ok02, ok4
+    !got_a
+    !got_b
+    !ptr_a
+    !pair_ptr
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !slot
+    EXPAND STRUCT_FREE pair
+    return
+
+@test "option and result convenience macros compose cleanly"():
+L_ENTRY:
+    some_opt = alloc Option_SIZE
+    store some_opt+Option_tag, Option_SOME as u64
+    store some_opt+Option_value, 11 as u64
+    none_opt = alloc Option_SIZE
+    store none_opt+Option_tag, Option_NONE as u64
+    store none_opt+Option_value, 0 as u64
+    ok_res = alloc Result_SIZE
+    store ok_res+Result_tag, Result_OK as u64
+    store ok_res+Result_ok, 13 as u64
+    store ok_res+Result_err, 0 as u64
+    err_res = alloc Result_SIZE
+    store err_res+Result_tag, Result_ERR as u64
+    store err_res+Result_ok, 0 as u64
+    store err_res+Result_err, 17 as u64
+    ok_res_alias = alloc Result_SIZE
+    store ok_res_alias+Result_tag, Result_OK as u64
+    store ok_res_alias+Result_ok, 19 as u64
+    store ok_res_alias+Result_err, 0 as u64
+    err_res_alias = alloc Result_SIZE
+    store err_res_alias+Result_tag, Result_ERR as u64
+    store err_res_alias+Result_ok, 0 as u64
+    store err_res_alias+Result_err, 23 as u64
+    some_opt_alias = alloc Option_SIZE
+    store some_opt_alias+Option_tag, Option_SOME as u64
+    store some_opt_alias+Option_value, 29 as u64
+    none_opt_alias = alloc Option_SIZE
+    store none_opt_alias+Option_tag, Option_NONE as u64
+    store none_opt_alias+Option_value, 0 as u64
+
+    EXPAND OPTION_MATCH_SOME_NONE some_value, some_opt, L_SOME, L_NONE
+
+L_SOME:
+    some_ok = eq some_value, 11
+    EXPAND OPTION_MATCH_SOME_NONE none_value, none_opt, L_NONE_OK, L_NONE_FAIL
+
+L_NONE_OK:
+    none_ok = eq none_value, 0
+    EXPAND RESULT_MATCH_OK_ERR ok_value, ok_res, L_OK, L_ERR
+
+L_OK:
+    ok_match = eq ok_value, 13
+    EXPAND RESULT_MATCH_OK_ERR err_value, err_res, L_ERR_OK, L_ERR_ERR
+
+L_ERR_ERR:
+    err_match = eq err_value, 17
+    EXPAND RESULT_MAP_OK mapped_ok, ok_res, @double_u64
+    EXPAND RESULT_MAP_OK mapped_err, err_res, @double_u64
+    mapped_ok_ok = eq mapped_ok, 26
+    mapped_err_ok = eq mapped_err, 0
+    returned_opt = call @option_unwrap_or_return_probe(some_opt)
+    returned_none = call @option_unwrap_or_return_probe(none_opt)
+    returned_res = call @result_return_err_probe(99)
+    returned_tag = load returned_res+Result_tag as u64
+    returned_err = load returned_res+Result_err as u64
+    try_ok_res = call @try_result_probe(ok_res)
+    try_err_res = call @try_result_probe(err_res)
+    try_ok_tag = load try_ok_res+Result_tag as u64
+    try_ok_value = load try_ok_res+Result_ok as u64
+    try_err_tag = load try_err_res+Result_tag as u64
+    try_err_value = load try_err_res+Result_err as u64
+    try_some_opt = call @try_option_probe(some_opt)
+    try_none_opt = call @try_option_probe(none_opt)
+    try_some_tag = load try_some_opt+Option_tag as u64
+    try_some_value = load try_some_opt+Option_value as u64
+    try_none_tag = load try_none_opt+Option_tag as u64
+    try_return_ok_res = call @try_result_return_probe(ok_res_alias)
+    try_return_err_res = call @try_result_return_probe(err_res_alias)
+    try_return_ok_tag = load try_return_ok_res+Result_tag as u64
+    try_return_ok_value = load try_return_ok_res+Result_ok as u64
+    try_return_err_tag = load try_return_err_res+Result_tag as u64
+    try_return_err_value = load try_return_err_res+Result_err as u64
+    try_return_some_opt = call @try_option_return_probe(some_opt_alias)
+    try_return_none_opt = call @try_option_return_probe(none_opt_alias)
+    try_return_some_tag = load try_return_some_opt+Option_tag as u64
+    try_return_some_value = load try_return_some_opt+Option_value as u64
+    try_return_none_tag = load try_return_none_opt+Option_tag as u64
+    returned_ok = eq returned_tag, Result_ERR
+    returned_err_ok = eq returned_err, 99
+    try_ok_tag_ok = eq try_ok_tag, Result_OK
+    try_ok_value_ok = eq try_ok_value, 13
+    try_err_tag_ok = eq try_err_tag, Result_ERR
+    try_err_value_ok = eq try_err_value, 17
+    try_some_tag_ok = eq try_some_tag, Option_SOME
+    try_some_value_ok = eq try_some_value, 11
+    try_none_tag_ok = eq try_none_tag, Option_NONE
+    try_return_ok_tag_ok = eq try_return_ok_tag, Result_OK
+    try_return_ok_value_ok = eq try_return_ok_value, 19
+    try_return_err_tag_ok = eq try_return_err_tag, Result_ERR
+    try_return_err_value_ok = eq try_return_err_value, 23
+    try_return_some_tag_ok = eq try_return_some_tag, Option_SOME
+    try_return_some_value_ok = eq try_return_some_value, 29
+    try_return_none_tag_ok = eq try_return_none_tag, Option_NONE
+    result_try01 = and some_ok, none_ok
+    result_try02 = and result_try01, ok_match
+    result_try03 = and result_try02, err_match
+    result_try04 = and result_try03, mapped_ok_ok
+    result_try05 = and result_try04, mapped_err_ok
+    result_try06 = and result_try05, returned_ok
+    result_try07 = and result_try06, returned_err_ok
+    result_try08 = and result_try07, try_ok_tag_ok
+    result_try09 = and result_try08, try_ok_value_ok
+    result_try10 = and result_try09, try_err_tag_ok
+    result_try11 = and result_try10, try_err_value_ok
+    result_try12 = and result_try11, try_some_tag_ok
+    result_try13 = and result_try12, try_some_value_ok
+    result_try14 = and result_try13, try_none_tag_ok
+    result_try15 = and result_try14, try_return_ok_tag_ok
+    result_try16 = and result_try15, try_return_ok_value_ok
+    result_try17 = and result_try16, try_return_err_tag_ok
+    result_try18 = and result_try17, try_return_err_value_ok
+    result_try19 = and result_try18, try_return_some_tag_ok
+    result_try20 = and result_try19, try_return_some_value_ok
+    result_try_ok = and result_try20, try_return_none_tag_ok
+    br result_try_ok -> L_OPTION_RESULT_TRY_OK, L_OPTION_RESULT_TRY_FAIL
+
+L_OPTION_RESULT_TRY_FAIL:
+    panic(906)
+
+L_OPTION_RESULT_TRY_OK:
+    !some_value
+    !none_value
+    !ok_value
+    !err_value
+    !mapped_ok
+    !mapped_err
+    !returned_opt
+    !returned_none
+    !returned_res
+    !returned_tag
+    !returned_err
+    !try_ok_res
+    !try_err_res
+    !try_ok_tag
+    !try_ok_value
+    !try_err_tag
+    !try_err_value
+    !try_some_opt
+    !try_none_opt
+    !try_some_tag
+    !try_some_value
+    !try_none_tag
+    !try_return_ok_res
+    !try_return_err_res
+    !try_return_ok_tag
+    !try_return_ok_value
+    !try_return_err_tag
+    !try_return_err_value
+    !try_return_some_opt
+    !try_return_none_opt
+    !try_return_some_tag
+    !try_return_some_value
+    !try_return_none_tag
+    !some_ok
+    !none_ok
+    !ok_match
+    !err_match
+    !mapped_ok_ok
+    !mapped_err_ok
+    !returned_ok
+    !returned_err_ok
+    !try_ok_tag_ok
+    !try_ok_value_ok
+    !try_err_tag_ok
+    !try_err_value_ok
+    !try_some_tag_ok
+    !try_some_value_ok
+    !try_none_tag_ok
+    !try_return_ok_tag_ok
+    !try_return_ok_value_ok
+    !try_return_err_tag_ok
+    !try_return_err_value_ok
+    !try_return_some_tag_ok
+    !try_return_some_value_ok
+    !try_return_none_tag_ok
+    !result_try01
+    !result_try02
+    !result_try03
+    !result_try04
+    !result_try05
+    !result_try06
+    !result_try07
+    !result_try08
+    !result_try09
+    !result_try10
+    !result_try11
+    !result_try12
+    !result_try13
+    !result_try14
+    !result_try15
+    !result_try16
+    !result_try17
+    !result_try18
+    !result_try19
+    !result_try20
+    !result_try_ok
+    !some_opt
+    !none_opt
+    !ok_res
+    !err_res
+    !ok_res_alias
+    !err_res_alias
+    !some_opt_alias
+    !none_opt_alias
+    return
+
+L_NONE:
+    trap_some = add 0, 0
+    !trap_some
+    !some_opt
+    !none_opt
+    return
+
+L_NONE_FAIL:
+    trap_none = add 0, 0
+    !trap_none
+    !some_opt
+    !none_opt
+    return
+
+L_ERR:
+    trap_ok = add 0, 0
+    !trap_ok
+    !some_opt
+    !none_opt
+    !ok_res
+    !err_res
+    return
+
+L_ERR_OK:
+    trap_err = add 0, 0
+    !trap_err
+    !some_opt
+    !none_opt
+    !ok_res
+    !err_res
+    return
+
+@test "iter helpers and slice indexing support scanning patterns"():
+L_ENTRY:
+    data = alloc 32
+    store data+0, 9 as u64
+    store data+8, 3 as u64
+    store data+16, 14 as u64
+    store data+24, 7 as u64
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 4
+    EXPAND SLICE_GET_U64 second, slice, 1
+    EXPAND ITER_FROM_SLICE iter, slice
+    EXPAND ITER_IS_EMPTY is_empty, iter
+    EXPAND ITER_HAS_NEXT has_next, iter
+    EXPAND ITER_PEEK_U64 peek, iter
+    EXPAND ITER_NEXT_U64 has_item, next_item, iter
+    ok1 = eq second, 3
+    ok2 = eq is_empty, 0
+    ok3 = eq has_next, 1
+    ok4 = eq peek, 9
+    ok5 = eq has_item, 1
+    ok6 = eq next_item, 9
+    !data
+    !slice
+    !second
+    !iter
+    !is_empty
+    !has_next
+    !peek
+    !has_item
+    !next_item
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    return
+
+@test "loop hash and cleanup macros expand in core smoke"():
+L_ENTRY:
+    arr = alloc 24
+    store arr+0, 8 as u64
+    store arr+8, 4 as u64
+    store arr+16, 12 as u64
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, arr, 3
+    EXPAND FOR_RANGE idx, 0, 3, L_FOR_BODY, L_FOR_DONE
+
+L_FOR_BODY:
+    EXPAND SLICE_GET_U64 current, slice, idx
+    EXPAND ARRAY_SCAN_MIN min_value, current, 4
+    EXPAND ARRAY_SCAN_MAX max_value, current, 12
+    EXPAND HASH_PTR hash_value, slice
+    EXPAND DEFER slice
+    ok1 = ult 0, hash_value
+    ok2 = eq min_value, 4
+    ok3 = eq max_value, 12
+    !arr
+    !idx
+    !current
+    !hash_value
+    !min_value
+    !max_value
+    !ok1
+    !ok2
+    !ok3
+    return
+
+L_FOR_DONE:
+    trap = add 0, 0
+    !trap
+    return
+
+@test "control flow helper macros branch and label correctly"():
+L_ENTRY:
+    true_cond = eq 1, 1
+    false_cond = eq 1, 2
+    EXPAND MATCH_BOOL matched_true, true_cond, L_MATCH_TRUE, L_MATCH_FALSE
+
+L_MATCH_TRUE:
+    ok1 = eq matched_true, 1
+    EXPAND MATCH_BOOL matched_false, false_cond, L_MATCH_FALSE_OK, L_MATCH_TRUE_FAIL
+
+L_MATCH_FALSE_OK:
+    ok2 = eq matched_false, 0
+    EXPAND WHILE true_cond, L_WHILE_BODY, L_WHILE_DONE
+
+L_WHILE_BODY:
+    while_hit = add 7, 0
+    jmp L_AFTER_WHILE
+
+L_WHILE_DONE:
+    trap = add 0, 0
+    !trap
+    return
+
+L_AFTER_WHILE:
+    EXPAND WHILE_COND false_cond, L_WHILE_COND_BODY, L_WHILE_COND_DONE
+
+L_WHILE_COND_BODY:
+    trap2 = add 0, 0
+    !trap2
+    return
+
+L_WHILE_COND_DONE:
+    EXPAND INDEX_LOOP idx2, 1, 2, L_INDEX_BODY, L_INDEX_DONE
+
+L_INDEX_BODY:
+    idx_ok = eq idx2, 1
+    jmp L_INDEX_AFTER
+
+L_INDEX_DONE:
+    trap3 = add 0, 0
+    !trap3
+    return
+
+L_INDEX_AFTER:
+    ok3 = eq idx_ok, 1
+    !true_cond
+    !false_cond
+    !matched_true
+    !matched_false
+    !ok1
+    !ok2
+    !ok3
+    !while_hit
+    !idx2
+    !idx_ok
+    return
+
+L_MATCH_FALSE:
+    trap_false = add 0, 0
+    !trap_false
+    return
+
+L_MATCH_TRUE_FAIL:
+    trap_true = add 0, 0
+    !trap_true
+    return
+
+@test "control flow sugar aliases preserve branching semantics"():
+L_ENTRY:
+    cond = eq 3, 3
+    other = eq 4, 5
+    EXPAND ELIF cond, L_ELIF_TRUE, L_ELIF_FALSE
+
+L_ELIF_TRUE:
+    ok1 = eq cond, 1
+    EXPAND WHILE_LET cond, L_WHILE_LET_BODY, L_WHILE_LET_DONE
+
+L_WHILE_LET_BODY:
+    EXPAND BREAK_IF cond, L_BREAK_HIT, L_BREAK_SKIP
+
+L_BREAK_HIT:
+    EXPAND CONTINUE_IF other, L_CONTINUE_HIT, L_CONTINUE_SKIP
+
+L_CONTINUE_HIT:
+    ok2 = eq other, 0
+    !cond
+    !other
+    !ok1
+    !ok2
+    return
+
+L_CONTINUE_SKIP:
+    ok2 = eq other, 0
+    !cond
+    !other
+    !ok1
+    !ok2
+    return
+
+L_BREAK_SKIP:
+    trap_break = add 0, 0
+    !trap_break
+    return
+
+L_WHILE_LET_DONE:
+    trap_done = add 0, 0
+    !trap_done
+    return
+
+L_ELIF_FALSE:
+    trap_else = add 0, 0
+    !trap_else
+    return
+
+@test "hash map helper macros insert lookup and update"():
+L_ENTRY:
+    map = alloc HashMap_SIZE
+    store map+HashMap_slots, 0 as ptr
+    store map+HashMap_cap, 0 as u64
+    store map+HashMap_len, 0 as u64
+    store map+HashMap_tombs, 0 as u64
+    key = alloc 8
+    value1 = alloc 8
+    value2 = alloc 8
+    store key+0, 5 as u64
+    store value1+0, 11 as u64
+    store value2+0, 22 as u64
+    EXPAND HASH_PTR key_hash, key
+    EXPAND MAP_INSERT_OR_UPDATE map, key, value1
+    EXPAND MAP_LOOKUP got1, map, key
+    ok1 = eq got1, value1
+    EXPAND MAP_INSERT_OR_UPDATE map, key, value2
+    EXPAND MAP_LOOKUP got2, map, key
+    ok2 = eq got2, value2
+    ok3 = ult 0, key_hash
+    EXPAND MAP_FREE map
+    !key
+    !value1
+    !value2
+    !key_hash
+    !got1
+    !got2
+    !ok1
+    !ok2
+    !ok3
+    return
+
+@test "bit macros set clear and index values"():
+L_ENTRY:
+    base = 0 as u64
+    EXPAND BIT_MASK mask, 5
+    EXPAND BIT_SET set_value, base, 5
+    EXPAND BIT_GET bit_is_set, set_value, 5
+    EXPAND BIT_CLEAR cleared_value, set_value, 5
+    EXPAND BIT_TEST bit_tested, set_value, 5
+    EXPAND BIT_INDEX_BYTE byte_index, 17
+    EXPAND BIT_INDEX_BIT bit_index, 17
+    ok1 = eq mask, 32
+    ok2 = eq set_value, 32
+    ok3 = eq bit_is_set, 1
+    ok4 = eq cleared_value, 0
+    ok5 = eq bit_tested, 1
+    ok6 = eq byte_index, 2
+    ok7 = eq bit_index, 1
+    !base
+    !mask
+    !set_value
+    !bit_is_set
+    !cleared_value
+    !bit_tested
+    !byte_index
+    !bit_index
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !ok7
+    return
+
+@test "loop probe and cleanup helper macros compose"():
+L_ENTRY:
+    bytes = alloc 16
+    store bytes+0, 5 as u64
+    store bytes+8, 11 as u64
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, bytes, 2
+    EXPAND ARRAY_FOR_EACH idx, slice, L_LOOP_BODY, L_LOOP_DONE
+
+L_LOOP_BODY:
+    EXPAND SLICE_GET_U64_AT first_item, slice, idx
+    EXPAND PROBE_START probe_start, 6, 8
+    EXPAND PROBE_NEXT probe_next, probe_start, 8
+    cleanup_flag = eq idx, 0
+    EXPAND CLEANUP_ON_ERROR cleanup_flag, bytes, L_LOOP_FAIL
+    ok1 = ult 0, first_item
+    ok2 = ult probe_start, 8
+    ok3 = ult probe_next, 8
+    !slice
+    !idx
+    !first_item
+    !probe_start
+    !probe_next
+    !cleanup_flag
+    !ok1
+    !ok2
+    !ok3
+    return
+
+L_LOOP_DONE:
+    trap = add 0, 0
+    !trap
+    return
+
+L_LOOP_FAIL:
+    trap_fail = add 0, 0
+    !trap_fail
+    return
+
+@test "cell set get replace"():
+L_ENTRY:
+    cell = alloc Cell_SIZE
+    store cell+Cell_value, 7 as i32
+    EXPAND CELL_GET got, cell
+    ok1 = eq got, 7
+    EXPAND CELL_SET cell, 11
+    EXPAND CELL_REPLACE prev, cell, 13
+    ok2 = eq prev, 11
+    EXPAND CELL_GET next, cell
+    ok3 = eq next, 13
+    !got
+    !ok1
+    !ok2
+    !ok3
+    !next
+    !prev
+    !cell
+    return
+
+@test "refcell borrow release"():
+L_ENTRY:
+    refcell = alloc RefCell_SIZE
+    store refcell+RefCell_value, 21 as u64
+    store refcell+RefCell_borrows, 0 as u64
+    EXPAND REFCELL_BORROW_MUT ok, borrow, refcell, L_FAIL
+L_OK:
+    EXPAND REFCELL_GET value, borrow
+    ok1 = eq value, 21
+    EXPAND REFCELL_SET borrow, 22
+    EXPAND REFCELL_RELEASE borrow
+    borrows = load refcell+RefCell_borrows as u64
+    ok2 = eq borrows, 0
+    !borrows
+    !ok1
+    !ok2
+    !value
+    !borrow
+    !ok
+    !refcell
+    return
+
+L_FAIL:
+    fail = add 0, 0
+    !fail
+    !refcell
+    return
+
+@test "refcell shared borrows coexist and block mutable borrow"():
+L_ENTRY:
+    refcell = alloc RefCell_SIZE
+    store refcell+RefCell_value, 31 as u64
+    store refcell+RefCell_borrows, 0 as u64
+    EXPAND REFCELL_BORROW ok1, borrow1, refcell, L_FAIL
+
+L_OK1:
+    EXPAND REFCELL_BORROW ok2, borrow2, refcell, L_FAIL
+
+L_OK2:
+    count = load refcell+RefCell_borrows as i64
+    ok3 = eq count, 2
+    EXPAND REFCELL_GET value, borrow1
+    ok4 = eq value, 31
+    EXPAND REFCELL_BORROW_MUT mut_ok, mut_borrow, refcell, L_MUT_FAIL
+
+L_FAIL:
+    trap = add 0, 0
+    !trap
+    return
+
+L_MUT_OK:
+    trap = add 0, 0
+    !trap
+    return
+
+L_MUT_FAIL:
+    EXPAND REFCELL_RELEASE borrow2
+    after_one = load refcell+RefCell_borrows as i64
+    ok5 = eq after_one, 1
+    EXPAND REFCELL_RELEASE borrow1
+    after_two = load refcell+RefCell_borrows as i64
+    ok6 = eq after_two, 0
+    !after_one
+    !after_two
+    !count
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !value
+    !borrow1
+    !borrow2
+    !mut_borrow
+    !mut_ok
+    return
+
+@test "rc clone downgrade drop"():
+L_ENTRY:
+    rc = alloc RcBox_SIZE
+    store rc+RcBox_strong, 1 as u64
+    store rc+RcBox_weak, 1 as u64
+    store rc+RcBox_data, 99 as u64
+    EXPAND RC_CLONE rc
+    strong1 = load rc+RcBox_strong as u64
+    ok1 = eq strong1, 2
+    EXPAND RC_DOWNGRADE weak, rc
+    weak_count = load rc+RcBox_weak as u64
+    ok2 = eq weak_count, 2
+    EXPAND RC_DROP rc, L_AFTER_RC_DROP
+
+L_AFTER_RC_DROP:
+    EXPAND WEAK_DROP weak, L_FREE
+
+L_FREE:
+    !ok1
+    !ok2
+    !strong1
+    !weak_count
+    !rc
+    !weak
+    return
+
+@test "weak upgrade succeeds and fails"():
+L_ENTRY:
+    rc = alloc RcBox_SIZE
+    store rc+RcBox_strong, 1 as u64
+    store rc+RcBox_weak, 1 as u64
+    store rc+RcBox_data, 44 as u64
+    EXPAND RC_DOWNGRADE weak, rc
+    EXPAND WEAK_UPGRADE upgraded_rc, upgraded_ok, weak
+    ok1 = eq upgraded_ok, 1
+    data = load upgraded_rc+RcBox_data as u64
+    ok2 = eq data, 44
+    EXPAND RC_DROP rc, L_RC_DONE
+
+L_RC_DONE:
+    EXPAND WEAK_DROP weak, L_WEAK_FREE
+
+L_WEAK_FREE:
+    !ok1
+    !ok2
+    !data
+    !upgraded_rc
+    !upgraded_ok
+    !rc
+    !weak
+    return
+
+@test "result match_result dispatches ok and err"():
+L_ENTRY:
+    ok_res = alloc Result_SIZE
+    store ok_res+Result_tag, Result_OK as u64
+    store ok_res+Result_ok, 77 as u64
+    store ok_res+Result_err, 0 as u64
+    err_res = alloc Result_SIZE
+    store err_res+Result_tag, Result_ERR as u64
+    store err_res+Result_ok, 0 as u64
+    store err_res+Result_err, 91 as u64
+    EXPAND MATCH_RESULT ok_value, ok_res, L_OK_OK, L_OK_ERR
+
+L_OK_OK:
+    ok_flag = eq ok_value, 77
+    EXPAND MATCH_RESULT err_value, err_res, L_ERR_OK, L_ERR_ERR
+
+L_ERR_OK:
+    !ok_flag
+    !ok_value
+    !err_res
+    !ok_res
+    return
+
+L_OK_ERR:
+    trap_ok = add 0, 0
+    !trap_ok
+    !ok_res
+    !err_res
+    return
+
+L_ERR_ERR:
+    err_flag = eq err_value, 91
+    !ok_flag
+    !err_flag
+    !err_value
+    !ok_res
+    !err_res
+    return
+
+@test "option match_option dispatches some and none"():
+L_ENTRY:
+    some_opt = alloc Option_SIZE
+    store some_opt+Option_tag, Option_SOME as u64
+    store some_opt+Option_value, 55 as u64
+    none_opt = alloc Option_SIZE
+    store none_opt+Option_tag, Option_NONE as u64
+    store none_opt+Option_value, 0 as u64
+    EXPAND MATCH_OPTION some_value, some_opt, L_SOME_OK, L_SOME_NONE
+
+L_SOME_OK:
+    some_flag = eq some_value, 55
+    EXPAND MATCH_OPTION none_value, none_opt, L_NONE_OK, L_NONE_NONE
+
+L_NONE_OK:
+    !some_flag
+    !some_value
+    !none_opt
+    !some_opt
+    return
+
+L_SOME_NONE:
+    trap_some = add 0, 0
+    !trap_some
+    !some_opt
+    !none_opt
+    return
+
+L_NONE_NONE:
+    none_flag = eq none_value, 0
+    !some_flag
+    !none_flag
+    !none_value
+    !some_opt
+    !none_opt
+    return
+
+@test "drop_and_return releases before return"():
+L_ENTRY:
+    probe = alloc TestDyn_SIZE
+    store probe+TestDyn_DATA, 64 as i32
+    store probe+TestDyn_VTABLE, &TEST_TRAIT_OBJECT_VT as ptr
+    EXPAND DROP_AND_RETURN probe, 123
+
+@test "box new free roundtrip"():
+L_ENTRY:
+    EXPAND BOX_NEW boxed, 19
+    stored = load boxed+Box_value as u64
+    ok1 = eq stored, 19
+    EXPAND BOX_FREE boxed
+    !stored
+    !ok1
+    return
+
+@test "arc clone drop roundtrip"():
+L_ENTRY:
+    EXPAND ARC_NEW arc, 41
+    EXPAND ARC_CLONE arc
+    strong1 = atomic_load arc+ArcBox_strong as u64 acquire
+    ok1 = eq strong1, 2
+    EXPAND ARC_DROP arc, L_ARC_CLEANUP
+
+L_ARC_CLEANUP:
+    EXPAND ARC_WEAK_DROP arc, L_ARC_FREE
+
+L_ARC_FREE:
+    !ok1
+    !strong1
+    !arc
+    return
+
+@test "dispatch routes by tag"():
+L_ENTRY:
+    dispatch = alloc Dispatch_SIZE
+    store dispatch+Dispatch_tag, Dispatch_TAG_A as u64
+    store dispatch+Dispatch_payload, 3 as u64
+    EXPAND DISPATCH dispatch, L_DISPATCH_A, L_DISPATCH_B
+
+L_DISPATCH_A:
+    payload_a = load dispatch+Dispatch_payload as u64
+    routed_a = add payload_a, 10
+    ok_a = eq routed_a, 13
+    store dispatch+Dispatch_tag, Dispatch_TAG_B as u64
+    store dispatch+Dispatch_payload, 4 as u64
+    jmp L_DISPATCH_ROUTE_B
+
+L_DISPATCH_B:
+    trap_a = add 0, 0
+    !trap_a
+    !dispatch
+    return
+
+L_DISPATCH_ROUTE_B:
+    EXPAND DISPATCH dispatch, L_DISPATCH_A_B, L_DISPATCH_B_B
+
+L_DISPATCH_A_B:
+    trap_b = add 0, 0
+    !trap_b
+    !dispatch
+    return
+
+L_DISPATCH_B_B:
+    payload_b = load dispatch+Dispatch_payload as u64
+    routed_b = add payload_b, 20
+    ok_b = eq routed_b, 24
+    !routed_a
+    !routed_b
+    !ok_a
+    !ok_b
+    !payload_a
+    !payload_b
+    !dispatch
+    return
+
+@test "trait object dyn call"():
+L_ENTRY:
+    data = alloc TestDyn_SIZE
+    store data+TestDyn_DATA, 5 as i32
+    store data+TestDyn_VTABLE, &TEST_TRAIT_OBJECT_VT as ptr
+    EXPAND DYN_CALL dyn_result, data, +0
+    ok1 = eq dyn_result, 8
+    !ok1
+    !dyn_result
+    !data
+    return
+
+@test "waker wake path"():
+L_ENTRY:
+    waker = alloc TestWaker_SIZE
+    store waker+TestWaker_DATA, 7 as i32
+    store waker+TestWaker_VTABLE, &TEST_WAKER_VT as ptr
+    EXPAND WAKER_WAKE wake_result, waker
+    ok1 = eq wake_result, 8
+    EXPAND WAKER_WAKE_BY_REF wake_ref_result, waker
+    ok2 = eq wake_ref_result, 9
+    !ok1
+    !ok2
+    !wake_result
+    !wake_ref_result
+    !waker
+    return
+
+@test "netx contract layout and constants"():
+L_ENTRY:
+    ticket = alloc Ticket_SIZE
+    store ticket+Ticket_slot_id, 17 as u32
+    store ticket+Ticket_op_code, 3 as u16
+    store ticket+Ticket_proto, NetxProto_WS as u8
+    store ticket+Ticket_flags, 5 as u8
+    store ticket+Ticket_payload, 0 as ptr
+    store ticket+Ticket_payload_len, 64 as u32
+    store ticket+Ticket_pad, 0 as u32
+    slot_id = load ticket+Ticket_slot_id as u32
+    op_code = load ticket+Ticket_op_code as u16
+    proto = load ticket+Ticket_proto as u8
+    flags = load ticket+Ticket_flags as u8
+    payload_len = load ticket+Ticket_payload_len as u32
+    pad = load ticket+Ticket_pad as u32
+    ok1 = eq slot_id, 17
+    ok2 = eq op_code, 3
+    ok3 = eq proto, NetxProto_WS
+    ok4 = eq flags, 5
+    ok5 = eq payload_len, 64
+    ok6 = eq pad, 0
+    !ticket
+    !slot_id
+    !op_code
+    !proto
+    !flags
+    !payload_len
+    !pad
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    return

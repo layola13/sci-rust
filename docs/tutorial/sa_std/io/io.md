@@ -4,9 +4,9 @@ SA 提供了处理字节数据流输入与输出的功能，封装在 `sa_std/io
 
 ## 导入
 ```sa
-@import "sa_std/io.sa"
-@import "sa_std/io/buf_reader.sa"
-@import "sa_std/io/buf_writer.sa"
+@import "sa_std/io.sars"
+@import "sa_std/io/buf_reader.sars"
+@import "sa_std/io/buf_writer.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -16,7 +16,7 @@ SA 提供了处理字节数据流输入与输出的功能，封装在 `sa_std/io
 由于 SA-ASM 无自动字符串拆箱等高层级设施，基础控制台常常由直接给定文本块（通常是 `utf8` 定义或内存动态 `String`）大小进行的调用执行。
 
 ```sa
-@import "sa_std/io.sa"
+@import "sa_std/io.sars"
 
 @const GREETING = utf8:"Hello, World!\n"
 
@@ -36,7 +36,7 @@ L_ENTRY:
 游标就像是把你申请的内存当成了虚拟硬盘文件一般。你只要维护游标实例，底层代码就会安全管理目前你“读取或写入到了哪一个字节”。对于防止封包溢出的手动序列化具有关键作用。
 
 ```sa
-@import "sa_std/io.sa"
+@import "sa_std/io.sars"
 
 @main() -> i32:
 L_ENTRY:

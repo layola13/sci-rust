@@ -1,0 +1,69 @@
+@import "sa_std/sync/mutex.sars"
+
+@test "sa_std mutex try_lock_timeout"():
+L_ENTRY:
+    EXPAND MUTEX_NEW mutex
+    EXPAND MUTEX_LOCK mutex
+    EXPAND MUTEX_TRY_LOCK_TIMEOUT_NS t_ok, mutex, 20000
+    EXPAND MUTEX_UNLOCK mutex
+    EXPAND MUTEX_TRY_LOCK_TIMEOUT_NS t2, mutex, 20000
+    EXPAND MUTEX_UNLOCK mutex
+    a = eq t_ok, 0
+    b = eq t2, 1
+    ok = and a, b
+    !t_ok
+    !t2
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10894)
+
+@test "sa_std mutex try_lock_timeout_ms overflow fails"():
+L_ENTRY:
+    EXPAND MUTEX_NEW mutex
+    EXPAND MUTEX_LOCK mutex
+    EXPAND MUTEX_TRY_LOCK_TIMEOUT_MS overflow_ok, mutex, 18446744073709551615
+    EXPAND MUTEX_IS_LOCKED locked, mutex
+    EXPAND MUTEX_UNLOCK mutex
+    ok0 = eq overflow_ok, 0
+    ok1 = eq locked, 1
+    ok = and ok0, ok1
+    !overflow_ok
+    !locked
+    !ok0
+    !ok1
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10995)
+
+@test "sa_std mutex try_lock_timeout_ms follows lock state"():
+L_ENTRY:
+    EXPAND MUTEX_NEW mutex
+    EXPAND MUTEX_LOCK mutex
+    EXPAND MUTEX_TRY_LOCK_TIMEOUT_MS blocked_ok, mutex, 1
+    EXPAND MUTEX_UNLOCK mutex
+    EXPAND MUTEX_TRY_LOCK_TIMEOUT_MS free_ok, mutex, 1
+    EXPAND MUTEX_UNLOCK mutex
+    ok0 = eq blocked_ok, 0
+    ok1 = eq free_ok, 1
+    ok = and ok0, ok1
+    !blocked_ok
+    !free_ok
+    !ok0
+    !ok1
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10996)

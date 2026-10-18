@@ -1,3 +1,0 @@
-// Public NonZero integer facade over num.sa.
-@import "num.sal"
-@import "num.sa"

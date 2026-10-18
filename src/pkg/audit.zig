@@ -84,7 +84,7 @@ fn pathHasPrecompiledArtifact(name: []const u8) bool {
 
 fn isSourceFile(path: []const u8) bool {
     const ext = std.fs.path.extension(path);
-    return std.mem.eql(u8, ext, ".sa") or
+    return std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sai") or
         std.mem.eql(u8, ext, ".sal");
@@ -544,7 +544,7 @@ test "audit scores pure packages as safe" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pure");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pure/index.sa", .data = "@main() -> i32:\n    return 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pure/index.sars", .data = "@main() -> i32:\n    return 0\n" });
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, "pure", std.testing.allocator);
     defer std.testing.allocator.free(root);
 
@@ -559,7 +559,7 @@ test "audit maps granted io primitives" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "io");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "io/index.sa", .data = "read_buf = call @sys_read_file(*PATH, 4, *len)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "io/index.sars", .data = "read_buf = call @sys_read_file(*PATH, 4, *len)\n" });
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, "io", std.testing.allocator);
     defer std.testing.allocator.free(root);
 
@@ -577,7 +577,7 @@ test "audit scores memory primitives as low privilege" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "mem");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "mem/index.sa", .data = "buf = call @sys_mem_slice(*PTR, 4)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "mem/index.sars", .data = "buf = call @sys_mem_slice(*PTR, 4)\n" });
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, "mem", std.testing.allocator);
     defer std.testing.allocator.free(root);
 
@@ -595,8 +595,8 @@ test "audit excludes nested vendor caches from package source identity" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pkg/sa_vendor/child");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "@main() -> i32:\nreturn 0\n" });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/sa_vendor/child/index.sa", .data = "call @sys_net_tx(*BUF, 4)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "@main() -> i32:\nreturn 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/sa_vendor/child/index.sars", .data = "call @sys_net_tx(*BUF, 4)\n" });
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, "pkg", std.testing.allocator);
     defer std.testing.allocator.free(root);
 
@@ -605,7 +605,7 @@ test "audit excludes nested vendor caches from package source identity" {
     try std.testing.expectEqual(@as(u8, 100), before.trust_score);
     try std.testing.expectEqual(@as(usize, 0), before.primitives.len);
 
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/sa_vendor/child/index.sa", .data = "call @sys_net_rx(*BUF, 4)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/sa_vendor/child/index.sars", .data = "call @sys_net_rx(*BUF, 4)\n" });
     var after = try auditPackage(std.testing.allocator, "github.com/example/pkg", "HEAD", root, &.{});
     defer after.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(u8, 100), after.trust_score);
@@ -617,7 +617,7 @@ test "audit flags ungranted network primitives and ignores strings/comments" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "net/src");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "net/src/main.sa", .data = 
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "net/src/main.sars", .data = 
         \\@const S = utf8:"@sys_net_rx is text"
         \\// call @sys_net_rx()
         \\call @sys_net_tx(*BUF, 4)
@@ -675,7 +675,7 @@ test "P33 audit score property covers synthesized pure io and net packages" {
     for (0..100) |idx| {
         const pure_dir = try std.fmt.allocPrint(std.testing.allocator, "p33/{d}/pure", .{idx});
         defer std.testing.allocator.free(pure_dir);
-        const pure_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sa", .{pure_dir});
+        const pure_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sars", .{pure_dir});
         defer std.testing.allocator.free(pure_file);
         try tmp.dir.createDirPath(std.testing.io, pure_dir);
         try tmp.dir.writeFile(std.testing.io, .{ .sub_path = pure_file, .data = "@main() -> i32:\nreturn 0\n" });
@@ -691,7 +691,7 @@ test "P33 audit score property covers synthesized pure io and net packages" {
         const io = io_variants[idx % io_variants.len];
         const io_dir = try std.fmt.allocPrint(std.testing.allocator, "p33/{d}/io", .{idx});
         defer std.testing.allocator.free(io_dir);
-        const io_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sa", .{io_dir});
+        const io_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sars", .{io_dir});
         defer std.testing.allocator.free(io_file);
         try tmp.dir.createDirPath(std.testing.io, io_dir);
         try tmp.dir.writeFile(std.testing.io, .{ .sub_path = io_file, .data = io.source });
@@ -712,7 +712,7 @@ test "P33 audit score property covers synthesized pure io and net packages" {
         const net = net_variants[idx % net_variants.len];
         const net_dir = try std.fmt.allocPrint(std.testing.allocator, "p33/{d}/net", .{idx});
         defer std.testing.allocator.free(net_dir);
-        const net_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sa", .{net_dir});
+        const net_file = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sars", .{net_dir});
         defer std.testing.allocator.free(net_file);
         try tmp.dir.createDirPath(std.testing.io, net_dir);
         try tmp.dir.writeFile(std.testing.io, .{ .sub_path = net_file, .data = net.source });

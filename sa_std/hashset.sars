@@ -1,0 +1,1004 @@
+@import "hashset.sal"
+@import "hashmap.sars"
+@import "core/slice.sal"
+@import "alloc/vec.sal"
+@import "vec.sars"
+@import "num.sars"
+
+@const HASHSET_SENTINEL = utf8:"hashset"
+
+@set_insert_all(&dst: ptr, &src: ptr) -> void:
+L_ENTRY:
+    slots = load src+HashSet_slots as ptr
+    cap = load src+HashSet_cap as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_INSERT_ALL_HEAD
+
+L_INSERT_ALL_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, cap
+    br done -> L_INSERT_ALL_DONE, L_INSERT_ALL_BODY
+
+L_INSERT_ALL_BODY:
+    slot_off = mul idx, HashSetSlot_SIZE
+    slot = ptr_add slots, slot_off
+    state = load slot+HashSetSlot_state as u8
+    filled = eq state, HashSet_STATE_FILLED
+    br filled -> L_INSERT_ALL_KEY, L_INSERT_ALL_NEXT
+
+L_INSERT_ALL_KEY:
+    key = load slot+HashSetSlot_key as ptr
+    inserted = call @sa_set_insert(&dst, &key)
+    !inserted
+    !key
+    jmp L_INSERT_ALL_NEXT
+
+L_INSERT_ALL_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    jmp L_INSERT_ALL_HEAD
+
+L_INSERT_ALL_DONE:
+    !done
+    !idx
+    !cap
+    !slots
+    !src
+    !dst
+    return
+
+@set_insert_intersection(&dst: ptr, &src: ptr, &other: ptr) -> void:
+L_ENTRY:
+    slots = load src+HashSet_slots as ptr
+    cap = load src+HashSet_cap as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_INSERT_INTERSECTION_HEAD
+
+L_INSERT_INTERSECTION_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, cap
+    br done -> L_INSERT_INTERSECTION_DONE, L_INSERT_INTERSECTION_BODY
+
+L_INSERT_INTERSECTION_BODY:
+    slot_off = mul idx, HashSetSlot_SIZE
+    slot = ptr_add slots, slot_off
+    state = load slot+HashSetSlot_state as u8
+    filled = eq state, HashSet_STATE_FILLED
+    br filled -> L_INSERT_INTERSECTION_KEY, L_INSERT_INTERSECTION_NEXT
+
+L_INSERT_INTERSECTION_KEY:
+    key = load slot+HashSetSlot_key as ptr
+    contains = call @sa_set_contains(&other, &key)
+    keep = ne contains, 0
+    br keep -> L_INSERT_INTERSECTION_KEEP, L_INSERT_INTERSECTION_SKIP
+
+L_INSERT_INTERSECTION_KEEP:
+    inserted = call @sa_set_insert(&dst, &key)
+    !inserted
+    !keep
+    !contains
+    !key
+    jmp L_INSERT_INTERSECTION_NEXT
+
+L_INSERT_INTERSECTION_SKIP:
+    !keep
+    !contains
+    !key
+    jmp L_INSERT_INTERSECTION_NEXT
+
+L_INSERT_INTERSECTION_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    jmp L_INSERT_INTERSECTION_HEAD
+
+L_INSERT_INTERSECTION_DONE:
+    !done
+    !idx
+    !cap
+    !slots
+    !other
+    !src
+    !dst
+    return
+
+@set_insert_difference(&dst: ptr, &src: ptr, &other: ptr) -> void:
+L_ENTRY:
+    slots = load src+HashSet_slots as ptr
+    cap = load src+HashSet_cap as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_INSERT_DIFFERENCE_HEAD
+
+L_INSERT_DIFFERENCE_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, cap
+    br done -> L_INSERT_DIFFERENCE_DONE, L_INSERT_DIFFERENCE_BODY
+
+L_INSERT_DIFFERENCE_BODY:
+    slot_off = mul idx, HashSetSlot_SIZE
+    slot = ptr_add slots, slot_off
+    state = load slot+HashSetSlot_state as u8
+    filled = eq state, HashSet_STATE_FILLED
+    br filled -> L_INSERT_DIFFERENCE_KEY, L_INSERT_DIFFERENCE_NEXT
+
+L_INSERT_DIFFERENCE_KEY:
+    key = load slot+HashSetSlot_key as ptr
+    contains = call @sa_set_contains(&other, &key)
+    keep = eq contains, 0
+    br keep -> L_INSERT_DIFFERENCE_KEEP, L_INSERT_DIFFERENCE_SKIP
+
+L_INSERT_DIFFERENCE_KEEP:
+    inserted = call @sa_set_insert(&dst, &key)
+    !inserted
+    !keep
+    !contains
+    !key
+    jmp L_INSERT_DIFFERENCE_NEXT
+
+L_INSERT_DIFFERENCE_SKIP:
+    !keep
+    !contains
+    !key
+    jmp L_INSERT_DIFFERENCE_NEXT
+
+L_INSERT_DIFFERENCE_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    jmp L_INSERT_DIFFERENCE_HEAD
+
+L_INSERT_DIFFERENCE_DONE:
+    !done
+    !idx
+    !cap
+    !slots
+    !other
+    !src
+    !dst
+    return
+
+@export sa_set_new() -> ^ptr:
+L_ENTRY:
+    set = call @sa_map_new()
+    return set
+
+@export sa_set_with_capacity(cap: u64) -> ^ptr:
+L_ENTRY:
+    set = call @sa_map_with_capacity(cap)
+    !cap
+    return set
+
+@export sa_set_try_with_capacity(cap: u64, &out_set_slot: ptr) -> i32:
+L_ENTRY:
+    set = call @sa_set_with_capacity(cap)
+    store out_set_slot+0, set as ptr
+    !set
+    !out_set_slot
+    !cap
+    return 1
+
+@export sa_set_len(&set: ptr) -> u64:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    !set
+    return len
+
+@export sa_set_capacity(&set: ptr) -> u64:
+L_ENTRY:
+    cap = load set+HashSet_cap as u64
+    !set
+    return cap
+
+@export sa_set_reserve(&set: ptr, additional: u64) -> void:
+L_ENTRY:
+    call @sa_map_reserve(&set, additional)
+    !additional
+    !set
+    return
+
+@export sa_set_try_reserve(&set: ptr, additional: u64) -> i32:
+L_ENTRY:
+    ok = call @sa_map_try_reserve(&set, additional)
+    !additional
+    !set
+    return ok
+
+@export sa_set_shrink_to(&set: ptr, min_capacity: u64) -> void:
+L_ENTRY:
+    call @sa_map_shrink_to(&set, min_capacity)
+    !min_capacity
+    !set
+    return
+
+@export sa_set_shrink_to_fit(&set: ptr) -> void:
+L_ENTRY:
+    call @sa_map_shrink_to_fit(&set)
+    !set
+    return
+
+@export sa_set_is_empty(&set: ptr) -> i32:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    empty = eq len, 0
+    result = empty as i32
+    !len
+    !set
+    return result
+
+@export sa_set_clear(&set: ptr) -> void:
+L_ENTRY:
+    call @sa_map_clear(&set)
+    !set
+    return
+
+@export sa_set_free(^set: ptr) -> void:
+L_ENTRY:
+    call @sa_map_free(^set)
+    return
+
+@export sa_set_insert(&set: ptr, &key: ptr) -> i32:
+L_ENTRY:
+    len_before = load set+HashSet_len as u64
+    sentinel = &HASHSET_SENTINEL
+    call @sa_map_put(&set, &key, &sentinel)
+    len_after = load set+HashSet_len as u64
+    is_new = ne len_after, len_before
+    result = is_new as i32
+    !sentinel
+    !len_after
+    !len_before
+    !key
+    !set
+    return result
+
+@export sa_set_contains(&set: ptr, &key: ptr) -> i32:
+L_ENTRY:
+    existing = call @sa_map_get(&set, &key)
+    found = ne existing, 0
+    result = found as i32
+    !existing
+    !key
+    !set
+    return result
+
+@export sa_set_get(&set: ptr, &key: ptr, &out_key_slot: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_map_try_get_key_value(&set, &key, &out_key_slot, &value_slot)
+    !out_key_slot
+    !key
+    !set
+    return found
+
+
+@export sa_set_take(&set: ptr, &key: ptr, &out_key_slot: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_map_remove_entry(&set, &key, &out_key_slot, &value_slot)
+    !out_key_slot
+    !key
+    !set
+    return found
+
+@export sa_set_replace(&set: ptr, &key: ptr, &out_old_key_slot: ptr) -> i32:
+L_ENTRY:
+    removed = call @sa_set_take(&set, &key, &out_old_key_slot)
+    sentinel = &HASHSET_SENTINEL
+    call @sa_map_put(&set, &key, &sentinel)
+    !sentinel
+    !out_old_key_slot
+    !key
+    !set
+    return removed
+
+@export sa_set_is_subset(&set: ptr, &other: ptr) -> i32:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    other_len = load other+HashSet_len as u64
+    too_large = ugt len, other_len
+    br too_large -> L_SUBSET_FALSE_FAST, L_SUBSET_SCAN_INIT
+
+L_SUBSET_SCAN_INIT:
+    slots = load set+HashSet_slots as ptr
+    cap = load set+HashSet_cap as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_SUBSET_SCAN_HEAD
+
+L_SUBSET_SCAN_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, cap
+    br done -> L_SUBSET_TRUE, L_SUBSET_SCAN_BODY
+
+L_SUBSET_SCAN_BODY:
+    slot_off = mul idx, HashSetSlot_SIZE
+    slot = ptr_add slots, slot_off
+    state = load slot+HashSetSlot_state as u8
+    filled = eq state, HashSet_STATE_FILLED
+    br filled -> L_SUBSET_CHECK_KEY, L_SUBSET_NEXT
+
+L_SUBSET_CHECK_KEY:
+    key = load slot+HashSetSlot_key as ptr
+    contains = call @sa_set_contains(&other, &key)
+    has_key = ne contains, 0
+    br has_key -> L_SUBSET_KEY_OK, L_SUBSET_FALSE
+
+L_SUBSET_KEY_OK:
+    !has_key
+    !contains
+    !key
+    jmp L_SUBSET_NEXT
+
+L_SUBSET_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    jmp L_SUBSET_SCAN_HEAD
+
+L_SUBSET_TRUE:
+    !done
+    !idx
+    !cap
+    !slots
+    !too_large
+    !other_len
+    !len
+    !other
+    !set
+    return 1
+
+L_SUBSET_FALSE:
+    !has_key
+    !contains
+    !key
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    !cap
+    !slots
+    !too_large
+    !other_len
+    !len
+    !other
+    !set
+    return 0
+
+L_SUBSET_FALSE_FAST:
+    !too_large
+    !other_len
+    !len
+    !other
+    !set
+    return 0
+
+@export sa_set_is_superset(&set: ptr, &other: ptr) -> i32:
+L_ENTRY:
+    result = call @sa_set_is_subset(&other, &set)
+    !other
+    !set
+    return result
+
+@export sa_set_is_disjoint(&set: ptr, &other: ptr) -> i32:
+L_ENTRY:
+    slots = load set+HashSet_slots as ptr
+    cap = load set+HashSet_cap as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_DISJOINT_SCAN_HEAD
+
+L_DISJOINT_SCAN_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, cap
+    br done -> L_DISJOINT_TRUE, L_DISJOINT_SCAN_BODY
+
+L_DISJOINT_SCAN_BODY:
+    slot_off = mul idx, HashSetSlot_SIZE
+    slot = ptr_add slots, slot_off
+    state = load slot+HashSetSlot_state as u8
+    filled = eq state, HashSet_STATE_FILLED
+    br filled -> L_DISJOINT_CHECK_KEY, L_DISJOINT_NEXT
+
+L_DISJOINT_CHECK_KEY:
+    key = load slot+HashSetSlot_key as ptr
+    contains = call @sa_set_contains(&other, &key)
+    overlaps = ne contains, 0
+    br overlaps -> L_DISJOINT_FALSE, L_DISJOINT_KEY_OK
+
+L_DISJOINT_KEY_OK:
+    !overlaps
+    !contains
+    !key
+    jmp L_DISJOINT_NEXT
+
+L_DISJOINT_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    jmp L_DISJOINT_SCAN_HEAD
+
+L_DISJOINT_TRUE:
+    !done
+    !idx
+    !cap
+    !slots
+    !other
+    !set
+    return 1
+
+L_DISJOINT_FALSE:
+    !overlaps
+    !contains
+    !key
+    !filled
+    !state
+    !slot
+    !slot_off
+    !done
+    !idx
+    !cap
+    !slots
+    !other
+    !set
+    return 0
+
+@export sa_set_remove(&set: ptr, &key: ptr) -> i32:
+L_ENTRY:
+    len_before = load set+HashSet_len as u64
+    removed = call @sa_map_del(&set, &key)
+    len_after = load set+HashSet_len as u64
+    is_found = ne len_after, len_before
+    result = is_found as i32
+    !removed
+    !len_after
+    !len_before
+    !key
+    !set
+    return result
+
+@export sa_set_union(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    other_len = load other+HashSet_len as u64
+    cap_hint = add len, other_len
+    out_set = call @sa_set_with_capacity(cap_hint)
+    call @set_insert_all(&out_set, &set)
+    call @set_insert_all(&out_set, &other)
+    !cap_hint
+    !other_len
+    !len
+    !other
+    !set
+    return out_set
+
+@export sa_set_intersection(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    other_len = load other+HashSet_len as u64
+    left_smaller = ule len, other_len
+    br left_smaller -> L_INTERSECTION_LEFT, L_INTERSECTION_RIGHT
+
+L_INTERSECTION_LEFT:
+    out_set = call @sa_set_with_capacity(len)
+    call @set_insert_intersection(&out_set, &set, &other)
+    !left_smaller
+    !other_len
+    !len
+    !other
+    !set
+    return out_set
+
+L_INTERSECTION_RIGHT:
+    out_set = call @sa_set_with_capacity(other_len)
+    call @set_insert_intersection(&out_set, &other, &set)
+    !left_smaller
+    !other_len
+    !len
+    !other
+    !set
+    return out_set
+
+@export sa_set_difference(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    out_set = call @sa_set_with_capacity(len)
+    call @set_insert_difference(&out_set, &set, &other)
+    !len
+    !other
+    !set
+    return out_set
+
+@export sa_set_symmetric_difference(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    len = load set+HashSet_len as u64
+    other_len = load other+HashSet_len as u64
+    cap_hint = add len, other_len
+    out_set = call @sa_set_with_capacity(cap_hint)
+    call @set_insert_difference(&out_set, &set, &other)
+    call @set_insert_difference(&out_set, &other, &set)
+    !cap_hint
+    !other_len
+    !len
+    !other
+    !set
+    return out_set
+
+[MACRO] SET_NEW %out_set
+    %out_set = call @sa_set_new()
+[END_MACRO]
+
+[MACRO] SET_WITH_CAPACITY %out_set, %cap
+    %out_set = call @sa_set_with_capacity(%cap)
+[END_MACRO]
+
+[MACRO] SET_TRY_WITH_CAPACITY %out_ok, %out_set, %cap
+    __set_try_new_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_set_try_with_capacity(%cap, &__set_try_new_slot_%out_ok)
+    %out_set = load __set_try_new_slot_%out_ok+0 as ptr
+[END_MACRO]
+
+[MACRO] SET_LEN %out_len, %set_reg
+    %out_len = call @sa_set_len(&%set_reg)
+[END_MACRO]
+
+[MACRO] SET_CAPACITY %out_cap, %set_reg
+    %out_cap = call @sa_set_capacity(&%set_reg)
+[END_MACRO]
+
+[MACRO] SET_RESERVE %set_reg, %additional
+    call @sa_set_reserve(&%set_reg, %additional)
+[END_MACRO]
+
+[MACRO] SET_TRY_RESERVE %out_ok, %set_reg, %additional
+    %out_ok = call @sa_set_try_reserve(&%set_reg, %additional)
+[END_MACRO]
+
+[MACRO] SET_SHRINK_TO %set_reg, %min_capacity
+    call @sa_set_shrink_to(&%set_reg, %min_capacity)
+[END_MACRO]
+
+[MACRO] SET_SHRINK_TO_FIT %set_reg
+    call @sa_set_shrink_to_fit(&%set_reg)
+[END_MACRO]
+
+[MACRO] SET_IS_EMPTY %out_flag, %set_reg
+    %out_flag = call @sa_set_is_empty(&%set_reg)
+[END_MACRO]
+
+[MACRO] SET_CLEAR %set_reg
+    call @sa_set_clear(&%set_reg)
+[END_MACRO]
+
+[MACRO] SET_RETAIN %out_len, %set_reg, %pred_fn
+    __set_retain_slots_%out_len = load %set_reg+HashSet_slots as ptr
+    __set_retain_cap_%out_len = load %set_reg+HashSet_cap as u64
+    __set_retain_len_%out_len = load %set_reg+HashSet_len as u64
+    __set_retain_tombs_start_%out_len = load %set_reg+HashSet_tombs as u64
+    __set_retain_len_slot_%out_len = stack_alloc 8
+    __set_retain_tombs_slot_%out_len = stack_alloc 8
+    store __set_retain_len_slot_%out_len+0, __set_retain_len_%out_len as u64
+    store __set_retain_tombs_slot_%out_len+0, __set_retain_tombs_start_%out_len as u64
+    __set_retain_idx_slot_%out_len = stack_alloc 8
+    store __set_retain_idx_slot_%out_len+0, 0 as u64
+    jmp L_SET_RETAIN_HEAD_%out_len
+
+L_SET_RETAIN_HEAD_%out_len:
+    __set_retain_idx_%out_len = load __set_retain_idx_slot_%out_len+0 as u64
+    __set_retain_done_%out_len = eq __set_retain_idx_%out_len, __set_retain_cap_%out_len
+    br __set_retain_done_%out_len -> L_SET_RETAIN_DONE_%out_len, L_SET_RETAIN_BODY_%out_len
+
+L_SET_RETAIN_BODY_%out_len:
+    __set_retain_slot_off_%out_len = mul __set_retain_idx_%out_len, HashSetSlot_SIZE
+    __set_retain_slot_%out_len = ptr_add __set_retain_slots_%out_len, __set_retain_slot_off_%out_len
+    __set_retain_state_%out_len = load __set_retain_slot_%out_len+HashSetSlot_state as u8
+    __set_retain_filled_%out_len = eq __set_retain_state_%out_len, HashSet_STATE_FILLED
+    br __set_retain_filled_%out_len -> L_SET_RETAIN_CHECK_%out_len, L_SET_RETAIN_NEXT_%out_len
+
+L_SET_RETAIN_CHECK_%out_len:
+    __set_retain_key_%out_len = load __set_retain_slot_%out_len+HashSetSlot_key as ptr
+    __set_retain_pred_%out_len = call %pred_fn(__set_retain_key_%out_len)
+    __set_retain_keep_%out_len = ne __set_retain_pred_%out_len, 0
+    br __set_retain_keep_%out_len -> L_SET_RETAIN_KEEP_%out_len, L_SET_RETAIN_DROP_%out_len
+
+L_SET_RETAIN_KEEP_%out_len:
+    !__set_retain_keep_%out_len
+    !__set_retain_pred_%out_len
+    !__set_retain_key_%out_len
+    jmp L_SET_RETAIN_NEXT_%out_len
+
+L_SET_RETAIN_DROP_%out_len:
+    __set_retain_cur_len_%out_len = load __set_retain_len_slot_%out_len+0 as u64
+    __set_retain_cur_tombs_%out_len = load __set_retain_tombs_slot_%out_len+0 as u64
+    __set_retain_next_len_%out_len = sub __set_retain_cur_len_%out_len, 1
+    __set_retain_next_tombs_%out_len = add __set_retain_cur_tombs_%out_len, 1
+    store __set_retain_len_slot_%out_len+0, __set_retain_next_len_%out_len as u64
+    store __set_retain_tombs_slot_%out_len+0, __set_retain_next_tombs_%out_len as u64
+    store __set_retain_slot_%out_len+HashSetSlot_hash, 0 as u64
+    store __set_retain_slot_%out_len+HashSetSlot_key, 0 as ptr
+    store __set_retain_slot_%out_len+HashSetSlot_value, 0 as ptr
+    store __set_retain_slot_%out_len+HashSetSlot_state, HashSet_STATE_TOMB as u8
+    !__set_retain_next_tombs_%out_len
+    !__set_retain_next_len_%out_len
+    !__set_retain_cur_tombs_%out_len
+    !__set_retain_cur_len_%out_len
+    !__set_retain_keep_%out_len
+    !__set_retain_pred_%out_len
+    !__set_retain_key_%out_len
+    jmp L_SET_RETAIN_NEXT_%out_len
+
+L_SET_RETAIN_NEXT_%out_len:
+    __set_retain_next_idx_%out_len = add __set_retain_idx_%out_len, 1
+    store __set_retain_idx_slot_%out_len+0, __set_retain_next_idx_%out_len as u64
+    !__set_retain_next_idx_%out_len
+    !__set_retain_filled_%out_len
+    !__set_retain_state_%out_len
+    !__set_retain_slot_%out_len
+    !__set_retain_slot_off_%out_len
+    !__set_retain_done_%out_len
+    !__set_retain_idx_%out_len
+    jmp L_SET_RETAIN_HEAD_%out_len
+
+L_SET_RETAIN_DONE_%out_len:
+    %out_len = load __set_retain_len_slot_%out_len+0 as u64
+    __set_retain_tombs_%out_len = load __set_retain_tombs_slot_%out_len+0 as u64
+    store %set_reg+HashSet_len, %out_len as u64
+    store %set_reg+HashSet_tombs, __set_retain_tombs_%out_len as u64
+    !__set_retain_done_%out_len
+    !__set_retain_idx_%out_len
+    !__set_retain_tombs_%out_len
+    !__set_retain_tombs_start_%out_len
+    !__set_retain_len_%out_len
+    !__set_retain_cap_%out_len
+    !__set_retain_slots_%out_len
+[END_MACRO]
+
+[MACRO] SET_DRAIN %out_vec, %set_reg
+    __set_drain_len_%out_vec = load %set_reg+HashSet_len as u64
+    EXPAND VEC_WITH_CAPACITY_U64 %out_vec, __set_drain_len_%out_vec
+    __set_drain_slots_%out_vec = load %set_reg+HashSet_slots as ptr
+    __set_drain_cap_%out_vec = load %set_reg+HashSet_cap as u64
+    __set_drain_idx_slot_%out_vec = stack_alloc 8
+    store __set_drain_idx_slot_%out_vec+0, 0 as u64
+    jmp L_SET_DRAIN_HEAD_%out_vec
+
+L_SET_DRAIN_HEAD_%out_vec:
+    __set_drain_idx_%out_vec = load __set_drain_idx_slot_%out_vec+0 as u64
+    __set_drain_done_%out_vec = eq __set_drain_idx_%out_vec, __set_drain_cap_%out_vec
+    br __set_drain_done_%out_vec -> L_SET_DRAIN_DONE_%out_vec, L_SET_DRAIN_BODY_%out_vec
+
+L_SET_DRAIN_BODY_%out_vec:
+    __set_drain_slot_off_%out_vec = mul __set_drain_idx_%out_vec, HashSetSlot_SIZE
+    __set_drain_slot_%out_vec = ptr_add __set_drain_slots_%out_vec, __set_drain_slot_off_%out_vec
+    __set_drain_state_%out_vec = load __set_drain_slot_%out_vec+HashSetSlot_state as u8
+    __set_drain_filled_%out_vec = eq __set_drain_state_%out_vec, HashSet_STATE_FILLED
+    br __set_drain_filled_%out_vec -> L_SET_DRAIN_PUSH_%out_vec, L_SET_DRAIN_NEXT_%out_vec
+
+L_SET_DRAIN_PUSH_%out_vec:
+    __set_drain_key_%out_vec = load __set_drain_slot_%out_vec+HashSetSlot_key as ptr
+    __set_drain_key_bits_%out_vec = bitcast __set_drain_key_%out_vec as u64
+    EXPAND VEC_PUSH_U64 %out_vec, __set_drain_key_bits_%out_vec
+    store __set_drain_slot_%out_vec+HashSetSlot_hash, 0 as u64
+    store __set_drain_slot_%out_vec+HashSetSlot_key, 0 as ptr
+    store __set_drain_slot_%out_vec+HashSetSlot_value, 0 as ptr
+    store __set_drain_slot_%out_vec+HashSetSlot_state, HashSet_STATE_EMPTY as u8
+    !__set_drain_key_bits_%out_vec
+    !__set_drain_key_%out_vec
+    jmp L_SET_DRAIN_NEXT_%out_vec
+
+L_SET_DRAIN_NEXT_%out_vec:
+    __set_drain_next_idx_%out_vec = add __set_drain_idx_%out_vec, 1
+    store __set_drain_idx_slot_%out_vec+0, __set_drain_next_idx_%out_vec as u64
+    !__set_drain_next_idx_%out_vec
+    !__set_drain_filled_%out_vec
+    !__set_drain_state_%out_vec
+    !__set_drain_slot_%out_vec
+    !__set_drain_slot_off_%out_vec
+    !__set_drain_done_%out_vec
+    !__set_drain_idx_%out_vec
+    jmp L_SET_DRAIN_HEAD_%out_vec
+
+L_SET_DRAIN_DONE_%out_vec:
+    EXPAND NUM_U64_CHECKED_MUL __set_drain_bytes_ok_%out_vec, __set_drain_bytes_%out_vec, __set_drain_cap_%out_vec, HashSetSlot_SIZE
+    br __set_drain_bytes_ok_%out_vec -> L_SET_DRAIN_BYTES_OK_%out_vec, L_SET_DRAIN_BYTES_OVERFLOW_%out_vec
+L_SET_DRAIN_BYTES_OVERFLOW_%out_vec:
+    panic(2101)
+L_SET_DRAIN_BYTES_OK_%out_vec:
+    __set_drain_has_slots_%out_vec = ne __set_drain_slots_%out_vec, 0
+    br __set_drain_has_slots_%out_vec -> L_SET_DRAIN_CLEAR_SLOTS_%out_vec, L_SET_DRAIN_FINISH_%out_vec
+
+L_SET_DRAIN_CLEAR_SLOTS_%out_vec:
+    call @sa_mem_set(&__set_drain_slots_%out_vec, 0, __set_drain_bytes_%out_vec)
+    jmp L_SET_DRAIN_FINISH_%out_vec
+
+L_SET_DRAIN_FINISH_%out_vec:
+    store %set_reg+HashSet_len, 0 as u64
+    store %set_reg+HashSet_tombs, 0 as u64
+    !__set_drain_has_slots_%out_vec
+    !__set_drain_bytes_ok_%out_vec
+    !__set_drain_bytes_%out_vec
+    !__set_drain_done_%out_vec
+    !__set_drain_idx_%out_vec
+    !__set_drain_cap_%out_vec
+    !__set_drain_slots_%out_vec
+    !__set_drain_len_%out_vec
+[END_MACRO]
+
+[MACRO] SET_KEYS %out_vec, %set_reg
+    EXPAND MAP_KEYS %out_vec, %set_reg
+[END_MACRO]
+
+[MACRO] SET_ITER %out_vec, %set_reg
+    EXPAND SET_KEYS %out_vec, %set_reg
+[END_MACRO]
+
+[MACRO] SET_REF_INTO_ITER %out_vec, %set_reg
+    EXPAND SET_ITER %out_vec, %set_reg
+[END_MACRO]
+
+[MACRO] SET_INTO_KEYS %out_vec, %set_reg
+    EXPAND SET_DRAIN %out_vec, %set_reg
+[END_MACRO]
+
+[MACRO] SET_INTO_ITER %out_vec, %set_reg
+    EXPAND SET_DRAIN %out_vec, %set_reg
+[END_MACRO]
+
+[MACRO] SET_EXTRACT_IF %out_len, %out_vec, %set_reg, %pred_fn
+    __set_extract_slots_%out_len = load %set_reg+HashSet_slots as ptr
+    __set_extract_cap_%out_len = load %set_reg+HashSet_cap as u64
+    __set_extract_len_%out_len = load %set_reg+HashSet_len as u64
+    __set_extract_tombs_start_%out_len = load %set_reg+HashSet_tombs as u64
+    EXPAND VEC_WITH_CAPACITY_U64 %out_vec, __set_extract_len_%out_len
+    __set_extract_len_slot_%out_len = stack_alloc 8
+    __set_extract_tombs_slot_%out_len = stack_alloc 8
+    store __set_extract_len_slot_%out_len+0, __set_extract_len_%out_len as u64
+    store __set_extract_tombs_slot_%out_len+0, __set_extract_tombs_start_%out_len as u64
+    __set_extract_idx_slot_%out_len = stack_alloc 8
+    store __set_extract_idx_slot_%out_len+0, 0 as u64
+    jmp L_SET_EXTRACT_HEAD_%out_len
+
+L_SET_EXTRACT_HEAD_%out_len:
+    __set_extract_idx_%out_len = load __set_extract_idx_slot_%out_len+0 as u64
+    __set_extract_done_%out_len = eq __set_extract_idx_%out_len, __set_extract_cap_%out_len
+    br __set_extract_done_%out_len -> L_SET_EXTRACT_DONE_%out_len, L_SET_EXTRACT_BODY_%out_len
+
+L_SET_EXTRACT_BODY_%out_len:
+    __set_extract_slot_off_%out_len = mul __set_extract_idx_%out_len, HashSetSlot_SIZE
+    __set_extract_slot_%out_len = ptr_add __set_extract_slots_%out_len, __set_extract_slot_off_%out_len
+    __set_extract_state_%out_len = load __set_extract_slot_%out_len+HashSetSlot_state as u8
+    __set_extract_filled_%out_len = eq __set_extract_state_%out_len, HashSet_STATE_FILLED
+    br __set_extract_filled_%out_len -> L_SET_EXTRACT_CHECK_%out_len, L_SET_EXTRACT_NEXT_%out_len
+
+L_SET_EXTRACT_CHECK_%out_len:
+    __set_extract_key_%out_len = load __set_extract_slot_%out_len+HashSetSlot_key as ptr
+    __set_extract_pred_%out_len = call %pred_fn(__set_extract_key_%out_len)
+    __set_extract_take_%out_len = ne __set_extract_pred_%out_len, 0
+    br __set_extract_take_%out_len -> L_SET_EXTRACT_TAKE_%out_len, L_SET_EXTRACT_KEEP_%out_len
+
+L_SET_EXTRACT_KEEP_%out_len:
+    !__set_extract_take_%out_len
+    !__set_extract_pred_%out_len
+    !__set_extract_key_%out_len
+    jmp L_SET_EXTRACT_NEXT_%out_len
+
+L_SET_EXTRACT_TAKE_%out_len:
+    __set_extract_key_bits_%out_len = bitcast __set_extract_key_%out_len as u64
+    EXPAND VEC_PUSH_U64 %out_vec, __set_extract_key_bits_%out_len
+    __set_extract_cur_len_%out_len = load __set_extract_len_slot_%out_len+0 as u64
+    __set_extract_cur_tombs_%out_len = load __set_extract_tombs_slot_%out_len+0 as u64
+    __set_extract_next_len_%out_len = sub __set_extract_cur_len_%out_len, 1
+    __set_extract_next_tombs_%out_len = add __set_extract_cur_tombs_%out_len, 1
+    store __set_extract_len_slot_%out_len+0, __set_extract_next_len_%out_len as u64
+    store __set_extract_tombs_slot_%out_len+0, __set_extract_next_tombs_%out_len as u64
+    store __set_extract_slot_%out_len+HashSetSlot_hash, 0 as u64
+    store __set_extract_slot_%out_len+HashSetSlot_key, 0 as ptr
+    store __set_extract_slot_%out_len+HashSetSlot_value, 0 as ptr
+    store __set_extract_slot_%out_len+HashSetSlot_state, HashSet_STATE_TOMB as u8
+    !__set_extract_next_tombs_%out_len
+    !__set_extract_next_len_%out_len
+    !__set_extract_cur_tombs_%out_len
+    !__set_extract_cur_len_%out_len
+    !__set_extract_key_bits_%out_len
+    !__set_extract_take_%out_len
+    !__set_extract_pred_%out_len
+    !__set_extract_key_%out_len
+    jmp L_SET_EXTRACT_NEXT_%out_len
+
+L_SET_EXTRACT_NEXT_%out_len:
+    __set_extract_next_idx_%out_len = add __set_extract_idx_%out_len, 1
+    store __set_extract_idx_slot_%out_len+0, __set_extract_next_idx_%out_len as u64
+    !__set_extract_next_idx_%out_len
+    !__set_extract_filled_%out_len
+    !__set_extract_state_%out_len
+    !__set_extract_slot_%out_len
+    !__set_extract_slot_off_%out_len
+    !__set_extract_done_%out_len
+    !__set_extract_idx_%out_len
+    jmp L_SET_EXTRACT_HEAD_%out_len
+
+L_SET_EXTRACT_DONE_%out_len:
+    %out_len = load __set_extract_len_slot_%out_len+0 as u64
+    __set_extract_tombs_%out_len = load __set_extract_tombs_slot_%out_len+0 as u64
+    store %set_reg+HashSet_len, %out_len as u64
+    store %set_reg+HashSet_tombs, __set_extract_tombs_%out_len as u64
+    !__set_extract_done_%out_len
+    !__set_extract_idx_%out_len
+    !__set_extract_tombs_%out_len
+    !__set_extract_tombs_start_%out_len
+    !__set_extract_len_%out_len
+    !__set_extract_cap_%out_len
+    !__set_extract_slots_%out_len
+[END_MACRO]
+
+[MACRO] SET_INSERT %out_ok, %set_reg, %key
+    %out_ok = call @sa_set_insert(&%set_reg, &%key)
+[END_MACRO]
+
+[MACRO] SET_CONTAINS %out_ok, %set_reg, %key
+    %out_ok = call @sa_set_contains(&%set_reg, &%key)
+[END_MACRO]
+
+[MACRO] SET_GET %out_ok, %out_key, %set_reg, %key
+    __set_get_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_set_get(&%set_reg, &%key, &__set_get_slot_%out_ok)
+    %out_key = load __set_get_slot_%out_ok+0 as ptr
+[END_MACRO]
+
+[MACRO] SET_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key
+    %out_inserted = call @sa_set_insert(&%set_reg, &%key)
+    __set_get_or_insert_slot_%out_inserted = stack_alloc 8
+    __set_get_or_insert_ok_%out_inserted = call @sa_set_get(&%set_reg, &%key, &__set_get_or_insert_slot_%out_inserted)
+    %out_key = load __set_get_or_insert_slot_%out_inserted+0 as ptr
+    !__set_get_or_insert_ok_%out_inserted
+[END_MACRO]
+
+[MACRO] SET_ENTRY_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key
+    EXPAND SET_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key
+[END_MACRO]
+
+// Rust method-name bare alias for the common set entry path (get_or_insert).
+[MACRO] SET_ENTRY %out_inserted, %out_key, %set_reg, %key
+    EXPAND SET_ENTRY_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key
+[END_MACRO]
+
+[MACRO] SET_OR_INSERT %out_inserted, %out_key, %set_reg, %key
+    EXPAND SET_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key
+[END_MACRO]
+
+[MACRO] SET_EXTRA_CAPACITY %out_extra, %set_reg
+    __set_ec_cap_%out_extra = call @sa_set_capacity(&%set_reg)
+    __set_ec_len_%out_extra = call @sa_set_len(&%set_reg)
+    %out_extra = sub __set_ec_cap_%out_extra, __set_ec_len_%out_extra
+    !__set_ec_len_%out_extra
+    !__set_ec_cap_%out_extra
+[END_MACRO]
+
+[MACRO] SET_TAKE %out_ok, %out_key, %set_reg, %key
+    __set_take_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_set_take(&%set_reg, &%key, &__set_take_slot_%out_ok)
+    %out_key = load __set_take_slot_%out_ok+0 as ptr
+[END_MACRO]
+
+[MACRO] SET_REPLACE %out_replaced, %out_old_key, %set_reg, %key
+    __set_replace_slot_%out_replaced = stack_alloc 8
+    %out_replaced = call @sa_set_replace(&%set_reg, &%key, &__set_replace_slot_%out_replaced)
+    %out_old_key = load __set_replace_slot_%out_replaced+0 as ptr
+[END_MACRO]
+
+[MACRO] SET_IS_DISJOINT %out_ok, %set_reg, %other_set
+    %out_ok = call @sa_set_is_disjoint(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_IS_SUBSET %out_ok, %set_reg, %other_set
+    %out_ok = call @sa_set_is_subset(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_IS_SUPERSET %out_ok, %set_reg, %other_set
+    %out_ok = call @sa_set_is_superset(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_REMOVE %out_ok, %set_reg, %key
+    %out_ok = call @sa_set_remove(&%set_reg, &%key)
+[END_MACRO]
+
+[MACRO] SET_UNION %out_set, %set_reg, %other_set
+    %out_set = call @sa_set_union(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_INTERSECTION %out_set, %set_reg, %other_set
+    %out_set = call @sa_set_intersection(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_DIFFERENCE %out_set, %set_reg, %other_set
+    %out_set = call @sa_set_difference(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_SYMMETRIC_DIFFERENCE %out_set, %set_reg, %other_set
+    %out_set = call @sa_set_symmetric_difference(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] SET_BITOR %out_set, %set_reg, %other_set
+    EXPAND SET_UNION %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] SET_BITAND %out_set, %set_reg, %other_set
+    EXPAND SET_INTERSECTION %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] SET_SUB %out_set, %set_reg, %other_set
+    EXPAND SET_DIFFERENCE %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] SET_BITXOR %out_set, %set_reg, %other_set
+    EXPAND SET_SYMMETRIC_DIFFERENCE %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] SET_FREE %set_reg
+    call @sa_set_free(^%set_reg)
+[END_MACRO]
+
+[MACRO] SET_LIT1 %out_set, %key1
+    EXPAND SET_NEW %out_set
+    EXPAND SET_INSERT __set_lit1_ok_1_%out_set, %out_set, %key1
+    !__set_lit1_ok_1_%out_set
+[END_MACRO]
+
+[MACRO] SET_LIT2 %out_set, %key1, %key2
+    EXPAND SET_NEW %out_set
+    EXPAND SET_INSERT __set_lit2_ok_1_%out_set, %out_set, %key1
+    EXPAND SET_INSERT __set_lit2_ok_2_%out_set, %out_set, %key2
+    !__set_lit2_ok_1_%out_set
+    !__set_lit2_ok_2_%out_set
+[END_MACRO]
+
+[MACRO] SET_LIT3 %out_set, %key1, %key2, %key3
+    EXPAND SET_NEW %out_set
+    EXPAND SET_INSERT __set_lit3_ok_1_%out_set, %out_set, %key1
+    EXPAND SET_INSERT __set_lit3_ok_2_%out_set, %out_set, %key2
+    EXPAND SET_INSERT __set_lit3_ok_3_%out_set, %out_set, %key3
+    !__set_lit3_ok_1_%out_set
+    !__set_lit3_ok_2_%out_set
+    !__set_lit3_ok_3_%out_set
+[END_MACRO]
+
+// Rust Default-style empty set constructor alias.
+
+[MACRO] SET_DEFAULT %out_set
+    EXPAND SET_NEW %out_set
+[END_MACRO]

@@ -1,0 +1,3 @@
+// Public Cow slice facade over borrow.sa.
+@import "borrow.sal"
+@import "borrow.sars"

@@ -1,8 +1,0 @@
-@import "consumer/../bridge/error_float_map.sa"
-
-@error_float_fallback_consumer_value() -> f64:
-L_ENTRY:
-    three = 3 as i64
-    v = call @map_code_to_float(three)
-    !three
-    return v

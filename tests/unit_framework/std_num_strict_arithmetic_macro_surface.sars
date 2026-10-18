@@ -1,0 +1,144 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive strict arithmetic macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_ADD u8_add, 100, 20
+    EXPAND NUM_U16_STRICT_ADD u16_add, 1000, 2000
+    EXPAND NUM_U32_STRICT_ADD u32_add, 40, 2
+    EXPAND NUM_U64_STRICT_ADD u64_add, 40, 2
+    EXPAND NUM_USIZE_STRICT_ADD usize_add, 41, 1
+    EXPAND NUM_I8_STRICT_ADD i8_add, -10, 3
+    EXPAND NUM_I16_STRICT_ADD i16_add, -10, 3
+    EXPAND NUM_I32_STRICT_ADD i32_add, -10, 3
+    EXPAND NUM_I64_STRICT_ADD i64_add, -10, 3
+    EXPAND NUM_ISIZE_STRICT_ADD isize_add, -10, 3
+
+    EXPAND NUM_U8_STRICT_SUB u8_sub, 100, 1
+    EXPAND NUM_U16_STRICT_SUB u16_sub, 1000, 1
+    EXPAND NUM_U32_STRICT_SUB u32_sub, 10000, 1
+    EXPAND NUM_U64_STRICT_SUB u64_sub, 100000, 1
+    EXPAND NUM_USIZE_STRICT_SUB usize_sub, 1000000, 1
+    EXPAND NUM_I8_STRICT_SUB i8_sub, -10, 3
+    EXPAND NUM_I16_STRICT_SUB i16_sub, -10, 3
+    EXPAND NUM_I32_STRICT_SUB i32_sub, -10, 3
+    EXPAND NUM_I64_STRICT_SUB i64_sub, -10, 3
+    EXPAND NUM_ISIZE_STRICT_SUB isize_sub, -10, 3
+
+    EXPAND NUM_U8_STRICT_MUL u8_mul, 7, 6
+    EXPAND NUM_U16_STRICT_MUL u16_mul, 7, 6
+    EXPAND NUM_U32_STRICT_MUL u32_mul, 7, 6
+    EXPAND NUM_U64_STRICT_MUL u64_mul, 7, 6
+    EXPAND NUM_USIZE_STRICT_MUL usize_mul, 7, 6
+    EXPAND NUM_I8_STRICT_MUL i8_mul, -7, 6
+    EXPAND NUM_I16_STRICT_MUL i16_mul, -7, 6
+    EXPAND NUM_I32_STRICT_MUL i32_mul, -7, 6
+    EXPAND NUM_I64_STRICT_MUL i64_mul, -7, 6
+    EXPAND NUM_ISIZE_STRICT_MUL isize_mul, -7, 6
+
+    ok_01 = eq u8_add, 120
+    ok_02 = eq u16_add, 3000
+    ok_03 = eq u32_add, 42
+    ok_04 = eq u64_add, 42
+    ok_05 = eq usize_add, 42
+    ok_06 = eq i8_add, -7
+    ok_07 = eq i16_add, -7
+    ok_08 = eq i32_add, -7
+    ok_09 = eq i64_add, -7
+    ok_10 = eq isize_add, -7
+
+    ok_11 = eq u8_sub, 99
+    ok_12 = eq u16_sub, 999
+    ok_13 = eq u32_sub, 9999
+    ok_14 = eq u64_sub, 99999
+    ok_15 = eq usize_sub, 999999
+    ok_16 = eq i8_sub, -13
+    ok_17 = eq i16_sub, -13
+    ok_18 = eq i32_sub, -13
+    ok_19 = eq i64_sub, -13
+    ok_20 = eq isize_sub, -13
+
+    ok_21 = eq u8_mul, 42
+    ok_22 = eq u16_mul, 42
+    ok_23 = eq u32_mul, 42
+    ok_24 = eq u64_mul, 42
+    ok_25 = eq usize_mul, 42
+    ok_26 = eq i8_mul, -42
+    ok_27 = eq i16_mul, -42
+    ok_28 = eq i32_mul, -42
+    ok_29 = eq i64_mul, -42
+    ok_30 = eq isize_mul, -42
+
+    acc_01 = and ok_01, ok_02
+    acc_02 = and acc_01, ok_03
+    acc_03 = and acc_02, ok_04
+    acc_04 = and acc_03, ok_05
+    acc_05 = and acc_04, ok_06
+    acc_06 = and acc_05, ok_07
+    acc_07 = and acc_06, ok_08
+    acc_08 = and acc_07, ok_09
+    acc_09 = and acc_08, ok_10
+    acc_10 = and acc_09, ok_11
+    acc_11 = and acc_10, ok_12
+    acc_12 = and acc_11, ok_13
+    acc_13 = and acc_12, ok_14
+    acc_14 = and acc_13, ok_15
+    acc_15 = and acc_14, ok_16
+    acc_16 = and acc_15, ok_17
+    acc_17 = and acc_16, ok_18
+    acc_18 = and acc_17, ok_19
+    acc_19 = and acc_18, ok_20
+    acc_20 = and acc_19, ok_21
+    acc_21 = and acc_20, ok_22
+    acc_22 = and acc_21, ok_23
+    acc_23 = and acc_22, ok_24
+    acc_24 = and acc_23, ok_25
+    acc_25 = and acc_24, ok_26
+    acc_26 = and acc_25, ok_27
+    acc_27 = and acc_26, ok_28
+    acc_28 = and acc_27, ok_29
+    ok = and acc_28, ok_30
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10633)
+
+L_PASS:
+    !ok
+    return 0
+
+@test should_panic "sa_std unsigned strict add panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_ADD value, NUM_U8_MAX, 1
+    !value
+    return 0
+
+@test should_panic "sa_std signed strict add panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_I64_STRICT_ADD value, NUM_I64_MAX, 1
+    !value
+    return 0
+
+@test should_panic "sa_std unsigned strict sub panics on underflow"():
+L_ENTRY:
+    EXPAND NUM_U64_STRICT_SUB value, 0, 1
+    !value
+    return 0
+
+@test should_panic "sa_std signed strict sub panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_I8_STRICT_SUB value, NUM_I8_MIN, 1
+    !value
+    return 0
+
+@test should_panic "sa_std unsigned strict mul panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_MUL value, NUM_U8_MAX, 2
+    !value
+    return 0
+
+@test should_panic "sa_std signed strict mul panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_I64_STRICT_MUL value, NUM_I64_MAX, 2
+    !value
+    return 0

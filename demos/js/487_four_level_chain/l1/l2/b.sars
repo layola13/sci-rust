@@ -1,0 +1,8 @@
+@import "l1/l2/l3/c.sars"
+
+@export b_value() -> i32:
+L_ENTRY:
+    c = call @c_value()
+    value = add c, 40
+    !c
+    return value

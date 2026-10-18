@@ -1,0 +1,56 @@
+@import "sa_std/hash.sars"
+
+@test "sa_std hash char macro surface"():
+L_ENTRY:
+    char_hasher = stack_alloc DefaultHasher_SIZE
+    u32_hasher = stack_alloc DefaultHasher_SIZE
+    other_hasher = stack_alloc DefaultHasher_SIZE
+
+    EXPAND DEFAULT_HASHER_NEW char_hasher
+    EXPAND DEFAULT_HASHER_WRITE_CHAR char_hasher, 65
+    EXPAND DEFAULT_HASHER_FINISH char_hash, char_hasher
+
+    EXPAND DEFAULT_HASHER_NEW u32_hasher
+    EXPAND DEFAULT_HASHER_WRITE_U32 u32_hasher, 65
+    EXPAND DEFAULT_HASHER_FINISH u32_hash, u32_hasher
+
+    EXPAND HASH_CHAR direct_hash, 65
+
+    EXPAND DEFAULT_HASHER_NEW other_hasher
+    EXPAND DEFAULT_HASHER_WRITE_CHAR other_hasher, 937
+    EXPAND DEFAULT_HASHER_FINISH other_hash, other_hasher
+    EXPAND HASH_CHAR direct_other_hash, 937
+
+    char_matches_u32 = eq char_hash, u32_hash
+    direct_matches = eq direct_hash, char_hash
+    other_direct_matches = eq direct_other_hash, other_hash
+    different_chars_differ = ne char_hash, other_hash
+    changed = ne char_hash, HASHER_DEFAULT_SEED
+
+    c01 = and char_matches_u32, direct_matches
+    c02 = and c01, other_direct_matches
+    c03 = and c02, different_chars_differ
+    ok = and c03, changed
+
+    !char_hash
+    !u32_hash
+    !direct_hash
+    !other_hash
+    !direct_other_hash
+    !char_matches_u32
+    !direct_matches
+    !other_direct_matches
+    !different_chars_differ
+    !changed
+    !c01
+    !c02
+    !c03
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10557)
+
+L_PASS:
+    !ok
+    return 0

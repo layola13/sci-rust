@@ -1,0 +1,130 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/collections/btree_map.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+
+@test "sa_std btree_map first/last entry aliases"():
+L_ENTRY:
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+
+    EXPAND BTREE_MAP_NEW map
+    EXPAND BTREE_MAP_INSERT map, charlie, 30
+    EXPAND BTREE_MAP_INSERT map, alpha, 10
+    EXPAND BTREE_MAP_INSERT map, bravo, 20
+
+    EXPAND BTREE_MAP_FIRST_ENTRY first_ok, first_key, first_ptr, map
+    first_key_len = load first_key+Slice_len as u64
+    store first_ptr+0, 11 as u64
+    EXPAND BTREE_MAP_LAST_ENTRY last_ok, last_key, last_ptr, map
+    last_key_len = load last_key+Slice_len as u64
+    store last_ptr+0, 33 as u64
+
+    EXPAND BTREE_MAP_FIRST_ENTRY_MUT first_mut_ok, first_mut_key, first_mut_ptr, map
+    store first_mut_ptr+0, 12 as u64
+    EXPAND BTREE_MAP_LAST_ENTRY_MUT last_mut_ok, last_mut_key, last_mut_ptr, map
+    store last_mut_ptr+0, 34 as u64
+
+    EXPAND BTREE_MAP_GET alpha_value, map, alpha
+    EXPAND BTREE_MAP_GET bravo_value, map, bravo
+    EXPAND BTREE_MAP_GET charlie_value, map, charlie
+
+    EXPAND BTREE_MAP_NEW empty_map
+    EXPAND BTREE_MAP_FIRST_ENTRY empty_first_ok, empty_first_key, empty_first_ptr, empty_map
+    EXPAND BTREE_MAP_LAST_ENTRY empty_last_ok, empty_last_key, empty_last_ptr, empty_map
+
+    null_ptr = 0 as ptr
+    ok_first = eq first_ok, 1
+    ok_first_len = eq first_key_len, 5
+    ok_last = eq last_ok, 1
+    ok_last_len = eq last_key_len, 7
+    ok_first_mut = eq first_mut_ok, 1
+    ok_last_mut = eq last_mut_ok, 1
+    ok_alpha = eq alpha_value, 12
+    ok_bravo = eq bravo_value, 20
+    ok_charlie = eq charlie_value, 34
+    ok_empty_first = eq empty_first_ok, 0
+    ok_empty_first_ptr = eq empty_first_ptr, null_ptr
+    ok_empty_last = eq empty_last_ok, 0
+    ok_empty_last_ptr = eq empty_last_ptr, null_ptr
+
+    ok01 = and ok_first, ok_first_len
+    ok02 = and ok01, ok_last
+    ok03 = and ok02, ok_last_len
+    ok04 = and ok03, ok_first_mut
+    ok05 = and ok04, ok_last_mut
+    ok06 = and ok05, ok_alpha
+    ok07 = and ok06, ok_bravo
+    ok08 = and ok07, ok_charlie
+    ok09 = and ok08, ok_empty_first
+    ok10 = and ok09, ok_empty_first_ptr
+    ok11 = and ok10, ok_empty_last
+    ok = and ok11, ok_empty_last_ptr
+
+    !first_ok
+    !first_key
+    !first_ptr
+    !first_key_len
+    !last_ok
+    !last_key
+    !last_ptr
+    !last_key_len
+    !first_mut_ok
+    !first_mut_key
+    !first_mut_ptr
+    !last_mut_ok
+    !last_mut_key
+    !last_mut_ptr
+    !alpha_value
+    !bravo_value
+    !charlie_value
+    !empty_first_ok
+    !empty_first_key
+    !empty_first_ptr
+    !empty_last_ok
+    !empty_last_key
+    !empty_last_ptr
+    !null_ptr
+    !ok_first
+    !ok_first_len
+    !ok_last
+    !ok_last_len
+    !ok_first_mut
+    !ok_last_mut
+    !ok_alpha
+    !ok_bravo
+    !ok_charlie
+    !ok_empty_first
+    !ok_empty_first_ptr
+    !ok_empty_last
+    !ok_empty_last_ptr
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !charlie
+    !bravo
+    !alpha
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND BTREE_MAP_FREE empty_map
+    EXPAND BTREE_MAP_FREE map
+    return 0
+
+L_FAIL:
+    panic(10832)

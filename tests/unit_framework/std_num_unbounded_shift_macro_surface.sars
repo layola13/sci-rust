@@ -1,0 +1,141 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive unbounded shift macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_UNBOUNDED_SHL u8_shl, 3, 4
+    EXPAND NUM_U16_UNBOUNDED_SHL u16_shl, 3, 4
+    EXPAND NUM_U32_UNBOUNDED_SHL u32_shl, 3, 4
+    EXPAND NUM_U64_UNBOUNDED_SHL u64_shl, 3, 4
+    EXPAND NUM_USIZE_UNBOUNDED_SHL usize_shl, 3, 4
+
+    EXPAND NUM_I8_UNBOUNDED_SHL i8_shl, 3, 4
+    EXPAND NUM_I16_UNBOUNDED_SHL i16_shl, 3, 4
+    EXPAND NUM_I32_UNBOUNDED_SHL i32_shl, 3, 4
+    EXPAND NUM_I64_UNBOUNDED_SHL i64_shl, 3, 4
+    EXPAND NUM_ISIZE_UNBOUNDED_SHL isize_shl, 3, 4
+
+    EXPAND NUM_U8_UNBOUNDED_SHR u8_shr, 128, 4
+    EXPAND NUM_U16_UNBOUNDED_SHR u16_shr, 128, 4
+    EXPAND NUM_U32_UNBOUNDED_SHR u32_shr, 128, 4
+    EXPAND NUM_U64_UNBOUNDED_SHR u64_shr, 128, 4
+    EXPAND NUM_USIZE_UNBOUNDED_SHR usize_shr, 128, 4
+
+    EXPAND NUM_I8_UNBOUNDED_SHR i8_shr, -16, 2
+    EXPAND NUM_I16_UNBOUNDED_SHR i16_shr, -16, 2
+    EXPAND NUM_I32_UNBOUNDED_SHR i32_shr, -16, 2
+    EXPAND NUM_I64_UNBOUNDED_SHR i64_shr, -16, 2
+    EXPAND NUM_ISIZE_UNBOUNDED_SHR isize_shr, -16, 2
+
+    EXPAND NUM_U8_UNBOUNDED_SHL u8_shl_over, 3, 8
+    EXPAND NUM_U16_UNBOUNDED_SHL u16_shl_over, 3, 16
+    EXPAND NUM_U32_UNBOUNDED_SHL u32_shl_over, 3, 32
+    EXPAND NUM_U64_UNBOUNDED_SHL u64_shl_over, 3, 64
+    EXPAND NUM_USIZE_UNBOUNDED_SHL usize_shl_over, 3, 64
+
+    EXPAND NUM_I8_UNBOUNDED_SHL i8_shl_over, -13, 8
+    EXPAND NUM_I16_UNBOUNDED_SHL i16_shl_over, -13, 16
+    EXPAND NUM_I32_UNBOUNDED_SHL i32_shl_over, -13, 32
+    EXPAND NUM_I64_UNBOUNDED_SHL i64_shl_over, -13, 64
+    EXPAND NUM_ISIZE_UNBOUNDED_SHL isize_shl_over, -13, 64
+
+    EXPAND NUM_U8_UNBOUNDED_SHR u8_shr_over, 128, 8
+    EXPAND NUM_U16_UNBOUNDED_SHR u16_shr_over, 128, 16
+    EXPAND NUM_U32_UNBOUNDED_SHR u32_shr_over, 128, 32
+    EXPAND NUM_U64_UNBOUNDED_SHR u64_shr_over, 128, 64
+    EXPAND NUM_USIZE_UNBOUNDED_SHR usize_shr_over, 128, 64
+
+    EXPAND NUM_I8_UNBOUNDED_SHR i8_shr_over, -13, 8
+    EXPAND NUM_I16_UNBOUNDED_SHR i16_shr_over, -13, 16
+    EXPAND NUM_I32_UNBOUNDED_SHR i32_shr_over, -13, 32
+    EXPAND NUM_I64_UNBOUNDED_SHR i64_shr_over, -13, 64
+    EXPAND NUM_ISIZE_UNBOUNDED_SHR isize_shr_over, -13, 64
+
+    ok_01 = eq u8_shl, 48
+    ok_02 = eq u16_shl, 48
+    ok_03 = eq u32_shl, 48
+    ok_04 = eq u64_shl, 48
+    ok_05 = eq usize_shl, 48
+    ok_06 = eq i8_shl, 48
+    ok_07 = eq i16_shl, 48
+    ok_08 = eq i32_shl, 48
+    ok_09 = eq i64_shl, 48
+    ok_10 = eq isize_shl, 48
+    ok_11 = eq u8_shr, 8
+    ok_12 = eq u16_shr, 8
+    ok_13 = eq u32_shr, 8
+    ok_14 = eq u64_shr, 8
+    ok_15 = eq usize_shr, 8
+    ok_16 = eq i8_shr, -4
+    ok_17 = eq i16_shr, -4
+    ok_18 = eq i32_shr, -4
+    ok_19 = eq i64_shr, -4
+    ok_20 = eq isize_shr, -4
+    ok_21 = eq u8_shl_over, 0
+    ok_22 = eq u16_shl_over, 0
+    ok_23 = eq u32_shl_over, 0
+    ok_24 = eq u64_shl_over, 0
+    ok_25 = eq usize_shl_over, 0
+    ok_26 = eq i8_shl_over, 0
+    ok_27 = eq i16_shl_over, 0
+    ok_28 = eq i32_shl_over, 0
+    ok_29 = eq i64_shl_over, 0
+    ok_30 = eq isize_shl_over, 0
+    ok_31 = eq u8_shr_over, 0
+    ok_32 = eq u16_shr_over, 0
+    ok_33 = eq u32_shr_over, 0
+    ok_34 = eq u64_shr_over, 0
+    ok_35 = eq usize_shr_over, 0
+    ok_36 = eq i8_shr_over, -1
+    ok_37 = eq i16_shr_over, -1
+    ok_38 = eq i32_shr_over, -1
+    ok_39 = eq i64_shr_over, -1
+    ok_40 = eq isize_shr_over, -1
+
+    acc_01 = and ok_01, ok_02
+    acc_02 = and acc_01, ok_03
+    acc_03 = and acc_02, ok_04
+    acc_04 = and acc_03, ok_05
+    acc_05 = and acc_04, ok_06
+    acc_06 = and acc_05, ok_07
+    acc_07 = and acc_06, ok_08
+    acc_08 = and acc_07, ok_09
+    acc_09 = and acc_08, ok_10
+    acc_10 = and acc_09, ok_11
+    acc_11 = and acc_10, ok_12
+    acc_12 = and acc_11, ok_13
+    acc_13 = and acc_12, ok_14
+    acc_14 = and acc_13, ok_15
+    acc_15 = and acc_14, ok_16
+    acc_16 = and acc_15, ok_17
+    acc_17 = and acc_16, ok_18
+    acc_18 = and acc_17, ok_19
+    acc_19 = and acc_18, ok_20
+    acc_20 = and acc_19, ok_21
+    acc_21 = and acc_20, ok_22
+    acc_22 = and acc_21, ok_23
+    acc_23 = and acc_22, ok_24
+    acc_24 = and acc_23, ok_25
+    acc_25 = and acc_24, ok_26
+    acc_26 = and acc_25, ok_27
+    acc_27 = and acc_26, ok_28
+    acc_28 = and acc_27, ok_29
+    acc_29 = and acc_28, ok_30
+    acc_30 = and acc_29, ok_31
+    acc_31 = and acc_30, ok_32
+    acc_32 = and acc_31, ok_33
+    acc_33 = and acc_32, ok_34
+    acc_34 = and acc_33, ok_35
+    acc_35 = and acc_34, ok_36
+    acc_36 = and acc_35, ok_37
+    acc_37 = and acc_36, ok_38
+    acc_38 = and acc_37, ok_39
+    ok = and acc_38, ok_40
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10640)
+
+L_PASS:
+    !ok
+    return 0

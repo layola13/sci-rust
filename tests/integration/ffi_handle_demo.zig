@@ -27,7 +27,7 @@ test "ffi handle demo exposes an exported C ABI symbol" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
 
-    const sa_source = try original_cwd.realpathAlloc(std.testing.allocator, "tests/integration/ffi_handle/handle.sa");
+    const sa_source = try original_cwd.realpathAlloc(std.testing.allocator, "tests/integration/ffi_handle/handle.sars");
     defer std.testing.allocator.free(sa_source);
     const c_source = try original_cwd.realpathAlloc(std.testing.allocator, "tests/integration/ffi_handle/handle_host.c");
     defer std.testing.allocator.free(c_source);

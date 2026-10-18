@@ -1,0 +1,26 @@
+@import "sa_std/path.sars"
+@import "sa_std/string.sars"
+
+@const P = utf8:"/tmp"
+@const M = utf8:"/tmp/__sa_std_path_should_not_exist_xyz__"
+
+@test "sa_std path exists"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS p, &P, 4
+    EXPAND STR_FROM_PARTS m, &M, 36
+    EXPAND PATH_EXISTS e1, p
+    EXPAND PATH_EXISTS e0, m
+    a = eq e1, 1
+    b = eq e0, 0
+    ok = and a, b
+    !e1
+    !e0
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10994)

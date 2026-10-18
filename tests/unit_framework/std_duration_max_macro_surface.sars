@@ -1,0 +1,22 @@
+@import "sa_std/time.sars"
+
+@test "sa_std duration max min"():
+L_ENTRY:
+    EXPAND TIME_DURATION_MAX mx
+    EXPAND TIME_DURATION_ZERO z
+    EXPAND TIME_DURATION_IS_ZERO isz, z
+    a = ugt mx, 0
+    b = eq isz, 1
+    ok = and a, b
+    !mx
+    !z
+    !isz
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10961)

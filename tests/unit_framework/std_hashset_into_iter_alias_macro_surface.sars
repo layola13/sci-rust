@@ -1,0 +1,104 @@
+@import "sa_std/collections/hashset.sars"
+@import "sa_std/vec.sars"
+
+@const KEY_A = utf8:"alpha"
+@const KEY_B = utf8:"bravo"
+@const KEY_C = utf8:"charlie"
+
+@test "sa_std hashset owned into-iterator alias"():
+L_ENTRY:
+    EXPAND SET_WITH_CAPACITY set, 4
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+    key_a_bits = bitcast key_a as u64
+    key_b_bits = bitcast key_b as u64
+    key_c_bits = bitcast key_c as u64
+
+    EXPAND SET_INSERT ins_a, set, key_a
+    EXPAND SET_INSERT ins_b, set, key_b
+    EXPAND SET_INSERT ins_c, set, key_c
+    EXPAND SET_INTO_ITER into_iter_vec, set
+    EXPAND VEC_LEN into_iter_len, into_iter_vec
+    EXPAND VEC_CONTAINS_U64 into_has_a, into_iter_vec, key_a_bits
+    EXPAND VEC_CONTAINS_U64 into_has_b, into_iter_vec, key_b_bits
+    EXPAND VEC_CONTAINS_U64 into_has_c, into_iter_vec, key_c_bits
+    EXPAND SET_LEN set_len_after, set
+    EXPAND SET_CONTAINS has_a_after, set, key_a
+
+    EXPAND SET_NEW empty_set
+    EXPAND SET_INTO_ITER empty_into_iter_vec, empty_set
+    EXPAND VEC_LEN empty_into_iter_len, empty_into_iter_vec
+    EXPAND SET_LEN empty_len_after, empty_set
+
+    ok_ins_a = eq ins_a, 1
+    ok_ins_b = eq ins_b, 1
+    ok_ins_c = eq ins_c, 1
+    ok_into_iter_len = eq into_iter_len, 3
+    ok_into_has_a = eq into_has_a, 1
+    ok_into_has_b = eq into_has_b, 1
+    ok_into_has_c = eq into_has_c, 1
+    ok_set_len_after = eq set_len_after, 0
+    ok_has_a_after = eq has_a_after, 0
+    ok_empty_into_iter = eq empty_into_iter_len, 0
+    ok_empty_len_after = eq empty_len_after, 0
+
+    ok01 = and ok_ins_a, ok_ins_b
+    ok02 = and ok01, ok_ins_c
+    ok03 = and ok02, ok_into_iter_len
+    ok04 = and ok03, ok_into_has_a
+    ok05 = and ok04, ok_into_has_b
+    ok06 = and ok05, ok_into_has_c
+    ok07 = and ok06, ok_set_len_after
+    ok08 = and ok07, ok_has_a_after
+    ok09 = and ok08, ok_empty_into_iter
+    ok = and ok09, ok_empty_len_after
+
+    !ins_a
+    !ins_b
+    !ins_c
+    !into_iter_vec
+    !into_iter_len
+    !into_has_a
+    !into_has_b
+    !into_has_c
+    !set_len_after
+    !has_a_after
+    !empty_into_iter_vec
+    !empty_into_iter_len
+    !empty_len_after
+    !key_a_bits
+    !key_b_bits
+    !key_c_bits
+    !ok_ins_a
+    !ok_ins_b
+    !ok_ins_c
+    !ok_into_iter_len
+    !ok_into_has_a
+    !ok_into_has_b
+    !ok_into_has_c
+    !ok_set_len_after
+    !ok_has_a_after
+    !ok_empty_into_iter
+    !ok_empty_len_after
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !key_c
+    !key_b
+    !key_a
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND SET_FREE empty_set
+    EXPAND SET_FREE set
+    return 0
+
+L_FAIL:
+    panic(10814)

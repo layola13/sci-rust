@@ -1,0 +1,53 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/tls_server.sars"
+@import "sa_std/dtls.sars"
+@import "sa_std/tls_client.sars"
+@import "sa_std/ws_client.sars"
+
+@const OK963 = utf8:"963\n"
+
+// 963 - tls_server + dtls + tls/ws one-liner surface smoke: probes and
+// status/constant JSON only. No certs, no network, no native libs required.
+@main() -> i32:
+L_ENTRY:
+    EXPAND TLS_SERVER_SUPPORTED st1, sup1
+    EXPAND DTLS_SUPPORTED st2, sup2
+    EXPAND TLS_SERVER_STATUS_JSON st3, j1
+    EXPAND DTLS_STATUS_JSON st4, j2
+    EXPAND TLS_SERVER_BUFFER_LEN bl1, j1
+    EXPAND DTLS_BUFFER_LEN bl2, j2
+    has1 = gt bl1, 0
+    has2 = gt bl2, 0
+    both = and has1, has2
+    br both -> L_PRINT, L_ERR
+L_PRINT:
+    EXPAND TLS_SERVER_BUFFER_FREE st5, j1
+    EXPAND DTLS_BUFFER_FREE st6, j2
+    call @sa_print_bytes(&OK963, 4)
+    !st1
+    !sup1
+    !st2
+    !sup2
+    !st3
+    !st4
+    !bl1
+    !bl2
+    !has1
+    !has2
+    !both
+    !st5
+    !st6
+    return 0
+L_ERR:
+    !st1
+    !sup1
+    !st2
+    !sup2
+    !st3
+    !st4
+    !bl1
+    !bl2
+    !has1
+    !has2
+    !both
+    return 1

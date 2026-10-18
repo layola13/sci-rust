@@ -1,0 +1,30 @@
+@import "sa_std/io/print.sai"
+@import "consumer/float_vtable_consumer.sars"
+
+@const OUT = utf8:"478\n"
+
+// 478 - Contract Vtable Export (float): the vtable lives in
+// bridge/float_vtable.sa; the consumer owns the indirect call (1.5).
+@main() -> i32:
+L_ENTRY:
+    value = call @float_vtable_consumer_value()
+    three = 3 as i32
+    two_i = 2 as i32
+    three_f = sitofp three as f64
+    two_f = sitofp two_i as f64
+    expect = fdiv three_f, two_f
+    ok = fcmp_eq value, expect
+    !value
+    !three
+    !two_i
+    !three_f
+    !two_f
+    !expect
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

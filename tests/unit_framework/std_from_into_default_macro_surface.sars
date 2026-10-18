@@ -1,0 +1,204 @@
+@import "sa_std/convert.sars"
+@import "sa_std/num.sars"
+@import "sa_std/char.sal"
+@import "sa_std/default.sars"
+
+@test "sa_std From TryFrom SaturatingFrom naming aliases"():
+L_ENTRY:
+    neg_three = sub 0, 3
+    neg_one = sub 0, 1
+
+    EXPAND FROM_U8_TO_U16 from_u8_u16, 250
+    EXPAND FROM_U8_TO_U32 from_u8_u32, 250
+    EXPAND FROM_U8_TO_U64 from_u8_u64, 250
+    EXPAND FROM_U16_TO_U32 from_u16_u32, 65535
+    EXPAND FROM_U16_TO_U64 from_u16_u64, 65535
+    EXPAND FROM_U32_TO_U64 from_u32_u64, 4294967295
+    EXPAND FROM_U64_TO_USIZE from_u64_usize, 7777
+    EXPAND FROM_USIZE_TO_U64 from_usize_u64, 8888
+
+    EXPAND FROM_I8_TO_I16 from_i8_i16, neg_three
+    EXPAND FROM_I8_TO_I32 from_i8_i32, neg_three
+    EXPAND FROM_I8_TO_I64 from_i8_i64, neg_three
+    EXPAND FROM_I16_TO_I32 from_i16_i32, neg_three
+    EXPAND FROM_I16_TO_I64 from_i16_i64, neg_three
+    EXPAND FROM_I32_TO_I64 from_i32_i64, neg_three
+    EXPAND FROM_I64_TO_ISIZE from_i64_isize, neg_three
+    EXPAND FROM_ISIZE_TO_I64 from_isize_i64, neg_three
+
+    EXPAND TRY_FROM_U64_TO_U8 tf_u8_ok, tf_u8_val, 200
+    EXPAND TRY_FROM_U64_TO_U16 tf_u16_ok, tf_u16_val, 65534
+    EXPAND TRY_FROM_U64_TO_U32 tf_u32_ok, tf_u32_val, 4294967294
+    too_big_u8 = add 255, 1
+    EXPAND TRY_FROM_U64_TO_U8 tf_u8_miss_ok, tf_u8_miss_val, too_big_u8
+
+    EXPAND TRY_FROM_I64_TO_U8 tfi_u8_ok, tfi_u8_val, 200
+    EXPAND TRY_FROM_I64_TO_I32 tfi_i32_ok, tfi_i32_val, neg_three
+    neg_low_i8 = sub 0, 200
+    EXPAND TRY_FROM_I64_TO_U8 tfi_u8_neg_ok, tfi_u8_neg_val, neg_low_i8
+
+    EXPAND SAT_FROM_U64_TO_U8 sat_u8_mid, 12
+    EXPAND SAT_FROM_U64_TO_U8 sat_u8_high, 999
+    EXPAND SAT_FROM_I64_TO_U8 sat_i8_low, neg_one
+    EXPAND SAT_FROM_I64_TO_U8 sat_i8_high, 200
+
+    ok01 = eq from_u8_u16, 250
+    ok02 = eq from_u8_u32, 250
+    ok03 = eq from_u8_u64, 250
+    ok04 = eq from_u16_u32, 65535
+    ok05 = eq from_u16_u64, 65535
+    ok06 = eq from_u32_u64, 4294967295
+    ok07 = eq from_u64_usize, 7777
+    ok08 = eq from_usize_u64, 8888
+    ok09 = eq from_i8_i16, neg_three
+    ok10 = eq from_i8_i32, neg_three
+    ok11 = eq from_i8_i64, neg_three
+    ok12 = eq from_i16_i32, neg_three
+    ok13 = eq from_i16_i64, neg_three
+    ok14 = eq from_i32_i64, neg_three
+    ok15 = eq from_i64_isize, neg_three
+    ok16 = eq from_isize_i64, neg_three
+    ok17 = eq tf_u8_ok, 1
+    ok18 = eq tf_u8_val, 200
+    ok19 = eq tf_u16_ok, 1
+    ok20 = eq tf_u16_val, 65534
+    ok21 = eq tf_u32_ok, 1
+    ok22 = eq tf_u32_val, 4294967294
+    ok23 = eq tf_u8_miss_ok, 0
+    ok24 = eq tf_u8_miss_val, 0
+    ok25 = eq tfi_u8_ok, 1
+    ok26 = eq tfi_u8_val, 200
+    ok27 = eq tfi_i32_ok, 1
+    ok28 = eq tfi_i32_val, neg_three
+    ok29 = eq tfi_u8_neg_ok, 0
+    ok30 = eq tfi_u8_neg_val, 0
+    ok31 = eq sat_u8_mid, 12
+    ok32 = eq sat_u8_high, 255
+    ok33 = eq sat_i8_low, 0
+    ok34 = eq sat_i8_high, 200
+
+    !neg_three
+    !neg_low_i8
+    !too_big_u8
+    !tf_u8_val
+    !tf_u8_miss_val
+    !tf_u16_val
+    !tf_u32_val
+    !tfi_u8_val
+    !tfi_u8_neg_val
+    !tfi_i32_val
+    !sat_u8_mid
+    !sat_u8_high
+    !sat_i8_low
+    !sat_i8_high
+    !from_u8_u16
+    !from_u8_u32
+    !from_u8_u64
+    !from_u16_u32
+    !from_u16_u64
+    !from_u32_u64
+    !from_u64_usize
+    !from_usize_u64
+    !from_i8_i16
+    !from_i8_i32
+    !from_i8_i64
+    !from_i16_i32
+    !from_i16_i64
+    !from_i32_i64
+    !from_i64_isize
+    !from_isize_i64
+
+    c01 = and ok01, ok02
+    c02 = and c01, ok03
+    c03 = and c02, ok04
+    c04 = and c03, ok05
+    c05 = and c04, ok06
+    c06 = and c05, ok07
+    c07 = and c06, ok08
+    c08 = and c07, ok09
+    c09 = and c08, ok10
+    c10 = and c09, ok11
+    c11 = and c10, ok12
+    c12 = and c11, ok13
+    c13 = and c12, ok14
+    c14 = and c13, ok15
+    c15 = and c14, ok16
+    c16 = and c15, ok17
+    c17 = and c16, ok18
+    c18 = and c17, ok19
+    c19 = and c18, ok20
+    c20 = and c19, ok21
+    c21 = and c20, ok22
+    c22 = and c21, ok23
+    c23 = and c22, ok24
+    c24 = and c23, ok25
+    c25 = and c24, ok26
+    c26 = and c25, ok27
+    c27 = and c26, ok28
+    c28 = and c27, ok29
+    c29 = and c28, ok30
+    c30 = and c29, ok31
+    c31 = and c30, ok32
+    c32 = and c31, ok33
+    c33 = and c32, ok34
+    ok = and c33, ok34
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10461)
+
+L_PASS:
+    return 0
+
+@test "sa_std numeric Default constants"():
+L_ENTRY:
+    ok_u8 = eq NUM_U8_DEFAULT, 0
+    ok_u16 = eq NUM_U16_DEFAULT, 0
+    ok_u32 = eq NUM_U32_DEFAULT, 0
+    ok_u64 = eq NUM_U64_DEFAULT, 0
+    ok_i8 = eq NUM_I8_DEFAULT, 0
+    ok_i16 = eq NUM_I16_DEFAULT, 0
+    ok_i32 = eq NUM_I32_DEFAULT, 0
+    ok_i64 = eq NUM_I64_DEFAULT, 0
+    ok_usize = eq NUM_USIZE_DEFAULT, 0
+    ok_isize = eq NUM_ISIZE_DEFAULT, 0
+    ok_bool = eq BOOL_DEFAULT, 0
+    ok_f32 = eq NUM_F32_DEFAULT, 0
+    ok_f64 = eq NUM_F64_DEFAULT, 0
+    ok_char = eq CHAR_DEFAULT, 0
+
+    EXPAND DEFAULT_F32 df32
+    EXPAND DEFAULT_F64 df64
+    EXPAND DEFAULT_CHAR dchar
+    ok_df32 = eq df32, 0
+    ok_df64 = eq df64, 0
+    ok_dchar = eq dchar, 0
+    !df32
+    !df64
+    !dchar
+
+    c1 = and ok_u8, ok_u16
+    c2 = and c1, ok_u32
+    c3 = and c2, ok_u64
+    c4 = and c3, ok_i8
+    c5 = and c4, ok_i16
+    c6 = and c5, ok_i32
+    c7 = and c6, ok_i64
+    c8 = and c7, ok_usize
+    c9 = and c8, ok_isize
+    c10 = and c9, ok_bool
+    c11 = and c10, ok_f32
+    c12 = and c11, ok_f64
+    c13 = and c12, ok_char
+    c14 = and c13, ok_df32
+    c15 = and c14, ok_df64
+    ok = and c15, ok_dchar
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10462)
+
+L_PASS:
+    return 0

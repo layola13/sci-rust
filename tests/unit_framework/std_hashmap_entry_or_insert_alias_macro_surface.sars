@@ -1,0 +1,38 @@
+@import "sa_std/collections/hashmap.sars"
+
+@const KEY_A = utf8:"alpha"
+@const VALUE_A = utf8:"A"
+@const VALUE_B = utf8:"B"
+
+@test "sa_std hashmap entry or_insert"():
+L_ENTRY:
+    EXPAND MAP_WITH_CAPACITY map, 4
+    key_a = &KEY_A
+    value_a = &VALUE_A
+    value_b = &VALUE_B
+    EXPAND MAP_ENTRY_OR_INSERT ins1, ptr1, map, key_a, value_a
+    EXPAND MAP_ENTRY_OR_INSERT ins2, ptr2, map, key_a, value_b
+    EXPAND MAP_GET after, map, key_a
+    EXPAND MAP_FREE map
+
+    a = eq ins1, 1
+    b = eq ins2, 0
+    c = eq after, value_a
+    ok01 = and a, b
+    ok = and ok01, c
+    !ins1
+    !ptr1
+    !ins2
+    !ptr2
+    !after
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10919)

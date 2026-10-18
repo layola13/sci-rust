@@ -1,0 +1,56 @@
+@import "sa_std/sync/poison.sars"
+
+@test "sa_std sync poison error constructors"():
+L_ENTRY:
+    EXPAND POISON_ERROR_NEW poison_error, 77
+    EXPAND POISON_ERROR_DATA poison_data, poison_error
+    EXPAND TRY_LOCK_ERROR_NEW blocked_error, TRY_LOCK_ERROR_WOULD_BLOCK, 12
+    EXPAND TRY_LOCK_ERROR_KIND blocked_kind, blocked_error
+    EXPAND TRY_LOCK_ERROR_DATA blocked_data, blocked_error
+    EXPAND TRY_LOCK_ERROR_IS_WOULD_BLOCK blocked_flag, blocked_error
+    EXPAND TRY_LOCK_ERROR_NEW poisoned_error, TRY_LOCK_ERROR_POISONED, 33
+    EXPAND TRY_LOCK_ERROR_KIND poisoned_kind, poisoned_error
+    EXPAND TRY_LOCK_ERROR_DATA poisoned_data, poisoned_error
+    EXPAND TRY_LOCK_ERROR_IS_POISONED poisoned_flag, poisoned_error
+    c0 = eq poison_data, 77
+    c1 = eq blocked_kind, TRY_LOCK_ERROR_WOULD_BLOCK
+    c2 = eq blocked_data, 12
+    c3 = eq blocked_flag, 1
+    c4 = eq poisoned_kind, TRY_LOCK_ERROR_POISONED
+    c5 = eq poisoned_data, 33
+    c6 = eq poisoned_flag, 1
+    a0 = and c0, c1
+    a1 = and a0, c2
+    a2 = and a1, c3
+    a3 = and a2, c4
+    a4 = and a3, c5
+    ok = and a4, c6
+    !poison_error
+    !poison_data
+    !blocked_error
+    !blocked_kind
+    !blocked_data
+    !blocked_flag
+    !poisoned_error
+    !poisoned_kind
+    !poisoned_data
+    !poisoned_flag
+    !c0
+    !c1
+    !c2
+    !c3
+    !c4
+    !c5
+    !c6
+    !a0
+    !a1
+    !a2
+    !a3
+    !a4
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11005)

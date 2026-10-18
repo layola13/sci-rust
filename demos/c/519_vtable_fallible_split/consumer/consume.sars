@@ -1,0 +1,17 @@
+@import "consumer/../bridge/vt.sars"
+
+// Indirect results carry no fallible contract (see 464), so the
+// fallible boundary lives on this direct wrapper: plain indirect
+// call inside, re-wrapped return.
+@export consume_value() -> i32!:
+L_ENTRY:
+    t = &FALL_VT
+    fp = load t + 0 as ptr
+    ctx = alloc 8
+    zero = 0 as i64
+    v = call_indirect fp(zero, ctx)
+    !t
+    !fp
+    !ctx
+    !zero
+    return v

@@ -1,0 +1,103 @@
+@import "sa_std/num.sars"
+
+@test "sa_std nonzero sign cast macro surface"():
+L_ENTRY:
+    u8_nz = stack_alloc NonZeroU8_SIZE
+    u16_nz = stack_alloc NonZeroU16_SIZE
+    u32_nz = stack_alloc NonZeroU32_SIZE
+    u64_nz = stack_alloc NonZeroU64_SIZE
+    usize_nz = stack_alloc NonZeroUsize_SIZE
+    i8_nz = stack_alloc NonZeroI8_SIZE
+    i16_nz = stack_alloc NonZeroI16_SIZE
+    i32_nz = stack_alloc NonZeroI32_SIZE
+    i64_nz = stack_alloc NonZeroI64_SIZE
+    isize_nz = stack_alloc NonZeroIsize_SIZE
+
+    u8_to_i8 = stack_alloc NonZeroI8_SIZE
+    u16_to_i16 = stack_alloc NonZeroI16_SIZE
+    u32_to_i32 = stack_alloc NonZeroI32_SIZE
+    u64_to_i64 = stack_alloc NonZeroI64_SIZE
+    usize_to_isize = stack_alloc NonZeroIsize_SIZE
+    i8_to_u8 = stack_alloc NonZeroU8_SIZE
+    i16_to_u16 = stack_alloc NonZeroU16_SIZE
+    i32_to_u32 = stack_alloc NonZeroU32_SIZE
+    i64_to_u64 = stack_alloc NonZeroU64_SIZE
+    isize_to_usize = stack_alloc NonZeroUsize_SIZE
+
+    isize_min_value = shl 1, 63
+
+    EXPAND NONZERO_U8_NEW ok_u8, u8_nz, NUM_U8_MAX
+    EXPAND NONZERO_U16_NEW ok_u16, u16_nz, NUM_U16_MAX
+    EXPAND NONZERO_U32_NEW ok_u32, u32_nz, NUM_U32_MAX
+    EXPAND NONZERO_U64_NEW ok_u64, u64_nz, NUM_U64_MAX
+    EXPAND NONZERO_USIZE_NEW ok_usize, usize_nz, NUM_U64_MAX
+    EXPAND NONZERO_I8_NEW ok_i8, i8_nz, -1
+    EXPAND NONZERO_I16_NEW ok_i16, i16_nz, -2
+    EXPAND NONZERO_I32_NEW ok_i32, i32_nz, -3
+    EXPAND NONZERO_I64_NEW ok_i64, i64_nz, -1
+    EXPAND NONZERO_ISIZE_NEW ok_isize, isize_nz, NUM_I64_MIN
+
+    EXPAND NONZERO_U8_CAST_SIGNED u8_to_i8, u8_nz
+    EXPAND NONZERO_U16_CAST_SIGNED u16_to_i16, u16_nz
+    EXPAND NONZERO_U32_CAST_SIGNED u32_to_i32, u32_nz
+    EXPAND NONZERO_U64_CAST_SIGNED u64_to_i64, u64_nz
+    EXPAND NONZERO_USIZE_CAST_SIGNED usize_to_isize, usize_nz
+    EXPAND NONZERO_I8_CAST_UNSIGNED i8_to_u8, i8_nz
+    EXPAND NONZERO_I16_CAST_UNSIGNED i16_to_u16, i16_nz
+    EXPAND NONZERO_I32_CAST_UNSIGNED i32_to_u32, i32_nz
+    EXPAND NONZERO_I64_CAST_UNSIGNED i64_to_u64, i64_nz
+    EXPAND NONZERO_ISIZE_CAST_UNSIGNED isize_to_usize, isize_nz
+
+    EXPAND NONZERO_I8_GET u8_signed_value, u8_to_i8
+    EXPAND NONZERO_I16_GET u16_signed_value, u16_to_i16
+    EXPAND NONZERO_I32_GET u32_signed_value, u32_to_i32
+    EXPAND NONZERO_I64_GET u64_signed_value, u64_to_i64
+    EXPAND NONZERO_ISIZE_GET usize_signed_value, usize_to_isize
+    EXPAND NONZERO_U8_GET i8_unsigned_value, i8_to_u8
+    EXPAND NONZERO_U16_GET i16_unsigned_value, i16_to_u16
+    EXPAND NONZERO_U32_GET i32_unsigned_value, i32_to_u32
+    EXPAND NONZERO_U64_GET i64_unsigned_value, i64_to_u64
+    EXPAND NONZERO_USIZE_GET isize_unsigned_value, isize_to_usize
+
+    ok_new_01 = and ok_u8, ok_u16
+    ok_new_02 = and ok_new_01, ok_u32
+    ok_new_03 = and ok_new_02, ok_u64
+    ok_new_04 = and ok_new_03, ok_usize
+    ok_new_05 = and ok_new_04, ok_i8
+    ok_new_06 = and ok_new_05, ok_i16
+    ok_new_07 = and ok_new_06, ok_i32
+    ok_new_08 = and ok_new_07, ok_i64
+    ok_new_all = and ok_new_08, ok_isize
+
+    ok_u8_signed = eq u8_signed_value, -1
+    ok_u16_signed = eq u16_signed_value, -1
+    ok_u32_signed = eq u32_signed_value, -1
+    ok_u64_signed = eq u64_signed_value, -1
+    ok_usize_signed = eq usize_signed_value, -1
+    ok_i8_unsigned = eq i8_unsigned_value, NUM_U8_MAX
+    ok_i16_unsigned = eq i16_unsigned_value, 65534
+    ok_i32_unsigned = eq i32_unsigned_value, 4294967293
+    ok_i64_unsigned = eq i64_unsigned_value, NUM_U64_MAX
+    ok_isize_unsigned = eq isize_unsigned_value, isize_min_value
+
+    ok_value_01 = and ok_new_all, ok_u8_signed
+    ok_value_02 = and ok_value_01, ok_u16_signed
+    ok_value_03 = and ok_value_02, ok_u32_signed
+    ok_value_04 = and ok_value_03, ok_u64_signed
+    ok_value_05 = and ok_value_04, ok_usize_signed
+    ok_value_06 = and ok_value_05, ok_i8_unsigned
+    ok_value_07 = and ok_value_06, ok_i16_unsigned
+    ok_value_08 = and ok_value_07, ok_i32_unsigned
+    ok_value_09 = and ok_value_08, ok_i64_unsigned
+    ok = and ok_value_09, ok_isize_unsigned
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !isize_min_value
+    panic(10625)
+
+L_PASS:
+    !ok
+    !isize_min_value
+    return 0

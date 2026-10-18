@@ -1,0 +1,123 @@
+@import "sa_std/collections/hashmap.sars"
+
+@const KEY_A = utf8:"alpha"
+@const KEY_B = utf8:"bravo"
+@const KEY_C = utf8:"charlie"
+@const VALUE_A = utf8:"A"
+@const VALUE_B = utf8:"B"
+@const VALUE_C = utf8:"C"
+@const VALUE_D = utf8:"D"
+
+@test "sa_std hashmap get_disjoint_mut aliases"():
+L_ENTRY:
+    EXPAND MAP_WITH_CAPACITY map, 4
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+    value_a = &VALUE_A
+    value_b = &VALUE_B
+    value_c = &VALUE_C
+    value_d = &VALUE_D
+
+    EXPAND MAP_PUT map, key_a, value_a
+    EXPAND MAP_PUT map, key_b, value_b
+
+    EXPAND MAP_GET_DISJOINT_MUT disjoint_ok, disjoint_a_ptr, disjoint_b_ptr, map, key_a, key_b
+    store disjoint_a_ptr+0, value_c as ptr
+    store disjoint_b_ptr+0, value_d as ptr
+    EXPAND MAP_GET after_a, map, key_a
+    EXPAND MAP_GET after_b, map, key_b
+
+    EXPAND MAP_GET_DISJOINT_MUT_PTRS ptrs_ok, ptrs_a, ptrs_b, map, key_a, key_b
+    EXPAND MAP_GET_DISJOINT_MUT same_key_ok, same_a_ptr, same_b_ptr, map, key_a, key_a
+    EXPAND MAP_GET_DISJOINT_MUT missing_ok, missing_a_ptr, missing_b_ptr, map, key_a, key_c
+
+    EXPAND MAP_NEW empty_map
+    EXPAND MAP_GET_DISJOINT_MUT empty_ok, empty_a_ptr, empty_b_ptr, empty_map, key_a, key_b
+
+    null_ptr = 0 as ptr
+    ok_disjoint = eq disjoint_ok, 1
+    ok_after_a = eq after_a, value_c
+    ok_after_b = eq after_b, value_d
+    ok_ptrs = eq ptrs_ok, 1
+    ok_same_key = eq same_key_ok, 0
+    ok_same_a = eq same_a_ptr, null_ptr
+    ok_same_b = eq same_b_ptr, null_ptr
+    ok_missing = eq missing_ok, 0
+    ok_missing_a = eq missing_a_ptr, null_ptr
+    ok_missing_b = eq missing_b_ptr, null_ptr
+    ok_empty = eq empty_ok, 0
+    ok_empty_a = eq empty_a_ptr, null_ptr
+    ok_empty_b = eq empty_b_ptr, null_ptr
+
+    ok01 = and ok_disjoint, ok_after_a
+    ok02 = and ok01, ok_after_b
+    ok03 = and ok02, ok_ptrs
+    ok04 = and ok03, ok_same_key
+    ok05 = and ok04, ok_same_a
+    ok06 = and ok05, ok_same_b
+    ok07 = and ok06, ok_missing
+    ok08 = and ok07, ok_missing_a
+    ok09 = and ok08, ok_missing_b
+    ok10 = and ok09, ok_empty
+    ok11 = and ok10, ok_empty_a
+    ok = and ok11, ok_empty_b
+
+    !disjoint_ok
+    !disjoint_a_ptr
+    !disjoint_b_ptr
+    !after_a
+    !after_b
+    !ptrs_ok
+    !ptrs_a
+    !ptrs_b
+    !same_key_ok
+    !same_a_ptr
+    !same_b_ptr
+    !missing_ok
+    !missing_a_ptr
+    !missing_b_ptr
+    !empty_ok
+    !empty_a_ptr
+    !empty_b_ptr
+    !null_ptr
+    !ok_disjoint
+    !ok_after_a
+    !ok_after_b
+    !ok_ptrs
+    !ok_same_key
+    !ok_same_a
+    !ok_same_b
+    !ok_missing
+    !ok_missing_a
+    !ok_missing_b
+    !ok_empty
+    !ok_empty_a
+    !ok_empty_b
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !value_d
+    !value_c
+    !value_b
+    !value_a
+    !key_c
+    !key_b
+    !key_a
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND MAP_FREE empty_map
+    EXPAND MAP_FREE map
+    return 0
+
+L_FAIL:
+    panic(10828)

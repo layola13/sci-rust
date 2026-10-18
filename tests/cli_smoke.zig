@@ -616,14 +616,14 @@ test "cli run/build-exe/build-wasm produce real artifacts" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "sample.sa", source);
+    try writeSource(tmp.dir, "sample.sars", source);
 
-    const run_argv = [_][]const u8{"sars", "run", "sample.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "sample.sars" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 7), run_code);
 
     const exe_path = "sample.out";
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "sample.sa", "-o", exe_path, "-g" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "sample.sars", "-o", exe_path, "-g" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -657,7 +657,7 @@ test "cli run/build-exe/build-wasm produce real artifacts" {
     }
 
     const obj_path = "sample.o";
-    const build_obj_argv = [_][]const u8{"sars", "build-obj", "sample.sa", "--jobs", "auto", "-o", obj_path };
+    const build_obj_argv = [_][]const u8{"sars", "build-obj", "sample.sars", "--jobs", "auto", "-o", obj_path };
     const obj_code = try saasm.cli.execute(std.testing.allocator, build_obj_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), obj_code);
 
@@ -668,7 +668,7 @@ test "cli run/build-exe/build-wasm produce real artifacts" {
     try std.testing.expect(obj_bytes.len > 0);
 
     const wasm_path = "sample.wasm";
-    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "sample.sa", "--jobs", "auto", "-o", wasm_path, "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "sample.sars", "--jobs", "auto", "-o", wasm_path, "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -705,9 +705,9 @@ test "llvm disabled build-exe reports backend diagnostic" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "minimal.sa", source);
+    try writeSource(tmp.dir, "minimal.sars", source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "minimal.sa" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "minimal.sars" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -746,9 +746,9 @@ test "cli build-obj incremental reuses local cache layout" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "incremental.sa", source);
+    try writeSource(tmp.dir, "incremental.sars", source);
 
-    const build_argv = [_][]const u8{"sars", "build-obj", "incremental.sa", "--incremental", "-o", "incremental.o" };
+    const build_argv = [_][]const u8{"sars", "build-obj", "incremental.sars", "--incremental", "-o", "incremental.o" };
     const first_code = try saasm.cli.execute(std.testing.allocator, build_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), first_code);
     const second_code = try saasm.cli.execute(std.testing.allocator, build_argv[0..]);
@@ -766,7 +766,7 @@ test "cli build-obj incremental reuses local cache layout" {
         \\value = call @helper(6)
         \\return value
     ;
-    try writeSource(tmp.dir, "incremental.sa", modified_source);
+    try writeSource(tmp.dir, "incremental.sars", modified_source);
     const modified_code = try saasm.cli.execute(std.testing.allocator, build_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), modified_code);
 
@@ -825,14 +825,14 @@ test "cli build project cache is default and can be disabled" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "cached.sa", source);
+    try writeSource(tmp.dir, "cached.sars", source);
 
     var stdout_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buf.deinit();
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const build_argv = [_][]const u8{"sars", "build-exe", "cached.sa", "-o", "cached.out", "--json", "--profile" };
+    const build_argv = [_][]const u8{"sars", "build-exe", "cached.sars", "-o", "cached.out", "--json", "--profile" };
     const first_code = try saasm.cli.executeWithWriters(std.testing.allocator, build_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), first_code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -855,7 +855,7 @@ test "cli build project cache is default and can be disabled" {
     try std.testing.expectEqual(true, try jsonBoolValue(try jsonObjectGetValue(second_cache, "hit")));
 
     stderr_buf.clearRetainingCapacity();
-    const no_cache_argv = [_][]const u8{"sars", "build-exe", "cached.sa", "-o", "cached_no_cache.out", "--json", "--profile", "--no-incremental" };
+    const no_cache_argv = [_][]const u8{"sars", "build-exe", "cached.sars", "-o", "cached_no_cache.out", "--json", "--profile", "--no-incremental" };
     const no_cache_code = try saasm.cli.executeWithWriters(std.testing.allocator, no_cache_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), no_cache_code);
     var no_cache_json = try parseJsonValue(std.testing.allocator, stderr_buf.items);
@@ -933,14 +933,14 @@ test "sa test compile-only reuses and repairs project test cache" {
         \\L_ENTRY:
         \\    return
     ;
-    try writeSource(tmp.dir, "cached_test.sa", source);
+    try writeSource(tmp.dir, "cached_test.sars", source);
 
     var stdout_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buf.deinit();
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const test_argv = [_][]const u8{"sars", "test", "cached_test.sa", "--compile-only", "--jobs", "1" };
+    const test_argv = [_][]const u8{"sars", "test", "cached_test.sars", "--compile-only", "--jobs", "1" };
     const first_code = try saasm.cli.executeWithWriters(std.testing.allocator, test_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), first_code);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buf.items, 1, "compiled 1 selected tests (1 discovered)"));
@@ -1010,8 +1010,8 @@ test "cli build-exe with jobs 1 and auto produce bitcode artifacts" {
     const tmp_root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(tmp_root);
 
-    try writeSource(tmp.dir, "jobs_ok.sa", source);
-    const source_path = try std.fs.path.join(std.testing.allocator, &.{ tmp_root, "jobs_ok.sa" });
+    try writeSource(tmp.dir, "jobs_ok.sars", source);
+    const source_path = try std.fs.path.join(std.testing.allocator, &.{ tmp_root, "jobs_ok.sars" });
     defer std.testing.allocator.free(source_path);
     const serial_out_path = try std.fs.path.join(std.testing.allocator, &.{ tmp_root, "serial.out" });
     defer std.testing.allocator.free(serial_out_path);
@@ -1048,7 +1048,7 @@ test "cli build-exe with jobs 1 and auto produce bitcode artifacts" {
 
 test "cli build-exe prunes unused imported functions before llvm emission" {
     const source =
-        \\@import "sa_std/sort.sa"
+        \\@import "sa_std/sort.sars"
         \\
         \\@main() -> i32:
         \\return 0
@@ -1062,9 +1062,9 @@ test "cli build-exe prunes unused imported functions before llvm emission" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "unused_sort_import.sa", source);
+    try writeSource(tmp.dir, "unused_sort_import.sars", source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "unused_sort_import.sa", "-o", "unused_sort_import.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "unused_sort_import.sars", "-o", "unused_sort_import.out" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_exe_code);
 
@@ -1077,7 +1077,7 @@ test "cli build-exe prunes unused imported functions before llvm emission" {
 
 test "json extern build-exe does not inject debug prints" {
     const source =
-        \\@import "sa_std/encoding/json.sa"
+        \\@import "sa_std/encoding/json.sars"
         \\
         \\@const DOC = utf8:"{\"name\":\"sci\"}"
         \\#def DOC_LEN = 14
@@ -1122,7 +1122,7 @@ test "json extern build-exe does not inject debug prints" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "json_debug_clean.sa", source);
+    try writeSource(tmp.dir, "json_debug_clean.sars", source);
 
     var build_stdout = std.array_list.Managed(u8).init(std.testing.allocator);
     defer build_stdout.deinit();
@@ -1132,7 +1132,7 @@ test "json extern build-exe does not inject debug prints" {
     const build_exe_argv = [_][]const u8{
         "sa",
         "build-exe",
-        "json_debug_clean.sa",
+        "json_debug_clean.sars",
         "-o",
         "json_debug_clean.out",
         "--jobs",
@@ -1200,14 +1200,14 @@ test "cli run with jobs 2 keeps the earliest source-order trap" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "parallel_trap.sa", source);
+    try writeSource(tmp.dir, "parallel_trap.sars", source);
 
     var stdout_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buf.deinit();
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{"sars", "run", "parallel_trap.sa", "--jobs", "2" };
+    const run_argv = [_][]const u8{"sars", "run", "parallel_trap.sars", "--jobs", "2" };
     const code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 1), code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -1222,7 +1222,7 @@ test "hello world demo prints through sa run" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{"sars", "run", "demos/rosetta/01_hello_world/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "demos/rosetta/01_hello_world/main.sars" };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), run_code);
     try std.testing.expectEqualStrings("hello, saasm\n", stdout_buf.items);
@@ -1245,14 +1245,14 @@ test "sa run reports unsupported extern symbol names" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "extern_run.sa", source);
+    try writeSource(tmp.dir, "extern_run.sars", source);
 
     var stdout_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buf.deinit();
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{"sars", "run", "extern_run.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "extern_run.sars" };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 1), run_code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -1281,7 +1281,7 @@ test "hello world demo prints through build-wasm and node wasi" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/01_hello_world/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/01_hello_world/main.sars");
     defer std.testing.allocator.free(source_path);
 
     const build_wasm_argv = [_][]const u8{"sars", "build-wasm", source_path, "-o", "hello.wasm", "--target", "wasm32" };
@@ -1334,7 +1334,7 @@ test "windows llvm builds and runs hello world executable" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/01_hello_world/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/01_hello_world/main.sars");
     defer std.testing.allocator.free(source_path);
     const build_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "hello.exe", "--no-incremental" };
     try std.testing.expectEqual(@as(u8, 0), try saasm.cli.execute(std.testing.allocator, &build_argv));
@@ -1396,10 +1396,10 @@ test "hello world upstream line can break in gdb" {
         \\// 9
         \\// 10
     ;
-    try writeSource(tmp.dir, "hello.sa", source);
+    try writeSource(tmp.dir, "hello.sars", source);
     try writeSource(tmp.dir, "hello.rs", upstream_source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "hello.sa", "-o", "hello.out", "-g" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "hello.sars", "-o", "hello.out", "-g" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_exe_code);
 
@@ -1467,7 +1467,7 @@ test "hello compute demo prints through build-exe and build-wasm" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/98_build_pipeline/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/98_build_pipeline/main.sars");
     defer std.testing.allocator.free(source_path);
 
     const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "hello_compute.out" };
@@ -1515,7 +1515,7 @@ test "trait vtable demo runs through sa run" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{"sars", "run", "demos/rosetta/07_trait_vtable/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "demos/rosetta/07_trait_vtable/main.sars" };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), run_code);
     try std.testing.expectEqualStrings("77\n", stdout_buf.items);
@@ -1523,11 +1523,11 @@ test "trait vtable demo runs through sa run" {
 }
 
 test "callback registration demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/253_contract_callback_registration/main.sa", "253\n");
+    try assertBuildExeStdout("demos/rosetta/253_contract_callback_registration/main.sars", "253\n");
 }
 
 test "indirect calls shadowed by an early import resolve to valued callees" {
-    try assertBuildExeStdout("demos/rosetta/334_indirect_import_shadow/main.sa", "334\n");
+    try assertBuildExeStdout("demos/rosetta/334_indirect_import_shadow/main.sars", "334\n");
 }
 
 test "pkg lib dynamic demo compiles via object archive and prints through native link" {
@@ -1540,9 +1540,9 @@ test "pkg lib dynamic demo compiles via object archive and prints through native
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const main_source = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/220_pkg_lib_dynamic/main.sa");
+    const main_source = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/220_pkg_lib_dynamic/main.sars");
     defer std.testing.allocator.free(main_source);
-    const lib_source = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/220_pkg_lib_dynamic/lib/index.sa");
+    const lib_source = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/220_pkg_lib_dynamic/lib/index.sars");
     defer std.testing.allocator.free(lib_source);
     const sa_std_archive_path = try original_cwd.realpathAlloc(std.testing.allocator, "artifacts/sa_std/libsa_std.a");
     defer std.testing.allocator.free(sa_std_archive_path);
@@ -1578,331 +1578,331 @@ test "pkg lib dynamic demo compiles via object archive and prints through native
 }
 
 test "comparison alias demos run through sa run" {
-    try assertRunStdout("demos/rosetta/03_if_else/main.sa", "20\n");
-    try assertRunStdout("demos/rosetta/04_loop/main.sa", "[0,0,0,0]\n");
-    try assertRunStdout("demos/rosetta/21_while_loop/main.sa", "15\n");
-    try assertRunStdout("demos/rosetta/24_factorial/main.sa", "120\n");
-    try assertRunStdout("demos/rosetta/25_fibonacci/main.sa", "21\n");
+    try assertRunStdout("demos/rosetta/03_if_else/main.sars", "20\n");
+    try assertRunStdout("demos/rosetta/04_loop/main.sars", "[0,0,0,0]\n");
+    try assertRunStdout("demos/rosetta/21_while_loop/main.sars", "15\n");
+    try assertRunStdout("demos/rosetta/24_factorial/main.sars", "120\n");
+    try assertRunStdout("demos/rosetta/25_fibonacci/main.sars", "21\n");
 }
 
 test "ownership and borrow demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/02_mutability/main.sa", "20\n");
-    try assertBuildExeStdout("demos/rosetta/20_boxed_value/main.sa", "9\n");
-    try assertBuildExeStdout("demos/rosetta/26_reference_return/main.sa", "9\n");
-    try assertBuildExeStdout("demos/rosetta/27_move_semantics/main.sa", "11\n");
-    try assertBuildExeStdout("demos/rosetta/28_borrow_chains/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/51_refcount/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/58_borrow_update/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/61_thread_pool/main.sa", "5\n");
-    try assertBuildExeStdout("demos/rosetta/67_resource_pool/main.sa", "20\n");
-    try assertBuildExeStdout("demos/rosetta/52_queue_rotate/main.sa", "2,3,1\n");
+    try assertBuildExeStdout("demos/rosetta/02_mutability/main.sars", "20\n");
+    try assertBuildExeStdout("demos/rosetta/20_boxed_value/main.sars", "9\n");
+    try assertBuildExeStdout("demos/rosetta/26_reference_return/main.sars", "9\n");
+    try assertBuildExeStdout("demos/rosetta/27_move_semantics/main.sars", "11\n");
+    try assertBuildExeStdout("demos/rosetta/28_borrow_chains/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/51_refcount/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/58_borrow_update/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/61_thread_pool/main.sars", "5\n");
+    try assertBuildExeStdout("demos/rosetta/67_resource_pool/main.sars", "20\n");
+    try assertBuildExeStdout("demos/rosetta/52_queue_rotate/main.sars", "2,3,1\n");
 }
 
 test "core control-flow and data demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/03_if_else/main.sa", "20\n");
-    try assertBuildExeStdout("demos/rosetta/05_struct/main.sa", "(10,20)\n");
-    try assertBuildExeStdout("demos/rosetta/06_enum_and_match/main.sa", "30\n");
-    try assertBuildExeStdout("demos/rosetta/11_tuples/main.sa", "(3, 4)\n");
-    try assertBuildExeStdout("demos/rosetta/13_array_sum/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/15_string_bytes/main.sa", "4\n");
-    try assertBuildExeStdout("demos/rosetta/18_option_map/main.sa", "8\n");
-    try assertBuildExeStdout("demos/rosetta/16_methods/main.sa", "25\n");
-    try assertBuildExeStdout("demos/rosetta/24_factorial/main.sa", "120\n");
-    try assertBuildExeStdout("demos/rosetta/25_fibonacci/main.sa", "21\n");
-    try assertBuildExeStdout("demos/rosetta/29_const_data/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/31_trait_static_dispatch/main.sa", "16\n");
+    try assertBuildExeStdout("demos/rosetta/03_if_else/main.sars", "20\n");
+    try assertBuildExeStdout("demos/rosetta/05_struct/main.sars", "(10,20)\n");
+    try assertBuildExeStdout("demos/rosetta/06_enum_and_match/main.sars", "30\n");
+    try assertBuildExeStdout("demos/rosetta/11_tuples/main.sars", "(3, 4)\n");
+    try assertBuildExeStdout("demos/rosetta/13_array_sum/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/15_string_bytes/main.sars", "4\n");
+    try assertBuildExeStdout("demos/rosetta/18_option_map/main.sars", "8\n");
+    try assertBuildExeStdout("demos/rosetta/16_methods/main.sars", "25\n");
+    try assertBuildExeStdout("demos/rosetta/24_factorial/main.sars", "120\n");
+    try assertBuildExeStdout("demos/rosetta/25_fibonacci/main.sars", "21\n");
+    try assertBuildExeStdout("demos/rosetta/29_const_data/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/31_trait_static_dispatch/main.sars", "16\n");
 }
 
 test "additional rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/12_destructuring/main.sa", "7\n");
-    try assertBuildExeStdout("demos/rosetta/34_iterator_filter/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/35_iterator_fold/main.sa", "7\n");
-    try assertBuildExeStdout("demos/rosetta/36_tuple_struct/main.sa", "14\n");
-    try assertBuildExeStdout("demos/rosetta/40_impl_block_state/main.sa", "15\n");
-    try assertBuildExeStdout("demos/rosetta/41_module_imports/main.sa", "42\n");
-    try assertBuildExeStdout("demos/rosetta/42_export_visibility/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/45_config_merge/main.sa", "4 3\n");
-    try assertBuildExeStdout("demos/rosetta/46_option_default/main.sa", "9\n");
-    try assertBuildExeStdout("demos/rosetta/48_generic_pair/main.sa", "11,31\n");
-    try assertBuildExeStdout("demos/rosetta/63_router_table/main.sa", "2\n");
+    try assertBuildExeStdout("demos/rosetta/12_destructuring/main.sars", "7\n");
+    try assertBuildExeStdout("demos/rosetta/34_iterator_filter/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/35_iterator_fold/main.sars", "7\n");
+    try assertBuildExeStdout("demos/rosetta/36_tuple_struct/main.sars", "14\n");
+    try assertBuildExeStdout("demos/rosetta/40_impl_block_state/main.sars", "15\n");
+    try assertBuildExeStdout("demos/rosetta/41_module_imports/main.sars", "42\n");
+    try assertBuildExeStdout("demos/rosetta/42_export_visibility/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/45_config_merge/main.sars", "4 3\n");
+    try assertBuildExeStdout("demos/rosetta/46_option_default/main.sars", "9\n");
+    try assertBuildExeStdout("demos/rosetta/48_generic_pair/main.sars", "11,31\n");
+    try assertBuildExeStdout("demos/rosetta/63_router_table/main.sars", "2\n");
 }
 
 test "fallible rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/19_result_question/main.sa", "21\n");
-    try assertBuildExeStdout("demos/rosetta/50_error_chain/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/176_result_flattening/main.sa", "2\n");
+    try assertBuildExeStdout("demos/rosetta/19_result_question/main.sars", "21\n");
+    try assertBuildExeStdout("demos/rosetta/50_error_chain/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/176_result_flattening/main.sars", "2\n");
 }
 
 test "slice and cache rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/44_slice_iteration/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/54_mem_fill/main.sa", "7,7,7,7\n");
-    try assertBuildExeStdout("demos/rosetta/86_cache_eviction/main.sa", "20\n");
+    try assertBuildExeStdout("demos/rosetta/44_slice_iteration/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/54_mem_fill/main.sars", "7,7,7,7\n");
+    try assertBuildExeStdout("demos/rosetta/86_cache_eviction/main.sars", "20\n");
 }
 
 test "baseline rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/01_hello_world/main.sa", "hello, saasm\n");
-    try assertBuildExeStdout("demos/rosetta/04_loop/main.sa", "[0,0,0,0]\n");
-    try assertBuildExeStdout("demos/rosetta/07_trait_vtable/main.sa", "77\n");
-    try assertBuildExeStdout("demos/rosetta/21_while_loop/main.sa", "15\n");
+    try assertBuildExeStdout("demos/rosetta/01_hello_world/main.sars", "hello, saasm\n");
+    try assertBuildExeStdout("demos/rosetta/04_loop/main.sars", "[0,0,0,0]\n");
+    try assertBuildExeStdout("demos/rosetta/07_trait_vtable/main.sars", "77\n");
+    try assertBuildExeStdout("demos/rosetta/21_while_loop/main.sars", "15\n");
 }
 
 test "break and nested loop rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/22_break_continue/main.sa", "9\n");
-    try assertBuildExeStdout("demos/rosetta/23_nested_loops/main.sa", "18\n");
+    try assertBuildExeStdout("demos/rosetta/22_break_continue/main.sars", "9\n");
+    try assertBuildExeStdout("demos/rosetta/23_nested_loops/main.sars", "18\n");
 }
 
 test "more baseline rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/29_const_data/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/31_trait_static_dispatch/main.sa", "16\n");
-    try assertBuildExeStdout("demos/rosetta/37_newtype/main.sa", "42\n");
-    try assertBuildExeStdout("demos/rosetta/38_generic_struct_i32/main.sa", "31\n");
-    try assertBuildExeStdout("demos/rosetta/39_generic_enum_i32/main.sa", "7\n");
-    try assertBuildExeStdout("demos/rosetta/40_impl_block_state/main.sa", "15\n");
+    try assertBuildExeStdout("demos/rosetta/29_const_data/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/31_trait_static_dispatch/main.sars", "16\n");
+    try assertBuildExeStdout("demos/rosetta/37_newtype/main.sars", "42\n");
+    try assertBuildExeStdout("demos/rosetta/38_generic_struct_i32/main.sars", "31\n");
+    try assertBuildExeStdout("demos/rosetta/39_generic_enum_i32/main.sars", "7\n");
+    try assertBuildExeStdout("demos/rosetta/40_impl_block_state/main.sars", "15\n");
 }
 
 test "more rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/08_closures/main.sa", "15\n");
-    try assertBuildExeStdout("demos/rosetta/10_generics_monomorph/main.sa", "42\n");
-    try assertBuildExeStdout("demos/rosetta/17_associated_fn/main.sa", "42\n");
-    try assertBuildExeStdout("demos/rosetta/30_manual_guard_branch/main.sa", "5\n");
-    try assertBuildExeStdout("demos/rosetta/33_iterator_map/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/37_newtype/main.sa", "42\n");
-    try assertBuildExeStdout("demos/rosetta/38_generic_struct_i32/main.sa", "31\n");
-    try assertBuildExeStdout("demos/rosetta/39_generic_enum_i32/main.sa", "7\n");
-    try assertBuildExeStdout("demos/rosetta/59_method_counter/main.sa", "4\n");
-    try assertBuildExeStdout("demos/rosetta/60_enum_branch/main.sa", "2\n");
+    try assertBuildExeStdout("demos/rosetta/08_closures/main.sars", "15\n");
+    try assertBuildExeStdout("demos/rosetta/10_generics_monomorph/main.sars", "42\n");
+    try assertBuildExeStdout("demos/rosetta/17_associated_fn/main.sars", "42\n");
+    try assertBuildExeStdout("demos/rosetta/30_manual_guard_branch/main.sars", "5\n");
+    try assertBuildExeStdout("demos/rosetta/33_iterator_map/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/37_newtype/main.sars", "42\n");
+    try assertBuildExeStdout("demos/rosetta/38_generic_struct_i32/main.sars", "31\n");
+    try assertBuildExeStdout("demos/rosetta/39_generic_enum_i32/main.sars", "7\n");
+    try assertBuildExeStdout("demos/rosetta/59_method_counter/main.sars", "4\n");
+    try assertBuildExeStdout("demos/rosetta/60_enum_branch/main.sars", "2\n");
 }
 
 test "even more rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/64_file_manifest/main.sa", "3\n");
-    try assertBuildExeStdout("demos/rosetta/68_parser_tokens/main.sa", "4\n");
-    try assertBuildExeStdout("demos/rosetta/69_serializer/main.sa", "{\"id\":7}\n");
-    try assertBuildExeStdout("demos/rosetta/70_integration_service/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/71_pipeline_stage/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/72_graph_walk/main.sa", "3\n");
-    try assertBuildExeStdout("demos/rosetta/73_scene_nodes/main.sa", "15\n");
-    try assertBuildExeStdout("demos/rosetta/74_component_store/main.sa", "2\n");
-    try assertBuildExeStdout("demos/rosetta/77_http_route/main.sa", "/health\n");
-    try assertBuildExeStdout("demos/rosetta/78_cli_args/main.sa", "2\n");
+    try assertBuildExeStdout("demos/rosetta/64_file_manifest/main.sars", "3\n");
+    try assertBuildExeStdout("demos/rosetta/68_parser_tokens/main.sars", "4\n");
+    try assertBuildExeStdout("demos/rosetta/69_serializer/main.sars", "{\"id\":7}\n");
+    try assertBuildExeStdout("demos/rosetta/70_integration_service/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/71_pipeline_stage/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/72_graph_walk/main.sars", "3\n");
+    try assertBuildExeStdout("demos/rosetta/73_scene_nodes/main.sars", "15\n");
+    try assertBuildExeStdout("demos/rosetta/74_component_store/main.sars", "2\n");
+    try assertBuildExeStdout("demos/rosetta/77_http_route/main.sars", "/health\n");
+    try assertBuildExeStdout("demos/rosetta/78_cli_args/main.sars", "2\n");
 }
 
 test "final rosetta batch compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/79_metrics/main.sa", "4\n");
-    try assertBuildExeStdout("demos/rosetta/80_workflow/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/81_kv_store/main.sa", "5\n");
-    try assertBuildExeStdout("demos/rosetta/82_sql_scan/main.sa", "2\n");
-    try assertBuildExeStdout("demos/rosetta/83_blob_chunk/main.sa", "4\n");
-    try assertBuildExeStdout("demos/rosetta/84_sync_gate/main.sa", "1\n");
-    try assertBuildExeStdout("demos/rosetta/85_scheduler_tree/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/89_job_queue/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/90_app_shell/main.sa", "app --mode demo\n");
-    try assertBuildExeStdout("demos/rosetta/91_db_session/main.sa", "2\n");
-    try assertBuildExeStdout("demos/rosetta/87_protocol_frame/main.sa", "3\n");
-    try assertBuildExeStdout("demos/rosetta/88_text_index/main.sa", "3\n");
-    try assertBuildExeStdout("demos/rosetta/92_query_plan/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/93_log_aggregator/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/94_graphql_router/main.sa", "query user\n");
-    try assertBuildExeStdout("demos/rosetta/95_repl_shell/main.sa", "sa> \n");
-    try assertBuildExeStdout("demos/rosetta/96_task_orchestrator/main.sa", "4\n");
-    try assertBuildExeStdout("demos/rosetta/97_sync_service/main.sa", "1\n");
-    try assertBuildExeStdout("demos/rosetta/98_build_pipeline/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/99_release_bundle/main.sa", "3\n");
-    try assertBuildExeStdout("demos/rosetta/100_full_app/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/178_panic_hook_override/main.sa", "1\n");
+    try assertBuildExeStdout("demos/rosetta/79_metrics/main.sars", "4\n");
+    try assertBuildExeStdout("demos/rosetta/80_workflow/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/81_kv_store/main.sars", "5\n");
+    try assertBuildExeStdout("demos/rosetta/82_sql_scan/main.sars", "2\n");
+    try assertBuildExeStdout("demos/rosetta/83_blob_chunk/main.sars", "4\n");
+    try assertBuildExeStdout("demos/rosetta/84_sync_gate/main.sars", "1\n");
+    try assertBuildExeStdout("demos/rosetta/85_scheduler_tree/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/89_job_queue/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/90_app_shell/main.sars", "app --mode demo\n");
+    try assertBuildExeStdout("demos/rosetta/91_db_session/main.sars", "2\n");
+    try assertBuildExeStdout("demos/rosetta/87_protocol_frame/main.sars", "3\n");
+    try assertBuildExeStdout("demos/rosetta/88_text_index/main.sars", "3\n");
+    try assertBuildExeStdout("demos/rosetta/92_query_plan/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/93_log_aggregator/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/94_graphql_router/main.sars", "query user\n");
+    try assertBuildExeStdout("demos/rosetta/95_repl_shell/main.sars", "sa> \n");
+    try assertBuildExeStdout("demos/rosetta/96_task_orchestrator/main.sars", "4\n");
+    try assertBuildExeStdout("demos/rosetta/97_sync_service/main.sars", "1\n");
+    try assertBuildExeStdout("demos/rosetta/98_build_pipeline/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/99_release_bundle/main.sars", "3\n");
+    try assertBuildExeStdout("demos/rosetta/100_full_app/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/178_panic_hook_override/main.sars", "1\n");
 }
 
 test "service and concurrency rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/55_builder_pattern/main.sa", "POST /api\n");
-    try assertBuildExeStdout("demos/rosetta/56_state_machine/main.sa", "2\n");
-    try assertBuildExeStdout("demos/rosetta/57_event_loop/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/62_channel_pingpong/main.sa", "8\n");
-    try assertBuildExeStdout("demos/rosetta/65_job_scheduler/main.sa", "10\n");
-    try assertBuildExeStdout("demos/rosetta/66_actor_mailbox/main.sa", "6\n");
-    try assertBuildExeStdout("demos/rosetta/75_async_bridge/main.sa", "5\n");
-    try assertBuildExeStdout("demos/rosetta/76_lockfree_counter/main.sa", "3\n");
+    try assertBuildExeStdout("demos/rosetta/55_builder_pattern/main.sars", "POST /api\n");
+    try assertBuildExeStdout("demos/rosetta/56_state_machine/main.sars", "2\n");
+    try assertBuildExeStdout("demos/rosetta/57_event_loop/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/62_channel_pingpong/main.sars", "8\n");
+    try assertBuildExeStdout("demos/rosetta/65_job_scheduler/main.sars", "10\n");
+    try assertBuildExeStdout("demos/rosetta/66_actor_mailbox/main.sars", "6\n");
+    try assertBuildExeStdout("demos/rosetta/75_async_bridge/main.sars", "5\n");
+    try assertBuildExeStdout("demos/rosetta/76_lockfree_counter/main.sars", "3\n");
 }
 
 test "remaining rosetta demos compile and print through build-exe" {
-    try assertBuildExeStdout("demos/rosetta/14_slice_window/main.sa", "5\n");
-    try assertBuildExeStdout("demos/rosetta/32_trait_object_vector/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/09_async_await/main.sa", "2\n");
-    try assertBuildExeStdout("demos/rosetta/47_tuple_swap/main.sa", "8,3\n");
-    try assertBuildExeStdout("demos/rosetta/53_cache_hits/main.sa", "3\n");
-    try assertBuildExeStdout("demos/rosetta/43_tagged_union/main.sa", "36\n");
-    try assertBuildExeStdout("demos/rosetta/49_pipeline_map/main.sa", "12\n");
-    try assertBuildExeStdout("demos/rosetta/94_graphql_router/main.sa", "query user\n");
-    try assertBuildExeStdout("demos/rosetta/95_repl_shell/main.sa", "sa> \n");
-    try assertBuildExeStdout("demos/rosetta/100_full_app/main.sa", "12\n");
+    try assertBuildExeStdout("demos/rosetta/14_slice_window/main.sars", "5\n");
+    try assertBuildExeStdout("demos/rosetta/32_trait_object_vector/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/09_async_await/main.sars", "2\n");
+    try assertBuildExeStdout("demos/rosetta/47_tuple_swap/main.sars", "8,3\n");
+    try assertBuildExeStdout("demos/rosetta/53_cache_hits/main.sars", "3\n");
+    try assertBuildExeStdout("demos/rosetta/43_tagged_union/main.sars", "36\n");
+    try assertBuildExeStdout("demos/rosetta/49_pipeline_map/main.sars", "12\n");
+    try assertBuildExeStdout("demos/rosetta/94_graphql_router/main.sars", "query user\n");
+    try assertBuildExeStdout("demos/rosetta/95_repl_shell/main.sars", "sa> \n");
+    try assertBuildExeStdout("demos/rosetta/100_full_app/main.sars", "12\n");
 }
 
 test "async await demo runs through sa run" {
-    try assertRunStdout("demos/rosetta/09_async_await/main.sa", "2\n");
+    try assertRunStdout("demos/rosetta/09_async_await/main.sars", "2\n");
 }
 
 test "macro demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/macro_print.sa", "macro ok\n");
+    try assertBuildExeStdout("demos/support/macro_print.sars", "macro ok\n");
 }
 
 test "sa_core macros compile and print through imported standard library macros" {
-    try assertBuildExeStdout("demos/support/macro_core.sa", "macro core ok\n");
+    try assertBuildExeStdout("demos/support/macro_core.sars", "macro core ok\n");
 }
 
 test "time demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/time_probe.sa", "time ok\n");
+    try assertBuildExeStdout("demos/support/time_probe.sars", "time ok\n");
 }
 
 test "time demo runs through sa run" {
-    try assertRunStdout("demos/support/time_probe.sa", "time ok\n");
+    try assertRunStdout("demos/support/time_probe.sars", "time ok\n");
 }
 
 test "pthread vtable worker stores survive native join" {
-    try assertBuildExeStdout("demos/support/pthread_vtable_store/main.sa", "ok\n");
+    try assertBuildExeStdout("demos/support/pthread_vtable_store/main.sars", "ok\n");
 }
 
 test "mutex demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/mutex_probe.sa", "mutex ok\n");
+    try assertBuildExeStdout("demos/support/mutex_probe.sars", "mutex ok\n");
 }
 
 test "mutex demo runs through sa run" {
-    try assertRunStdout("demos/support/mutex_probe.sa", "mutex ok\n");
+    try assertRunStdout("demos/support/mutex_probe.sars", "mutex ok\n");
 }
 
 test "once demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/once_probe.sa", "once ok\n");
+    try assertBuildExeStdout("demos/support/once_probe.sars", "once ok\n");
 }
 
 test "once demo runs through sa run" {
-    try assertRunStdout("demos/support/once_probe.sa", "once ok\n");
+    try assertRunStdout("demos/support/once_probe.sars", "once ok\n");
 }
 
 test "mpsc demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/mpsc_probe.sa", "mpsc ok\n");
+    try assertBuildExeStdout("demos/support/mpsc_probe.sars", "mpsc ok\n");
 }
 
 test "mpsc demo runs through sa run" {
-    try assertRunStdout("demos/support/mpsc_probe.sa", "mpsc ok\n");
+    try assertRunStdout("demos/support/mpsc_probe.sars", "mpsc ok\n");
 }
 
 test "io demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/io_probe.sa", "alpha\n5\n");
+    try assertBuildExeStdout("demos/support/io_probe.sars", "alpha\n5\n");
 }
 
 test "hashmap demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/hashmap_probe.sa", "alpha\nbravo\nmap ok\n");
+    try assertBuildExeStdout("demos/support/hashmap_probe.sars", "alpha\nbravo\nmap ok\n");
 }
 
 test "hashset demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/hashset_probe.sa", "set ok\n");
+    try assertBuildExeStdout("demos/support/hashset_probe.sars", "set ok\n");
 }
 
 test "hashset demo runs through sa run" {
-    try assertRunStdout("demos/support/hashset_probe.sa", "set ok\n");
+    try assertRunStdout("demos/support/hashset_probe.sars", "set ok\n");
 }
 
 test "sort demo compiles and prints through build-exe" {
-    try assertBuildExeStdout("demos/support/sort_probe.sa", "sort ok\n");
+    try assertBuildExeStdout("demos/support/sort_probe.sars", "sort ok\n");
 }
 
 test "use after move demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/use_after_move.sa", "use_after_move.out", "UseAfterMove", 1009, "moved value is no longer usable");
+    try assertBuildExeTrap("demos/support/use_after_move.sars", "use_after_move.out", "UseAfterMove", 1009, "moved value is no longer usable");
 }
 
 test "return after move demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/return_after_move.sa", "return_after_move.out", "UseAfterMove", 1009, "moved value is no longer usable");
+    try assertBuildExeTrap("demos/support/return_after_move.sars", "return_after_move.out", "UseAfterMove", 1009, "moved value is no longer usable");
 }
 
 test "borrow conflict demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/borrow_conflict.sa", "borrow_conflict.out", "BorrowConflict", 1008, "borrow rules reject this access");
+    try assertBuildExeTrap("demos/support/borrow_conflict.sars", "borrow_conflict.out", "BorrowConflict", 1008, "borrow rules reject this access");
 }
 
 test "read write conflict demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/read_write_conflict.sa", "read_write_conflict.out", "ReadWriteConflict", 1011, "cannot write through a shared borrow");
+    try assertBuildExeTrap("demos/support/read_write_conflict.sars", "read_write_conflict.out", "ReadWriteConflict", 1011, "cannot write through a shared borrow");
 }
 
 test "illegal unsafe context demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/illegal_unsafe_context.sa", "illegal_unsafe_context.out", "IllegalUnsafeContext", 1019, "raw pointer and assume_* instructions are only legal inside @ffi_wrapper");
+    try assertBuildExeTrap("demos/support/illegal_unsafe_context.sars", "illegal_unsafe_context.out", "IllegalUnsafeContext", 1019, "raw pointer and assume_* instructions are only legal inside @ffi_wrapper");
 }
 
 test "stack escape demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/stack_escape.sa", "stack_escape.out", "StackEscape", 1025, "stack allocation cannot be moved out of its function");
+    try assertBuildExeTrap("demos/support/stack_escape.sars", "stack_escape.out", "StackEscape", 1025, "stack allocation cannot be moved out of its function");
 }
 
 test "const mutation demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/const_mutation.sa", "const_mutation.out", "ConstMutation", 1023, "immutable registers cannot be released");
+    try assertBuildExeTrap("demos/support/const_mutation.sars", "const_mutation.out", "ConstMutation", 1023, "immutable registers cannot be released");
 }
 
 test "early return leak demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/early_return_leak.sa", "early_return_leak.out", "EarlyReturnLeak", 1026, "early return would leak live registers");
+    try assertBuildExeTrap("demos/support/early_return_leak.sars", "early_return_leak.out", "EarlyReturnLeak", 1026, "early return would leak live registers");
 }
 
 test "macro recursion demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/macro_recursion.sa", "macro_recursion.out", "MacroRecursionLimit", 1005, "macro recursion limit exceeded");
+    try assertBuildExeTrap("demos/support/macro_recursion.sars", "macro_recursion.out", "MacroRecursionLimit", 1005, "macro recursion limit exceeded");
 }
 
 test "forbidden syntax demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/forbidden_syntax.sa", "forbidden_syntax.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
+    try assertBuildExeTrap("demos/support/forbidden_syntax.sars", "forbidden_syntax.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
 }
 
 test "forbidden if demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/forbidden_if.sa", "forbidden_if.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
+    try assertBuildExeTrap("demos/support/forbidden_if.sars", "forbidden_if.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
 }
 
 test "forbidden while demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/forbidden_while.sa", "forbidden_while.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
+    try assertBuildExeTrap("demos/support/forbidden_while.sars", "forbidden_while.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
 }
 
 test "forbidden for demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/forbidden_for.sa", "forbidden_for.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
+    try assertBuildExeTrap("demos/support/forbidden_for.sars", "forbidden_for.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
 }
 
 test "forbidden brace demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/forbidden_brace.sa", "forbidden_brace.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
+    try assertBuildExeTrap("demos/support/forbidden_brace.sars", "forbidden_brace.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
 }
 
 test "forbidden property chain demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/forbidden_property_chain.sa", "forbidden_property_chain.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
+    try assertBuildExeTrap("demos/support/forbidden_property_chain.sars", "forbidden_property_chain.out", "ForbiddenSyntax", 1001, "forbidden syntax detected during flattening");
 }
 
 test "memory leak after borrow demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/memory_leak_after_borrow.sa", "memory_leak_after_borrow.out", "MemoryLeak", 1012, "live registers remain at function exit");
+    try assertBuildExeTrap("demos/support/memory_leak_after_borrow.sars", "memory_leak_after_borrow.out", "MemoryLeak", 1012, "live registers remain at function exit");
 }
 
 test "memory leak partial release demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/memory_leak_partial_release.sa", "memory_leak_partial_release.out", "MemoryLeak", 1012, "live registers remain at function exit");
+    try assertBuildExeTrap("demos/support/memory_leak_partial_release.sars", "memory_leak_partial_release.out", "MemoryLeak", 1012, "live registers remain at function exit");
 }
 
 test "atomic ordering mismatch demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/atomic_ordering_mismatch.sa", "atomic_ordering_mismatch.out", "AtomicOrderingMismatch", 1029, "same-address RMW ordering combination is not allowed");
+    try assertBuildExeTrap("demos/support/atomic_ordering_mismatch.sars", "atomic_ordering_mismatch.out", "AtomicOrderingMismatch", 1029, "same-address RMW ordering combination is not allowed");
 }
 
 test "invalid atomic ordering demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/invalid_atomic_ordering.sa", "invalid_atomic_ordering.out", "InvalidAtomicOrdering", 1028, "invalid atomic ordering");
+    try assertBuildExeTrap("demos/support/invalid_atomic_ordering.sars", "invalid_atomic_ordering.out", "InvalidAtomicOrdering", 1028, "invalid atomic ordering");
 }
 
 test "unknown register return demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/unknown_register_return.sa", "unknown_register_return.out", "UnknownRegister", 1007, "register is not declared in the current scope");
+    try assertBuildExeTrap("demos/support/unknown_register_return.sars", "unknown_register_return.out", "UnknownRegister", 1007, "register is not declared in the current scope");
 }
 
 test "capability mismatch demo is rejected with structured trap output" {
-    try assertBuildExeTrap("demos/support/capability_mismatch.sa", "capability_mismatch.out", "CapabilityMismatch", 1013, "call-site capability prefix does not match the callee contract");
+    try assertBuildExeTrap("demos/support/capability_mismatch.sars", "capability_mismatch.out", "CapabilityMismatch", 1013, "call-site capability prefix does not match the callee contract");
 }
 
 test "package and module roadmap demos are rejected with structured trap output" {
-    try assertBuildExeTrap("demos/rosetta/205_pkg_cyclic_dependency_reject/main.sa", "205_pkg_cyclic_dependency_reject.out", "ForbiddenSyntax", 1001, "import cycle detected during flattening");
-    try assertBuildExeTrap("demos/rosetta/207_pkg_multiple_versions_conflict/main.sa", "207_pkg_multiple_versions_conflict.out", "DuplicateDef", 1002, "duplicate definition detected during flattening");
-    try assertBuildExeTrap("demos/rosetta/226_mod_cyclic_import_detect/main.sa", "226_mod_cyclic_import_detect.out", "ForbiddenSyntax", 1001, "import cycle detected during flattening");
-    try assertBuildExeTrap("demos/rosetta/227_mod_shadowing_prevention/main.sa", "227_mod_shadowing_prevention.out", "DuplicateDef", 1002, "duplicate definition detected during flattening");
-    try assertBuildExeTrap("demos/rosetta/243_contract_sig_mismatch_link/main.sa", "243_contract_sig_mismatch_link.out", "CapabilityMismatch", 1013, "call-site capability prefix does not match the callee contract");
+    try assertBuildExeTrap("demos/rosetta/205_pkg_cyclic_dependency_reject/main.sars", "205_pkg_cyclic_dependency_reject.out", "ForbiddenSyntax", 1001, "import cycle detected during flattening");
+    try assertBuildExeTrap("demos/rosetta/207_pkg_multiple_versions_conflict/main.sars", "207_pkg_multiple_versions_conflict.out", "DuplicateDef", 1002, "duplicate definition detected during flattening");
+    try assertBuildExeTrap("demos/rosetta/226_mod_cyclic_import_detect/main.sars", "226_mod_cyclic_import_detect.out", "ForbiddenSyntax", 1001, "import cycle detected during flattening");
+    try assertBuildExeTrap("demos/rosetta/227_mod_shadowing_prevention/main.sars", "227_mod_shadowing_prevention.out", "DuplicateDef", 1002, "duplicate definition detected during flattening");
+    try assertBuildExeTrap("demos/rosetta/243_contract_sig_mismatch_link/main.sars", "243_contract_sig_mismatch_link.out", "CapabilityMismatch", 1013, "call-site capability prefix does not match the callee contract");
 }
 
 test "struct demo runs through sa run" {
-    try assertRunStdout("demos/rosetta/05_struct/main.sa", "(10,20)\n");
+    try assertRunStdout("demos/rosetta/05_struct/main.sars", "(10,20)\n");
 }
 
 test "sys runtime demo prints and round-trips file contents" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/sys_runtime_probe.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/sys_runtime_probe.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -1995,7 +1995,7 @@ test "sys runtime demo prints and round-trips file contents" {
 test "ffi airlock demo preserves pointer values through assume_* in sa run" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/airlock_probe.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/airlock_probe.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -2029,7 +2029,7 @@ test "ffi airlock demo preserves pointer values through assume_* in sa run" {
 test "http client saasm demo builds through native exe" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/301_http_client_saasm/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/301_http_client_saasm/main.sars");
     defer std.testing.allocator.free(source_path);
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
@@ -2098,7 +2098,7 @@ test "http client saasm demo builds through native exe" {
 test "http server saasm demo builds through native exe" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/302_http_server_saasm/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/302_http_server_saasm/main.sars");
     defer std.testing.allocator.free(source_path);
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
@@ -2182,9 +2182,9 @@ test "panic builtins terminate through the interpreter" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "panic.sa", plain_source);
+    try writeSource(tmp.dir, "panic.sars", plain_source);
 
-    const plain_argv = [_][]const u8{"sars", "run", "panic.sa" };
+    const plain_argv = [_][]const u8{"sars", "run", "panic.sars" };
     const plain_code = try saasm.cli.execute(std.testing.allocator, plain_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), plain_code);
 
@@ -2197,9 +2197,9 @@ test "panic builtins terminate through the interpreter" {
         \\panic_msg(23, *buf, 2)
     ;
 
-    try writeSource(tmp.dir, "panic_msg.sa", msg_source);
+    try writeSource(tmp.dir, "panic_msg.sars", msg_source);
 
-    const msg_argv = [_][]const u8{"sars", "run", "panic_msg.sa" };
+    const msg_argv = [_][]const u8{"sars", "run", "panic_msg.sars" };
     const msg_code = try saasm.cli.execute(std.testing.allocator, msg_argv[0..]);
     try std.testing.expectEqual(@as(u8, 151), msg_code);
 
@@ -2207,11 +2207,11 @@ test "panic builtins terminate through the interpreter" {
     defer std.testing.allocator.free(result_layout_path);
     const option_layout_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/option.sal");
     defer std.testing.allocator.free(option_layout_path);
-    const result_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/result.sa");
+    const result_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/result.sars");
     defer std.testing.allocator.free(result_src_path);
-    const option_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/option.sa");
+    const option_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/option.sars");
     defer std.testing.allocator.free(option_src_path);
-    const panic_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/panic.sa");
+    const panic_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/panic.sars");
     defer std.testing.allocator.free(panic_src_path);
 
     const result_unwrap_source = try std.fmt.allocPrint(std.testing.allocator,
@@ -2228,9 +2228,9 @@ test "panic builtins terminate through the interpreter" {
     , .{ result_layout_path, result_src_path, panic_src_path });
     defer std.testing.allocator.free(result_unwrap_source);
 
-    try writeSource(tmp.dir, "result_unwrap.sa", result_unwrap_source);
+    try writeSource(tmp.dir, "result_unwrap.sars", result_unwrap_source);
 
-    const result_unwrap_argv = [_][]const u8{"sars", "run", "result_unwrap.sa" };
+    const result_unwrap_argv = [_][]const u8{"sars", "run", "result_unwrap.sars" };
     const result_unwrap_code = try saasm.cli.execute(std.testing.allocator, result_unwrap_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), result_unwrap_code);
 
@@ -2248,9 +2248,9 @@ test "panic builtins terminate through the interpreter" {
     , .{ option_layout_path, option_src_path, panic_src_path });
     defer std.testing.allocator.free(option_unwrap_source);
 
-    try writeSource(tmp.dir, "option_unwrap.sa", option_unwrap_source);
+    try writeSource(tmp.dir, "option_unwrap.sars", option_unwrap_source);
 
-    const option_unwrap_argv = [_][]const u8{"sars", "run", "option_unwrap.sa" };
+    const option_unwrap_argv = [_][]const u8{"sars", "run", "option_unwrap.sars" };
     const option_unwrap_code = try saasm.cli.execute(std.testing.allocator, option_unwrap_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), option_unwrap_code);
 
@@ -2268,9 +2268,9 @@ test "panic builtins terminate through the interpreter" {
     , .{ result_layout_path, result_src_path, panic_src_path });
     defer std.testing.allocator.free(result_unwrap_err_source);
 
-    try writeSource(tmp.dir, "result_unwrap_err.sa", result_unwrap_err_source);
+    try writeSource(tmp.dir, "result_unwrap_err.sars", result_unwrap_err_source);
 
-    const result_unwrap_err_argv = [_][]const u8{"sars", "run", "result_unwrap_err.sa" };
+    const result_unwrap_err_argv = [_][]const u8{"sars", "run", "result_unwrap_err.sars" };
     const result_unwrap_err_code = try saasm.cli.execute(std.testing.allocator, result_unwrap_err_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), result_unwrap_err_code);
 }
@@ -2284,7 +2284,7 @@ test "sa test covers include macro expansion fixture" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/include_macro_expand_unit.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/include_macro_expand_unit.sars");
     defer std.testing.allocator.free(source_path);
 
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -2317,7 +2317,7 @@ test "sa test covers module_path macro expansion fixture" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/module_path_macro_unit.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/module_path_macro_unit.sars");
     defer std.testing.allocator.free(source_path);
 
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -2350,7 +2350,7 @@ test "sa test runs isolated native tests with filterable names" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_basic.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_basic.sars");
     defer std.testing.allocator.free(source_path);
 
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -2403,8 +2403,8 @@ test "sa test runs isolated native tests with filterable names" {
         \\    call @missing_runtime_probe()
         \\    return
     ;
-    try writeSource(tmp.dir, "list_only.sa", list_only_source);
-    const list_only_argv = [_][]const u8{"sars", "test", "list_only.sa", "--list" };
+    try writeSource(tmp.dir, "list_only.sars", list_only_source);
+    const list_only_argv = [_][]const u8{"sars", "test", "list_only.sars", "--list" };
     const list_only_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         list_only_argv[0..],
@@ -2448,7 +2448,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const should_panic_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_should_panic.sa");
+    const should_panic_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_should_panic.sars");
     defer std.testing.allocator.free(should_panic_path);
 
     const should_panic_argv = [_][]const u8{"sars", "test", should_panic_path };
@@ -2471,7 +2471,7 @@ test "sa test runs isolated native tests with filterable names" {
         \\@extern sa_assert_eq_i64_at(actual: i64, expected: i64, code: i32, &file: ptr, file_len: u64, line: u32, col: u32) -> void
         \\@extern sa_test_debug_i64(&name: ptr, name_len: u64, value: i64) -> void
         \\@const ACTUAL_NAME = utf8:"actual"
-        \\@const ASSERT_FILE = utf8:"assert_values.sa"
+        \\@const ASSERT_FILE = utf8:"assert_values.sars"
         \\
         \\@test "assert equal reports values"():
         \\L_FAIL:
@@ -2482,9 +2482,9 @@ test "sa test runs isolated native tests with filterable names" {
         \\    return
         \\
     ;
-    try writeSource(tmp.dir, "assert_values.sa", assert_source);
+    try writeSource(tmp.dir, "assert_values.sars", assert_source);
 
-    const compile_only_argv = [_][]const u8{"sars", "test", "assert_values.sa", "--compile-only" };
+    const compile_only_argv = [_][]const u8{"sars", "test", "assert_values.sars", "--compile-only" };
     const compile_only_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         compile_only_argv[0..],
@@ -2499,7 +2499,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const assert_argv = [_][]const u8{"sars", "test", "assert_values.sa", "--jobs", "1", "--trace-panic" };
+    const assert_argv = [_][]const u8{"sars", "test", "assert_values.sars", "--jobs", "1", "--trace-panic" };
     const assert_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         assert_argv[0..],
@@ -2539,7 +2539,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const ignored_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_ignored.sa");
+    const ignored_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_ignored.sars");
     defer std.testing.allocator.free(ignored_path);
 
     const ignored_default_argv = [_][]const u8{"sars", "test", ignored_path };
@@ -2607,8 +2607,8 @@ test "sa test runs isolated native tests with filterable names" {
         \\    panic(99)
         \\
     ;
-    try writeSource(tmp.dir, "signal.sa", signal_source);
-    const signal_path = "signal.sa";
+    try writeSource(tmp.dir, "signal.sars", signal_source);
+    const signal_path = "signal.sars";
 
     const signal_argv = [_][]const u8{"sars", "test", signal_path };
     const signal_code = try saasm.cli.executeWithWriters(
@@ -2630,7 +2630,7 @@ test "sa test schedules native tests in parallel when jobs are higher" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_jobs_parallel.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_jobs_parallel.sars");
     defer std.testing.allocator.free(source_path);
 
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -2708,13 +2708,13 @@ test "fallible ABI and ? propagation work end to end" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "fallible.sa", source);
+    try writeSource(tmp.dir, "fallible.sars", source);
 
-    const run_argv = [_][]const u8{"sars", "run", "fallible.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "fallible.sars" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), run_code);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible.sa", "-o", "fallible.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible.sars", "-o", "fallible.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -2814,10 +2814,10 @@ test "extern u64 fallible return can be loaded from ABI payload offset" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "fallible_u64_file.sa", source);
+    try writeSource(tmp.dir, "fallible_u64_file.sars", source);
     try writeBytes(tmp.dir, "probe.env", "PORT=28080\n");
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible_u64_file.sa", "-o", "fallible_u64_file.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible_u64_file.sars", "-o", "fallible_u64_file.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -2942,10 +2942,10 @@ test "extern i32 fallible return uses ABI-aligned payload offset" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "fallible_i32_file.sa", source);
+    try writeSource(tmp.dir, "fallible_i32_file.sars", source);
     try writeBytes(tmp.dir, "probe.env", "PORT=28080\n");
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible_i32_file.sa", "-o", "fallible_i32_file.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible_i32_file.sars", "-o", "fallible_i32_file.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -2974,9 +2974,9 @@ test "result unwrap_or and map_or helpers branch on tags correctly" {
 
     const result_layout_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/result.sal");
     defer std.testing.allocator.free(result_layout_path);
-    const result_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/result.sa");
+    const result_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/result.sars");
     defer std.testing.allocator.free(result_src_path);
-    const panic_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/panic.sa");
+    const panic_src_path = try original_cwd.realpathAlloc(std.testing.allocator, "sa_std/core/panic.sars");
     defer std.testing.allocator.free(panic_src_path);
 
     const source = try std.fmt.allocPrint(std.testing.allocator,
@@ -3024,9 +3024,9 @@ test "result unwrap_or and map_or helpers branch on tags correctly" {
     , .{ result_layout_path, result_src_path, panic_src_path });
     defer std.testing.allocator.free(source);
 
-    try writeSource(tmp.dir, "result_helpers.sa", source);
+    try writeSource(tmp.dir, "result_helpers.sars", source);
 
-    const run_argv = [_][]const u8{"sars", "run", "result_helpers.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "result_helpers.sars" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 142), run_code);
 }
@@ -3054,9 +3054,9 @@ test "const pointer stores survive load and print end to end" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "const_ptr_store.sa", source);
+    try writeSource(tmp.dir, "const_ptr_store.sars", source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "const_ptr_store.sa", "-o", "const_ptr_store.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "const_ptr_store.sars", "-o", "const_ptr_store.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3117,9 +3117,9 @@ test "vtable loads preserve indirect call provenance end to end" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "vtable_indirect.sa", source);
+    try writeSource(tmp.dir, "vtable_indirect.sars", source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "vtable_indirect.sa", "-o", "vtable_indirect.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "vtable_indirect.sars", "-o", "vtable_indirect.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3353,7 +3353,7 @@ test "bc2sa rejects static stack buffer overflow in clang cmake demo" {
 test "import expansion keeps source paths alive end to end" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/40_impl_block_state/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/40_impl_block_state/main.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3402,13 +3402,13 @@ test "atomic instructions work end to end and emit real LLVM" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "atomic.sa", source);
+    try writeSource(tmp.dir, "atomic.sars", source);
 
-    const run_argv = [_][]const u8{"sars", "run", "atomic.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "atomic.sars" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 11), run_code);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "atomic.sa", "-o", "atomic.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "atomic.sars", "-o", "atomic.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3426,7 +3426,7 @@ test "atomic instructions work end to end and emit real LLVM" {
         else => return error.TestUnexpectedResult,
     }
 
-    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "atomic.sa", "-o", "atomic.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "atomic.sars", "-o", "atomic.wasm", "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -3438,7 +3438,7 @@ test "atomic instructions work end to end and emit real LLVM" {
     try std.testing.expectEqualSlices(u8, &std.wasm.magic, wasm_bytes[0..4]);
     try std.testing.expectEqualSlices(u8, &std.wasm.version, wasm_bytes[4..8]);
 
-    const build_obj_argv = [_][]const u8{"sars", "build-obj", "atomic.sa", "-o", "atomic.o" };
+    const build_obj_argv = [_][]const u8{"sars", "build-obj", "atomic.sars", "-o", "atomic.o" };
     const obj_code = try saasm.cli.execute(std.testing.allocator, build_obj_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), obj_code);
 
@@ -3474,13 +3474,13 @@ test "ptr arithmetic lowers to gep and runs through the interpreter" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "ptr_add.sa", source);
+    try writeSource(tmp.dir, "ptr_add.sars", source);
 
-    const run_argv = [_][]const u8{"sars", "run", "ptr_add.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "ptr_add.sars" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 65), run_code);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "ptr_add.sa", "-o", "ptr_add.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "ptr_add.sars", "-o", "ptr_add.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3552,9 +3552,9 @@ test "panic lowers to native executable failure code" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "panic_native.sa", source);
+    try writeSource(tmp.dir, "panic_native.sars", source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "panic_native.sa", "-o", "panic_native.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "panic_native.sars", "-o", "panic_native.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3573,7 +3573,7 @@ test "panic lowers to native executable failure code" {
     }
     try std.testing.expect(std.mem.containsAtLeast(u8, exe_result.stderr, 1, "PANIC[77]: hi"));
 
-    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "panic_native.sa", "-o", "panic_native.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "panic_native.sars", "-o", "panic_native.wasm", "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -3629,9 +3629,9 @@ test "extern export ffi wrapper map to real declarations and symbols" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "contracts.sa", source);
+    try writeSource(tmp.dir, "contracts.sars", source);
 
-    const build_obj_argv = [_][]const u8{"sars", "build-obj", "contracts.sa", "-o", "contracts.o" };
+    const build_obj_argv = [_][]const u8{"sars", "build-obj", "contracts.sars", "-o", "contracts.o" };
     const code = try saasm.cli.execute(std.testing.allocator, build_obj_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), code);
 
@@ -3664,9 +3664,9 @@ test "unknown sys intrinsic is rejected before emission" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "unsupported_sys.sa", source);
+    try writeSource(tmp.dir, "unsupported_sys.sars", source);
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "unsupported_sys.sa", "-o", "unsupported_sys.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "unsupported_sys.sars", "-o", "unsupported_sys.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3693,13 +3693,13 @@ test "external compiler failures report linker context instead of child process 
         \\return value
     ;
 
-    try assertBuildExeLinkFailure("link_fail.sa", source, "link_fail.out", "ld.lld: error: undefined symbol: missing_symbol");
+    try assertBuildExeLinkFailure("link_fail.sars", source, "link_fail.out", "ld.lld: error: undefined symbol: missing_symbol");
 }
 
 test "unknown register demo is rejected with structured trap output" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/unknown_register.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/unknown_register.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3731,7 +3731,7 @@ test "unknown register demo is rejected with structured trap output" {
 test "memory leak demo is rejected with structured trap output" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/memory_leak.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/memory_leak.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3762,7 +3762,7 @@ test "memory leak demo is rejected with structured trap output" {
 test "fallthrough demo is rejected without a terminator" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/fallthrough.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/fallthrough.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3794,7 +3794,7 @@ test "fallthrough demo is rejected without a terminator" {
 test "duplicate label demo is rejected with structured trap output" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/duplicate_label.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/duplicate_label.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3826,7 +3826,7 @@ test "duplicate label demo is rejected with structured trap output" {
 test "phi conflict demo is rejected on mismatched join states" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/phi_conflict.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/phi_conflict.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3857,7 +3857,7 @@ test "phi conflict demo is rejected on mismatched join states" {
 test "phi join AND demo runs through the join point" {
     var original_cwd = try sio.cwd().openDir(".", .{});
     defer original_cwd.close();
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/phi_join_and.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/support/phi_join_and.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
@@ -3904,9 +3904,9 @@ test "build-wasm supports wasm64 freestanding no-entry" {
 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
-    try writeSource(tmp.dir, "wasm64.sa", source);
+    try writeSource(tmp.dir, "wasm64.sars", source);
 
-    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "wasm64.sa", "-o", "wasm64.wasm", "--target", "wasm64" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "wasm64.sars", "-o", "wasm64.wasm", "--target", "wasm64" };
     const build_wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_wasm_code);
 
@@ -4110,7 +4110,7 @@ test "db cli register inspect exec round trip through registry" {
         \\#def COL_FACTOR_STRIDE = 8 // u64
         \\#def TABLE_ROW_BYTES = 16
     );
-    try writeSource(tmp.dir, "simple.query.sa",
+    try writeSource(tmp.dir, "simple.query.sars",
         \\@import "simple.sadb-schema"
         \\grants [db_read:simple]
         \\@main(id: u64, factor: u64) -> u64:
@@ -4132,7 +4132,7 @@ test "db cli register inspect exec round trip through registry" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const register_argv = [_][]const u8{ "sars", "db", "register", "simple.query.sa" };
+    const register_argv = [_][]const u8{ "sars", "db", "register", "simple.query.sars" };
     const register_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         register_argv[0..],
@@ -4141,7 +4141,7 @@ test "db cli register inspect exec round trip through registry" {
     );
     try std.testing.expectEqual(@as(u8, 0), register_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buffer.items.len);
-    try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "Compiled: simple.query.sa"));
+    try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "Compiled: simple.query.sars"));
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "Registered:"));
 
     const hash_hex = try std.testing.allocator.dupe(u8, try extractLineValue(stdout_buffer.items, "Hash: "));
@@ -4499,7 +4499,7 @@ test "cli audit dispatches through runtime package plugin" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try writeSource(tmp.dir, "pkg/index.sa",
+    try writeSource(tmp.dir, "pkg/index.sars",
         \\call @sys_print(*MSG, 2)
         \\
     );
@@ -4534,7 +4534,7 @@ test "cli audit update-lock writes project lock through package flow" {
 
     try tmp.dir.createDirPath(std.testing.io, "zig-out");
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try writeSource(tmp.dir, "pkg/index.sa",
+    try writeSource(tmp.dir, "pkg/index.sars",
         \\@main() -> i32:
         \\return 0
         \\
@@ -4610,13 +4610,13 @@ test "cli init creates a binary project and install syncs manifest dependencies"
     try std.testing.expectEqual(@as(usize, 0), stderr_buffer.items.len);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "Initialized SA binary project: app"));
     try tmp.dir.access(std.testing.io, "app/sa.mod", .{ .read = true });
-    try tmp.dir.access(std.testing.io, "app/src/main.sa", .{ .read = true });
+    try tmp.dir.access(std.testing.io, "app/src/main.sars", .{ .read = true });
     try tmp.dir.access(std.testing.io, "app/.gitignore", .{ .read = true });
 
     var app_dir = try tmp.dir.openDir(std.testing.io, "app", .{});
     defer app_dir.close();
     try app_dir.setAsCwd();
-    const run_argv = [_][]const u8{"sars", "run", "src/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sars" };
     const run_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -4628,7 +4628,7 @@ test "cli init creates a binary project and install syncs manifest dependencies"
     try original_cwd.setAsCwd();
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     try tmp.dir.createDirPath(std.testing.io, "app/deps/example/pkg");
-    try writeSource(tmp.dir, "app/deps/example/pkg/index.sa",
+    try writeSource(tmp.dir, "app/deps/example/pkg/index.sars",
         \\@pkg_value() -> i32:
         \\return 42
     );
@@ -4657,7 +4657,7 @@ test "cli init creates a binary project and install syncs manifest dependencies"
     try std.testing.expectEqual(@as(u8, 0), install_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buffer.items.len);
     try std.testing.expect(try containsPortablePath(std.testing.allocator, stdout_buffer.items, "sa_vendor/deps/example/pkg"));
-    try tmp.dir.access(std.testing.io, "app/sa_vendor/deps/example/pkg/index.sa", .{ .read = true });
+    try tmp.dir.access(std.testing.io, "app/sa_vendor/deps/example/pkg/index.sars", .{ .read = true });
     try tmp.dir.access(std.testing.io, "app/sa.sum", .{ .read = true });
 }
 
@@ -4676,23 +4676,23 @@ test "workspace install aggregates member manifests at root and pkg install fall
     try tmp.dir.createDirPath(std.testing.io, "deps/example/app");
     try tmp.dir.createDirPath(std.testing.io, "deps/example/tool");
 
-    try writeSource(tmp.dir, "members/app/src/main.sa",
+    try writeSource(tmp.dir, "members/app/src/main.sars",
         \\@main() -> i32:
         \\return 1
     );
-    try writeSource(tmp.dir, "members/tool/src/main.sa",
+    try writeSource(tmp.dir, "members/tool/src/main.sars",
         \\@main() -> i32:
         \\return 2
     );
-    try writeSource(tmp.dir, "deps/example/shared/index.sa",
+    try writeSource(tmp.dir, "deps/example/shared/index.sars",
         \\@shared_value() -> i32:
         \\return 10
     );
-    try writeSource(tmp.dir, "deps/example/app/index.sa",
+    try writeSource(tmp.dir, "deps/example/app/index.sars",
         \\@app_value() -> i32:
         \\return 20
     );
-    try writeSource(tmp.dir, "deps/example/tool/index.sa",
+    try writeSource(tmp.dir, "deps/example/tool/index.sars",
         \\@tool_value() -> i32:
         \\return 30
     );
@@ -4761,9 +4761,9 @@ test "workspace install aggregates member manifests at root and pkg install fall
     try std.testing.expect(try containsPortablePath(std.testing.allocator, stdout_buffer.items, "sa_vendor/deps/example/shared"));
     try std.testing.expect(try containsPortablePath(std.testing.allocator, stdout_buffer.items, "sa_vendor/deps/example/app"));
     try std.testing.expect(try containsPortablePath(std.testing.allocator, stdout_buffer.items, "sa_vendor/deps/example/tool"));
-    try tmp.dir.access(std.testing.io, "sa_vendor/deps/example/shared/index.sa", .{ .read = true });
-    try tmp.dir.access(std.testing.io, "sa_vendor/deps/example/app/index.sa", .{ .read = true });
-    try tmp.dir.access(std.testing.io, "sa_vendor/deps/example/tool/index.sa", .{ .read = true });
+    try tmp.dir.access(std.testing.io, "sa_vendor/deps/example/shared/index.sars", .{ .read = true });
+    try tmp.dir.access(std.testing.io, "sa_vendor/deps/example/app/index.sars", .{ .read = true });
+    try tmp.dir.access(std.testing.io, "sa_vendor/deps/example/tool/index.sars", .{ .read = true });
     try tmp.dir.access(std.testing.io, "sa.sum", .{ .read = true });
 
     stdout_buffer.clearRetainingCapacity();
@@ -4791,11 +4791,11 @@ test "package preflight rejects tampered project sum as structured trap" {
 
     try tmp.dir.createDirPath(std.testing.io, "app/src");
     try tmp.dir.createDirPath(std.testing.io, "app/deps/example/pkg");
-    try writeSource(tmp.dir, "app/src/main.sa",
+    try writeSource(tmp.dir, "app/src/main.sars",
         \\@main() -> i32:
         \\return 0
     );
-    try writeSource(tmp.dir, "app/deps/example/pkg/index.sa",
+    try writeSource(tmp.dir, "app/deps/example/pkg/index.sars",
         \\@pkg_value() -> i32:
         \\return 42
     );
@@ -4840,7 +4840,7 @@ test "package preflight rejects tampered project sum as structured trap" {
 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
-    const run_argv = [_][]const u8{"sars", "run", "src/main.sa", "--json" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sars", "--json" };
     const run_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -4864,11 +4864,11 @@ test "PkgMgr-Confirm-NonTty rejects risky package preflight before build output"
 
     try tmp.dir.createDirPath(std.testing.io, "app/src");
     try tmp.dir.createDirPath(std.testing.io, "app/sa_vendor/risky/pkg");
-    try writeSource(tmp.dir, "app/src/main.sa",
+    try writeSource(tmp.dir, "app/src/main.sars",
         \\@main() -> i32:
         \\return 0
     );
-    try writeSource(tmp.dir, "app/sa_vendor/risky/pkg/index.sa",
+    try writeSource(tmp.dir, "app/sa_vendor/risky/pkg/index.sars",
         \\call @sys_net_tx(*BUF, 4)
         \\
     );
@@ -4887,7 +4887,7 @@ test "PkgMgr-Confirm-NonTty rejects risky package preflight before build output"
     defer stderr_buffer.deinit();
 
     var input = std.io.fixedBufferStream("");
-    const build_argv = [_][]const u8{"sars", "build-exe", "src/main.sa", "-o", "blocked.out", "--json" };
+    const build_argv = [_][]const u8{"sars", "build-exe", "src/main.sars", "-o", "blocked.out", "--json" };
     const code = try saasm.cli.executeWithWritersAndOptions(
         std.testing.allocator,
         build_argv[0..],
@@ -4912,11 +4912,11 @@ test "PkgMgr-Confirm-Tty accepts exact URL through compile preflight" {
 
     try tmp.dir.createDirPath(std.testing.io, "app/src");
     try tmp.dir.createDirPath(std.testing.io, "app/sa_vendor/risky/pkg");
-    try writeSource(tmp.dir, "app/src/main.sa",
+    try writeSource(tmp.dir, "app/src/main.sars",
         \\@main() -> i32:
         \\return 0
     );
-    try writeSource(tmp.dir, "app/sa_vendor/risky/pkg/index.sa",
+    try writeSource(tmp.dir, "app/sa_vendor/risky/pkg/index.sars",
         \\call @sys_net_tx(*BUF, 4)
         \\
     );
@@ -4935,7 +4935,7 @@ test "PkgMgr-Confirm-Tty accepts exact URL through compile preflight" {
     defer stderr_buffer.deinit();
 
     var input = std.io.fixedBufferStream("risky/pkg\n");
-    const run_argv = [_][]const u8{"sars", "run", "src/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sars" };
     const code = try saasm.cli.executeWithWritersAndOptions(
         std.testing.allocator,
         run_argv[0..],
@@ -4960,11 +4960,11 @@ test "PkgMgr-CI-DualTrack rejects mismatched source and unauthorized primitives"
 
     try tmp.dir.createDirPath(std.testing.io, "app/src");
     try tmp.dir.createDirPath(std.testing.io, "app/sa_vendor/ci/pkg");
-    try writeSource(tmp.dir, "app/src/main.sa",
+    try writeSource(tmp.dir, "app/src/main.sars",
         \\@main() -> i32:
         \\return 0
     );
-    try writeSource(tmp.dir, "app/sa_vendor/ci/pkg/index.sa",
+    try writeSource(tmp.dir, "app/sa_vendor/ci/pkg/index.sars",
         \\call @sys_net_tx(*BUF, 4)
         \\
     );
@@ -4986,7 +4986,7 @@ test "PkgMgr-CI-DualTrack rejects mismatched source and unauthorized primitives"
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const run_ci_argv = [_][]const u8{"sars", "run", "src/main.sa", "--ci", "--json" };
+    const run_ci_argv = [_][]const u8{"sars", "run", "src/main.sars", "--ci", "--json" };
     var code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_ci_argv[0..],
@@ -5024,11 +5024,11 @@ test "PkgMgr-Offline-Build uses vendored sources and project sum" {
 
     try tmp.dir.createDirPath(std.testing.io, "app/src");
     try tmp.dir.createDirPath(std.testing.io, "app/sa_vendor/safe/pkg");
-    try writeSource(tmp.dir, "app/src/main.sa",
+    try writeSource(tmp.dir, "app/src/main.sars",
         \\@main() -> i32:
         \\return 0
     );
-    try writeSource(tmp.dir, "app/sa_vendor/safe/pkg/index.sa",
+    try writeSource(tmp.dir, "app/sa_vendor/safe/pkg/index.sars",
         \\@pkg_value() -> i32:
         \\return 42
     );
@@ -5046,7 +5046,7 @@ test "PkgMgr-Offline-Build uses vendored sources and project sum" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const run_argv = [_][]const u8{"sars", "run", "src/main.sa", "--offline" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sars", "--offline" };
     const code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -5067,7 +5067,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    try writeSource(tmp.dir, "json_success.sa",
+    try writeSource(tmp.dir, "json_success.sars",
         \\@main() -> i32:
         \\return 7
     );
@@ -5077,7 +5077,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const run_argv = [_][]const u8{"sars", "run", "json_success.sa", "--json" };
+    const run_argv = [_][]const u8{"sars", "run", "json_success.sars", "--json" };
     const run_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -5091,7 +5091,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const build_exe_argv = [_][]const u8{"sars", "build-exe", "json_success.sa", "-o", "json_success.out", "--json" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "json_success.sars", "-o", "json_success.out", "--json" };
     const build_exe_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         build_exe_argv[0..],
@@ -5106,7 +5106,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const build_mem_argv = [_][]const u8{"sars", "build-exe", "json_success.sa", "-o", "json_success_mem.out", "--json", "--mem-report", "--no-incremental" };
+    const build_mem_argv = [_][]const u8{"sars", "build-exe", "json_success.sars", "-o", "json_success_mem.out", "--json", "--mem-report", "--no-incremental" };
     const build_mem_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         build_mem_argv[0..],
@@ -5139,7 +5139,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const build_mem_text_argv = [_][]const u8{"sars", "build-exe", "json_success.sa", "-o", "json_success_mem_text.out", "--mem-report", "--no-incremental" };
+    const build_mem_text_argv = [_][]const u8{"sars", "build-exe", "json_success.sars", "-o", "json_success_mem_text.out", "--mem-report", "--no-incremental" };
     const build_mem_text_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         build_mem_text_argv[0..],
@@ -5165,7 +5165,7 @@ test "graph and size cli emit structured reports for a tiny project" {
     defer original_cwd.setAsCwd() catch {};
 
     try tmp.dir.createDirPath(std.testing.io, "src");
-    try writeSource(tmp.dir, "src/main.sa",
+    try writeSource(tmp.dir, "src/main.sars",
         \\@helper(value: i32) -> i32:
         \\    return value
         \\@main() -> i32:
@@ -5228,9 +5228,9 @@ test "graph and size cli emit structured reports for a tiny project" {
 }
 
 test "llvmc backend compilation and verification on rosetta demos" {
-    try assertBuildExeStdoutPureBc("demos/rosetta/01_hello_world/main.sa", "hello, saasm\n");
-    try assertBuildExeStdoutPureBc("demos/rosetta/04_loop/main.sa", "[0,0,0,0]\n");
-    try assertBuildExeStdout("demos/rosetta/21_while_loop/main.sa", "15\n");
+    try assertBuildExeStdoutPureBc("demos/rosetta/01_hello_world/main.sars", "hello, saasm\n");
+    try assertBuildExeStdoutPureBc("demos/rosetta/04_loop/main.sars", "[0,0,0,0]\n");
+    try assertBuildExeStdout("demos/rosetta/21_while_loop/main.sars", "15\n");
 }
 
 test "agent capability: check verdict cache and affected help" {
@@ -5250,7 +5250,7 @@ test "agent capability: check verdict cache and affected help" {
     stderr_buffer.clearRetainingCapacity();
 
     // In-process check hit: same process reuses verdict cache.
-    const check1 = [_][]const u8{"sars", "check", "tests/agent_fixtures/check_ok.sa", "--json" };
+    const check1 = [_][]const u8{"sars", "check", "tests/agent_fixtures/check_ok.sars", "--json" };
     const c1 = try saasm.cli.executeWithWriters(std.testing.allocator, check1[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
     try std.testing.expectEqual(@as(u8, 0), c1);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "\"hit\":false") or std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "\"status\":\"ok\""));
@@ -5276,7 +5276,7 @@ test "agent capability: affected selects impacted tests" {
     defer stderr_buffer.deinit();
 
     // First run establishes baseline (no prior function hashes in this process).
-    const first = [_][]const u8{"sars", "test", "tests/agent_fixtures/affected_graph.sa", "--affected" };
+    const first = [_][]const u8{"sars", "test", "tests/agent_fixtures/affected_graph.sars", "--affected" };
     const code1 = try saasm.cli.executeWithWriters(std.testing.allocator, first[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
     try std.testing.expectEqual(@as(u8, 0), code1);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "affected:"));
@@ -5314,13 +5314,13 @@ test "sab with corrupted param_ids traps CorruptedSignature without panic or tex
         \\    call @add2(20, 22)
         \\    return 0
     ;
-    try writeSource(tmp.dir, "params.sa", sa_source);
+    try writeSource(tmp.dir, "params.sars", sa_source);
 
     // Produce a valid SAB through the real `check --emit-sab` CLI path.
     // NOTE: use executeWithWriters (not execute): execute writes to the real
     // process stdout, which corrupts the `zig build` --listen test protocol
     // and hangs the run.
-    const emit_argv = [_][]const u8{"sars", "check", "params.sa", "--emit-sab", "params.sab" };
+    const emit_argv = [_][]const u8{"sars", "check", "params.sars", "--emit-sab", "params.sab" };
     var emit_stdout = std.array_list.Managed(u8).init(std.testing.allocator);
     defer emit_stdout.deinit();
     var emit_stderr = std.array_list.Managed(u8).init(std.testing.allocator);

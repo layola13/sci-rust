@@ -1,0 +1,1115 @@
+@import "sa_std/io.sars"
+@import "sa_std/fs.sars"
+@import "sa_std/string.sars"
+@import "sa_std/testing/assert.sai"
+
+@const IO_COPY_SRC = utf8:"_tmp_io_copy_src.txt"
+@const IO_COPY_N_SRC = utf8:"_tmp_io_copy_n_src.txt"
+@const IO_COPY_N_DST = utf8:"_tmp_io_copy_n_dst.txt"
+@const IO_COPY_N_PAYLOAD = utf8:"abcdefg"
+@const IO_COPY_DST = utf8:"_tmp_io_copy_dst.txt"
+@const IO_COPY_PAYLOAD = utf8:"copy-me"
+@const IO_HANDLE_SRC = utf8:"_tmp_io_handle_src.txt"
+@const IO_HANDLE_PAYLOAD = utf8:"handle!"
+
+@test "sa_std io stdio raw fd macro surface"():
+L_ENTRY:
+    EXPAND IO_STDIN stdin_handle
+    EXPAND IO_STDOUT stdout_handle
+    EXPAND IO_STDERR stderr_handle
+    EXPAND IO_STDIN_AS_RAW_FD stdin_raw_status, stdin_raw_fd
+    EXPAND IO_STDOUT_AS_RAW_FD stdout_raw_status, stdout_raw_fd
+    EXPAND IO_STDERR_AS_RAW_FD stderr_raw_status, stderr_raw_fd
+
+    stdin_handle_ok = eq stdin_handle, 1
+    stdout_handle_ok = eq stdout_handle, 2
+    stderr_handle_ok = eq stderr_handle, 3
+    stdin_status_ok = eq stdin_raw_status, SA_IO_OK
+    stdout_status_ok = eq stdout_raw_status, SA_IO_OK
+    stderr_status_ok = eq stderr_raw_status, SA_IO_OK
+    stdin_fd_ok = eq stdin_raw_fd, 0
+    stdout_fd_ok = eq stdout_raw_fd, 1
+    stderr_fd_ok = eq stderr_raw_fd, 2
+    ok01 = and stdin_handle_ok, stdout_handle_ok
+    ok02 = and ok01, stderr_handle_ok
+    ok03 = and ok02, stdin_status_ok
+    ok04 = and ok03, stdout_status_ok
+    ok05 = and ok04, stderr_status_ok
+    ok06 = and ok05, stdin_fd_ok
+    ok07 = and ok06, stdout_fd_ok
+    ok = and ok07, stderr_fd_ok
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    !ok07
+    !ok06
+    !ok05
+    !ok04
+    !ok03
+    !ok02
+    !ok01
+    !stderr_fd_ok
+    !stdout_fd_ok
+    !stdin_fd_ok
+    !stderr_status_ok
+    !stdout_status_ok
+    !stdin_status_ok
+    !stderr_handle_ok
+    !stdout_handle_ok
+    !stdin_handle_ok
+    !stderr_raw_fd
+    !stdout_raw_fd
+    !stdin_raw_fd
+    !stderr_raw_status
+    !stdout_raw_status
+    !stdin_raw_status
+    !stderr_handle
+    !stdout_handle
+    !stdin_handle
+    panic(10025)
+
+L_OK:
+    !ok
+    !ok07
+    !ok06
+    !ok05
+    !ok04
+    !ok03
+    !ok02
+    !ok01
+    !stderr_fd_ok
+    !stdout_fd_ok
+    !stdin_fd_ok
+    !stderr_status_ok
+    !stdout_status_ok
+    !stdin_status_ok
+    !stderr_handle_ok
+    !stdout_handle_ok
+    !stdin_handle_ok
+    !stderr_raw_fd
+    !stdout_raw_fd
+    !stdin_raw_fd
+    !stderr_raw_status
+    !stdout_raw_status
+    !stdin_raw_status
+    !stderr_handle
+    !stdout_handle
+    !stdin_handle
+    return
+
+@test "sa_std io error and slice utility macros"():
+L_ENTRY:
+    EXPAND IO_ERROR_KIND_FROM_STATUS kind_eof, SA_IO_ERR_EOF
+    EXPAND IO_ERROR_KIND_FROM_STATUS kind_would_block, SA_IO_ERR_WOULD_BLOCK
+    EXPAND IO_ERROR_KIND_FROM_STATUS kind_interrupted, SA_IO_ERR_INTERRUPTED
+    EXPAND IO_ERROR_KIND_FROM_STATUS kind_invalid, SA_IO_ERR_INVALID_HANDLE
+    EXPAND IO_ERROR_KIND_FROM_STATUS kind_invalid_data, SA_IO_ERR_INVALID_DATA
+    EXPAND IO_ERROR_KIND_FROM_STATUS kind_other, SA_IO_ERR_UNKNOWN
+    EXPAND IO_ERROR_KIND_IS_RETRYABLE retry_would_block, kind_would_block
+    EXPAND IO_ERROR_KIND_IS_RETRYABLE retry_interrupted, kind_interrupted
+    EXPAND IO_ERROR_KIND_IS_RETRYABLE retry_eof, kind_eof
+
+    data = stack_alloc 4
+    store data+0, 65 as u8
+    store data+1, 66 as u8
+    io_slice = stack_alloc IoSlice_SIZE
+    io_slice_empty = stack_alloc IoSlice_SIZE
+    EXPAND IO_SLICE_NEW io_slice, data, 4
+    EXPAND IO_SLICE_NEW io_slice_empty, data, 0
+    EXPAND IO_SLICE_AS_PTR slice_ptr, io_slice
+    EXPAND IO_SLICE_LEN slice_len, io_slice
+    EXPAND IO_SLICE_IS_EMPTY slice_is_empty, io_slice
+    EXPAND IO_SLICE_IS_EMPTY slice_empty_is_empty, io_slice_empty
+
+    mut_slice = stack_alloc IoSliceMut_SIZE
+    EXPAND IO_SLICE_MUT_NEW mut_slice, data, 4
+    EXPAND IO_SLICE_MUT_AS_PTR mut_ptr, mut_slice
+    EXPAND IO_SLICE_MUT_LEN mut_len, mut_slice
+    EXPAND IO_SLICE_MUT_IS_EMPTY mut_empty, mut_slice
+
+    ok_kind_eof = eq kind_eof, IO_ERROR_KIND_UNEXPECTED_EOF
+    ok_kind_wb = eq kind_would_block, IO_ERROR_KIND_WOULD_BLOCK
+    ok_kind_int = eq kind_interrupted, IO_ERROR_KIND_INTERRUPTED
+    ok_kind_invalid = eq kind_invalid, IO_ERROR_KIND_INVALID_INPUT
+    ok_kind_invalid_data = eq kind_invalid_data, IO_ERROR_KIND_INVALID_DATA
+    ok_kind_other = eq kind_other, IO_ERROR_KIND_OTHER
+    ok_retry_wb = eq retry_would_block, 1
+    ok_retry_int = eq retry_interrupted, 1
+    ok_retry_eof = eq retry_eof, 0
+    ok_slice_ptr = eq slice_ptr, data
+    ok_slice_len = eq slice_len, 4
+    ok_slice_empty = eq slice_is_empty, 0
+    ok_slice_empty2 = eq slice_empty_is_empty, 1
+    ok_mut_ptr = eq mut_ptr, data
+    ok_mut_len = eq mut_len, 4
+    ok_mut_empty = eq mut_empty, 0
+    ok01 = and ok_kind_eof, ok_kind_wb
+    ok02 = and ok01, ok_kind_int
+    ok03 = and ok02, ok_kind_invalid
+    ok04 = and ok03, ok_kind_invalid_data
+    ok04a = and ok04, ok_kind_other
+    ok05 = and ok04a, ok_retry_wb
+    ok06 = and ok05, ok_retry_int
+    ok07 = and ok06, ok_retry_eof
+    ok08 = and ok07, ok_slice_ptr
+    ok09 = and ok08, ok_slice_len
+    ok10 = and ok09, ok_slice_empty
+    ok11 = and ok10, ok_slice_empty2
+    ok12 = and ok11, ok_mut_ptr
+    ok13 = and ok12, ok_mut_len
+    ok = and ok13, ok_mut_empty
+
+    !kind_eof
+    !kind_would_block
+    !kind_interrupted
+    !kind_invalid
+    !kind_invalid_data
+    !kind_other
+    !retry_would_block
+    !retry_interrupted
+    !retry_eof
+    !slice_ptr
+    !slice_len
+    !slice_is_empty
+    !slice_empty_is_empty
+    !mut_ptr
+    !mut_len
+    !mut_empty
+    !ok_kind_eof
+    !ok_kind_wb
+    !ok_kind_int
+    !ok_kind_invalid
+    !ok_kind_invalid_data
+    !ok_kind_other
+    !ok_retry_wb
+    !ok_retry_int
+    !ok_retry_eof
+    !ok_slice_ptr
+    !ok_slice_len
+    !ok_slice_empty
+    !ok_slice_empty2
+    !ok_mut_ptr
+    !ok_mut_len
+    !ok_mut_empty
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok04a
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(997)
+
+L_PASS:
+    return 0
+
+@test "sa_std io cursor read to end macros"():
+L_ENTRY:
+    data = stack_alloc 8
+    store data+0, 10 as u8
+    store data+1, 11 as u8
+    store data+2, 12 as u8
+    store data+3, 13 as u8
+    store data+4, 14 as u8
+    store data+5, 15 as u8
+
+    cursor = stack_alloc IoCursor_SIZE
+    rem_slice = stack_alloc IoSlice_SIZE
+    dst = stack_alloc 8
+    EXPAND IO_CURSOR_NEW cursor, data, 6
+    EXPAND IO_CURSOR_SEEK_START seed_pos, cursor, 2
+    EXPAND IO_CURSOR_REMAINING_SLICE rem_slice, cursor
+    EXPAND IO_SLICE_AS_PTR rem_ptr, rem_slice
+    EXPAND IO_SLICE_LEN rem_len, rem_slice
+    rem0 = load rem_ptr+0 as u8
+    rem3 = load rem_ptr+3 as u8
+    EXPAND IO_CURSOR_READ_TO_END read_all, cursor, dst, 8
+    EXPAND IO_CURSOR_POSITION pos_after_all, cursor
+    all0 = load dst+0 as u8
+    all3 = load dst+3 as u8
+    EXPAND IO_CURSOR_READ_TO_END read_empty, cursor, dst, 8
+
+    cursor_small = stack_alloc IoCursor_SIZE
+    small_dst = stack_alloc 2
+    EXPAND IO_CURSOR_NEW cursor_small, data, 6
+    EXPAND IO_CURSOR_SEEK_START small_seed, cursor_small, 1
+    EXPAND IO_CURSOR_READ_TO_END read_small, cursor_small, small_dst, 2
+    EXPAND IO_CURSOR_POSITION pos_after_small, cursor_small
+    EXPAND IO_CURSOR_REMAINING rem_after_small, cursor_small
+    small0 = load small_dst+0 as u8
+    small1 = load small_dst+1 as u8
+
+    take_cursor = stack_alloc IoCursor_SIZE
+    take = stack_alloc IoTake_SIZE
+    take_dst = stack_alloc 8
+    EXPAND IO_CURSOR_NEW take_cursor, data, 6
+    EXPAND IO_CURSOR_SEEK_START take_seed, take_cursor, 1
+    EXPAND IO_TAKE_NEW take, take_cursor, 3
+    EXPAND IO_TAKE_READ_TO_END take_read, take, take_dst, 8
+    EXPAND IO_TAKE_LIMIT take_limit_after, take
+    EXPAND IO_CURSOR_POSITION take_pos_after, take_cursor
+    take0 = load take_dst+0 as u8
+    take2 = load take_dst+2 as u8
+
+    utf8_data = stack_alloc 4
+    store utf8_data+0, 97 as u8
+    store utf8_data+1, 195 as u8
+    store utf8_data+2, 169 as u8
+    store utf8_data+3, 122 as u8
+    utf8_cursor = stack_alloc IoCursor_SIZE
+    utf8_dst = stack_alloc 8
+    utf8_slice = stack_alloc IoSlice_SIZE
+    EXPAND IO_CURSOR_NEW utf8_cursor, utf8_data, 4
+    EXPAND IO_CURSOR_READ_TO_STRING utf8_status, utf8_slice, utf8_cursor, utf8_dst, 8
+    EXPAND IO_SLICE_LEN utf8_len, utf8_slice
+    EXPAND IO_CURSOR_POSITION utf8_pos, utf8_cursor
+    utf8_b0 = load utf8_dst+0 as u8
+    utf8_b1 = load utf8_dst+1 as u8
+    utf8_b3 = load utf8_dst+3 as u8
+
+    invalid_utf8_data = stack_alloc 3
+    store invalid_utf8_data+0, 195 as u8
+    store invalid_utf8_data+1, 40 as u8
+    store invalid_utf8_data+2, 120 as u8
+    invalid_utf8_cursor = stack_alloc IoCursor_SIZE
+    invalid_utf8_dst = stack_alloc 8
+    invalid_utf8_slice = stack_alloc IoSlice_SIZE
+    EXPAND IO_CURSOR_NEW invalid_utf8_cursor, invalid_utf8_data, 3
+    EXPAND IO_CURSOR_READ_TO_STRING invalid_utf8_status, invalid_utf8_slice, invalid_utf8_cursor, invalid_utf8_dst, 8
+    EXPAND IO_SLICE_LEN invalid_utf8_len, invalid_utf8_slice
+    EXPAND IO_ERROR_KIND_FROM_STATUS invalid_utf8_kind, invalid_utf8_status
+
+    take_string_cursor = stack_alloc IoCursor_SIZE
+    take_string = stack_alloc IoTake_SIZE
+    take_string_dst = stack_alloc 8
+    take_string_slice = stack_alloc IoSlice_SIZE
+    EXPAND IO_CURSOR_NEW take_string_cursor, utf8_data, 4
+    EXPAND IO_TAKE_NEW take_string, take_string_cursor, 3
+    EXPAND IO_TAKE_READ_TO_STRING take_string_status, take_string_slice, take_string, take_string_dst, 8
+    EXPAND IO_SLICE_LEN take_string_len, take_string_slice
+    EXPAND IO_TAKE_LIMIT take_string_limit, take_string
+    EXPAND IO_CURSOR_POSITION take_string_pos, take_string_cursor
+
+    call @sa_assert_eq_i64(seed_pos, 2, 9991)
+    call @sa_assert_eq_i64(rem_len, 4, 9992)
+    call @sa_assert_eq_i64(rem0, 12, 9993)
+    call @sa_assert_eq_i64(rem3, 15, 9994)
+    call @sa_assert_eq_i64(read_all, 4, 9995)
+    call @sa_assert_eq_i64(pos_after_all, 6, 9996)
+    call @sa_assert_eq_i64(all0, 12, 9997)
+    call @sa_assert_eq_i64(all3, 15, 9998)
+    call @sa_assert_eq_i64(read_empty, 0, 9999)
+    call @sa_assert_eq_i64(small_seed, 1, 10000)
+    call @sa_assert_eq_i64(read_small, 2, 10001)
+    call @sa_assert_eq_i64(pos_after_small, 3, 10002)
+    call @sa_assert_eq_i64(rem_after_small, 3, 10003)
+    call @sa_assert_eq_i64(small0, 11, 10004)
+    call @sa_assert_eq_i64(small1, 12, 10005)
+    call @sa_assert_eq_i64(take_seed, 1, 10006)
+    call @sa_assert_eq_i64(take_read, 3, 10007)
+    call @sa_assert_eq_i64(take_limit_after, 0, 10008)
+    call @sa_assert_eq_i64(take_pos_after, 4, 10009)
+    call @sa_assert_eq_i64(take0, 11, 10010)
+    call @sa_assert_eq_i64(take2, 13, 10011)
+    call @sa_assert_eq_i64(utf8_status, SA_IO_OK, 10012)
+    call @sa_assert_eq_i64(utf8_len, 4, 10013)
+    call @sa_assert_eq_i64(utf8_pos, 4, 10014)
+    call @sa_assert_eq_i64(utf8_b0, 97, 10015)
+    call @sa_assert_eq_i64(utf8_b1, 195, 10016)
+    call @sa_assert_eq_i64(utf8_b3, 122, 10017)
+    call @sa_assert_eq_i64(invalid_utf8_status, SA_IO_ERR_INVALID_DATA, 10018)
+    call @sa_assert_eq_i64(invalid_utf8_len, 0, 10019)
+    call @sa_assert_eq_i64(invalid_utf8_kind, IO_ERROR_KIND_INVALID_DATA, 10020)
+    call @sa_assert_eq_i64(take_string_status, SA_IO_OK, 10021)
+    call @sa_assert_eq_i64(take_string_len, 3, 10022)
+    call @sa_assert_eq_i64(take_string_limit, 0, 10023)
+    call @sa_assert_eq_i64(take_string_pos, 3, 10024)
+
+    !seed_pos
+    !rem_ptr
+    !rem_len
+    !rem0
+    !rem3
+    !read_all
+    !pos_after_all
+    !all0
+    !all3
+    !read_empty
+    !small_seed
+    !read_small
+    !pos_after_small
+    !rem_after_small
+    !small0
+    !small1
+    !take_seed
+    !take_read
+    !take_limit_after
+    !take_pos_after
+    !take0
+    !take2
+    !utf8_status
+    !utf8_len
+    !utf8_pos
+    !utf8_b0
+    !utf8_b1
+    !utf8_b3
+    !invalid_utf8_status
+    !invalid_utf8_len
+    !invalid_utf8_kind
+    !take_string_status
+    !take_string_len
+    !take_string_limit
+    !take_string_pos
+    return 0
+
+@test "sa_std io cursor empty repeat sink macros"():
+L_ENTRY:
+    data = stack_alloc 8
+    store data+0, 1 as u8
+    store data+1, 2 as u8
+    store data+2, 3 as u8
+    store data+3, 4 as u8
+    dst = stack_alloc 8
+    src = stack_alloc 4
+    store src+0, 90 as u8
+    store src+1, 91 as u8
+    store src+2, 0 as u8
+    store src+3, 0 as u8
+
+    cursor = stack_alloc IoCursor_SIZE
+    EXPAND IO_CURSOR_NEW cursor, data, 4
+    cursor_slice = stack_alloc IoSlice_SIZE
+    cursor_mut_slice = stack_alloc IoSliceMut_SIZE
+    fill_slice = stack_alloc IoSlice_SIZE
+    EXPAND IO_CURSOR_AS_PTR cursor_ptr, cursor
+    EXPAND IO_CURSOR_LEN cursor_len, cursor
+    EXPAND IO_CURSOR_IS_EMPTY cursor_empty, cursor
+    EXPAND IO_CURSOR_AS_SLICE cursor_slice, cursor
+    EXPAND IO_CURSOR_AS_MUT_SLICE cursor_mut_slice, cursor
+    EXPAND IO_CURSOR_INTO_INNER inner_ptr, inner_len, cursor
+    EXPAND IO_SLICE_AS_PTR cursor_slice_ptr, cursor_slice
+    EXPAND IO_SLICE_LEN cursor_slice_len, cursor_slice
+    EXPAND IO_SLICE_MUT_AS_PTR cursor_mut_ptr, cursor_mut_slice
+    EXPAND IO_SLICE_MUT_LEN cursor_mut_len, cursor_mut_slice
+    EXPAND IO_CURSOR_POSITION pos0, cursor
+    EXPAND IO_CURSOR_REMAINING rem0, cursor
+    EXPAND IO_CURSOR_READ read_len, cursor, dst, 2
+    EXPAND IO_CURSOR_POSITION pos1, cursor
+    EXPAND IO_CURSOR_REMAINING rem1, cursor
+    read0 = load dst+0 as u8
+    read1 = load dst+1 as u8
+    EXPAND IO_CURSOR_SEEK_START exact_seed, cursor, 0
+    EXPAND IO_CURSOR_READ_EXACT exact_status, cursor, dst, 3
+    EXPAND IO_CURSOR_POSITION exact_pos, cursor
+    exact0 = load dst+0 as u8
+    exact2 = load dst+2 as u8
+    EXPAND IO_CURSOR_READ_EXACT exact_eof_status, cursor, dst, 3
+    EXPAND IO_CURSOR_POSITION exact_eof_pos, cursor
+    EXPAND IO_CURSOR_SEEK_START fill_seed, cursor, 1
+    EXPAND IO_CURSOR_FILL_BUF fill_status, fill_slice, cursor
+    EXPAND IO_SLICE_LEN fill_len, fill_slice
+    EXPAND IO_SLICE_AS_PTR fill_ptr, fill_slice
+    fill0 = load fill_ptr+0 as u8
+    EXPAND IO_CURSOR_CONSUME cursor, 2
+    EXPAND IO_CURSOR_POSITION consume_pos, cursor
+    EXPAND IO_CURSOR_REMAINING consume_rem, cursor
+    EXPAND IO_CURSOR_SEEK_START seek_pos, cursor, 1
+    EXPAND IO_CURSOR_WRITE write_len, cursor, src, 4
+    EXPAND IO_CURSOR_POSITION pos2, cursor
+    EXPAND IO_CURSOR_SEEK_START write_all_seed, cursor, 0
+    EXPAND IO_CURSOR_WRITE_ALL write_all_status, cursor, src, 2
+    EXPAND IO_CURSOR_POSITION write_all_pos, cursor
+    EXPAND IO_CURSOR_WRITE_ALL write_all_eof_status, cursor, src, 4
+    EXPAND IO_CURSOR_POSITION write_all_eof_pos, cursor
+    EXPAND IO_CURSOR_SEEK_CURRENT seek_current_back, cursor, -2
+    EXPAND IO_CURSOR_POSITION pos3, cursor
+    EXPAND IO_CURSOR_SEEK_CURRENT seek_current_forward, cursor, 1
+    EXPAND IO_CURSOR_SEEK_END seek_end_back, cursor, -1
+    EXPAND IO_CURSOR_SEEK_END seek_end_forward, cursor, 2
+    d1 = load data+1 as u8
+    d2 = load data+2 as u8
+    d3 = load data+3 as u8
+
+    EXPAND IO_EMPTY_READ empty_len, dst, 4
+    EXPAND IO_EMPTY_READ_EXACT empty_exact_zero_status, dst, 0
+    EXPAND IO_EMPTY_READ_EXACT empty_exact_eof_status, dst, 1
+    EXPAND IO_EMPTY_SEEK empty_pos
+
+    take_cursor = stack_alloc IoCursor_SIZE
+    take = stack_alloc IoTake_SIZE
+    take_data = stack_alloc 4
+    take_dst = stack_alloc 4
+    store take_data+0, 1 as u8
+    store take_data+1, 2 as u8
+    store take_data+2, 3 as u8
+    store take_data+3, 4 as u8
+    EXPAND IO_CURSOR_NEW take_cursor, take_data, 4
+    EXPAND IO_TAKE_NEW take, take_cursor, 2
+    EXPAND IO_TAKE_LIMIT take_limit0, take
+    EXPAND IO_TAKE_INTO_INNER take_inner, take
+    EXPAND IO_TAKE_READ take_read_len, take, take_dst, 4
+    EXPAND IO_TAKE_LIMIT take_limit1, take
+    EXPAND IO_CURSOR_POSITION take_pos, take_cursor
+    EXPAND IO_TAKE_READ take_read_len2, take, take_dst, 4
+    take0 = load take_dst+0 as u8
+    take1 = load take_dst+1 as u8
+
+    repeat = stack_alloc IoRepeat_SIZE
+    EXPAND IO_REPEAT_NEW repeat, 42
+    EXPAND IO_REPEAT_READ repeat_len, repeat, dst, 3
+    EXPAND IO_REPEAT_READ_EXACT repeat_exact_status, repeat, dst, 2
+    repeat0 = load dst+0 as u8
+    repeat1 = load dst+1 as u8
+    repeat2 = load dst+2 as u8
+
+    EXPAND IO_SINK_WRITE sink_len, src, 2
+    EXPAND IO_SINK_WRITE_ALL sink_all_status, src, 2
+    slice = stack_alloc IoSlice_SIZE
+    copy_dst = stack_alloc 4
+    EXPAND IO_SLICE_NEW slice, src, 2
+    EXPAND IO_COPY_SLICE copy_len, copy_dst, slice
+    copy0 = load copy_dst+0 as u8
+    copy1 = load copy_dst+1 as u8
+
+    ok_pos0 = eq pos0, 0
+    ok_cursor_ptr = eq cursor_ptr, data
+    ok_cursor_len = eq cursor_len, 4
+    ok_cursor_empty = eq cursor_empty, 0
+    ok_inner_ptr = eq inner_ptr, data
+    ok_inner_len = eq inner_len, 4
+    ok_cursor_slice_ptr = eq cursor_slice_ptr, data
+    ok_cursor_slice_len = eq cursor_slice_len, 4
+    ok_cursor_mut_ptr = eq cursor_mut_ptr, data
+    ok_cursor_mut_len = eq cursor_mut_len, 4
+    ok_rem0 = eq rem0, 4
+    ok_read_len = eq read_len, 2
+    ok_pos1 = eq pos1, 2
+    ok_rem1 = eq rem1, 2
+    ok_read0 = eq read0, 1
+    ok_read1 = eq read1, 2
+    ok_exact_seed = eq exact_seed, 0
+    ok_exact_status = eq exact_status, SA_IO_OK
+    ok_exact_pos = eq exact_pos, 3
+    ok_exact0 = eq exact0, 1
+    ok_exact2 = eq exact2, 3
+    ok_exact_eof_status = eq exact_eof_status, SA_IO_ERR_EOF
+    ok_exact_eof_pos = eq exact_eof_pos, 4
+    ok_fill_seed = eq fill_seed, 1
+    ok_fill_status = eq fill_status, SA_IO_OK
+    ok_fill_len = eq fill_len, 3
+    ok_fill0 = eq fill0, 2
+    ok_consume_pos = eq consume_pos, 3
+    ok_consume_rem = eq consume_rem, 1
+    ok_seek = eq seek_pos, 1
+    ok_write_len = eq write_len, 3
+    ok_pos2 = eq pos2, 4
+    ok_write_all_seed = eq write_all_seed, 0
+    ok_write_all_status = eq write_all_status, SA_IO_OK
+    ok_write_all_pos = eq write_all_pos, 2
+    ok_write_all_eof_status = eq write_all_eof_status, SA_IO_ERR_EOF
+    ok_write_all_eof_pos = eq write_all_eof_pos, 4
+    ok_seek_current_back = eq seek_current_back, 2
+    ok_pos3 = eq pos3, 2
+    ok_seek_current_forward = eq seek_current_forward, 3
+    ok_seek_end_back = eq seek_end_back, 3
+    ok_seek_end_forward = eq seek_end_forward, 6
+    ok_d1 = eq d1, 91
+    ok_d2 = eq d2, 90
+    ok_d3 = eq d3, 91
+    ok_empty_len = eq empty_len, 0
+    ok_empty_exact_zero_status = eq empty_exact_zero_status, SA_IO_OK
+    ok_empty_exact_eof_status = eq empty_exact_eof_status, SA_IO_ERR_EOF
+    ok_empty_pos = eq empty_pos, 0
+    ok_take_limit0 = eq take_limit0, 2
+    ok_take_inner = eq take_inner, take_cursor
+    ok_take_read_len = eq take_read_len, 2
+    ok_take_limit1 = eq take_limit1, 0
+    ok_take_pos = eq take_pos, 2
+    ok_take_read_len2 = eq take_read_len2, 0
+    ok_take0 = eq take0, 1
+    ok_take1 = eq take1, 2
+    ok_repeat_len = eq repeat_len, 3
+    ok_repeat_exact_status = eq repeat_exact_status, SA_IO_OK
+    ok_repeat0 = eq repeat0, 42
+    ok_repeat1 = eq repeat1, 42
+    ok_repeat2 = eq repeat2, 42
+    ok_sink_len = eq sink_len, 2
+    ok_sink_all_status = eq sink_all_status, SA_IO_OK
+    ok_copy_len = eq copy_len, 2
+    ok_copy0 = eq copy0, 90
+    ok_copy1 = eq copy1, 91
+    ok01 = and ok_pos0, ok_cursor_ptr
+    ok02 = and ok01, ok_cursor_len
+    ok03 = and ok02, ok_cursor_empty
+    ok04 = and ok03, ok_inner_ptr
+    ok05 = and ok04, ok_inner_len
+    ok06 = and ok05, ok_cursor_slice_ptr
+    ok07 = and ok06, ok_cursor_slice_len
+    ok08 = and ok07, ok_cursor_mut_ptr
+    ok09 = and ok08, ok_cursor_mut_len
+    ok10 = and ok09, ok_rem0
+    ok11 = and ok10, ok_read_len
+    ok12 = and ok11, ok_pos1
+    ok13 = and ok12, ok_rem1
+    ok14 = and ok13, ok_read0
+    ok15 = and ok14, ok_read1
+    ok16 = and ok15, ok_exact_seed
+    ok17 = and ok16, ok_exact_status
+    ok18 = and ok17, ok_exact_pos
+    ok19 = and ok18, ok_exact0
+    ok20 = and ok19, ok_exact2
+    ok21 = and ok20, ok_exact_eof_status
+    ok22 = and ok21, ok_exact_eof_pos
+    ok23 = and ok22, ok_fill_seed
+    ok24 = and ok23, ok_fill_status
+    ok25 = and ok24, ok_fill_len
+    ok26 = and ok25, ok_fill0
+    ok27 = and ok26, ok_consume_pos
+    ok28 = and ok27, ok_consume_rem
+    ok29 = and ok28, ok_seek
+    ok30 = and ok29, ok_write_len
+    ok31 = and ok30, ok_pos2
+    ok32 = and ok31, ok_write_all_seed
+    ok33 = and ok32, ok_write_all_status
+    ok34 = and ok33, ok_write_all_pos
+    ok35 = and ok34, ok_write_all_eof_status
+    ok36 = and ok35, ok_write_all_eof_pos
+    ok37 = and ok36, ok_seek_current_back
+    ok38 = and ok37, ok_pos3
+    ok39 = and ok38, ok_seek_current_forward
+    ok40 = and ok39, ok_seek_end_back
+    ok41 = and ok40, ok_seek_end_forward
+    ok42 = and ok41, ok_d1
+    ok43 = and ok42, ok_d2
+    ok44 = and ok43, ok_d3
+    ok45 = and ok44, ok_empty_len
+    ok46 = and ok45, ok_empty_exact_zero_status
+    ok47 = and ok46, ok_empty_exact_eof_status
+    ok48 = and ok47, ok_empty_pos
+    ok49 = and ok48, ok_take_limit0
+    ok50 = and ok49, ok_take_inner
+    ok51 = and ok50, ok_take_read_len
+    ok52 = and ok51, ok_take_limit1
+    ok53 = and ok52, ok_take_pos
+    ok54 = and ok53, ok_take_read_len2
+    ok55 = and ok54, ok_take0
+    ok56 = and ok55, ok_take1
+    ok57 = and ok56, ok_repeat_len
+    ok58 = and ok57, ok_repeat_exact_status
+    ok59 = and ok58, ok_repeat0
+    ok60 = and ok59, ok_repeat1
+    ok61 = and ok60, ok_repeat2
+    ok62 = and ok61, ok_sink_len
+    ok63 = and ok62, ok_sink_all_status
+    ok64 = and ok63, ok_copy_len
+    ok65 = and ok64, ok_copy0
+    ok = and ok65, ok_copy1
+
+    call @sa_assert_eq_i64(empty_exact_zero_status, SA_IO_OK, 9978)
+    call @sa_assert_eq_i64(empty_exact_eof_status, SA_IO_ERR_EOF, 9979)
+    call @sa_assert_eq_i64(repeat_exact_status, SA_IO_OK, 9980)
+
+    call @sa_assert_eq_i64(take_limit0, 2, 9981)
+    call @sa_assert_eq_i64(ok_take_inner, 1, 9982)
+    call @sa_assert_eq_i64(take_read_len, 2, 9983)
+    call @sa_assert_eq_i64(take_limit1, 0, 9984)
+    call @sa_assert_eq_i64(take_pos, 2, 9985)
+    call @sa_assert_eq_i64(take_read_len2, 0, 9986)
+    call @sa_assert_eq_i64(take0, 1, 9987)
+    call @sa_assert_eq_i64(take1, 2, 9988)
+    call @sa_assert_eq_i64(sink_all_status, SA_IO_OK, 9989)
+
+    !pos0
+    !cursor_ptr
+    !cursor_len
+    !cursor_empty
+    !inner_ptr
+    !inner_len
+    !cursor_slice_ptr
+    !cursor_slice_len
+    !cursor_mut_ptr
+    !cursor_mut_len
+    !rem0
+    !read_len
+    !pos1
+    !rem1
+    !read0
+    !read1
+    !exact_seed
+    !exact_status
+    !exact_pos
+    !exact0
+    !exact2
+    !exact_eof_status
+    !exact_eof_pos
+    !fill_seed
+    !fill_status
+    !fill_len
+    !fill_ptr
+    !fill0
+    !consume_pos
+    !consume_rem
+    !seek_pos
+    !write_len
+    !pos2
+    !write_all_seed
+    !write_all_status
+    !write_all_pos
+    !write_all_eof_status
+    !write_all_eof_pos
+    !seek_current_back
+    !pos3
+    !seek_current_forward
+    !seek_end_back
+    !seek_end_forward
+    !d1
+    !d2
+    !d3
+    !empty_len
+    !empty_exact_zero_status
+    !empty_exact_eof_status
+    !empty_pos
+    !take_limit0
+    !take_inner
+    !take_read_len
+    !take_limit1
+    !take_pos
+    !take_read_len2
+    !take0
+    !take1
+    !repeat_len
+    !repeat_exact_status
+    !repeat0
+    !repeat1
+    !repeat2
+    !sink_len
+    !sink_all_status
+    !copy_len
+    !copy0
+    !copy1
+    !ok_pos0
+    !ok_cursor_ptr
+    !ok_cursor_len
+    !ok_cursor_empty
+    !ok_inner_ptr
+    !ok_inner_len
+    !ok_cursor_slice_ptr
+    !ok_cursor_slice_len
+    !ok_cursor_mut_ptr
+    !ok_cursor_mut_len
+    !ok_rem0
+    !ok_read_len
+    !ok_pos1
+    !ok_rem1
+    !ok_read0
+    !ok_read1
+    !ok_exact_seed
+    !ok_exact_status
+    !ok_exact_pos
+    !ok_exact0
+    !ok_exact2
+    !ok_exact_eof_status
+    !ok_exact_eof_pos
+    !ok_fill_seed
+    !ok_fill_status
+    !ok_fill_len
+    !ok_fill0
+    !ok_consume_pos
+    !ok_consume_rem
+    !ok_seek
+    !ok_write_len
+    !ok_pos2
+    !ok_write_all_seed
+    !ok_write_all_status
+    !ok_write_all_pos
+    !ok_write_all_eof_status
+    !ok_write_all_eof_pos
+    !ok_seek_current_back
+    !ok_pos3
+    !ok_seek_current_forward
+    !ok_seek_end_back
+    !ok_seek_end_forward
+    !ok_d1
+    !ok_d2
+    !ok_d3
+    !ok_empty_len
+    !ok_empty_exact_zero_status
+    !ok_empty_exact_eof_status
+    !ok_empty_pos
+    !ok_take_limit0
+    !ok_take_inner
+    !ok_take_read_len
+    !ok_take_limit1
+    !ok_take_pos
+    !ok_take_read_len2
+    !ok_take0
+    !ok_take1
+    !ok_repeat_len
+    !ok_repeat_exact_status
+    !ok_repeat0
+    !ok_repeat1
+    !ok_repeat2
+    !ok_sink_len
+    !ok_sink_all_status
+    !ok_copy_len
+    !ok_copy0
+    !ok_copy1
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    !ok47
+    !ok48
+    !ok49
+    !ok50
+    !ok51
+    !ok52
+    !ok53
+    !ok54
+    !ok55
+    !ok56
+    !ok57
+    !ok58
+    !ok59
+    !ok60
+    !ok61
+    !ok62
+    !ok63
+    !ok64
+    !ok65
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(998)
+
+L_PASS:
+    return 0
+
+@test "sa_std io copy handle macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_src0, &IO_COPY_SRC, 20
+    EXPAND FS_REMOVE_PATH cleanup_dst0, &IO_COPY_DST, 20
+    EXPAND FS_WRITE_FILE write_status, &IO_COPY_SRC, 20, &IO_COPY_PAYLOAD, 7
+    EXPAND FS_OPEN_READ open_src_status, src_file, &IO_COPY_SRC, 20
+    EXPAND FS_OPEN_WRITE open_dst_status, dst_file, &IO_COPY_DST, 20, 1
+    EXPAND IO_COPY copy_status, copy_total, src_file, dst_file
+    EXPAND FS_CLOSE close_src_status, src_file
+    EXPAND FS_CLOSE close_dst_status, dst_file
+    EXPAND FS_READ_FILE read_status, read_buf, &IO_COPY_DST, 20, 64
+    EXPAND FS_READ_BUFFER_LEN read_len, read_buf
+    EXPAND FS_READ_BUFFER_DATA read_ptr, read_buf
+    EXPAND STR_FROM_PARTS read_view, read_ptr, read_len
+    EXPAND STR_FROM_PARTS expect_view, &IO_COPY_PAYLOAD, 7
+    EXPAND STR_EQ read_eq, read_view, expect_view
+    EXPAND FS_READ_BUFFER_FREE free_status, read_buf
+    EXPAND FS_REMOVE_PATH cleanup_src1, &IO_COPY_SRC, 20
+    EXPAND FS_REMOVE_PATH cleanup_dst1, &IO_COPY_DST, 20
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_open_src = eq open_src_status, SA_FS_OK
+    ok_open_dst = eq open_dst_status, SA_FS_OK
+    ok_copy_status = eq copy_status, SA_IO_OK
+    ok_copy_total = eq copy_total, 7
+    ok_close_src = eq close_src_status, SA_FS_OK
+    ok_close_dst = eq close_dst_status, SA_FS_OK
+    ok_read_status = eq read_status, SA_FS_OK
+    ok_read_len = eq read_len, 7
+    ok_read_eq = eq read_eq, 1
+    ok_free = eq free_status, SA_FS_OK
+
+    ok01 = and ok_write, ok_open_src
+    ok02 = and ok01, ok_open_dst
+    ok03 = and ok02, ok_copy_status
+    ok04 = and ok03, ok_copy_total
+    ok05 = and ok04, ok_close_src
+    ok06 = and ok05, ok_close_dst
+    ok07 = and ok06, ok_read_status
+    ok08 = and ok07, ok_read_len
+    ok09 = and ok08, ok_read_eq
+    ok = and ok09, ok_free
+
+    !cleanup_src0
+    !cleanup_dst0
+    !write_status
+    !open_src_status
+    !open_dst_status
+    !copy_status
+    !copy_total
+    !close_src_status
+    !close_dst_status
+    !read_status
+    !read_len
+    !read_ptr
+    !read_eq
+    !free_status
+    !cleanup_src1
+    !cleanup_dst1
+    !read_view
+    !expect_view
+    !ok_write
+    !ok_open_src
+    !ok_open_dst
+    !ok_copy_status
+    !ok_copy_total
+    !ok_close_src
+    !ok_close_dst
+    !ok_read_status
+    !ok_read_len
+    !ok_read_eq
+    !ok_free
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10413)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std io handle read/write/flush/close aliases"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup0, &IO_HANDLE_SRC, 22
+    EXPAND FS_OPEN_WRITE open_status, file, &IO_HANDLE_SRC, 22, 1
+    EXPAND IO_WRITE write_status, write_len, file, &IO_HANDLE_PAYLOAD, 7
+    EXPAND IO_FLUSH flush_status, file
+    EXPAND IO_CLOSE close_w_status, file
+    EXPAND FS_OPEN_READ open_r_status, file_r, &IO_HANDLE_SRC, 22
+    stack_buf = stack_alloc 16
+    EXPAND IO_READ_EXACT exact_status, file_r, stack_buf, 7
+    b0 = load stack_buf+0 as u8
+    b6 = load stack_buf+6 as u8
+    EXPAND IO_CLOSE close_r_status, file_r
+    EXPAND FS_REMOVE_PATH cleanup1, &IO_HANDLE_SRC, 22
+
+    ok_open = eq open_status, SA_FS_OK
+    ok_write = eq write_status, SA_IO_OK
+    ok_write_len = eq write_len, 7
+    ok_flush = eq flush_status, SA_IO_OK
+    ok_close_w = eq close_w_status, SA_IO_OK
+    ok_open_r = eq open_r_status, SA_FS_OK
+    ok_exact = eq exact_status, SA_IO_OK
+    ok_b0 = eq b0, 104
+    ok_b6 = eq b6, 33
+    ok_close_r = eq close_r_status, SA_IO_OK
+
+    ok01 = and ok_open, ok_write
+    ok02 = and ok01, ok_write_len
+    ok03 = and ok02, ok_flush
+    ok04 = and ok03, ok_close_w
+    ok05 = and ok04, ok_open_r
+    ok06 = and ok05, ok_exact
+    ok07 = and ok06, ok_b0
+    ok08 = and ok07, ok_b6
+    ok = and ok08, ok_close_r
+
+    !cleanup0
+    !open_status
+    !write_status
+    !write_len
+    !flush_status
+    !close_w_status
+    !open_r_status
+    !exact_status
+    !b0
+    !b6
+    !close_r_status
+    !cleanup1
+    !ok_open
+    !ok_write
+    !ok_write_len
+    !ok_flush
+    !ok_close_w
+    !ok_open_r
+    !ok_exact
+    !ok_b0
+    !ok_b6
+    !ok_close_r
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10424)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std io copy_n handle macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_src0, &IO_COPY_N_SRC, 22
+    EXPAND FS_REMOVE_PATH cleanup_dst0, &IO_COPY_N_DST, 22
+    EXPAND FS_WRITE_FILE write_status, &IO_COPY_N_SRC, 22, &IO_COPY_N_PAYLOAD, 7
+    EXPAND FS_OPEN_READ open_src_status, src_file, &IO_COPY_N_SRC, 22
+    EXPAND FS_OPEN_WRITE open_dst_status, dst_file, &IO_COPY_N_DST, 22, 1
+    EXPAND IO_COPY_N copy_status, copy_total, src_file, dst_file, 3
+    EXPAND FS_CLOSE close_src_status, src_file
+    EXPAND FS_CLOSE close_dst_status, dst_file
+    EXPAND FS_READ_FILE read_status, read_buf, &IO_COPY_N_DST, 22, 64
+    EXPAND FS_READ_BUFFER_LEN read_len, read_buf
+    EXPAND FS_READ_BUFFER_DATA read_ptr, read_buf
+    EXPAND STR_FROM_PARTS read_view, read_ptr, read_len
+    EXPAND STR_FROM_PARTS expect_view, &IO_COPY_N_PAYLOAD, 3
+    EXPAND STR_EQ read_eq, read_view, expect_view
+    EXPAND FS_READ_BUFFER_FREE free_status, read_buf
+    EXPAND FS_REMOVE_PATH cleanup_src1, &IO_COPY_N_SRC, 22
+    EXPAND FS_REMOVE_PATH cleanup_dst1, &IO_COPY_N_DST, 22
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_open_src = eq open_src_status, SA_FS_OK
+    ok_open_dst = eq open_dst_status, SA_FS_OK
+    ok_copy_status = eq copy_status, SA_IO_OK
+    ok_copy_total = eq copy_total, 3
+    ok_close_src = eq close_src_status, SA_FS_OK
+    ok_close_dst = eq close_dst_status, SA_FS_OK
+    ok_read_status = eq read_status, SA_FS_OK
+    ok_read_len = eq read_len, 3
+    ok_read_eq = eq read_eq, 1
+    ok_free = eq free_status, SA_FS_OK
+
+    ok01 = and ok_write, ok_open_src
+    ok02 = and ok01, ok_open_dst
+    ok03 = and ok02, ok_copy_status
+    ok04 = and ok03, ok_copy_total
+    ok05 = and ok04, ok_close_src
+    ok06 = and ok05, ok_close_dst
+    ok07 = and ok06, ok_read_status
+    ok08 = and ok07, ok_read_len
+    ok09 = and ok08, ok_read_eq
+    ok = and ok09, ok_free
+
+    !cleanup_src0
+    !cleanup_dst0
+    !write_status
+    !open_src_status
+    !open_dst_status
+    !copy_status
+    !copy_total
+    !close_src_status
+    !close_dst_status
+    !read_status
+    !read_len
+    !read_ptr
+    !read_eq
+    !free_status
+    !cleanup_src1
+    !cleanup_dst1
+    !read_view
+    !expect_view
+    !ok_write
+    !ok_open_src
+    !ok_open_dst
+    !ok_copy_status
+    !ok_copy_total
+    !ok_close_src
+    !ok_close_dst
+    !ok_read_status
+    !ok_read_len
+    !ok_read_eq
+    !ok_free
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10449)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std io flush stdout/stderr helpers"():
+L_ENTRY:
+    EXPAND IO_FLUSH_STDOUT status0
+    EXPAND IO_FLUSH_STDERR status1
+    ok0 = eq status0, SA_IO_OK
+    ok1 = eq status1, SA_IO_OK
+    ok = and ok0, ok1
+    !status0
+    !status1
+    !ok0
+    !ok1
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10452)
+L_OK:
+    !ok
+    return

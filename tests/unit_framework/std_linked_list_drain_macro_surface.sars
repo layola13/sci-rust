@@ -1,0 +1,40 @@
+@import "sa_std/collections/linked_list.sars"
+@import "sa_std/vec.sars"
+
+@test "sa_std linked_list drain"():
+L_ENTRY:
+    EXPAND LINKED_LIST_NEW list
+    EXPAND LINKED_LIST_PUSH_BACK list, 7
+    EXPAND LINKED_LIST_PUSH_BACK list, 8
+    EXPAND LINKED_LIST_DRAIN drained, list
+    EXPAND LINKED_LIST_IS_EMPTY empty, list
+    EXPAND VEC_LEN dlen, drained
+    EXPAND VEC_GET_U64 d0, drained, 0
+    EXPAND VEC_GET_U64 d1, drained, 1
+    EXPAND LINKED_LIST_FREE list
+    EXPAND VEC_FREE drained
+
+    a = eq empty, 1
+    b = eq dlen, 2
+    c = eq d0, 7
+    d = eq d1, 8
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok = and ok02, d
+    !empty
+    !dlen
+    !d0
+    !d1
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10883)

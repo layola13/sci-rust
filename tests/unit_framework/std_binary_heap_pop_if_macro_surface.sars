@@ -1,0 +1,113 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@binary_heap_pop_if_is_7(value: u64) -> u64:
+L_ENTRY:
+    hit = eq value, 7
+    !value
+    return hit
+
+@binary_heap_pop_if_ge_8(value: u64) -> u64:
+L_ENTRY:
+    hit = uge value, 8
+    !value
+    return hit
+
+@binary_heap_pop_if_is_4(value: u64) -> u64:
+L_ENTRY:
+    hit = eq value, 4
+    !value
+    return hit
+
+@test "sa_std binary_heap pop_if helpers"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 1
+
+    EXPAND BINARY_HEAP_TRY_POP_IF_U64 miss_ok, miss_value, heap, @binary_heap_pop_if_is_7
+    EXPAND BINARY_HEAP_LEN len_after_miss, heap
+    EXPAND BINARY_HEAP_TRY_PEEK peek_after_miss_ok, peek_after_miss, heap
+
+    EXPAND BINARY_HEAP_TRY_POP_IF_U64 hit_ok, hit_value, heap, @binary_heap_pop_if_ge_8
+    EXPAND BINARY_HEAP_TRY_PEEK peek_after_hit_ok, peek_after_hit, heap
+    EXPAND BINARY_HEAP_LEN len_after_hit, heap
+
+    EXPAND BINARY_HEAP_POP_IF_U64 alias_ok, alias_value, heap, @binary_heap_pop_if_is_4
+    EXPAND BINARY_HEAP_LEN len_after_alias, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    EXPAND BINARY_HEAP_NEW empty
+    EXPAND BINARY_HEAP_TRY_POP_IF_U64 empty_ok, empty_value, empty, @binary_heap_pop_if_ge_8
+    EXPAND BINARY_HEAP_FREE empty
+
+    ok_miss_flag = eq miss_ok, 0
+    ok_miss_value = eq miss_value, 0
+    ok_len_after_miss = eq len_after_miss, 3
+    ok_peek_after_miss_flag = eq peek_after_miss_ok, 1
+    ok_peek_after_miss = eq peek_after_miss, 9
+    ok_hit_flag = eq hit_ok, 1
+    ok_hit_value = eq hit_value, 9
+    ok_peek_after_hit_flag = eq peek_after_hit_ok, 1
+    ok_peek_after_hit = eq peek_after_hit, 4
+    ok_len_after_hit = eq len_after_hit, 2
+    ok_alias_flag = eq alias_ok, 1
+    ok_alias_value = eq alias_value, 4
+    ok_len_after_alias = eq len_after_alias, 1
+    ok_empty_flag = eq empty_ok, 0
+    ok_empty_value = eq empty_value, 0
+
+    ok = and ok_miss_flag, ok_miss_value
+    ok = and ok, ok_len_after_miss
+    ok = and ok, ok_peek_after_miss_flag
+    ok = and ok, ok_peek_after_miss
+    ok = and ok, ok_hit_flag
+    ok = and ok, ok_hit_value
+    ok = and ok, ok_peek_after_hit_flag
+    ok = and ok, ok_peek_after_hit
+    ok = and ok, ok_len_after_hit
+    ok = and ok, ok_alias_flag
+    ok = and ok, ok_alias_value
+    ok = and ok, ok_len_after_alias
+    ok = and ok, ok_empty_flag
+    ok = and ok, ok_empty_value
+
+    !miss_ok
+    !miss_value
+    !len_after_miss
+    !peek_after_miss_ok
+    !peek_after_miss
+    !hit_ok
+    !hit_value
+    !peek_after_hit_ok
+    !peek_after_hit
+    !len_after_hit
+    !alias_ok
+    !alias_value
+    !len_after_alias
+    !empty_ok
+    !empty_value
+    !ok_miss_flag
+    !ok_miss_value
+    !ok_len_after_miss
+    !ok_peek_after_miss_flag
+    !ok_peek_after_miss
+    !ok_hit_flag
+    !ok_hit_value
+    !ok_peek_after_hit_flag
+    !ok_peek_after_hit
+    !ok_len_after_hit
+    !ok_alias_flag
+    !ok_alias_value
+    !ok_len_after_alias
+    !ok_empty_flag
+    !ok_empty_value
+    br ok -> L_BINARY_HEAP_POP_IF_OK, L_BINARY_HEAP_POP_IF_FAIL
+
+L_BINARY_HEAP_POP_IF_FAIL:
+    !ok
+    panic(10701)
+
+L_BINARY_HEAP_POP_IF_OK:
+    !ok
+    return

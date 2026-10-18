@@ -1,0 +1,34 @@
+@import "sa_std/io/print.sai"
+@import "generated/harness/index.sars"
+
+@const RESULT_OK = utf8:"273\n"
+@const RESULT_ERR = utf8:"error\n"
+
+#def EXPECTED_BUILD = 273
+
+// 273 - Build Test Harness
+// harness/manifest.toml and harness/cases/*.toml feed generated/harness/index.sa.
+
+@harness_artifact_value() -> i32:
+L_ENTRY:
+    value = call @harness_index_value()
+    count = call @harness_index_count()
+    !count
+    return value
+
+@main() -> i32:
+L_ENTRY:
+    value = call @harness_artifact_value()
+    ok = eq value, EXPECTED_BUILD
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

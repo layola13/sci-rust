@@ -1,0 +1,566 @@
+// ts_string.sa -- thin-handle string ops for tsgosa mapping (R2 backport).
+//
+// Handle model (16 字节 {ptr,len} 切片句柄, 与数组同模型):
+//   +0: data ptr (utf8 bytes)
+//   +8: len u64 (byte length)
+// 调用方展开为 (ptr,len) 值参传入；除 @ts_str_split 外无堆分配、无归属，纯值语义
+// （split 返新串元数组调用方持有，段柄作 i32 入槽随数组载荷，移植调用点
+// saLowerArrayPush 同形，段不单独释放）。
+// 形状证据：移植 tsgosa `saStringContentEq`/`saStrContentEq`
+// （等长 + 零偏 indexOf 命中；negate 由调用点折叠）
+// + `saClampRange`（负值自末端起钳并钳入 [0,len]；substring 另交换逆序界
+// 并将负值记 0；封存 clampRange:7393-7465；substr 下溢 quirk 原样保留）。
+
+@import "string.sai"
+@import "ts_array.sars"
+@import "fmt.sai"
+
+@const jn_empty = utf8:"\0"
+
+// @ts_str_equals 串内容判等（等长且被串零偏命中即 1，否则 0）。
+@ts_str_equals(lp: ptr, llen: u64, rp: ptr, rlen: u64) -> i32:
+L_SEQ_ENTRY:
+    idx = call @sa_string_index_of(lp, llen, rp, rlen, 0)
+    at0 = eq idx, 0
+    samelen = eq llen, rlen
+    both = and at0, samelen
+    return both
+
+// @ts_str_slice 钳位子切片（返新 16 字节柄，调用方持有；缺省 end 与
+// substr 起始加长由调用点折叠，sub=1 时交换逆序界）。
+@ts_str_slice(bp: ptr, bl: u64, start: i32, end: i32, sub: i32) -> ptr:
+L_SSL_ENTRY:
+    neg_s = slt start, 0
+    br neg_s -> L_SSL_SN, L_SSL_SNN
+L_SSL_SN:
+    is_sub_s = ne sub, 0
+    br is_sub_s -> L_SSL_S0, L_SSL_SBL
+L_SSL_S0:
+    adj_s = 0
+    jmp L_SSL_SEND
+L_SSL_SBL:
+    adj_s = add bl, start
+    jmp L_SSL_SEND
+L_SSL_SNN:
+    adj_s = add start, 0
+    jmp L_SSL_SEND
+L_SSL_SEND:
+    lo_s = slt adj_s, 0
+    br lo_s -> L_SSL_SLOT, L_SSL_SLOF
+L_SSL_SLOT:
+    s = 0
+    jmp L_SSL_SLOE
+L_SSL_SLOF:
+    hi_s = sgt adj_s, bl
+    br hi_s -> L_SSL_SHIT, L_SSL_SHIF
+L_SSL_SHIT:
+    s = add bl, 0
+    jmp L_SSL_SLOE
+L_SSL_SHIF:
+    s = add adj_s, 0
+    jmp L_SSL_SLOE
+L_SSL_SLOE:
+    neg_f = slt end, 0
+    br neg_f -> L_SSL_FN, L_SSL_FNN
+L_SSL_FN:
+    is_sub_f = ne sub, 0
+    br is_sub_f -> L_SSL_F0, L_SSL_FBL
+L_SSL_F0:
+    adj_f = 0
+    jmp L_SSL_FEND
+L_SSL_FBL:
+    adj_f = add bl, end
+    jmp L_SSL_FEND
+L_SSL_FNN:
+    adj_f = add end, 0
+    jmp L_SSL_FEND
+L_SSL_FEND:
+    lo_f = slt adj_f, 0
+    br lo_f -> L_SSL_FLOT, L_SSL_FLOF
+L_SSL_FLOT:
+    f = 0
+    jmp L_SSL_FLOE
+L_SSL_FLOF:
+    hi_f = sgt adj_f, bl
+    br hi_f -> L_SSL_FHIT, L_SSL_FHIF
+L_SSL_FHIT:
+    f = add bl, 0
+    jmp L_SSL_FLOE
+L_SSL_FHIF:
+    f = add adj_f, 0
+    jmp L_SSL_FLOE
+L_SSL_FLOE:
+    do_swap = ne sub, 0
+    br do_swap -> L_SSL_CMP, L_SSL_NOSWAP
+L_SSL_CMP:
+    c = sgt s, f
+    br c -> L_SSL_SWAP, L_SSL_KEEP
+L_SSL_SWAP:
+    sw = add s, 0
+    s = f
+    f = sw
+    jmp L_SSL_DONE
+L_SSL_KEEP:
+    jmp L_SSL_DONE
+L_SSL_NOSWAP:
+    c0 = sgt s, f
+    br c0 -> L_SSL_NEMPTY, L_SSL_DONE
+L_SSL_NEMPTY:
+    f = add s, 0
+    jmp L_SSL_DONE
+L_SSL_DONE:
+    nptr = add bp, s
+    nlen = sub f, s
+    out = alloc 16
+    store out+0, nptr as ptr
+    store out+8, nlen as u64
+    return out
+
+// @ts_str_parse_int 通用基数扫描（2-36；符号/空即 0；16 进制 0x 前缀剥离
+// 由调用点经 @ts_str_hex_i0 折叠为起始位；digit 经大小写归一，超基数字
+// 即停；十进制调用方传 radix=10、start=0，与旧十进制扫描逐指令同形）。
+@ts_str_parse_int(bp: ptr, bl: u64, radix: i32, start: i32) -> i32:
+L_PR_ENTRY:
+    acc = 0
+    i = add start, 0
+    neg = 0
+    nonempty = ne bl, 0
+    br nonempty -> L_PR_SIGN, L_PR_TOP
+L_PR_SIGN:
+    b0 = load bp + 0 as u8
+    ism = eq b0, 45
+    br ism -> L_PR_NEG, L_PR_TOP
+L_PR_NEG:
+    neg = 1
+    i1 = add i, 1
+    i = i1
+    jmp L_PR_TOP
+L_PR_TOP:
+    c = slt i, bl
+    br c -> L_PR_BODY, L_PR_END
+L_PR_BODY:
+    off = add bp, i
+    b = load off + 0 as u8
+    d = sub b, 48
+    lo = or b, 32
+    dl = sub lo, 87
+    isd = sle d, 9
+    nn = sge d, 0
+    dig09 = and isd, nn
+    loa = sge dl, 10
+    hib = slt dl, radix
+    digaz = and loa, hib
+    ok = or dig09, digaz
+    br ok -> L_PR_DIGIT, L_PR_END
+L_PR_DIGIT:
+    dv = add d, 0
+    dvaz = add dl, 0
+    useaz = sub 1, dig09
+    pick = mul dvaz, useaz
+    digm = mul dv, dig09
+    digv = add digm, pick
+    m1 = mul acc, radix
+    nacc = add m1, digv
+    acc = nacc
+    jmp L_PR_NEXT
+L_PR_NEXT:
+    inext = add i, 1
+    i = inext
+    jmp L_PR_TOP
+L_PR_END:
+    isn = ne neg, 0
+    br isn -> L_PR_NEGB, L_PR_DONE
+L_PR_NEGB:
+    nv = sub 0, acc
+    acc = nv
+    jmp L_PR_DONE
+L_PR_DONEB:
+    jmp L_PR_DONE
+L_PR_DONE:
+    return acc
+
+// @ts_str_hex_i0 算 16 进制扫描起点（`0x`/`0X` 开头即 2 否则 0）。
+@ts_str_hex_i0(bp: ptr, bl: u64) -> i32:
+L_PXI_ENTRY:
+    has2 = sge bl, 2
+    br has2 -> L_PXI_PROBE, L_PXI_KEEP
+L_PXI_PROBE:
+    c0 = load bp + 0 as u8
+    c1a = add bp, 1
+    c1 = load c1a + 0 as u8
+    z0 = eq c0, 48
+    x1 = or c1, 32
+    xx = eq x1, 120
+    px = and z0, xx
+    br px -> L_PXI_SKIP, L_PXI_KEEP
+L_PXI_SKIP:
+    i0 = 2
+    jmp L_PXI_END
+L_PXI_KEEP:
+    i0 = 0
+    jmp L_PXI_END
+L_PXI_END:
+    return i0
+
+// @ts_str_char_at 取单字节字柄（`charAt`/`s[i]` 同形；data+idx 拼 16 字节
+// {ptr,1} 新柄，调用方持有；无界检查（越界未定义）；形参为展开值（非柄），
+// 调用方保留原归属；形状证据：封存 lowerStringCharAt（saemit.go:7270-7280）。
+@ts_str_char_at(bp: ptr, idx: i32) -> ptr:
+L_CA_ENTRY:
+    addr = add bp, idx
+    out = alloc 16
+    store out+0, addr as ptr
+    store out+8, 1 as u64
+    return out
+
+// @ts_str_split 分隔扫描成串元数组（返新句柄数组，调用方持有；段柄作 i32 入槽，
+// 与调用点 saLowerArrayPush 同形，段不单独释放；lim<0 即不限长（node ToUint32
+// 实证），haslim=0 忽略 lim；移植 tsgosa saLowerStringSplit 全形，含 limit 截断）。
+@ts_str_split(bp: ptr, bl: u64, sp: ptr, sl: u64, lim: i32, haslim: i32) -> ptr:
+L_SSP_ENTRY:
+    h = alloc 16
+    store h+0, 0 as ptr
+    store h+8, 0 as u64
+    base = add bp, 0
+    blen = add bl, 0
+    sepp = add sp, 0
+    sepl = add sl, 0
+    start = 0
+    neg = slt lim, 0
+    br neg -> L_SSP_NINF, L_SSP_NCHK
+L_SSP_NINF:
+    lim_n = 2147483647
+    jmp L_SSP_NEND
+L_SSP_NCHK:
+    lim_n = add lim, 0
+    jmp L_SSP_NEND
+L_SSP_NEND:
+    use_lim = ne haslim, 0
+    br use_lim -> L_SSP_USE, L_SSP_INF
+L_SSP_USE:
+    eff = add lim_n, 0
+    jmp L_SSP_LOOP
+L_SSP_INF:
+    eff = 2147483647
+    jmp L_SSP_LOOP
+L_SSP_LOOP:
+    cnt = load h+8 as i32
+    room = slt cnt, eff
+    br room -> L_SSP_WORK, L_SSP_DONE
+L_SSP_WORK:
+    idx = call @sa_string_index_of(base, blen, sepp, sepl, start)
+    found = ne idx, -1
+    br found -> L_SSP_BODY, L_SSP_END
+L_SSP_BODY:
+    pp = add base, start
+    pl = sub idx, start
+    part = alloc 16
+    store part+0, pp as ptr
+    store part+8, pl as u64
+    call @ts_arr_push_word(h, part)
+    nstart = add idx, sl
+    start = nstart
+    jmp L_SSP_LOOP
+L_SSP_END:
+    cnt2 = load h+8 as i32
+    room2 = slt cnt2, eff
+    br room2 -> L_SSP_TAIL, L_SSP_DONE
+L_SSP_TAIL:
+    pp2 = add base, start
+    pl2 = sub blen, start
+    tail = alloc 16
+    store tail+0, pp2 as ptr
+    store tail+8, pl2 as u64
+    call @ts_arr_push_word(h, tail)
+    jmp L_SSP_DONE
+L_SSP_DONE:
+    return h
+
+// @ts_str_arr_scan 串元数组内容扫描（includes/indexOf 正向 + lastIndexOf
+// 逆向；针 (np,nl) 值参；起位钳位与 tsgosa 串扫描同形：缺省正向 0/逆向末位，
+// 负值 len+from 仍负正向钳 0/逆向空扫，显式正向逆向上确界 len-1；逐元展开
+// @ts_str_equals 内容判等（地址直比永禁；同模块符号，闭包自足）；wantidx=1
+// 返位/-1 否则返 1/0；调用方展开值参，针柄自理；返纯值无归属）。
+@ts_str_arr_scan(src: ptr, np: ptr, nl: u64, from: i32, hasfrom: i32, rev: i32, wantidx: i32) -> i32:
+L_SSQ_ENTRY:
+    slen = load src+8 as u64
+    dptr = load src+0 as ptr
+    s_slot = alloc 8
+    hf = ne hasfrom, 0
+    br hf -> L_SSQ_CLAMP, L_SSQ_DEFLT
+L_SSQ_DEFLT:
+    rv0 = ne rev, 0
+    br rv0 -> L_SSQ_LAST, L_SSQ_ZERO
+L_SSQ_LAST:
+    lm1 = sub slen, 1
+    store s_slot+0, lm1 as i32
+    jmp L_SSQ_GOT
+L_SSQ_ZERO:
+    store s_slot+0, 0 as i32
+    jmp L_SSQ_GOT
+L_SSQ_CLAMP:
+    fneg = slt from, 0
+    br fneg -> L_SSQ_NEG, L_SSQ_POS
+L_SSQ_NEG:
+    fplus = add from, slen
+    fpos = sge fplus, 0
+    br fpos -> L_SSQ_KEEP, L_SSQ_FNON
+L_SSQ_KEEP:
+    store s_slot+0, fplus as i32
+    jmp L_SSQ_GOT
+L_SSQ_FNON:
+    rvn = ne rev, 0
+    br rvn -> L_SSQ_FM1, L_SSQ_FZ
+L_SSQ_FM1:
+    store s_slot+0, -1 as i32
+    jmp L_SSQ_GOT
+L_SSQ_FZ:
+    store s_slot+0, 0 as i32
+    jmp L_SSQ_GOT
+L_SSQ_POS:
+    rvp = ne rev, 0
+    br rvp -> L_SSQ_PMIN, L_SSQ_PFWD
+L_SSQ_PMIN:
+    lm1b = sub slen, 1
+    over = slt from, slen
+    br over -> L_SSQ_PTAKE, L_SSQ_PCAP
+L_SSQ_PTAKE:
+    store s_slot+0, from as i32
+    jmp L_SSQ_GOT
+L_SSQ_PCAP:
+    store s_slot+0, lm1b as i32
+    jmp L_SSQ_GOT
+L_SSQ_PFWD:
+    store s_slot+0, from as i32
+    jmp L_SSQ_GOT
+L_SSQ_GOT:
+    start = load s_slot+0 as i32
+    !s_slot
+    wi = ne wantidx, 0
+    br wi -> L_SSQ_M1, L_SSQ_Z1
+L_SSQ_M1:
+    res = -1
+    jmp L_SSQ_INIT
+L_SSQ_Z1:
+    res = 0
+    jmp L_SSQ_INIT
+L_SSQ_INIT:
+    i = add start, 0
+    jmp L_SSQ_TOP
+L_SSQ_TOP:
+    rv1 = ne rev, 0
+    br rv1 -> L_SSQ_BCOND, L_SSQ_FCOND
+L_SSQ_FCOND:
+    c = slt i, slen
+    br c -> L_SSQ_BODY, L_SSQ_END
+L_SSQ_BCOND:
+    c2 = sge i, 0
+    br c2 -> L_SSQ_BODY, L_SSQ_END
+L_SSQ_BODY:
+    off = mul i, 4
+    addr = add dptr, off
+    eh = load addr+0 as i32
+    ep = load eh+0 as ptr
+    el = load eh+8 as u64
+    eq = call @ts_str_equals(ep, el, np, nl)
+    hit = ne eq, 0
+    br hit -> L_SSQ_HIT, L_SSQ_NEXT
+L_SSQ_HIT:
+    wi2 = ne wantidx, 0
+    br wi2 -> L_SSQ_AT, L_SSQ_ONE
+L_SSQ_AT:
+    res = add i, 0
+    jmp L_SSQ_END
+L_SSQ_ONE:
+    res = 1
+    jmp L_SSQ_END
+L_SSQ_NEXT:
+    rv2 = ne rev, 0
+    br rv2 -> L_SSQ_DEC, L_SSQ_INC
+L_SSQ_INC:
+    step = add i, 1
+    i = step
+    jmp L_SSQ_TOP
+L_SSQ_DEC:
+    step2 = sub i, 1
+    i = step2
+    jmp L_SSQ_TOP
+L_SSQ_END:
+    !src
+    return res
+
+// @ts_str_trim 修剪成新柄（返新 16 字节柄，调用方持有；mode 0=trim/1=trimStart/
+// 2=trimEnd，由调用点按方法折叠；trimEnd 不计前导（与调用点旧形一致，只切尾）；
+// 全空串下溢由 extern 内聚（H14）；移植 tsgosa trim 三件套全形）。
+@ts_str_trim(bp: ptr, bl: u64, mode: i32) -> ptr:
+L_STM_ENTRY:
+    end_only = eq mode, 2
+    br end_only -> L_STM_EONLY, L_STM_START
+L_STM_EONLY:
+    elen = call @sa_str_trim_ascii_end_len(bp, bl)
+    eout = alloc 16
+    store eout+0, bp as ptr
+    store eout+8, elen as u64
+    return eout
+L_STM_START:
+    start = call @sa_str_trim_ascii_start_index(bp, bl)
+    midlen = sub bl, start
+    midptr = add bp, start
+    start_only = eq mode, 1
+    br start_only -> L_STM_SONLY, L_STM_FULL
+L_STM_SONLY:
+    sout = alloc 16
+    store sout+0, midptr as ptr
+    store sout+8, midlen as u64
+    return sout
+L_STM_FULL:
+    flen = call @sa_str_trim_ascii_end_len(midptr, midlen)
+    fout = alloc 16
+    store fout+0, midptr as ptr
+    store fout+8, flen as u64
+    return fout
+
+// @ts_arr_join_vals 数组 i32 元经分隔符拼接成新柄（返新 16 字节柄，调用方持有；
+// 分隔符除首元外；空数组返空串；元经 sext + fmt_into 文本化；移植 tsgosa
+// saLowerArrayJoin 全形；分支汇合 acc 自赋值对齐）。
+@ts_arr_join_vals(h: ptr, sp: ptr, sl: u64) -> ptr:
+L_JN_ENTRY:
+    acc0 = alloc 16
+    store acc0+0, &jn_empty as ptr
+    store acc0+8, 0 as u64
+    aslot = alloc 8
+    store aslot+0, acc0 as ptr
+    ln = load h+8 as u64
+    data = load h+0 as ptr
+    i = 0
+    jmp L_JN_TOP
+L_JN_TOP:
+    c = slt i, ln
+    br c -> L_JN_BODY, L_JN_END
+L_JN_BODY:
+    first = ne i, 0
+    br first -> L_JN_SEP, L_JN_ELEM
+L_JN_SEP:
+    a0 = load aslot+0 as ptr
+    seph = alloc 16
+    store seph+0, sp as ptr
+    store seph+8, sl as u64
+    a1 = call @ts_arr_join_append(a0, seph, sl)
+    !seph
+    store aslot+0, a1 as ptr
+    jmp L_JN_ELEM
+L_JN_ELEM:
+    off = mul i, 4
+    addr = add data, off
+    raw = load addr+0 as i32
+    wide = sext raw as i64
+    numbuf = alloc 64
+    numlen = alloc 8
+    rc = call @sa_fmt_i64_into(wide, 10, numbuf, 64, &numlen)
+    !rc
+    nlen = load numlen+0 as u64
+    !numlen
+    part = alloc 16
+    store part+0, numbuf as ptr
+    store part+8, nlen as u64
+    a2 = load aslot+0 as ptr
+    a3 = call @ts_arr_join_append(a2, part, nlen)
+    store aslot+0, a3 as ptr
+    !part
+    inext = add i, 1
+    i = inext
+    jmp L_JN_TOP
+L_JN_END:
+    acc = load aslot+0 as ptr
+    !aslot
+    return acc
+
+// @ts_arr_join_append 两柄经 concat 合并读回新柄（saConcatSlices 读回同形）。
+@ts_arr_join_append(lh: ptr, rh: ptr, rlen: u64) -> ptr:
+L_JA_ENTRY:
+    lp = load lh+0 as ptr
+    ll = load lh+8 as u64
+    rp = load rh+0 as ptr
+    obuf = call @sa_string_concat(lp, ll, rp, rlen)
+    optr = call @sa_fmt_buffer_data(obuf)
+    olen = call @sa_fmt_buffer_len(obuf)
+    !obuf
+    out = alloc 16
+    store out+0, optr as ptr
+    store out+8, olen as u64
+    return out
+
+// @ts_arr_join_strs 串元数组无分隔直拼（返新 16 字节柄；元为 4 字节
+// 句柄截断值，低堆假设与 tsgosa 串元读同形；替换 `saConcatSlices`
+// 逐片拼接的运行时版，供 replaceAll 段组装）。
+@ts_arr_join_strs(h: ptr) -> ptr:
+L_JS_ENTRY:
+    ln = load h+8 as u64
+    data = load h+0 as ptr
+    acc0 = alloc 16
+    store acc0+0, &jn_empty as ptr
+    store acc0+8, 0 as u64
+    aslot = alloc 8
+    store aslot+0, acc0 as ptr
+    i = 0
+    jmp L_JS_TOP
+L_JS_TOP:
+    c = slt i, ln
+    br c -> L_JS_BODY, L_JS_END
+L_JS_BODY:
+    off = mul i, 4
+    addr = add data, off
+    eh = load addr+0 as i32
+    el = load eh+8 as u64
+    a0 = load aslot+0 as ptr
+    a1 = call @ts_arr_join_append(a0, eh, el)
+    store aslot+0, a1 as ptr
+    inext = add i, 1
+    i = inext
+    jmp L_JS_TOP
+L_JS_END:
+    acc = load aslot+0 as ptr
+    !aslot
+    return acc
+// 调用方展开值参，纯值无堆无归属；JS UTF-16 码元序在 BMP 内与 UTF-8 字节序
+// 一致，astral 平面边沿另议；tsgosa H30 串 </<=/>/>= 经 slt/sle/sgt/sge 判 0）。
+@ts_str_compare(lp: ptr, llen: u64, rp: ptr, rlen: u64) -> i32:
+L_SC_ENTRY:
+    i = 0
+    jmp L_SC_TOP
+L_SC_TOP:
+    ld = eq i, llen
+    rd = eq i, rlen
+    br ld -> L_SC_LD, L_SC_LS
+L_SC_LS:
+    br rd -> L_SC_GT, L_SC_BODY
+L_SC_BODY:
+    lo = add lp, i
+    ro = add rp, i
+    lb = load lo + 0 as u8
+    rb = load ro + 0 as u8
+    lt = ult lb, rb
+    br lt -> L_SC_LESS, L_SC_CG
+L_SC_CG:
+    gt = ugt lb, rb
+    br gt -> L_SC_GREATER, L_SC_NEXT
+L_SC_NEXT:
+    inext = add i, 1
+    i = inext
+    jmp L_SC_TOP
+L_SC_LD:
+    br rd -> L_SC_EQ, L_SC_LESS
+L_SC_LESS:
+    ord = sub 0, 1
+    jmp L_SC_END
+L_SC_GREATER:
+    ord = 1
+    jmp L_SC_END
+L_SC_GT:
+    ord = 1
+    jmp L_SC_END
+L_SC_EQ:
+    ord = 0
+    jmp L_SC_END
+L_SC_END:
+    return ord

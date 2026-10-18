@@ -251,8 +251,8 @@ test "sum flattens transitive dependency trees and detects tampering" {
 
     try tmp.dir.createDirPath(std.testing.io, "sa_vendor/a/sa_vendor/b");
     try tmp.dir.createDirPath(std.testing.io, "sa_vendor/b");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/a/index.sa", .data = "@a() -> i32:\nreturn 1\n" });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/b/index.sa", .data = "@b() -> i32:\nreturn 2\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/a/index.sars", .data = "@a() -> i32:\nreturn 1\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/b/index.sars", .data = "@b() -> i32:\nreturn 2\n" });
 
     const root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(root);
@@ -268,7 +268,7 @@ test "sum flattens transitive dependency trees and detects tampering" {
     const nested_manifest = try std.fmt.allocPrint(std.testing.allocator, "require b @HEAD sha256:{s}\n", .{b_hex[0..]});
     defer std.testing.allocator.free(nested_manifest);
     try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/a/sa.mod", .data = nested_manifest });
-    try tmp.dir.copyFile("sa_vendor/b/index.sa", tmp.dir, "sa_vendor/a/sa_vendor/b/index.sa", std.testing.io, .{});
+    try tmp.dir.copyFile("sa_vendor/b/index.sars", tmp.dir, "sa_vendor/a/sa_vendor/b/index.sars", std.testing.io, .{});
 
     var a_report = try audit.auditPackage(std.testing.allocator, "a", "HEAD", a_root, &.{});
     defer a_report.deinit(std.testing.allocator);
@@ -285,6 +285,6 @@ test "sum flattens transitive dependency trees and detects tampering" {
     try std.testing.expectEqual(@as(usize, 2), result.entry_count);
     try verifyProjectSum(std.testing.allocator, root, project_manifest);
 
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/a/sa_vendor/b/index.sa", .data = "@b() -> i32:\nreturn 3\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/a/sa_vendor/b/index.sars", .data = "@b() -> i32:\nreturn 3\n" });
     try std.testing.expectError(error.UpstreamShaMismatch, verifyProjectSum(std.testing.allocator, root, project_manifest));
 }

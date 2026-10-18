@@ -1,0 +1,35 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/collections/btree_map.sars"
+
+@const K = utf8:"k"
+
+@test "sa_std btree_map remove"():
+L_ENTRY:
+    key = alloc Slice_SIZE
+    EXPAND SLICE_NEW key, &K, 1
+    EXPAND BTREE_MAP_NEW map
+    EXPAND BTREE_MAP_INSERT map, key, 42
+    EXPAND BTREE_MAP_GET g0, map, key
+    EXPAND BTREE_MAP_REMOVE rem_val, map, key
+    EXPAND BTREE_MAP_LEN ln, map
+    EXPAND BTREE_MAP_FREE map
+    a = eq g0, 42
+    b = eq rem_val, 42
+    c = eq ln, 0
+    ok01 = and a, b
+    ok = and ok01, c
+    !g0
+    !rem_val
+    !ln
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10988)

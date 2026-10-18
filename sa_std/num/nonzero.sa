@@ -1,3 +1,0 @@
-// NonZero integer namespace facade.
-@import "../num.sal"
-@import "../num.sa"

@@ -1,7 +1,0 @@
-@import "binary_heap.sa"
-@import "btree_map.sa"
-@import "btree_set.sa"
-@import "hashmap.sa"
-@import "hashset.sa"
-@import "linked_list.sa"
-@import "vec_deque.sa"

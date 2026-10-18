@@ -6,7 +6,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/sync/mpsc.sa"
+@import "sa_std/sync/mpsc.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@
 下面的完整 SA 程序展示了 MPSC 管道如何建立、进行多轮发送，并被单方消费者以非阻塞的方式源源不断地进行消化：
 
 ```sa
-@import "sa_std/sync/mpsc.sa"
+@import "sa_std/sync/mpsc.sars"
 
 @main() -> i32:
 L_ENTRY:

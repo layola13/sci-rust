@@ -1,0 +1,92 @@
+@import "sa_std/cmp.sars"
+
+@test "sa_std cmp Reverse clone and default macro surface"():
+L_ENTRY:
+    u64_default = stack_alloc CmpReverseU64_SIZE
+    u64_source = stack_alloc CmpReverseU64_SIZE
+    u64_clone = stack_alloc CmpReverseU64_SIZE
+    u64_clone_from = stack_alloc CmpReverseU64_SIZE
+    i64_default = stack_alloc CmpReverseI64_SIZE
+    i64_source = stack_alloc CmpReverseI64_SIZE
+    i64_clone = stack_alloc CmpReverseI64_SIZE
+    i64_clone_from = stack_alloc CmpReverseI64_SIZE
+
+    EXPAND CMP_REVERSE_U64_NEW u64_default, 99
+    EXPAND CMP_REVERSE_U64_DEFAULT u64_default
+    EXPAND CMP_REVERSE_U64_NEW u64_source, 41
+    EXPAND CMP_REVERSE_U64_NEW u64_clone, 1
+    EXPAND CMP_REVERSE_U64_NEW u64_clone_from, 2
+    EXPAND CMP_REVERSE_U64_CLONE u64_clone, u64_source
+    EXPAND CMP_REVERSE_U64_CLONE_FROM u64_clone_from, u64_source
+    EXPAND CMP_REVERSE_U64_SET u64_source, 77
+
+    neg_42 = sub 0, 42
+    neg_71 = sub 0, 71
+    EXPAND CMP_REVERSE_I64_NEW i64_default, neg_42
+    EXPAND CMP_REVERSE_I64_DEFAULT i64_default
+    EXPAND CMP_REVERSE_I64_NEW i64_source, neg_42
+    EXPAND CMP_REVERSE_I64_NEW i64_clone, 1
+    EXPAND CMP_REVERSE_I64_NEW i64_clone_from, 2
+    EXPAND CMP_REVERSE_I64_CLONE i64_clone, i64_source
+    EXPAND CMP_REVERSE_I64_CLONE_FROM i64_clone_from, i64_source
+    EXPAND CMP_REVERSE_I64_SET i64_source, neg_71
+
+    EXPAND CMP_REVERSE_U64_GET u64_default_value, u64_default
+    EXPAND CMP_REVERSE_U64_GET u64_source_value, u64_source
+    EXPAND CMP_REVERSE_U64_GET u64_clone_value, u64_clone
+    EXPAND CMP_REVERSE_U64_GET u64_clone_from_value, u64_clone_from
+    EXPAND CMP_REVERSE_I64_GET i64_default_value, i64_default
+    EXPAND CMP_REVERSE_I64_GET i64_source_value, i64_source
+    EXPAND CMP_REVERSE_I64_GET i64_clone_value, i64_clone
+    EXPAND CMP_REVERSE_I64_GET i64_clone_from_value, i64_clone_from
+
+    ok_u64_default = eq u64_default_value, 0
+    ok_u64_source = eq u64_source_value, 77
+    ok_u64_clone = eq u64_clone_value, 41
+    ok_u64_clone_from = eq u64_clone_from_value, 41
+    ok_i64_default = eq i64_default_value, 0
+    ok_i64_source = eq i64_source_value, neg_71
+    ok_i64_clone = eq i64_clone_value, neg_42
+    ok_i64_clone_from = eq i64_clone_from_value, neg_42
+
+    c01 = and ok_u64_default, ok_u64_source
+    c02 = and c01, ok_u64_clone
+    c03 = and c02, ok_u64_clone_from
+    c04 = and c03, ok_i64_default
+    c05 = and c04, ok_i64_source
+    c06 = and c05, ok_i64_clone
+    ok = and c06, ok_i64_clone_from
+
+    !neg_42
+    !neg_71
+    !u64_default_value
+    !u64_source_value
+    !u64_clone_value
+    !u64_clone_from_value
+    !i64_default_value
+    !i64_source_value
+    !i64_clone_value
+    !i64_clone_from_value
+    !ok_u64_default
+    !ok_u64_source
+    !ok_u64_clone
+    !ok_u64_clone_from
+    !ok_i64_default
+    !ok_i64_source
+    !ok_i64_clone
+    !ok_i64_clone_from
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10601)
+
+L_PASS:
+    !ok
+    return 0

@@ -1904,7 +1904,7 @@ test "dce modes prune std and user functions at distinct levels" {
         .return_ty = .void,
         .entry_inst_idx = 0,
         .is_ffi_wrapper = false,
-        .upstream_file = "/tmp/app/sa_std/core/unused.sa",
+        .upstream_file = "/tmp/app/sa_std/core/unused.sars",
     };
     const user_func = sig.FunctionSig{
         .id = 1,
@@ -1915,10 +1915,10 @@ test "dce modes prune std and user functions at distinct levels" {
         .return_ty = .void,
         .entry_inst_idx = 0,
         .is_ffi_wrapper = false,
-        .upstream_file = "/tmp/app/src/user.sa",
+        .upstream_file = "/tmp/app/src/user.sars",
     };
 
-    const source_path = "/tmp/app/src/main.sa";
+    const source_path = "/tmp/app/src/main.sars";
     try std.testing.expect(shouldPruneUnreachableFunction(.{ .dce = .std, .std_root = "/tmp/app/sa_std" }, std_func, source_path));
     try std.testing.expect(!shouldPruneUnreachableFunction(.{ .dce = .std, .std_root = "/tmp/app/sa_std" }, user_func, source_path));
     try std.testing.expect(shouldPruneUnreachableFunction(.{ .dce = .full, .std_root = "/tmp/app/sa_std" }, user_func, source_path));

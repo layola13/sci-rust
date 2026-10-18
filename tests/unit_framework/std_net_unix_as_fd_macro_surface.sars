@@ -1,0 +1,291 @@
+@import "sa_std/net.sars"
+@import "sa_std/os/fd.sars"
+
+@const UNIX_AS_FD_PATH = utf8:"/tmp/sa_uds_as_fd.sock"
+
+#def UNIX_AS_FD_PATH_LEN = 22
+
+@test "sa_std net unix socket AsFd aliases"():
+L_ENTRY:
+    EXPAND NET_UNIX_LISTEN listen_status, listener, UNIX_AS_FD_PATH, UNIX_AS_FD_PATH_LEN
+    listen_status_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    listen_ok = and listen_status_ok, listener_ok
+    br listen_ok -> L_CONNECT, L_FAIL_LISTEN
+
+L_FAIL_LISTEN:
+    !listen_ok
+    !listener_ok
+    !listen_status_ok
+    !listener
+    !listen_status
+    panic(10698)
+
+L_CONNECT:
+    EXPAND NET_UNIX_CONNECT connect_status, client, UNIX_AS_FD_PATH, UNIX_AS_FD_PATH_LEN
+    connect_status_ok = eq connect_status, SA_NET_OK
+    client_ok = ne client, 0
+    connect_ok = and connect_status_ok, client_ok
+    br connect_ok -> L_ACCEPT, L_FAIL_CONNECT
+
+L_FAIL_CONNECT:
+    EXPAND NET_TCP_LISTENER_CLOSE fail_listener_close_status, listener
+    !fail_listener_close_status
+    !connect_ok
+    !client_ok
+    !connect_status_ok
+    !client
+    !connect_status
+    !listen_ok
+    !listener
+    panic(10698)
+
+L_ACCEPT:
+    EXPAND NET_UNIX_ACCEPT accept_status, server, listener
+    accept_status_ok = eq accept_status, SA_NET_OK
+    server_ok = ne server, 0
+    accept_ok = and accept_status_ok, server_ok
+    br accept_ok -> L_DATAGRAM, L_FAIL_ACCEPT
+
+L_FAIL_ACCEPT:
+    EXPAND NET_TCP_STREAM_CLOSE fail_client_close_status, client
+    EXPAND NET_TCP_LISTENER_CLOSE fail_listener_close_status2, listener
+    !fail_client_close_status
+    !fail_listener_close_status2
+    !accept_ok
+    !server_ok
+    !accept_status_ok
+    !server
+    !accept_status
+    !connect_ok
+    !client
+    !listen_ok
+    !listener
+    panic(10698)
+
+L_DATAGRAM:
+    EXPAND NET_UNIX_DATAGRAM_PAIR pair_status, left, right
+    pair_status_ok = eq pair_status, SA_NET_OK
+    left_ok = ne left, 0
+    right_ok = ne right, 0
+    pair01 = and pair_status_ok, left_ok
+    pair_ok = and pair01, right_ok
+    br pair_ok -> L_CHECK_AS_FD, L_FAIL_PAIR
+
+L_FAIL_PAIR:
+    EXPAND NET_TCP_STREAM_CLOSE fail_client_close_status2, client
+    EXPAND NET_TCP_STREAM_CLOSE fail_server_close_status, server
+    EXPAND NET_TCP_LISTENER_CLOSE fail_listener_close_status3, listener
+    !fail_client_close_status2
+    !fail_server_close_status
+    !fail_listener_close_status3
+    !pair_ok
+    !pair01
+    !right_ok
+    !left_ok
+    !pair_status_ok
+    !right
+    !left
+    !pair_status
+    !accept_ok
+    !server
+    !client
+    !listen_ok
+    !listener
+    panic(10698)
+
+L_CHECK_AS_FD:
+    EXPAND NET_UNIX_LISTENER_AS_FD listener_as_fd_status, listener_fd, listener
+    EXPAND NET_UNIX_LISTENER_AS_RAW_FD listener_raw_status, listener_raw_fd, listener
+    EXPAND FD_BORROWED_AS_RAW_FD listener_borrowed_status, listener_borrowed_fd, listener_fd
+    EXPAND NET_UNIX_STREAM_AS_FD client_as_fd_status, client_fd, client
+    EXPAND NET_UNIX_STREAM_AS_RAW_FD client_raw_status, client_raw_fd, client
+    EXPAND FD_BORROWED_AS_RAW_FD client_borrowed_status, client_borrowed_fd, client_fd
+    EXPAND NET_UNIX_STREAM_AS_FD server_as_fd_status, server_fd, server
+    EXPAND NET_UNIX_STREAM_AS_RAW_FD server_raw_status, server_raw_fd, server
+    EXPAND FD_BORROWED_AS_RAW_FD server_borrowed_status, server_borrowed_fd, server_fd
+    EXPAND NET_UNIX_DATAGRAM_AS_FD left_as_fd_status, left_fd, left
+    EXPAND NET_UNIX_DATAGRAM_AS_RAW_FD left_raw_status, left_raw_fd, left
+    EXPAND FD_BORROWED_AS_RAW_FD left_borrowed_status, left_borrowed_fd, left_fd
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status, client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_status, server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status, listener
+    EXPAND NET_UNIX_DATAGRAM_CLOSE left_close_status, left
+    EXPAND NET_UNIX_DATAGRAM_CLOSE right_close_status, right
+
+    listener_as_fd_ok = eq listener_as_fd_status, SA_FD_OK
+    listener_fd_ok = ne listener_fd, -1
+    listener_raw_ok = eq listener_raw_status, SA_FD_OK
+    listener_raw_same_ok = eq listener_raw_fd, listener_fd
+    listener_borrowed_ok = eq listener_borrowed_status, SA_FD_OK
+    listener_borrowed_same_ok = eq listener_borrowed_fd, listener_fd
+    client_as_fd_ok = eq client_as_fd_status, SA_FD_OK
+    client_fd_ok = ne client_fd, -1
+    client_raw_ok = eq client_raw_status, SA_FD_OK
+    client_raw_same_ok = eq client_raw_fd, client_fd
+    client_borrowed_ok = eq client_borrowed_status, SA_FD_OK
+    client_borrowed_same_ok = eq client_borrowed_fd, client_fd
+    server_as_fd_ok = eq server_as_fd_status, SA_FD_OK
+    server_fd_ok = ne server_fd, -1
+    server_raw_ok = eq server_raw_status, SA_FD_OK
+    server_raw_same_ok = eq server_raw_fd, server_fd
+    server_borrowed_ok = eq server_borrowed_status, SA_FD_OK
+    server_borrowed_same_ok = eq server_borrowed_fd, server_fd
+    left_as_fd_ok = eq left_as_fd_status, SA_FD_OK
+    left_fd_ok = ne left_fd, -1
+    left_raw_ok = eq left_raw_status, SA_FD_OK
+    left_raw_same_ok = eq left_raw_fd, left_fd
+    left_borrowed_ok = eq left_borrowed_status, SA_FD_OK
+    left_borrowed_same_ok = eq left_borrowed_fd, left_fd
+    client_close_ok = eq client_close_status, SA_NET_OK
+    server_close_ok = eq server_close_status, SA_NET_OK
+    listener_close_ok = eq listener_close_status, SA_NET_OK
+    left_close_ok = eq left_close_status, SA_NET_OK
+    right_close_ok = eq right_close_status, SA_NET_OK
+
+    ok01 = and listener_as_fd_ok, listener_fd_ok
+    ok02 = and ok01, listener_raw_ok
+    ok03 = and ok02, listener_raw_same_ok
+    ok04 = and ok03, listener_borrowed_ok
+    ok05 = and ok04, listener_borrowed_same_ok
+    ok06 = and ok05, client_as_fd_ok
+    ok07 = and ok06, client_fd_ok
+    ok08 = and ok07, client_raw_ok
+    ok09 = and ok08, client_raw_same_ok
+    ok10 = and ok09, client_borrowed_ok
+    ok11 = and ok10, client_borrowed_same_ok
+    ok12 = and ok11, server_as_fd_ok
+    ok13 = and ok12, server_fd_ok
+    ok14 = and ok13, server_raw_ok
+    ok15 = and ok14, server_raw_same_ok
+    ok16 = and ok15, server_borrowed_ok
+    ok17 = and ok16, server_borrowed_same_ok
+    ok18 = and ok17, left_as_fd_ok
+    ok19 = and ok18, left_fd_ok
+    ok20 = and ok19, left_raw_ok
+    ok21 = and ok20, left_raw_same_ok
+    ok22 = and ok21, left_borrowed_ok
+    ok23 = and ok22, left_borrowed_same_ok
+    ok24 = and ok23, client_close_ok
+    ok25 = and ok24, server_close_ok
+    ok26 = and ok25, listener_close_ok
+    ok27 = and ok26, left_close_ok
+    ok = and ok27, right_close_ok
+
+    !listener_as_fd_status
+    !listener_fd
+    !listener_raw_status
+    !listener_raw_fd
+    !listener_borrowed_status
+    !listener_borrowed_fd
+    !client_as_fd_status
+    !client_fd
+    !client_raw_status
+    !client_raw_fd
+    !client_borrowed_status
+    !client_borrowed_fd
+    !server_as_fd_status
+    !server_fd
+    !server_raw_status
+    !server_raw_fd
+    !server_borrowed_status
+    !server_borrowed_fd
+    !left_as_fd_status
+    !left_fd
+    !left_raw_status
+    !left_raw_fd
+    !left_borrowed_status
+    !left_borrowed_fd
+    !client_close_status
+    !server_close_status
+    !listener_close_status
+    !left_close_status
+    !right_close_status
+    !listener_as_fd_ok
+    !listener_fd_ok
+    !listener_raw_ok
+    !listener_raw_same_ok
+    !listener_borrowed_ok
+    !listener_borrowed_same_ok
+    !client_as_fd_ok
+    !client_fd_ok
+    !client_raw_ok
+    !client_raw_same_ok
+    !client_borrowed_ok
+    !client_borrowed_same_ok
+    !server_as_fd_ok
+    !server_fd_ok
+    !server_raw_ok
+    !server_raw_same_ok
+    !server_borrowed_ok
+    !server_borrowed_same_ok
+    !left_as_fd_ok
+    !left_fd_ok
+    !left_raw_ok
+    !left_raw_same_ok
+    !left_borrowed_ok
+    !left_borrowed_same_ok
+    !client_close_ok
+    !server_close_ok
+    !listener_close_ok
+    !left_close_ok
+    !right_close_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !pair_ok
+    !pair01
+    !right_ok
+    !left_ok
+    !pair_status_ok
+    !right
+    !left
+    !pair_status
+    !accept_ok
+    !server_ok
+    !accept_status_ok
+    !server
+    !accept_status
+    !connect_ok
+    !client_ok
+    !connect_status_ok
+    !client
+    !connect_status
+    !listen_ok
+    !listener_ok
+    !listen_status_ok
+    !listener
+    !listen_status
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10698)
+
+L_PASS:
+    !ok
+    return 0

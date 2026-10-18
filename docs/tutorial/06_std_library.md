@@ -11,7 +11,7 @@
 
 **最佳实践**：
 ```sa
-@import "sa_std/vec.sa"
+@import "sa_std/vec.sars"
 ```
 
 ## 2. 动态数组 (`Vec`)
@@ -20,7 +20,7 @@
 它的扩容和边界检查都经过了深入的底层强化，提供了基于容量倍增策略的高性能扩容，并在越界和溢出时自动 panic。
 
 ```sa
-@import "sa_std/vec.sa"
+@import "sa_std/vec.sars"
 
 @main() -> i32:
 L_ENTRY:
@@ -42,7 +42,7 @@ L_ENTRY:
 使用 `sa_std/io.sa` 中的 `PRINT` / `PRINTLN` 宏可以输出静态字节串：
 
 ```sa
-@import "sa_std/io.sa"
+@import "sa_std/io.sars"
 
 @const MSG = utf8:"Value"
 

@@ -1,0 +1,21 @@
+@import "sa_std/core/future.sars"
+
+@test "sa_std future poll ready"():
+L_ENTRY:
+    EXPAND POLL_READY poll, 42
+    EXPAND POLL_IS_READY is_r, poll
+    EXPAND POLL_IS_PENDING is_p, poll
+    a = eq is_r, 1
+    b = eq is_p, 0
+    ok = and a, b
+    !is_r
+    !is_p
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10941)

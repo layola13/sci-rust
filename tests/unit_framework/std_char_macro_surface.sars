@@ -1,0 +1,665 @@
+@import "sa_std/char.sars"
+
+@test "sa_std char scalar and encoding macros"():
+L_ENTRY:
+    EXPAND CHAR_IS_VALID_SCALAR valid_zero, 0
+    EXPAND CHAR_IS_VALID_SCALAR valid_max, CHAR_MAX
+    EXPAND CHAR_IS_VALID_SCALAR invalid_surrogate, CHAR_SURROGATE_MIN
+    EXPAND CHAR_IS_VALID_SCALAR invalid_above, 1114112
+    EXPAND CHAR_FROM_U32 from_ok, from_value, 10084
+    EXPAND CHAR_FROM_U32 from_bad_ok, from_bad_value, CHAR_SURROGATE_MIN
+    EXPAND CHAR_FROM_U32_UNCHECKED unchecked_value, 65
+
+    EXPAND CHAR_LEN_UTF8 len_ascii, 65
+    EXPAND CHAR_LEN_UTF8 len_two, 223
+    EXPAND CHAR_LEN_UTF8 len_three, 8477
+    EXPAND CHAR_LEN_UTF8 len_four, 128163
+    EXPAND CHAR_LEN_UTF16 len16_bmp, 8477
+    EXPAND CHAR_LEN_UTF16 len16_pair, 128163
+
+    out = stack_alloc 8
+    EXPAND CHAR_TRY_ENCODE_UTF8 enc1_ok, enc1_len, out, 8, 65
+    enc1_b0 = load out+0 as u8
+    EXPAND CHAR_TRY_ENCODE_UTF8 enc2_ok, enc2_len, out, 8, 223
+    enc2_b0 = load out+0 as u8
+    enc2_p1 = ptr_add out, 1
+    enc2_b1 = load enc2_p1+0 as u8
+    EXPAND CHAR_TRY_ENCODE_UTF8 enc3_ok, enc3_len, out, 8, 8477
+    enc3_b0 = load out+0 as u8
+    enc3_p1 = ptr_add out, 1
+    enc3_p2 = ptr_add out, 2
+    enc3_b1 = load enc3_p1+0 as u8
+    enc3_b2 = load enc3_p2+0 as u8
+    EXPAND CHAR_TRY_ENCODE_UTF8 enc4_ok, enc4_len, out, 8, 128163
+    enc4_b0 = load out+0 as u8
+    enc4_p1 = ptr_add out, 1
+    enc4_p2 = ptr_add out, 2
+    enc4_p3 = ptr_add out, 3
+    enc4_b1 = load enc4_p1+0 as u8
+    enc4_b2 = load enc4_p2+0 as u8
+    enc4_b3 = load enc4_p3+0 as u8
+    EXPAND CHAR_TRY_ENCODE_UTF8 enc_short_ok, enc_short_len, out, 1, 8477
+    EXPAND CHAR_TRY_ENCODE_UTF8 enc_invalid_ok, enc_invalid_len, out, 8, CHAR_SURROGATE_MIN
+
+    out16 = stack_alloc 4
+    EXPAND CHAR_TRY_ENCODE_UTF16 enc16_bmp_ok, enc16_bmp_len, out16, 2, 8477
+    enc16_bmp0 = load out16+0 as u16
+    EXPAND CHAR_TRY_ENCODE_UTF16 enc16_pair_ok, enc16_pair_len, out16, 2, 128163
+    enc16_pair0 = load out16+0 as u16
+    enc16_pair_p1 = ptr_add out16, 2
+    enc16_pair1 = load enc16_pair_p1+0 as u16
+    EXPAND CHAR_TRY_ENCODE_UTF16 enc16_short_ok, enc16_short_len, out16, 1, 128163
+    EXPAND CHAR_TRY_ENCODE_UTF16 enc16_invalid_ok, enc16_invalid_len, out16, 2, CHAR_SURROGATE_MIN
+
+    EXPAND CHAR_DECODE_UTF16_UNIT dec16_bmp_ok, dec16_bmp_char, dec16_bmp_units, 65, 0
+    EXPAND CHAR_DECODE_UTF16_UNIT dec16_pair_ok, dec16_pair_char, dec16_pair_units, 55357, 56483
+    EXPAND CHAR_DECODE_UTF16_UNIT dec16_low_ok, dec16_low_char, dec16_low_units, 56483, 0
+    EXPAND CHAR_DECODE_UTF16_UNIT dec16_bad_high_ok, dec16_bad_high_char, dec16_bad_high_units, 55357, 65
+
+    ok_valid_zero = eq valid_zero, 1
+    ok_valid_max = eq valid_max, 1
+    ok_invalid_surrogate = eq invalid_surrogate, 0
+    ok_invalid_above = eq invalid_above, 0
+    ok_from_flag = eq from_ok, 1
+    ok_from_value = eq from_value, 10084
+    ok_from_bad_flag = eq from_bad_ok, 0
+    ok_from_bad_value = eq from_bad_value, 0
+    ok_unchecked = eq unchecked_value, 65
+    ok_len_ascii = eq len_ascii, 1
+    ok_len_two = eq len_two, 2
+    ok_len_three = eq len_three, 3
+    ok_len_four = eq len_four, 4
+    ok_len16_bmp = eq len16_bmp, 1
+    ok_len16_pair = eq len16_pair, 2
+    ok_enc1_flag = eq enc1_ok, 1
+    ok_enc1_len = eq enc1_len, 1
+    ok_enc1_b0 = eq enc1_b0, 65
+    ok_enc2_flag = eq enc2_ok, 1
+    ok_enc2_len = eq enc2_len, 2
+    ok_enc2_b0 = eq enc2_b0, 195
+    ok_enc2_b1 = eq enc2_b1, 159
+    ok_enc3_flag = eq enc3_ok, 1
+    ok_enc3_len = eq enc3_len, 3
+    ok_enc3_b0 = eq enc3_b0, 226
+    ok_enc3_b1 = eq enc3_b1, 132
+    ok_enc3_b2 = eq enc3_b2, 157
+    ok_enc4_flag = eq enc4_ok, 1
+    ok_enc4_len = eq enc4_len, 4
+    ok_enc4_b0 = eq enc4_b0, 240
+    ok_enc4_b1 = eq enc4_b1, 159
+    ok_enc4_b2 = eq enc4_b2, 146
+    ok_enc4_b3 = eq enc4_b3, 163
+    ok_enc_short_flag = eq enc_short_ok, 0
+    ok_enc_short_len = eq enc_short_len, 0
+    ok_enc_invalid_flag = eq enc_invalid_ok, 0
+    ok_enc_invalid_len = eq enc_invalid_len, 0
+    ok_enc16_bmp_flag = eq enc16_bmp_ok, 1
+    ok_enc16_bmp_len = eq enc16_bmp_len, 1
+    ok_enc16_bmp0 = eq enc16_bmp0, 8477
+    ok_enc16_pair_flag = eq enc16_pair_ok, 1
+    ok_enc16_pair_len = eq enc16_pair_len, 2
+    ok_enc16_pair0 = eq enc16_pair0, 55357
+    ok_enc16_pair1 = eq enc16_pair1, 56483
+    ok_enc16_short_flag = eq enc16_short_ok, 0
+    ok_enc16_short_len = eq enc16_short_len, 0
+    ok_enc16_invalid_flag = eq enc16_invalid_ok, 0
+    ok_enc16_invalid_len = eq enc16_invalid_len, 0
+    ok_dec16_bmp_flag = eq dec16_bmp_ok, 1
+    ok_dec16_bmp_char = eq dec16_bmp_char, 65
+    ok_dec16_bmp_units = eq dec16_bmp_units, 1
+    ok_dec16_pair_flag = eq dec16_pair_ok, 1
+    ok_dec16_pair_char = eq dec16_pair_char, 128163
+    ok_dec16_pair_units = eq dec16_pair_units, 2
+    ok_dec16_low_flag = eq dec16_low_ok, 0
+    ok_dec16_low_char = eq dec16_low_char, 0
+    ok_dec16_low_units = eq dec16_low_units, 1
+    ok_dec16_bad_high_flag = eq dec16_bad_high_ok, 0
+    ok_dec16_bad_high_char = eq dec16_bad_high_char, 0
+    ok_dec16_bad_high_units = eq dec16_bad_high_units, 1
+
+    ok01 = and ok_valid_zero, ok_valid_max
+    ok02 = and ok01, ok_invalid_surrogate
+    ok03 = and ok02, ok_invalid_above
+    ok04 = and ok03, ok_from_flag
+    ok05 = and ok04, ok_from_value
+    ok06 = and ok05, ok_from_bad_flag
+    ok07 = and ok06, ok_from_bad_value
+    ok08 = and ok07, ok_unchecked
+    ok09 = and ok08, ok_len_ascii
+    ok10 = and ok09, ok_len_two
+    ok11 = and ok10, ok_len_three
+    ok12 = and ok11, ok_len_four
+    ok13 = and ok12, ok_len16_bmp
+    ok14 = and ok13, ok_len16_pair
+    ok15 = and ok14, ok_enc1_flag
+    ok16 = and ok15, ok_enc1_len
+    ok17 = and ok16, ok_enc1_b0
+    ok18 = and ok17, ok_enc2_flag
+    ok19 = and ok18, ok_enc2_len
+    ok20 = and ok19, ok_enc2_b0
+    ok21 = and ok20, ok_enc2_b1
+    ok22 = and ok21, ok_enc3_flag
+    ok23 = and ok22, ok_enc3_len
+    ok24 = and ok23, ok_enc3_b0
+    ok25 = and ok24, ok_enc3_b1
+    ok26 = and ok25, ok_enc3_b2
+    ok27 = and ok26, ok_enc4_flag
+    ok28 = and ok27, ok_enc4_len
+    ok29 = and ok28, ok_enc4_b0
+    ok30 = and ok29, ok_enc4_b1
+    ok31 = and ok30, ok_enc4_b2
+    ok32 = and ok31, ok_enc4_b3
+    ok33 = and ok32, ok_enc_short_flag
+    ok34 = and ok33, ok_enc_short_len
+    ok35 = and ok34, ok_enc_invalid_flag
+    ok36 = and ok35, ok_enc_invalid_len
+    ok37 = and ok36, ok_enc16_bmp_flag
+    ok38 = and ok37, ok_enc16_bmp_len
+    ok39 = and ok38, ok_enc16_bmp0
+    ok40 = and ok39, ok_enc16_pair_flag
+    ok41 = and ok40, ok_enc16_pair_len
+    ok42 = and ok41, ok_enc16_pair0
+    ok43 = and ok42, ok_enc16_pair1
+    ok44 = and ok43, ok_enc16_short_flag
+    ok45 = and ok44, ok_enc16_short_len
+    ok46 = and ok45, ok_enc16_invalid_flag
+    ok47 = and ok46, ok_enc16_invalid_len
+    ok48 = and ok47, ok_dec16_bmp_flag
+    ok49 = and ok48, ok_dec16_bmp_char
+    ok50 = and ok49, ok_dec16_bmp_units
+    ok51 = and ok50, ok_dec16_pair_flag
+    ok52 = and ok51, ok_dec16_pair_char
+    ok53 = and ok52, ok_dec16_pair_units
+    ok54 = and ok53, ok_dec16_low_flag
+    ok55 = and ok54, ok_dec16_low_char
+    ok56 = and ok55, ok_dec16_low_units
+    ok57 = and ok56, ok_dec16_bad_high_flag
+    ok58 = and ok57, ok_dec16_bad_high_char
+    ok = and ok58, ok_dec16_bad_high_units
+
+    !enc16_pair_p1
+    !enc4_p3
+    !enc4_p2
+    !enc4_p1
+    !enc3_p2
+    !enc3_p1
+    !enc2_p1
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(970)
+
+L_PASS:
+    return 0
+
+@test "sa_std char escape_unicode write macro"():
+L_ENTRY:
+    out = stack_alloc 16
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_zero_ok, esc_zero_len, out, 16, 0
+    zero_b0 = load out+0 as u8
+    zero_b1 = load out+1 as u8
+    zero_b2 = load out+2 as u8
+    zero_b3 = load out+3 as u8
+    zero_b4 = load out+4 as u8
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_ascii_ok, esc_ascii_len, out, 16, 65
+    ascii_b0 = load out+0 as u8
+    ascii_b1 = load out+1 as u8
+    ascii_b2 = load out+2 as u8
+    ascii_b3 = load out+3 as u8
+    ascii_b4 = load out+4 as u8
+    ascii_b5 = load out+5 as u8
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_three_ok, esc_three_len, out, 16, 4095
+    three_b3 = load out+3 as u8
+    three_b4 = load out+4 as u8
+    three_b5 = load out+5 as u8
+    three_b6 = load out+6 as u8
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_bmp_ok, esc_bmp_len, out, 16, 10084
+    bmp_b3 = load out+3 as u8
+    bmp_b4 = load out+4 as u8
+    bmp_b5 = load out+5 as u8
+    bmp_b6 = load out+6 as u8
+    bmp_b7 = load out+7 as u8
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_supp_ok, esc_supp_len, out, 16, 128163
+    supp_b3 = load out+3 as u8
+    supp_b4 = load out+4 as u8
+    supp_b5 = load out+5 as u8
+    supp_b6 = load out+6 as u8
+    supp_b7 = load out+7 as u8
+    supp_b8 = load out+8 as u8
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_max_ok, esc_max_len, out, 16, CHAR_MAX
+    max_b3 = load out+3 as u8
+    max_b4 = load out+4 as u8
+    max_b5 = load out+5 as u8
+    max_b6 = load out+6 as u8
+    max_b7 = load out+7 as u8
+    max_b8 = load out+8 as u8
+    max_b9 = load out+9 as u8
+
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_short_ok, esc_short_len, out, 8, 128163
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE esc_bad_ok, esc_bad_len, out, 16, CHAR_SURROGATE_MIN
+
+    ok_zero_flag = eq esc_zero_ok, 1
+    ok_zero_len = eq esc_zero_len, 5
+    ok_zero_b0 = eq zero_b0, 92
+    ok_zero_b1 = eq zero_b1, 117
+    ok_zero_b2 = eq zero_b2, 123
+    ok_zero_b3 = eq zero_b3, 48
+    ok_zero_b4 = eq zero_b4, 125
+    ok_ascii_flag = eq esc_ascii_ok, 1
+    ok_ascii_len = eq esc_ascii_len, 6
+    ok_ascii_b0 = eq ascii_b0, 92
+    ok_ascii_b1 = eq ascii_b1, 117
+    ok_ascii_b2 = eq ascii_b2, 123
+    ok_ascii_b3 = eq ascii_b3, 52
+    ok_ascii_b4 = eq ascii_b4, 49
+    ok_ascii_b5 = eq ascii_b5, 125
+    ok_three_flag = eq esc_three_ok, 1
+    ok_three_len = eq esc_three_len, 7
+    ok_three_b3 = eq three_b3, 102
+    ok_three_b4 = eq three_b4, 102
+    ok_three_b5 = eq three_b5, 102
+    ok_three_b6 = eq three_b6, 125
+    ok_bmp_flag = eq esc_bmp_ok, 1
+    ok_bmp_len = eq esc_bmp_len, 8
+    ok_bmp_b3 = eq bmp_b3, 50
+    ok_bmp_b4 = eq bmp_b4, 55
+    ok_bmp_b5 = eq bmp_b5, 54
+    ok_bmp_b6 = eq bmp_b6, 52
+    ok_bmp_b7 = eq bmp_b7, 125
+    ok_supp_flag = eq esc_supp_ok, 1
+    ok_supp_len = eq esc_supp_len, 9
+    ok_supp_b3 = eq supp_b3, 49
+    ok_supp_b4 = eq supp_b4, 102
+    ok_supp_b5 = eq supp_b5, 52
+    ok_supp_b6 = eq supp_b6, 97
+    ok_supp_b7 = eq supp_b7, 51
+    ok_supp_b8 = eq supp_b8, 125
+    ok_max_flag = eq esc_max_ok, 1
+    ok_max_len = eq esc_max_len, 10
+    ok_max_b3 = eq max_b3, 49
+    ok_max_b4 = eq max_b4, 48
+    ok_max_b5 = eq max_b5, 102
+    ok_max_b6 = eq max_b6, 102
+    ok_max_b7 = eq max_b7, 102
+    ok_max_b8 = eq max_b8, 102
+    ok_max_b9 = eq max_b9, 125
+    ok_short_flag = eq esc_short_ok, 0
+    ok_short_len = eq esc_short_len, 0
+    ok_bad_flag = eq esc_bad_ok, 0
+    ok_bad_len = eq esc_bad_len, 0
+
+    ok01 = and ok_zero_flag, ok_zero_len
+    ok02 = and ok01, ok_zero_b0
+    ok03 = and ok02, ok_zero_b1
+    ok04 = and ok03, ok_zero_b2
+    ok05 = and ok04, ok_zero_b3
+    ok06 = and ok05, ok_zero_b4
+    ok07 = and ok06, ok_ascii_flag
+    ok08 = and ok07, ok_ascii_len
+    ok09 = and ok08, ok_ascii_b0
+    ok10 = and ok09, ok_ascii_b1
+    ok11 = and ok10, ok_ascii_b2
+    ok12 = and ok11, ok_ascii_b3
+    ok13 = and ok12, ok_ascii_b4
+    ok14 = and ok13, ok_ascii_b5
+    ok15 = and ok14, ok_three_flag
+    ok16 = and ok15, ok_three_len
+    ok17 = and ok16, ok_three_b3
+    ok18 = and ok17, ok_three_b4
+    ok19 = and ok18, ok_three_b5
+    ok20 = and ok19, ok_three_b6
+    ok21 = and ok20, ok_bmp_flag
+    ok22 = and ok21, ok_bmp_len
+    ok23 = and ok22, ok_bmp_b3
+    ok24 = and ok23, ok_bmp_b4
+    ok25 = and ok24, ok_bmp_b5
+    ok26 = and ok25, ok_bmp_b6
+    ok27 = and ok26, ok_bmp_b7
+    ok28 = and ok27, ok_supp_flag
+    ok29 = and ok28, ok_supp_len
+    ok30 = and ok29, ok_supp_b3
+    ok31 = and ok30, ok_supp_b4
+    ok32 = and ok31, ok_supp_b5
+    ok33 = and ok32, ok_supp_b6
+    ok34 = and ok33, ok_supp_b7
+    ok35 = and ok34, ok_supp_b8
+    ok36 = and ok35, ok_max_flag
+    ok37 = and ok36, ok_max_len
+    ok38 = and ok37, ok_max_b3
+    ok39 = and ok38, ok_max_b4
+    ok40 = and ok39, ok_max_b5
+    ok41 = and ok40, ok_max_b6
+    ok42 = and ok41, ok_max_b7
+    ok43 = and ok42, ok_max_b8
+    ok44 = and ok43, ok_max_b9
+    ok45 = and ok44, ok_short_flag
+    ok46 = and ok45, ok_short_len
+    ok47 = and ok46, ok_bad_flag
+    ok = and ok47, ok_bad_len
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(972)
+
+L_PASS:
+    return 0
+
+@test "sa_std char escape_default write macro"():
+L_ENTRY:
+    out = stack_alloc 16
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_raw_ok, def_raw_len, out, 16, 65
+    raw_b0 = load out+0 as u8
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_lf_ok, def_lf_len, out, 16, 10
+    lf_b0 = load out+0 as u8
+    lf_b1 = load out+1 as u8
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_quote_ok, def_quote_len, out, 16, 34
+    quote_b0 = load out+0 as u8
+    quote_b1 = load out+1 as u8
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_backslash_ok, def_backslash_len, out, 16, 92
+    backslash_b0 = load out+0 as u8
+    backslash_b1 = load out+1 as u8
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_zero_ok, def_zero_len, out, 16, 0
+    zero_b0 = load out+0 as u8
+    zero_b1 = load out+1 as u8
+    zero_b2 = load out+2 as u8
+    zero_b3 = load out+3 as u8
+    zero_b4 = load out+4 as u8
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_unicode_ok, def_unicode_len, out, 16, 10084
+    unicode_b0 = load out+0 as u8
+    unicode_b1 = load out+1 as u8
+    unicode_b2 = load out+2 as u8
+    unicode_b3 = load out+3 as u8
+    unicode_b4 = load out+4 as u8
+    unicode_b5 = load out+5 as u8
+    unicode_b6 = load out+6 as u8
+    unicode_b7 = load out+7 as u8
+
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_short_ok, def_short_len, out, 1, 10
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_short_unicode_ok, def_short_unicode_len, out, 7, 10084
+    EXPAND CHAR_ESCAPE_DEFAULT_WRITE def_bad_ok, def_bad_len, out, 16, CHAR_SURROGATE_MIN
+
+    ok_raw_flag = eq def_raw_ok, 1
+    ok_raw_len = eq def_raw_len, 1
+    ok_raw_b0 = eq raw_b0, 65
+    ok_lf_flag = eq def_lf_ok, 1
+    ok_lf_len = eq def_lf_len, 2
+    ok_lf_b0 = eq lf_b0, 92
+    ok_lf_b1 = eq lf_b1, 110
+    ok_quote_flag = eq def_quote_ok, 1
+    ok_quote_len = eq def_quote_len, 2
+    ok_quote_b0 = eq quote_b0, 92
+    ok_quote_b1 = eq quote_b1, 34
+    ok_backslash_flag = eq def_backslash_ok, 1
+    ok_backslash_len = eq def_backslash_len, 2
+    ok_backslash_b0 = eq backslash_b0, 92
+    ok_backslash_b1 = eq backslash_b1, 92
+    ok_zero_flag = eq def_zero_ok, 1
+    ok_zero_len = eq def_zero_len, 5
+    ok_zero_b0 = eq zero_b0, 92
+    ok_zero_b1 = eq zero_b1, 117
+    ok_zero_b2 = eq zero_b2, 123
+    ok_zero_b3 = eq zero_b3, 48
+    ok_zero_b4 = eq zero_b4, 125
+    ok_unicode_flag = eq def_unicode_ok, 1
+    ok_unicode_len = eq def_unicode_len, 8
+    ok_unicode_b0 = eq unicode_b0, 92
+    ok_unicode_b1 = eq unicode_b1, 117
+    ok_unicode_b2 = eq unicode_b2, 123
+    ok_unicode_b3 = eq unicode_b3, 50
+    ok_unicode_b4 = eq unicode_b4, 55
+    ok_unicode_b5 = eq unicode_b5, 54
+    ok_unicode_b6 = eq unicode_b6, 52
+    ok_unicode_b7 = eq unicode_b7, 125
+    ok_short_flag = eq def_short_ok, 0
+    ok_short_len = eq def_short_len, 0
+    ok_short_unicode_flag = eq def_short_unicode_ok, 0
+    ok_short_unicode_len = eq def_short_unicode_len, 0
+    ok_bad_flag = eq def_bad_ok, 0
+    ok_bad_len = eq def_bad_len, 0
+
+    ok01 = and ok_raw_flag, ok_raw_len
+    ok02 = and ok01, ok_raw_b0
+    ok03 = and ok02, ok_lf_flag
+    ok04 = and ok03, ok_lf_len
+    ok05 = and ok04, ok_lf_b0
+    ok06 = and ok05, ok_lf_b1
+    ok07 = and ok06, ok_quote_flag
+    ok08 = and ok07, ok_quote_len
+    ok09 = and ok08, ok_quote_b0
+    ok10 = and ok09, ok_quote_b1
+    ok11 = and ok10, ok_backslash_flag
+    ok12 = and ok11, ok_backslash_len
+    ok13 = and ok12, ok_backslash_b0
+    ok14 = and ok13, ok_backslash_b1
+    ok15 = and ok14, ok_zero_flag
+    ok16 = and ok15, ok_zero_len
+    ok17 = and ok16, ok_zero_b0
+    ok18 = and ok17, ok_zero_b1
+    ok19 = and ok18, ok_zero_b2
+    ok20 = and ok19, ok_zero_b3
+    ok21 = and ok20, ok_zero_b4
+    ok22 = and ok21, ok_unicode_flag
+    ok23 = and ok22, ok_unicode_len
+    ok24 = and ok23, ok_unicode_b0
+    ok25 = and ok24, ok_unicode_b1
+    ok26 = and ok25, ok_unicode_b2
+    ok27 = and ok26, ok_unicode_b3
+    ok28 = and ok27, ok_unicode_b4
+    ok29 = and ok28, ok_unicode_b5
+    ok30 = and ok29, ok_unicode_b6
+    ok31 = and ok30, ok_unicode_b7
+    ok32 = and ok31, ok_short_flag
+    ok33 = and ok32, ok_short_len
+    ok34 = and ok33, ok_short_unicode_flag
+    ok35 = and ok34, ok_short_unicode_len
+    ok36 = and ok35, ok_bad_flag
+    ok = and ok36, ok_bad_len
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(973)
+
+L_PASS:
+    return 0
+
+@test "sa_std char escape_debug write macro"():
+L_ENTRY:
+    out = stack_alloc 16
+
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_raw_ok, dbg_raw_len, out, 16, 65
+    raw_b0 = load out+0 as u8
+
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_lf_ok, dbg_lf_len, out, 16, 10
+    lf_b0 = load out+0 as u8
+    lf_b1 = load out+1 as u8
+
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_quote_ok, dbg_quote_len, out, 16, 34
+    quote_b0 = load out+0 as u8
+    quote_b1 = load out+1 as u8
+
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_zero_ok, dbg_zero_len, out, 16, 0
+    zero_b0 = load out+0 as u8
+    zero_b1 = load out+1 as u8
+    zero_b2 = load out+2 as u8
+    zero_b3 = load out+3 as u8
+    zero_b4 = load out+4 as u8
+
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_heart_ok, dbg_heart_len, out, 16, 10084
+    heart_b0 = load out+0 as u8
+    heart_b1 = load out+1 as u8
+    heart_b2 = load out+2 as u8
+
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_short_ok, dbg_short_len, out, 1, 10
+    EXPAND CHAR_ESCAPE_DEBUG_WRITE dbg_bad_ok, dbg_bad_len, out, 16, CHAR_SURROGATE_MIN
+
+    ok_raw_flag = eq dbg_raw_ok, 1
+    ok_raw_len = eq dbg_raw_len, 1
+    ok_raw_b0 = eq raw_b0, 65
+    ok_lf_flag = eq dbg_lf_ok, 1
+    ok_lf_len = eq dbg_lf_len, 2
+    ok_lf_b0 = eq lf_b0, 92
+    ok_lf_b1 = eq lf_b1, 110
+    ok_quote_flag = eq dbg_quote_ok, 1
+    ok_quote_len = eq dbg_quote_len, 2
+    ok_quote_b0 = eq quote_b0, 92
+    ok_quote_b1 = eq quote_b1, 34
+    ok_zero_flag = eq dbg_zero_ok, 1
+    ok_zero_len = eq dbg_zero_len, 5
+    ok_zero_b0 = eq zero_b0, 92
+    ok_zero_b1 = eq zero_b1, 117
+    ok_zero_b2 = eq zero_b2, 123
+    ok_zero_b3 = eq zero_b3, 48
+    ok_zero_b4 = eq zero_b4, 125
+    ok_heart_flag = eq dbg_heart_ok, 1
+    ok_heart_len = eq dbg_heart_len, 3
+    ok_heart_b0 = eq heart_b0, 226
+    ok_heart_b1 = eq heart_b1, 157
+    ok_heart_b2 = eq heart_b2, 164
+    ok_short_flag = eq dbg_short_ok, 0
+    ok_short_len = eq dbg_short_len, 0
+    ok_bad_flag = eq dbg_bad_ok, 0
+    ok_bad_len = eq dbg_bad_len, 0
+
+    ok01 = and ok_raw_flag, ok_raw_len
+    ok02 = and ok01, ok_raw_b0
+    ok03 = and ok02, ok_lf_flag
+    ok04 = and ok03, ok_lf_len
+    ok05 = and ok04, ok_lf_b0
+    ok06 = and ok05, ok_lf_b1
+    ok07 = and ok06, ok_quote_flag
+    ok08 = and ok07, ok_quote_len
+    ok09 = and ok08, ok_quote_b0
+    ok10 = and ok09, ok_quote_b1
+    ok11 = and ok10, ok_zero_flag
+    ok12 = and ok11, ok_zero_len
+    ok13 = and ok12, ok_zero_b0
+    ok14 = and ok13, ok_zero_b1
+    ok15 = and ok14, ok_zero_b2
+    ok16 = and ok15, ok_zero_b3
+    ok17 = and ok16, ok_zero_b4
+    ok18 = and ok17, ok_heart_flag
+    ok19 = and ok18, ok_heart_len
+    ok20 = and ok19, ok_heart_b0
+    ok21 = and ok20, ok_heart_b1
+    ok22 = and ok21, ok_heart_b2
+    ok23 = and ok22, ok_short_flag
+    ok24 = and ok23, ok_short_len
+    ok25 = and ok24, ok_bad_flag
+    ok = and ok25, ok_bad_len
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(974)
+
+L_PASS:
+    return 0
+
+@test "sa_std char ascii and radix macros"():
+L_ENTRY:
+    EXPAND CHAR_IS_ASCII ascii_a, 65
+    EXPAND CHAR_IS_ASCII ascii_high, 128
+    EXPAND CHAR_IS_ASCII_ALPHABETIC alpha_a, 65
+    EXPAND CHAR_IS_ASCII_ALPHANUMERIC alnum_9, 57
+    EXPAND CHAR_IS_ASCII_DIGIT digit_9, 57
+    EXPAND CHAR_IS_ASCII_HEXDIGIT hex_f, 102
+    EXPAND CHAR_IS_ASCII_WHITESPACE ws_space, 32
+    EXPAND CHAR_TO_ASCII_UPPERCASE upper_a, 97
+    EXPAND CHAR_TO_ASCII_LOWERCASE lower_z, 90
+    EXPAND CHAR_EQ_IGNORE_ASCII_CASE eq_ascii, 82, 114
+
+    EXPAND CHAR_TO_DIGIT digit_ok, digit_value, 49, 10
+    EXPAND CHAR_TO_DIGIT hex_ok, hex_value, 102, 16
+    EXPAND CHAR_TO_DIGIT hex_upper_ok, hex_upper_value, 70, 16
+    EXPAND CHAR_TO_DIGIT z_hex_ok, z_hex_value, 122, 16
+    EXPAND CHAR_TO_DIGIT nine_oct_ok, nine_oct_value, 57, 8
+    EXPAND CHAR_TO_DIGIT invalid_radix_ok, invalid_radix_value, 49, 1
+    EXPAND CHAR_IS_DIGIT is_digit_hex, 102, 16
+    EXPAND CHAR_IS_DIGIT is_digit_dec, 102, 10
+    EXPAND CHAR_FROM_DIGIT from_digit_ok, from_digit_char, 15, 16
+    EXPAND CHAR_FROM_DIGIT from_digit_dec_ok, from_digit_dec_char, 9, 10
+    EXPAND CHAR_FROM_DIGIT from_digit_bad_ok, from_digit_bad_char, 10, 10
+
+    ok_ascii_a = eq ascii_a, 1
+    ok_ascii_high = eq ascii_high, 0
+    ok_alpha_a = eq alpha_a, 1
+    ok_alnum_9 = eq alnum_9, 1
+    ok_digit_9 = eq digit_9, 1
+    ok_hex_f = eq hex_f, 1
+    ok_ws_space = eq ws_space, 1
+    ok_upper_a = eq upper_a, 65
+    ok_lower_z = eq lower_z, 122
+    ok_eq_ascii = eq eq_ascii, 1
+    ok_digit_flag = eq digit_ok, 1
+    ok_digit_value = eq digit_value, 1
+    ok_hex_flag = eq hex_ok, 1
+    ok_hex_value = eq hex_value, 15
+    ok_hex_upper_flag = eq hex_upper_ok, 1
+    ok_hex_upper_value = eq hex_upper_value, 15
+    ok_z_hex_flag = eq z_hex_ok, 0
+    ok_z_hex_value = eq z_hex_value, 0
+    ok_nine_oct_flag = eq nine_oct_ok, 0
+    ok_nine_oct_value = eq nine_oct_value, 0
+    ok_invalid_radix_flag = eq invalid_radix_ok, 0
+    ok_invalid_radix_value = eq invalid_radix_value, 0
+    ok_is_digit_hex = eq is_digit_hex, 1
+    ok_is_digit_dec = eq is_digit_dec, 0
+    ok_from_digit_flag = eq from_digit_ok, 1
+    ok_from_digit_char = eq from_digit_char, 102
+    ok_from_digit_dec_flag = eq from_digit_dec_ok, 1
+    ok_from_digit_dec_char = eq from_digit_dec_char, 57
+    ok_from_digit_bad_flag = eq from_digit_bad_ok, 0
+    ok_from_digit_bad_char = eq from_digit_bad_char, 0
+
+    ok01 = and ok_ascii_a, ok_ascii_high
+    ok02 = and ok01, ok_alpha_a
+    ok03 = and ok02, ok_alnum_9
+    ok04 = and ok03, ok_digit_9
+    ok05 = and ok04, ok_hex_f
+    ok06 = and ok05, ok_ws_space
+    ok07 = and ok06, ok_upper_a
+    ok08 = and ok07, ok_lower_z
+    ok09 = and ok08, ok_eq_ascii
+    ok10 = and ok09, ok_digit_flag
+    ok11 = and ok10, ok_digit_value
+    ok12 = and ok11, ok_hex_flag
+    ok13 = and ok12, ok_hex_value
+    ok14 = and ok13, ok_hex_upper_flag
+    ok15 = and ok14, ok_hex_upper_value
+    ok16 = and ok15, ok_z_hex_flag
+    ok17 = and ok16, ok_z_hex_value
+    ok18 = and ok17, ok_nine_oct_flag
+    ok19 = and ok18, ok_nine_oct_value
+    ok20 = and ok19, ok_invalid_radix_flag
+    ok21 = and ok20, ok_invalid_radix_value
+    ok22 = and ok21, ok_is_digit_hex
+    ok23 = and ok22, ok_is_digit_dec
+    ok24 = and ok23, ok_from_digit_flag
+    ok25 = and ok24, ok_from_digit_char
+    ok26 = and ok25, ok_from_digit_dec_flag
+    ok27 = and ok26, ok_from_digit_dec_char
+    ok28 = and ok27, ok_from_digit_bad_flag
+    ok = and ok28, ok_from_digit_bad_char
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(971)
+
+L_PASS:
+    return 0

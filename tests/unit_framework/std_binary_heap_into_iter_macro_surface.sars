@@ -1,0 +1,69 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap into_iter helper"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 1
+
+    EXPAND BINARY_HEAP_INTO_ITER_U64 iter, backing_vec, heap
+    EXPAND VEC_LEN backing_len, backing_vec
+    EXPAND ITER_NEXT_U64 first_ok, first, iter
+    EXPAND ITER_NEXT_U64 second_ok, second, iter
+    EXPAND ITER_NEXT_BACK_U64 last_ok, last, iter
+    EXPAND ITER_NEXT_U64 done_ok, done_value, iter
+    EXPAND ITER_LEN len_after, iter
+    EXPAND VEC_FREE backing_vec
+
+    ok_backing_len = eq backing_len, 3
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 9
+    ok_second_flag = eq second_ok, 1
+    ok_second = eq second, 4
+    ok_last_flag = eq last_ok, 1
+    ok_last = eq last, 1
+    ok_done_flag = eq done_ok, 0
+    ok_done_value = eq done_value, 0
+    ok_len_after = eq len_after, 0
+
+    ok = and ok_backing_len, ok_first_flag
+    ok = and ok, ok_first
+    ok = and ok, ok_second_flag
+    ok = and ok, ok_second
+    ok = and ok, ok_last_flag
+    ok = and ok, ok_last
+    ok = and ok, ok_done_flag
+    ok = and ok, ok_done_value
+    ok = and ok, ok_len_after
+
+    !backing_len
+    !first_ok
+    !first
+    !second_ok
+    !second
+    !last_ok
+    !last
+    !done_ok
+    !done_value
+    !len_after
+    !ok_backing_len
+    !ok_first_flag
+    !ok_first
+    !ok_second_flag
+    !ok_second
+    !ok_last_flag
+    !ok_last
+    !ok_done_flag
+    !ok_done_value
+    !ok_len_after
+    !iter
+    br ok -> L_BINARY_HEAP_INTO_ITER_OK, L_BINARY_HEAP_INTO_ITER_FAIL
+
+L_BINARY_HEAP_INTO_ITER_FAIL:
+    !ok
+    panic(10704)
+
+L_BINARY_HEAP_INTO_ITER_OK:
+    !ok
+    return

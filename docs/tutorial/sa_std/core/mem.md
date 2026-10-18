@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/core/mem.sa"
+@import "sa_std/core/mem.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@
 下面的完整 SA 程序展示了如何向一块栈分配的局部内存块填充初值，并利用 `MEM_COPY` 完整备份其内容（若遇到非法空指针入参会被阻断并 Panic）：
 
 ```sa
-@import "sa_std/core/mem.sa"
+@import "sa_std/core/mem.sars"
 
 @main() -> i32:
 L_ENTRY:

@@ -1,0 +1,34 @@
+@import "sa_std/io/print.sai"
+@import "generated/ci/pipeline.sars"
+
+@const RESULT_OK = utf8:"280\n"
+@const RESULT_ERR = utf8:"error\n"
+
+#def EXPECTED_BUILD = 280
+
+// 280 - Build Ci Cd Integration
+// ci/workflows/*.yml and build/ci.toml feed generated/ci/pipeline.sa.
+
+@ci_artifact_value() -> i32:
+L_ENTRY:
+    value = call @ci_pipeline_value()
+    count = call @ci_pipeline_count()
+    !count
+    return value
+
+@main() -> i32:
+L_ENTRY:
+    value = call @ci_artifact_value()
+    ok = eq value, EXPECTED_BUILD
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

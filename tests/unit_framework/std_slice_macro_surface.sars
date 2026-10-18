@@ -1,0 +1,165 @@
+@import "sa_std/core/slice.sars"
+
+@test "sa_std slice unchecked u64 macros"():
+L_ENTRY:
+    values = stack_alloc 40
+    store values+0, 10 as u64
+    store values+8, 20 as u64
+    store values+16, 30 as u64
+    store values+24, 40 as u64
+    store values+32, 50 as u64
+
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 5
+
+    EXPAND SLICE_GET_UNCHECKED_U64 unchecked_value, slice, 2
+    EXPAND SLICE_GET_UNCHECKED_MUT_PTR_U64 unchecked_mut_ptr, slice, 3
+    store unchecked_mut_ptr+0, 99 as u64
+    EXPAND SLICE_GET_U64 mutated_value, slice, 3
+
+    EXPAND SLICE_RANGE_UNCHECKED_U64 range_slice, slice, 1, 3
+    range_ptr = load range_slice+Slice_ptr as ptr
+    range_len = load range_slice+Slice_len as u64
+    expected_range_ptr = ptr_add values, 8
+    EXPAND SLICE_GET_UNCHECKED_U64 range_first, range_slice, 0
+    EXPAND SLICE_GET_UNCHECKED_U64 range_last, range_slice, 2
+
+    EXPAND SLICE_GET_RANGE_UNCHECKED_U64 alias_slice, slice, 2, 2
+    alias_len = load alias_slice+Slice_len as u64
+    EXPAND SLICE_GET_UNCHECKED_U64 alias_first, alias_slice, 0
+    EXPAND SLICE_GET_UNCHECKED_U64 alias_second, alias_slice, 1
+
+    EXPAND SLICE_GET_RANGE_MUT_UNCHECKED_U64 mut_range_slice, slice, 3, 1
+    EXPAND SLICE_GET_UNCHECKED_MUT_PTR_U64 mut_range_ptr, mut_range_slice, 0
+    store mut_range_ptr+0, 77 as u64
+    EXPAND SLICE_GET_U64 mut_range_original, slice, 3
+
+    EXPAND SLICE_SPLIT_AT_UNCHECKED_U64 left_slice, right_slice, slice, 2
+    left_len = load left_slice+Slice_len as u64
+    right_ptr = load right_slice+Slice_ptr as ptr
+    right_len = load right_slice+Slice_len as u64
+    expected_right_ptr = ptr_add values, 16
+    EXPAND SLICE_GET_UNCHECKED_U64 left_second, left_slice, 1
+    EXPAND SLICE_GET_UNCHECKED_U64 right_first, right_slice, 0
+    EXPAND SLICE_GET_UNCHECKED_U64 right_second, right_slice, 1
+
+    EXPAND SLICE_SPLIT_AT_MUT_UNCHECKED_U64 mut_left_slice, mut_right_slice, slice, 4
+    mut_left_len = load mut_left_slice+Slice_len as u64
+    mut_right_len = load mut_right_slice+Slice_len as u64
+    EXPAND SLICE_GET_UNCHECKED_U64 mut_right_first, mut_right_slice, 0
+
+    ok01 = eq unchecked_value, 30
+    ok02 = eq mutated_value, 99
+    ok03 = eq range_ptr, expected_range_ptr
+    ok04 = eq range_len, 3
+    ok05 = eq range_first, 20
+    ok06 = eq range_last, 99
+    ok07 = eq alias_len, 2
+    ok08 = eq alias_first, 30
+    ok09 = eq alias_second, 99
+    ok10 = eq mut_range_original, 77
+    ok11 = eq left_len, 2
+    ok12 = eq right_ptr, expected_right_ptr
+    ok13 = eq right_len, 3
+    ok14 = eq left_second, 20
+    ok15 = eq right_first, 30
+    ok16 = eq right_second, 77
+    ok17 = eq mut_left_len, 4
+    ok18 = eq mut_right_len, 1
+    ok19 = eq mut_right_first, 50
+
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all11 = and all10, ok12
+    all12 = and all11, ok13
+    all13 = and all12, ok14
+    all14 = and all13, ok15
+    all15 = and all14, ok16
+    all16 = and all15, ok17
+    all17 = and all16, ok18
+    all = and all17, ok19
+
+    !unchecked_value
+    !unchecked_mut_ptr
+    !mutated_value
+    !range_ptr
+    !range_len
+    !expected_range_ptr
+    !range_first
+    !range_last
+    !alias_len
+    !alias_first
+    !alias_second
+    !mut_range_ptr
+    !mut_range_original
+    !left_len
+    !right_ptr
+    !right_len
+    !expected_right_ptr
+    !left_second
+    !right_first
+    !right_second
+    !mut_left_len
+    !mut_right_len
+    !mut_right_first
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !all01
+    !all02
+    !all03
+    !all04
+    !all05
+    !all06
+    !all07
+    !all08
+    !all09
+    !all10
+    !all11
+    !all12
+    !all13
+    !all14
+    !all15
+    !all16
+    !all17
+    !mut_right_slice
+    !mut_left_slice
+    !right_slice
+    !left_slice
+    !mut_range_slice
+    !alias_slice
+    !range_slice
+    !slice
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    !all
+    panic(10219)
+
+L_PASS:
+    !all
+    return 0

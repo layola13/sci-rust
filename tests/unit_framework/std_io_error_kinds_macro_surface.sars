@@ -1,0 +1,249 @@
+@import "sa_std/io.sal"
+@import "sa_std/error.sars"
+
+@const TEST_MSG = utf8:"err"
+
+@test "sa_std IO_ERROR_KIND constants"():
+L_ENTRY:
+    ok_not_found = eq IO_ERROR_KIND_NOT_FOUND, 7
+    ok_perm = eq IO_ERROR_KIND_PERMISSION_DENIED, 8
+    ok_conn_refused = eq IO_ERROR_KIND_CONNECTION_REFUSED, 9
+    ok_conn_reset = eq IO_ERROR_KIND_CONNECTION_RESET, 10
+    ok_conn_abort = eq IO_ERROR_KIND_CONNECTION_ABORTED, 11
+    ok_not_conn = eq IO_ERROR_KIND_NOT_CONNECTED, 12
+    ok_addr_in_use = eq IO_ERROR_KIND_ADDR_IN_USE, 13
+    ok_addr_not_avail = eq IO_ERROR_KIND_ADDR_NOT_AVAILABLE, 14
+    ok_broken_pipe = eq IO_ERROR_KIND_BROKEN_PIPE, 15
+    ok_already_exists = eq IO_ERROR_KIND_ALREADY_EXISTS, 16
+    ok_timed_out = eq IO_ERROR_KIND_TIMED_OUT, 17
+    ok_unsupported = eq IO_ERROR_KIND_UNSUPPORTED, 18
+    ok_oom = eq IO_ERROR_KIND_OUT_OF_MEMORY, 19
+    ok_is_dir = eq IO_ERROR_KIND_IS_A_DIRECTORY, 20
+    ok_dir_ne = eq IO_ERROR_KIND_DIRECTORY_NOT_EMPTY, 21
+    ok_recursive = eq IO_ERROR_KIND_RECURSIVE_ENTRY, 22
+    ok_quota = eq IO_ERROR_KIND_QUOTA_EXCEEDED, 23
+    ok_file_large = eq IO_ERROR_KIND_FILE_TOO_LARGE, 24
+    ok_fs_loop = eq IO_ERROR_KIND_FILESYSTEM_LOOP, 25
+    ok_exec_busy = eq IO_ERROR_KIND_EXECUTABLE_FILE_BUSY, 26
+    ok_cross = eq IO_ERROR_KIND_CROSSED_DEVICES, 27
+    ok_not_seek = eq IO_ERROR_KIND_NOT_SEEKABLE, 28
+    ok_ro = eq IO_ERROR_KIND_READ_ONLY_FILESYSTEM, 29
+    ok_arg_long = eq IO_ERROR_KIND_ARGUMENT_LIST_TOO_LONG, 30
+    ok_busy = eq IO_ERROR_KIND_RESOURCE_BUSY, 31
+    ok_name_long = eq IO_ERROR_KIND_NAME_TOO_LONG, 32
+    ok_links = eq IO_ERROR_KIND_TOO_MANY_LINKS, 33
+    ok_host = eq IO_ERROR_KIND_HOST_UNREACHABLE, 34
+    ok_net = eq IO_ERROR_KIND_NETWORK_UNREACHABLE, 35
+    ok_net_down = eq IO_ERROR_KIND_NETWORK_DOWN, 36
+    ok_stale = eq IO_ERROR_KIND_STALE_NETWORK_FILE_HANDLE, 37
+    ok_fs_quota = eq IO_ERROR_KIND_FILESYSTEM_QUOTA, 38
+    ok_storage = eq IO_ERROR_KIND_STORAGE_FULL, 39
+
+    c1 = and ok_not_found, ok_perm
+    c2 = and c1, ok_conn_refused
+    c3 = and c2, ok_conn_reset
+    c4 = and c3, ok_conn_abort
+    c5 = and c4, ok_not_conn
+    c6 = and c5, ok_addr_in_use
+    c7 = and c6, ok_addr_not_avail
+    c8 = and c7, ok_broken_pipe
+    c9 = and c8, ok_already_exists
+    c10 = and c9, ok_timed_out
+    c11 = and c10, ok_unsupported
+    c12 = and c11, ok_oom
+    c13 = and c12, ok_is_dir
+    c14 = and c13, ok_dir_ne
+    c15 = and c14, ok_recursive
+    c16 = and c15, ok_quota
+    c17 = and c16, ok_file_large
+    c18 = and c17, ok_fs_loop
+    c19 = and c18, ok_exec_busy
+    c20 = and c19, ok_cross
+    c21 = and c20, ok_not_seek
+    c22 = and c21, ok_ro
+    c23 = and c22, ok_arg_long
+    c24 = and c23, ok_busy
+    c25 = and c24, ok_name_long
+    c26 = and c25, ok_links
+    c27 = and c26, ok_host
+    c28 = and c27, ok_net
+    c29 = and c28, ok_net_down
+    c30 = and c29, ok_stale
+    c31 = and c30, ok_fs_quota
+    ok = and c31, ok_storage
+
+    !ok_not_found
+    !ok_perm
+    !ok_conn_refused
+    !ok_conn_reset
+    !ok_conn_abort
+    !ok_not_conn
+    !ok_addr_in_use
+    !ok_addr_not_avail
+    !ok_broken_pipe
+    !ok_already_exists
+    !ok_timed_out
+    !ok_unsupported
+    !ok_oom
+    !ok_is_dir
+    !ok_dir_ne
+    !ok_recursive
+    !ok_quota
+    !ok_file_large
+    !ok_fs_loop
+    !ok_exec_busy
+    !ok_cross
+    !ok_not_seek
+    !ok_ro
+    !ok_arg_long
+    !ok_busy
+    !ok_name_long
+    !ok_links
+    !ok_host
+    !ok_net
+    !ok_net_down
+    !ok_stale
+    !ok_fs_quota
+    !ok_storage
+    !c1
+    !c2
+    !c3
+    !c4
+    !c5
+    !c6
+    !c7
+    !c8
+    !c9
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !c18
+    !c19
+    !c20
+    !c21
+    !c22
+    !c23
+    !c24
+    !c25
+    !c26
+    !c27
+    !c28
+    !c29
+    !c30
+    !c31
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10467)
+
+L_PASS:
+    return 0
+
+@test "sa_std new ERROR_CODE constants and ERROR_REF_IS_* macros"():
+L_ENTRY:
+    ok_conn_refused = eq ERROR_CODE_CONNECTION_REFUSED, 10
+    ok_conn_reset = eq ERROR_CODE_CONNECTION_RESET, 11
+    ok_conn_abort = eq ERROR_CODE_CONNECTION_ABORTED, 12
+    ok_not_conn = eq ERROR_CODE_NOT_CONNECTED, 13
+    ok_addr_use = eq ERROR_CODE_ADDR_IN_USE, 14
+    ok_addr_nav = eq ERROR_CODE_ADDR_NOT_AVAILABLE, 15
+    ok_pipe = eq ERROR_CODE_BROKEN_PIPE, 16
+    ok_exists = eq ERROR_CODE_ALREADY_EXISTS, 17
+    ok_oom = eq ERROR_CODE_OUT_OF_MEMORY, 18
+    ok_net = eq ERROR_CODE_NETWORK_UNREACHABLE, 19
+    ok_host = eq ERROR_CODE_HOST_UNREACHABLE, 20
+    ok_is_dir = eq ERROR_CODE_IS_A_DIRECTORY, 21
+    ok_dir_ne = eq ERROR_CODE_DIRECTORY_NOT_EMPTY, 22
+    ok_ro = eq ERROR_CODE_READ_ONLY_FILESYSTEM, 23
+    ok_busy = eq ERROR_CODE_RESOURCE_BUSY, 24
+    ok_long = eq ERROR_CODE_ARGUMENT_LIST_TOO_LONG, 25
+    ok_name = eq ERROR_CODE_NAME_TOO_LONG, 26
+    ok_links = eq ERROR_CODE_TOO_MANY_LINKS, 27
+    ok_store = eq ERROR_CODE_STORAGE_FULL, 28
+
+    err = stack_alloc ErrorRef_SIZE
+    EXPAND ERROR_REF_STATIC err, ERROR_TYPE_IO_LO, ERROR_CODE_BROKEN_PIPE, *TEST_MSG, 3
+    EXPAND ERROR_REF_IS_BROKEN_PIPE is_pipe, err
+    EXPAND ERROR_REF_IS_NOT_FOUND is_nf, err
+    ok_is_pipe = eq is_pipe, 1
+    ok_is_nf = eq is_nf, 0
+
+    c1 = and ok_conn_refused, ok_conn_reset
+    c2 = and c1, ok_conn_abort
+    c3 = and c2, ok_not_conn
+    c4 = and c3, ok_addr_use
+    c5 = and c4, ok_addr_nav
+    c6 = and c5, ok_pipe
+    c7 = and c6, ok_exists
+    c8 = and c7, ok_oom
+    c9 = and c8, ok_net
+    c10 = and c9, ok_host
+    c11 = and c10, ok_is_dir
+    c12 = and c11, ok_dir_ne
+    c13 = and c12, ok_ro
+    c14 = and c13, ok_busy
+    c15 = and c14, ok_long
+    c16 = and c15, ok_name
+    c17 = and c16, ok_links
+    c18 = and c17, ok_store
+    c19 = and c18, ok_is_pipe
+    ok = and c19, ok_is_nf
+
+    !is_pipe
+    !is_nf
+    !ok_conn_refused
+    !ok_conn_reset
+    !ok_conn_abort
+    !ok_not_conn
+    !ok_addr_use
+    !ok_addr_nav
+    !ok_pipe
+    !ok_exists
+    !ok_oom
+    !ok_net
+    !ok_host
+    !ok_is_dir
+    !ok_dir_ne
+    !ok_ro
+    !ok_busy
+    !ok_long
+    !ok_name
+    !ok_links
+    !ok_store
+    !ok_is_pipe
+    !ok_is_nf
+    !c1
+    !c2
+    !c3
+    !c4
+    !c5
+    !c6
+    !c7
+    !c8
+    !c9
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !c18
+    !c19
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10468)
+
+L_PASS:
+    return 0

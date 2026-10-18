@@ -1,0 +1,174 @@
+@import "sa_std/ops.sars"
+
+@test "sa_std ops Bound intersect macros"():
+L_ENTRY:
+    from3 = stack_alloc RangeFromU64_SIZE
+    to5 = stack_alloc RangeToU64_SIZE
+    range12_387 = stack_alloc RangeU64_SIZE
+    range0_256 = stack_alloc RangeU64_SIZE
+    range1_5 = stack_alloc RangeU64_SIZE
+    inc1_9 = stack_alloc RangeInclusiveU64_SIZE
+    range0_10 = stack_alloc RangeU64_SIZE
+    inc7_13 = stack_alloc RangeInclusiveU64_SIZE
+    range8_13 = stack_alloc RangeU64_SIZE
+    from_usize4 = stack_alloc RangeFromUsize_SIZE
+    to_inc_usize10 = stack_alloc RangeToInclusiveUsize_SIZE
+
+    c1ls = stack_alloc BoundU64_SIZE
+    c1le = stack_alloc BoundU64_SIZE
+    c1rs = stack_alloc BoundU64_SIZE
+    c1re = stack_alloc BoundU64_SIZE
+    c1os = stack_alloc BoundU64_SIZE
+    c1oe = stack_alloc BoundU64_SIZE
+
+    c2ls = stack_alloc BoundU64_SIZE
+    c2le = stack_alloc BoundU64_SIZE
+    c2rs = stack_alloc BoundU64_SIZE
+    c2re = stack_alloc BoundU64_SIZE
+    c2os = stack_alloc BoundU64_SIZE
+    c2oe = stack_alloc BoundU64_SIZE
+
+    c3ls = stack_alloc BoundU64_SIZE
+    c3le = stack_alloc BoundU64_SIZE
+    c3rs = stack_alloc BoundU64_SIZE
+    c3re = stack_alloc BoundU64_SIZE
+    c3os = stack_alloc BoundU64_SIZE
+    c3oe = stack_alloc BoundU64_SIZE
+
+    c4ls = stack_alloc BoundU64_SIZE
+    c4le = stack_alloc BoundU64_SIZE
+    c4rs = stack_alloc BoundU64_SIZE
+    c4re = stack_alloc BoundU64_SIZE
+    c4os = stack_alloc BoundU64_SIZE
+    c4oe = stack_alloc BoundU64_SIZE
+
+    c5ls = stack_alloc BoundU64_SIZE
+    c5le = stack_alloc BoundU64_SIZE
+    c5rs = stack_alloc BoundU64_SIZE
+    c5re = stack_alloc BoundU64_SIZE
+    c5os = stack_alloc BoundU64_SIZE
+    c5oe = stack_alloc BoundU64_SIZE
+
+    c6ls = stack_alloc BoundUsize_SIZE
+    c6le = stack_alloc BoundUsize_SIZE
+    c6rs = stack_alloc BoundUsize_SIZE
+    c6re = stack_alloc BoundUsize_SIZE
+    c6os = stack_alloc BoundUsize_SIZE
+    c6oe = stack_alloc BoundUsize_SIZE
+
+    EXPAND RANGE_FROM_U64_NEW from3, 3
+    EXPAND RANGE_TO_U64_NEW to5, 5
+    EXPAND RANGE_U64_NEW range12_387, 12, 387
+    EXPAND RANGE_U64_NEW range0_256, 0, 256
+    EXPAND RANGE_U64_NEW range1_5, 1, 5
+    EXPAND RANGE_INCLUSIVE_U64_NEW inc1_9, 1, 9
+    EXPAND RANGE_U64_NEW range0_10, 0, 10
+    EXPAND RANGE_INCLUSIVE_U64_NEW inc7_13, 7, 13
+    EXPAND RANGE_U64_NEW range8_13, 8, 13
+    EXPAND RANGE_FROM_USIZE_NEW from_usize4, 4
+    EXPAND RANGE_TO_INCLUSIVE_USIZE_NEW to_inc_usize10, 10
+
+    EXPAND RANGE_FROM_U64_INTO_BOUNDS c1ls, c1le, from3
+    EXPAND RANGE_TO_U64_INTO_BOUNDS c1rs, c1re, to5
+    EXPAND BOUND_U64_INTERSECT_RANGE c1os, c1oe, c1ls, c1le, c1rs, c1re
+    EXPAND BOUND_U64_TAG c1_start_tag, c1os
+    EXPAND BOUND_U64_VALUE c1_start_value, c1os
+    EXPAND BOUND_U64_TAG c1_end_tag, c1oe
+    EXPAND BOUND_U64_VALUE c1_end_value, c1oe
+
+    EXPAND RANGE_U64_INTO_BOUNDS c2ls, c2le, range12_387
+    EXPAND RANGE_U64_INTO_BOUNDS c2rs, c2re, range0_256
+    EXPAND BOUND_U64_INTERSECT_RANGE c2os, c2oe, c2ls, c2le, c2rs, c2re
+    EXPAND BOUND_U64_TAG c2_start_tag, c2os
+    EXPAND BOUND_U64_VALUE c2_start_value, c2os
+    EXPAND BOUND_U64_TAG c2_end_tag, c2oe
+    EXPAND BOUND_U64_VALUE c2_end_value, c2oe
+
+    EXPAND RANGE_U64_INTO_BOUNDS c3ls, c3le, range1_5
+    EXPAND RANGE_FULL_INTO_BOUNDS_U64 c3rs, c3re
+    EXPAND BOUND_U64_INTERSECT_RANGE c3os, c3oe, c3ls, c3le, c3rs, c3re
+    EXPAND BOUND_U64_TAG c3_start_tag, c3os
+    EXPAND BOUND_U64_VALUE c3_start_value, c3os
+    EXPAND BOUND_U64_TAG c3_end_tag, c3oe
+    EXPAND BOUND_U64_VALUE c3_end_value, c3oe
+
+    EXPAND RANGE_INCLUSIVE_U64_INTO_BOUNDS c4ls, c4le, inc1_9
+    EXPAND RANGE_U64_INTO_BOUNDS c4rs, c4re, range0_10
+    EXPAND BOUND_U64_INTERSECT_RANGE c4os, c4oe, c4ls, c4le, c4rs, c4re
+    EXPAND BOUND_U64_TAG c4_start_tag, c4os
+    EXPAND BOUND_U64_VALUE c4_start_value, c4os
+    EXPAND BOUND_U64_TAG c4_end_tag, c4oe
+    EXPAND BOUND_U64_VALUE c4_end_value, c4oe
+
+    EXPAND RANGE_INCLUSIVE_U64_INTO_BOUNDS c5ls, c5le, inc7_13
+    EXPAND RANGE_U64_INTO_BOUNDS c5rs, c5re, range8_13
+    EXPAND BOUND_U64_INTERSECT_RANGE c5os, c5oe, c5ls, c5le, c5rs, c5re
+    EXPAND BOUND_U64_TAG c5_start_tag, c5os
+    EXPAND BOUND_U64_VALUE c5_start_value, c5os
+    EXPAND BOUND_U64_TAG c5_end_tag, c5oe
+    EXPAND BOUND_U64_VALUE c5_end_value, c5oe
+
+    EXPAND RANGE_FROM_USIZE_INTO_BOUNDS c6ls, c6le, from_usize4
+    EXPAND RANGE_TO_INCLUSIVE_USIZE_INTO_BOUNDS c6rs, c6re, to_inc_usize10
+    EXPAND BOUND_USIZE_INTERSECT_RANGE c6os, c6oe, c6ls, c6le, c6rs, c6re
+    EXPAND BOUND_USIZE_TAG c6_start_tag, c6os
+    EXPAND BOUND_USIZE_VALUE c6_start_value, c6os
+    EXPAND BOUND_USIZE_TAG c6_end_tag, c6oe
+    EXPAND BOUND_USIZE_VALUE c6_end_value, c6oe
+
+    ok_c1_start_tag = eq c1_start_tag, BOUND_U64_INCLUDED
+    ok_c1_start_value = eq c1_start_value, 3
+    ok_c1_end_tag = eq c1_end_tag, BOUND_U64_EXCLUDED
+    ok_c1_end_value = eq c1_end_value, 5
+    ok_c2_start_tag = eq c2_start_tag, BOUND_U64_INCLUDED
+    ok_c2_start_value = eq c2_start_value, 12
+    ok_c2_end_tag = eq c2_end_tag, BOUND_U64_EXCLUDED
+    ok_c2_end_value = eq c2_end_value, 256
+    ok_c3_start_tag = eq c3_start_tag, BOUND_U64_INCLUDED
+    ok_c3_start_value = eq c3_start_value, 1
+    ok_c3_end_tag = eq c3_end_tag, BOUND_U64_EXCLUDED
+    ok_c3_end_value = eq c3_end_value, 5
+    ok_c4_start_tag = eq c4_start_tag, BOUND_U64_INCLUDED
+    ok_c4_start_value = eq c4_start_value, 1
+    ok_c4_end_tag = eq c4_end_tag, BOUND_U64_INCLUDED
+    ok_c4_end_value = eq c4_end_value, 9
+    ok_c5_start_tag = eq c5_start_tag, BOUND_U64_INCLUDED
+    ok_c5_start_value = eq c5_start_value, 8
+    ok_c5_end_tag = eq c5_end_tag, BOUND_U64_EXCLUDED
+    ok_c5_end_value = eq c5_end_value, 13
+    ok_c6_start_tag = eq c6_start_tag, BOUND_USIZE_INCLUDED
+    ok_c6_start_value = eq c6_start_value, 4
+    ok_c6_end_tag = eq c6_end_tag, BOUND_USIZE_INCLUDED
+    ok_c6_end_value = eq c6_end_value, 10
+
+    c01 = and ok_c1_start_tag, ok_c1_start_value
+    c02 = and c01, ok_c1_end_tag
+    c03 = and c02, ok_c1_end_value
+    c04 = and c03, ok_c2_start_tag
+    c05 = and c04, ok_c2_start_value
+    c06 = and c05, ok_c2_end_tag
+    c07 = and c06, ok_c2_end_value
+    c08 = and c07, ok_c3_start_tag
+    c09 = and c08, ok_c3_start_value
+    c10 = and c09, ok_c3_end_tag
+    c11 = and c10, ok_c3_end_value
+    c12 = and c11, ok_c4_start_tag
+    c13 = and c12, ok_c4_start_value
+    c14 = and c13, ok_c4_end_tag
+    c15 = and c14, ok_c4_end_value
+    c16 = and c15, ok_c5_start_tag
+    c17 = and c16, ok_c5_start_value
+    c18 = and c17, ok_c5_end_tag
+    c19 = and c18, ok_c5_end_value
+    c20 = and c19, ok_c6_start_tag
+    c21 = and c20, ok_c6_start_value
+    c22 = and c21, ok_c6_end_tag
+    ok = and c22, ok_c6_end_value
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10514)
+
+L_PASS:
+    return 0

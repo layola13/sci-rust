@@ -83,7 +83,7 @@ fn vendorRoot(allocator: std.mem.Allocator, identity: []const u8) ![]u8 {
 fn globalRoot(allocator: std.mem.Allocator, home: []const u8, identity: []const u8, ref: []const u8) ![]u8 {
     const leaf = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ identity, ref });
     errdefer allocator.free(leaf);
-    const joined = try pathJoin(allocator, &.{ home, ".sa", "pkg", leaf });
+    const joined = try pathJoin(allocator, &.{ home, ".sars", "pkg", leaf });
     allocator.free(leaf);
     return joined;
 }
@@ -390,7 +390,7 @@ test "fetch copies a local source tree into sa_vendor" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "github.com/example/pkg/src");
-    var src_file = try tmp.dir.createFile(std.testing.io, "github.com/example/pkg/src/main.sa", .{ .truncate = true });
+    var src_file = try tmp.dir.createFile(std.testing.io, "github.com/example/pkg/src/main.sars", .{ .truncate = true });
     defer src_file.close(std.testing.io);
     try src_file.writeStreamingAll(std.testing.io, "@main() -> i32:\n    return 0\n");
 
@@ -407,7 +407,7 @@ test "fetch copies a local source tree into sa_vendor" {
 
     var copied = try sio.cwd().openDir(result.root, .{ .iterate = true });
     defer copied.close();
-    try copied.access("src/main.sa", .{ .read = true });
+    try copied.access("src/main.sars", .{ .read = true });
 }
 
 test "copyTree can set read-only permissions while skipping symlinks" {
@@ -416,9 +416,9 @@ test "copyTree can set read-only permissions while skipping symlinks" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "src/nested");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "src/nested/main.sa", .data = "@main() -> i32:\n    return 0\n" });
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "outside.sa", .data = "outside" });
-    try tmp.dir.symLink(std.testing.io, "../outside.sa", "src/link.sa", .{});
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "src/nested/main.sars", .data = "@main() -> i32:\n    return 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "outside.sars", .data = "outside" });
+    try tmp.dir.symLink(std.testing.io, "../outside.sars", "src/link.sars", .{});
 
     var old_cwd = try sio.cwd().openDir(".", .{});
     defer old_cwd.close();
@@ -445,10 +445,10 @@ test "copyTree can set read-only permissions while skipping symlinks" {
     try sio.cwd().makePath("dst");
     try copyTree("src", "dst", std.testing.allocator, .{ .read_only = true });
 
-    try sio.cwd().access("dst/nested/main.sa", .{ .read = true });
-    try std.testing.expectError(error.FileNotFound, sio.cwd().access("dst/link.sa", .{}));
+    try sio.cwd().access("dst/nested/main.sars", .{ .read = true });
+    try std.testing.expectError(error.FileNotFound, sio.cwd().access("dst/link.sars", .{}));
 
-    var copied_file = try sio.cwd().openFile("dst/nested/main.sa", .{ .mode = .read_only });
+    var copied_file = try sio.cwd().openFile("dst/nested/main.sars", .{ .mode = .read_only });
     defer copied_file.close();
     const file_mode = @intFromEnum((try copied_file.stat()).permissions) & 0o777;
     try std.testing.expectEqual(@as(u32, 0o444), @as(u32, @intCast(file_mode)));
@@ -504,7 +504,7 @@ test "PkgMgr-Fetch-Smoke computes hash and does not execute package files" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "github.com/example/smoke");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "github.com/example/smoke/index.sa", .data = "@main() -> i32:\nreturn 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "github.com/example/smoke/index.sars", .data = "@main() -> i32:\nreturn 0\n" });
     var postinstall = try tmp.dir.createFile(std.testing.io, "github.com/example/smoke/postinstall.sh", .{ .truncate = true });
     {
         var wbuf: [8192]u8 = undefined;
@@ -599,7 +599,7 @@ test "fetch rejects and removes non-offline packages whose source hash mismatche
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "github.com/example/pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "github.com/example/pkg/index.sa", .data = "@main() -> i32:\nreturn 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "github.com/example/pkg/index.sars", .data = "@main() -> i32:\nreturn 0\n" });
     const source_root = try tmp.dir.realPathFileAlloc(std.testing.io, "github.com/example/pkg", std.testing.allocator);
     defer std.testing.allocator.free(source_root);
     var wrong_hash = try audit.hashPackageSource(std.testing.allocator, source_root);
@@ -622,7 +622,7 @@ test "fetch offline reuses existing vendor without deleting it" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "sa_vendor/github.com/example/pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/github.com/example/pkg/index.sa", .data = "@cached() -> i32:\nreturn 1\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "sa_vendor/github.com/example/pkg/index.sars", .data = "@cached() -> i32:\nreturn 1\n" });
 
     var old_cwd = try sio.cwd().openDir(".", .{});
     defer old_cwd.close();
@@ -639,7 +639,7 @@ test "fetch offline reuses existing vendor without deleting it" {
     try std.testing.expectEqualStrings(expected_root, result.root);
     const expected_hash = try audit.hashPackageSource(std.testing.allocator, result.root);
     try std.testing.expect(std.mem.eql(u8, expected_hash[0..], result.source_sha256[0..]));
-    try sio.cwd().access("sa_vendor/github.com/example/pkg/index.sa", .{ .read = true });
+    try sio.cwd().access("sa_vendor/github.com/example/pkg/index.sars", .{ .read = true });
 }
 
 test "fetch applies mirror rules before network fallback" {
@@ -647,7 +647,7 @@ test "fetch applies mirror rules before network fallback" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "mirror/github/org/pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "mirror/github/org/pkg/index.sa", .data = "@mirrored() -> i32:\nreturn 9\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "mirror/github/org/pkg/index.sars", .data = "@mirrored() -> i32:\nreturn 9\n" });
 
     var old_cwd = try sio.cwd().openDir(".", .{});
     defer old_cwd.close();
@@ -663,5 +663,5 @@ test "fetch applies mirror rules before network fallback" {
     }};
     var result = try fetchPackage(std.testing.allocator, "github.com/org/pkg", "HEAD", .{ .mirror_rules = rules[0..] });
     defer result.deinit(std.testing.allocator);
-    try sio.cwd().access("sa_vendor/github.com/org/pkg/index.sa", .{ .read = true });
+    try sio.cwd().access("sa_vendor/github.com/org/pkg/index.sars", .{ .read = true });
 }

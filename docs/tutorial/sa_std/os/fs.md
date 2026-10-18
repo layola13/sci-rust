@@ -4,7 +4,7 @@ SA 的文件系统模块提供了安全的文件和目录操作原语。最新�
 
 ## 导入
 ```sa
-@import "sa_std/fs.sa"
+@import "sa_std/fs.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,9 +12,9 @@ SA 的文件系统模块提供了安全的文件和目录操作原语。最新�
 下面的完整 SA 程序展示了如何将一段数据切片写入文件，然后再将其读取回来进行完整的内容验证：
 
 ```sa
-@import "sa_std/fs.sa"
-@import "sa_std/core/slice.sa"
-@import "sa_std/string.sa"
+@import "sa_std/fs.sars"
+@import "sa_std/core/slice.sars"
+@import "sa_std/string.sars"
 
 @main() -> i32:
 L_ENTRY:

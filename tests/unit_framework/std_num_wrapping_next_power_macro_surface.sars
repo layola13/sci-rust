@@ -1,0 +1,84 @@
+@import "sa_std/num.sars"
+
+@test "sa_std Wrapping unsigned next_power_of_two macro surface"():
+L_ENTRY:
+    wrap_u64_zero = stack_alloc WrappingU64_SIZE
+    wrap_u64_three = stack_alloc WrappingU64_SIZE
+    wrap_u64_high = stack_alloc WrappingU64_SIZE
+    wrap_u64_max = stack_alloc WrappingU64_SIZE
+    wrap_u64_zero_out = stack_alloc WrappingU64_SIZE
+    wrap_u64_three_out = stack_alloc WrappingU64_SIZE
+    wrap_u64_high_out = stack_alloc WrappingU64_SIZE
+    wrap_u64_max_out = stack_alloc WrappingU64_SIZE
+
+    wrap_u32_zero_raw = stack_alloc WrappingU32_SIZE
+    wrap_u32_three_raw = stack_alloc WrappingU32_SIZE
+    wrap_u32_high = stack_alloc WrappingU32_SIZE
+    wrap_u32_over = stack_alloc WrappingU32_SIZE
+    wrap_u32_zero_out = stack_alloc WrappingU32_SIZE
+    wrap_u32_three_out = stack_alloc WrappingU32_SIZE
+    wrap_u32_high_out = stack_alloc WrappingU32_SIZE
+    wrap_u32_over_out = stack_alloc WrappingU32_SIZE
+
+    u64_high = shl 1, 63
+    u32_high = shl 1, 31
+    u32_over = add u32_high, 1
+
+    EXPAND WRAPPING_U64_NEW wrap_u64_zero, 0
+    EXPAND WRAPPING_U64_NEW wrap_u64_three, 3
+    EXPAND WRAPPING_U64_NEW wrap_u64_high, u64_high
+    EXPAND WRAPPING_U64_NEW wrap_u64_max, NUM_U64_MAX
+    EXPAND WRAPPING_U64_NEXT_POWER_OF_TWO wrap_u64_zero_out, wrap_u64_zero
+    EXPAND WRAPPING_U64_NEXT_POWER_OF_TWO wrap_u64_three_out, wrap_u64_three
+    EXPAND WRAPPING_U64_NEXT_POWER_OF_TWO wrap_u64_high_out, wrap_u64_high
+    EXPAND WRAPPING_U64_NEXT_POWER_OF_TWO wrap_u64_max_out, wrap_u64_max
+    EXPAND WRAPPING_U64_GET wrap_u64_zero_value, wrap_u64_zero_out
+    EXPAND WRAPPING_U64_GET wrap_u64_three_value, wrap_u64_three_out
+    EXPAND WRAPPING_U64_GET wrap_u64_high_value, wrap_u64_high_out
+    EXPAND WRAPPING_U64_GET wrap_u64_max_value, wrap_u64_max_out
+
+    EXPAND WRAPPING_U32_NEW wrap_u32_zero_raw, 4294967296
+    EXPAND WRAPPING_U32_NEW wrap_u32_three_raw, 4294967299
+    EXPAND WRAPPING_U32_NEW wrap_u32_high, u32_high
+    EXPAND WRAPPING_U32_NEW wrap_u32_over, u32_over
+    EXPAND WRAPPING_U32_NEXT_POWER_OF_TWO wrap_u32_zero_out, wrap_u32_zero_raw
+    EXPAND WRAPPING_U32_NEXT_POWER_OF_TWO wrap_u32_three_out, wrap_u32_three_raw
+    EXPAND WRAPPING_U32_NEXT_POWER_OF_TWO wrap_u32_high_out, wrap_u32_high
+    EXPAND WRAPPING_U32_NEXT_POWER_OF_TWO wrap_u32_over_out, wrap_u32_over
+    EXPAND WRAPPING_U32_GET wrap_u32_zero_value, wrap_u32_zero_out
+    EXPAND WRAPPING_U32_GET wrap_u32_three_value, wrap_u32_three_out
+    EXPAND WRAPPING_U32_GET wrap_u32_high_value, wrap_u32_high_out
+    EXPAND WRAPPING_U32_GET wrap_u32_over_value, wrap_u32_over_out
+
+    ok01 = eq wrap_u64_zero_value, 1
+    ok02 = eq wrap_u64_three_value, 4
+    ok03 = eq wrap_u64_high_value, u64_high
+    ok04 = eq wrap_u64_max_value, 0
+    ok05 = eq wrap_u32_zero_value, 1
+    ok06 = eq wrap_u32_three_value, 4
+    ok07 = eq wrap_u32_high_value, u32_high
+    ok08 = eq wrap_u32_over_value, 0
+
+    c01 = and ok01, ok02
+    c02 = and c01, ok03
+    c03 = and c02, ok04
+    c04 = and c03, ok05
+    c05 = and c04, ok06
+    c06 = and c05, ok07
+    ok = and c06, ok08
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u64_high
+    !u32_high
+    !u32_over
+    panic(10623)
+
+L_PASS:
+    !ok
+    !u64_high
+    !u32_high
+    !u32_over
+    return 0

@@ -1,0 +1,28 @@
+@import "sa_std/array.sars"
+
+@double(i: u64) -> u64:
+L_ENTRY:
+    out = mul i, 2
+    !i
+    return out
+
+@test "sa_std array from_fn get"():
+L_ENTRY:
+    buf = stack_alloc 32
+    EXPAND ARRAY_FROM_FN buf, 4, @double
+    EXPAND ARRAY_GET v0, buf, 0
+    EXPAND ARRAY_GET v3, buf, 3
+    a = eq v0, 0
+    b = eq v3, 6
+    ok = and a, b
+    !v0
+    !v3
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10928)

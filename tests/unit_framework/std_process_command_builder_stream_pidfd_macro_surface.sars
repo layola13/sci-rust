@@ -1,0 +1,132 @@
+@import "sa_std/process.sars"
+
+@const TRUE_BIN = utf8:"/bin/true"
+
+#def TRUE_BIN_LEN = 9
+#def TRUE_ARGV1_SIZE = 16
+#def PIDFD_CREATE = 1
+
+@test "sa_std process Command builder stream pidfd macros"():
+L_ENTRY:
+    argv = stack_alloc TRUE_ARGV1_SIZE
+    dummy = stack_alloc 1
+    EXPAND PROCESS_ARGV_SET_CONST argv, 0, TRUE_BIN, TRUE_BIN_LEN
+
+    EXPAND PROCESS_COMMAND_BUILDER_NEW cwd_len0, has_cwd0, arg0_len0, has_arg00, pgroup0, has_pgroup0, setsid0
+    EXPAND PROCESS_COMMAND_BUILDER_SPAWN_STREAM_PIDFD stream_status, stream_process, stream_stdout, stream_stderr, argv, 1, dummy, cwd_len0, has_cwd0, dummy, arg0_len0, has_arg00, pgroup0, has_pgroup0, setsid0, PIDFD_CREATE
+    stream_status_ok = eq stream_status, SA_PROCESS_OK
+    stream_process_ok = ne stream_process, 0
+    stream_stdout_ok = ne stream_stdout, 0
+    stream_stderr_ok = ne stream_stderr, 0
+    stream01 = and stream_status_ok, stream_process_ok
+    stream02 = and stream01, stream_stdout_ok
+    stream_ok = and stream02, stream_stderr_ok
+    br stream_ok -> L_PIDFD, L_FAIL_STREAM
+
+L_FAIL_STREAM:
+    !stream_ok
+    !stream02
+    !stream01
+    !stream_stderr_ok
+    !stream_stdout_ok
+    !stream_process_ok
+    !stream_status_ok
+    !stream_stderr
+    !stream_stdout
+    !stream_process
+    !stream_status
+    !cwd_len0
+    !has_cwd0
+    !arg0_len0
+    !has_arg00
+    !pgroup0
+    !has_pgroup0
+    !setsid0
+    panic(10691)
+
+L_PIDFD:
+    EXPAND PROCESS_PIDFD pidfd_status, pidfd, stream_process
+    EXPAND PIDFD_AS_RAW_FD raw_status, raw_fd, pidfd
+    EXPAND PROCESS_WAIT stream_wait_status, stream_code, stream_process
+    EXPAND PROCESS_CLOSE pidfd_close_status, pidfd
+    EXPAND PROCESS_CLOSE process_close_status, stream_process
+    EXPAND FS_CLOSE stdout_close_status, stream_stdout
+    EXPAND FS_CLOSE stderr_close_status, stream_stderr
+
+    pidfd_status_ok = eq pidfd_status, SA_PROCESS_OK
+    pidfd_ok = ne pidfd, 0
+    raw_status_ok = eq raw_status, SA_PROCESS_OK
+    raw_fd_ok = ne raw_fd, -1
+    wait_ok = eq stream_wait_status, SA_PROCESS_OK
+    code_ok = eq stream_code, 0
+    pidfd_close_ok = eq pidfd_close_status, SA_PROCESS_OK
+    process_close_ok = eq process_close_status, SA_PROCESS_OK
+    stdout_close_ok = eq stdout_close_status, SA_PROCESS_OK
+    stderr_close_ok = eq stderr_close_status, SA_PROCESS_OK
+    close01 = and pidfd_close_ok, process_close_ok
+    close02 = and close01, stdout_close_ok
+    close_ok = and close02, stderr_close_ok
+    ok00 = and stream_ok, pidfd_status_ok
+    ok01 = and ok00, pidfd_ok
+    ok02 = and ok01, raw_status_ok
+    ok03 = and ok02, raw_fd_ok
+    ok04 = and ok03, wait_ok
+    ok05 = and ok04, code_ok
+    ok = and ok05, close_ok
+
+    !pidfd_status
+    !pidfd
+    !raw_status
+    !raw_fd
+    !stream_wait_status
+    !stream_code
+    !pidfd_close_status
+    !process_close_status
+    !stdout_close_status
+    !stderr_close_status
+    !pidfd_status_ok
+    !pidfd_ok
+    !raw_status_ok
+    !raw_fd_ok
+    !wait_ok
+    !code_ok
+    !pidfd_close_ok
+    !process_close_ok
+    !stdout_close_ok
+    !stderr_close_ok
+    !close01
+    !close02
+    !close_ok
+    !ok00
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !stream_ok
+    !stream02
+    !stream01
+    !stream_stderr_ok
+    !stream_stdout_ok
+    !stream_process_ok
+    !stream_status_ok
+    !stream_stderr
+    !stream_stdout
+    !stream_process
+    !stream_status
+    !cwd_len0
+    !has_cwd0
+    !arg0_len0
+    !has_arg00
+    !pgroup0
+    !has_pgroup0
+    !setsid0
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10691)
+
+L_PASS:
+    !ok
+    return 0

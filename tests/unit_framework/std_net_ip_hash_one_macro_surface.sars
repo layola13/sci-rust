@@ -1,0 +1,447 @@
+@import "sa_std/net.sars"
+@import "sa_std/hash.sars"
+
+@test "sa_std net ipv4 hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    addr = stack_alloc NetIpv4Addr_SIZE
+    same_addr = stack_alloc NetIpv4Addr_SIZE
+    diff_addr = stack_alloc NetIpv4Addr_SIZE
+    reversed_addr = stack_alloc NetIpv4Addr_SIZE
+
+    EXPAND NET_IPV4_NEW addr, 18, 52, 86, 120
+    EXPAND NET_IPV4_NEW same_addr, 18, 52, 86, 120
+    EXPAND NET_IPV4_NEW diff_addr, 18, 52, 86, 121
+    EXPAND NET_IPV4_NEW reversed_addr, 120, 86, 52, 18
+
+    native_bits = load addr+NetIpv4Addr_a as u32
+    EXPAND NET_IPV4_TO_BITS network_bits, addr
+    EXPAND HASH_U32 native_hash, native_bits
+    EXPAND HASH_U32 network_hash, network_bits
+
+    writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_NET_IPV4 writer_hasher, addr
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, writer_hasher
+
+    EXPAND NET_IPV4_HASH direct_hash, addr
+    EXPAND NET_IPV4_HASH same_hash, same_addr
+    EXPAND NET_IPV4_HASH diff_hash, diff_addr
+    EXPAND NET_IPV4_HASH reversed_hash, reversed_addr
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NET_IPV4 build_hash, builder, addr
+
+    state = stack_alloc RandomState_SIZE
+    state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 123, 456
+    EXPAND RANDOM_STATE_HASH_ONE_NET_IPV4 state_hash, state, addr
+    EXPAND RANDOM_STATE_BUILD state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_NET_IPV4 state_hasher, addr
+    EXPAND DEFAULT_HASHER_FINISH manual_state_hash, state_hasher
+
+    writer_matches = eq writer_hash, direct_hash
+    direct_matches_native = eq direct_hash, native_hash
+    same_contents_match = eq same_hash, direct_hash
+    last_octet_matters = ne diff_hash, direct_hash
+    octet_order_matters = ne reversed_hash, direct_hash
+    native_differs_network_bits = ne native_bits, network_bits
+    native_differs_network_hash = ne direct_hash, network_hash
+    build_matches = eq build_hash, direct_hash
+    state_matches_manual = eq state_hash, manual_state_hash
+    seeded_differs_default = ne state_hash, direct_hash
+
+    c01 = and writer_matches, direct_matches_native
+    c02 = and c01, same_contents_match
+    c03 = and c02, last_octet_matters
+    c04 = and c03, octet_order_matters
+    c05 = and c04, native_differs_network_bits
+    c06 = and c05, native_differs_network_hash
+    c07 = and c06, build_matches
+    c08 = and c07, state_matches_manual
+    ok = and c08, seeded_differs_default
+
+    !native_bits
+    !network_bits
+    !native_hash
+    !network_hash
+    !writer_hash
+    !direct_hash
+    !same_hash
+    !diff_hash
+    !reversed_hash
+    !build_hash
+    !state_hash
+    !manual_state_hash
+    !writer_matches
+    !direct_matches_native
+    !same_contents_match
+    !last_octet_matters
+    !octet_order_matters
+    !native_differs_network_bits
+    !native_differs_network_hash
+    !build_matches
+    !state_matches_manual
+    !seeded_differs_default
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !builder
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10589)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std net socketaddrv4 hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    ip = stack_alloc NetIpv4Addr_SIZE
+    ip_same = stack_alloc NetIpv4Addr_SIZE
+    ip_diff = stack_alloc NetIpv4Addr_SIZE
+    sock = stack_alloc NetSocketAddrV4_SIZE
+    same_sock = stack_alloc NetSocketAddrV4_SIZE
+    diff_port_sock = stack_alloc NetSocketAddrV4_SIZE
+    diff_ip_sock = stack_alloc NetSocketAddrV4_SIZE
+
+    EXPAND NET_IPV4_NEW ip, 127, 0, 0, 1
+    EXPAND NET_IPV4_NEW ip_same, 127, 0, 0, 1
+    EXPAND NET_IPV4_NEW ip_diff, 127, 0, 0, 2
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock, ip, 8080
+    EXPAND NET_SOCKET_ADDR_V4_NEW same_sock, ip_same, 8080
+    EXPAND NET_SOCKET_ADDR_V4_NEW diff_port_sock, ip_same, 8081
+    EXPAND NET_SOCKET_ADDR_V4_NEW diff_ip_sock, ip_diff, 8080
+
+    EXPAND NET_SOCKET_ADDR_V4_IP_PTR sock_ip, sock
+    EXPAND NET_SOCKET_ADDR_V4_PORT sock_port, sock
+
+    manual_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW manual_hasher
+    EXPAND DEFAULT_HASHER_WRITE_NET_IPV4 manual_hasher, sock_ip
+    EXPAND DEFAULT_HASHER_WRITE_U16 manual_hasher, sock_port
+    EXPAND DEFAULT_HASHER_FINISH manual_hash, manual_hasher
+
+    writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_NET_SOCKET_ADDR_V4 writer_hasher, sock
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, writer_hasher
+
+    EXPAND NET_SOCKET_ADDR_V4_HASH direct_hash, sock
+    EXPAND NET_SOCKET_ADDR_V4_HASH same_hash, same_sock
+    EXPAND NET_SOCKET_ADDR_V4_HASH diff_port_hash, diff_port_sock
+    EXPAND NET_SOCKET_ADDR_V4_HASH diff_ip_hash, diff_ip_sock
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NET_SOCKET_ADDR_V4 build_hash, builder, sock
+
+    state = stack_alloc RandomState_SIZE
+    state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 222, 333
+    EXPAND RANDOM_STATE_HASH_ONE_NET_SOCKET_ADDR_V4 state_hash, state, sock
+    EXPAND RANDOM_STATE_BUILD state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_NET_SOCKET_ADDR_V4 state_hasher, sock
+    EXPAND DEFAULT_HASHER_FINISH manual_state_hash, state_hasher
+
+    manual_matches_writer = eq manual_hash, writer_hash
+    writer_matches_direct = eq writer_hash, direct_hash
+    same_contents_match = eq same_hash, direct_hash
+    port_matters = ne diff_port_hash, direct_hash
+    ip_matters = ne diff_ip_hash, direct_hash
+    build_matches = eq build_hash, direct_hash
+    state_matches_manual = eq state_hash, manual_state_hash
+    seeded_differs_default = ne state_hash, direct_hash
+
+    c01 = and manual_matches_writer, writer_matches_direct
+    c02 = and c01, same_contents_match
+    c03 = and c02, port_matters
+    c04 = and c03, ip_matters
+    c05 = and c04, build_matches
+    c06 = and c05, state_matches_manual
+    ok = and c06, seeded_differs_default
+
+    !sock_ip
+    !sock_port
+    !manual_hash
+    !writer_hash
+    !direct_hash
+    !same_hash
+    !diff_port_hash
+    !diff_ip_hash
+    !build_hash
+    !state_hash
+    !manual_state_hash
+    !manual_matches_writer
+    !writer_matches_direct
+    !same_contents_match
+    !port_matters
+    !ip_matters
+    !build_matches
+    !state_matches_manual
+    !seeded_differs_default
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !builder
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10590)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std net ipv6 hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    addr = stack_alloc NetIpv6Addr_SIZE
+    same_addr = stack_alloc NetIpv6Addr_SIZE
+    diff_addr = stack_alloc NetIpv6Addr_SIZE
+    socket_addr = stack_alloc NetSocketAddrV6_SIZE
+    same_socket_addr = stack_alloc NetSocketAddrV6_SIZE
+    diff_port_socket_addr = stack_alloc NetSocketAddrV6_SIZE
+    diff_flow_socket_addr = stack_alloc NetSocketAddrV6_SIZE
+    diff_scope_socket_addr = stack_alloc NetSocketAddrV6_SIZE
+
+    EXPAND NET_IPV6_NEW addr, 0x2001, 0xdb8, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW same_addr, 0x2001, 0xdb8, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW diff_addr, 0x2001, 0xdb8, 0, 0, 0, 0, 0, 2
+    EXPAND NET_SOCKET_ADDR_V6_NEW socket_addr, addr, 8080, 11, 22
+    EXPAND NET_SOCKET_ADDR_V6_NEW same_socket_addr, same_addr, 8080, 11, 22
+    EXPAND NET_SOCKET_ADDR_V6_NEW diff_port_socket_addr, same_addr, 8081, 11, 22
+    EXPAND NET_SOCKET_ADDR_V6_NEW diff_flow_socket_addr, same_addr, 8080, 12, 22
+    EXPAND NET_SOCKET_ADDR_V6_NEW diff_scope_socket_addr, same_addr, 8080, 11, 23
+
+    manual_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW manual_hasher
+    EXPAND DEFAULT_HASHER_WRITE_NET_IPV6 manual_hasher, addr
+    EXPAND DEFAULT_HASHER_FINISH manual_ipv6_hash, manual_hasher
+
+    EXPAND NET_IPV6_HASH direct_ipv6_hash, addr
+    EXPAND NET_IPV6_HASH same_ipv6_hash, same_addr
+    EXPAND NET_IPV6_HASH diff_ipv6_hash, diff_addr
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NET_IPV6 build_ipv6_hash, builder, addr
+
+    socket_manual_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW socket_manual_hasher
+    EXPAND DEFAULT_HASHER_WRITE_NET_SOCKET_ADDR_V6 socket_manual_hasher, socket_addr
+    EXPAND DEFAULT_HASHER_FINISH manual_socket_hash, socket_manual_hasher
+
+    EXPAND NET_SOCKET_ADDR_V6_HASH direct_socket_hash, socket_addr
+    EXPAND NET_SOCKET_ADDR_V6_HASH same_socket_hash, same_socket_addr
+    EXPAND NET_SOCKET_ADDR_V6_HASH diff_port_socket_hash, diff_port_socket_addr
+    EXPAND NET_SOCKET_ADDR_V6_HASH diff_flow_socket_hash, diff_flow_socket_addr
+    EXPAND NET_SOCKET_ADDR_V6_HASH diff_scope_socket_hash, diff_scope_socket_addr
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NET_SOCKET_ADDR_V6 build_socket_hash, builder, socket_addr
+
+    state = stack_alloc RandomState_SIZE
+    state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 444, 555
+    EXPAND RANDOM_STATE_HASH_ONE_NET_IPV6 state_ipv6_hash, state, addr
+    EXPAND RANDOM_STATE_BUILD state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_NET_IPV6 state_hasher, addr
+    EXPAND DEFAULT_HASHER_FINISH manual_state_ipv6_hash, state_hasher
+
+    socket_state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_HASH_ONE_NET_SOCKET_ADDR_V6 state_socket_hash, state, socket_addr
+    EXPAND RANDOM_STATE_BUILD socket_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_NET_SOCKET_ADDR_V6 socket_state_hasher, socket_addr
+    EXPAND DEFAULT_HASHER_FINISH manual_state_socket_hash, socket_state_hasher
+
+    ipv6_writer_matches = eq manual_ipv6_hash, direct_ipv6_hash
+    ipv6_same_matches = eq same_ipv6_hash, direct_ipv6_hash
+    ipv6_diff_matters = ne diff_ipv6_hash, direct_ipv6_hash
+    ipv6_build_matches = eq build_ipv6_hash, direct_ipv6_hash
+    ipv6_state_matches = eq state_ipv6_hash, manual_state_ipv6_hash
+    ipv6_seeded_differs = ne state_ipv6_hash, direct_ipv6_hash
+
+    socket_writer_matches = eq manual_socket_hash, direct_socket_hash
+    socket_same_matches = eq same_socket_hash, direct_socket_hash
+    socket_port_matters = ne diff_port_socket_hash, direct_socket_hash
+    socket_flow_matters = ne diff_flow_socket_hash, direct_socket_hash
+    socket_scope_matters = ne diff_scope_socket_hash, direct_socket_hash
+    socket_build_matches = eq build_socket_hash, direct_socket_hash
+    socket_state_matches = eq state_socket_hash, manual_state_socket_hash
+    socket_seeded_differs = ne state_socket_hash, direct_socket_hash
+
+    c01 = and ipv6_writer_matches, ipv6_same_matches
+    c02 = and c01, ipv6_diff_matters
+    c03 = and c02, ipv6_build_matches
+    c04 = and c03, ipv6_state_matches
+    c05 = and c04, ipv6_seeded_differs
+    c06 = and c05, socket_writer_matches
+    c07 = and c06, socket_same_matches
+    c08 = and c07, socket_port_matters
+    c09 = and c08, socket_flow_matters
+    c10 = and c09, socket_scope_matters
+    c11 = and c10, socket_build_matches
+    c12 = and c11, socket_state_matches
+    ok = and c12, socket_seeded_differs
+
+    !manual_ipv6_hash
+    !direct_ipv6_hash
+    !same_ipv6_hash
+    !diff_ipv6_hash
+    !build_ipv6_hash
+    !state_ipv6_hash
+    !manual_state_ipv6_hash
+    !manual_socket_hash
+    !direct_socket_hash
+    !same_socket_hash
+    !diff_port_socket_hash
+    !diff_flow_socket_hash
+    !diff_scope_socket_hash
+    !build_socket_hash
+    !state_socket_hash
+    !manual_state_socket_hash
+    !ipv6_writer_matches
+    !ipv6_same_matches
+    !ipv6_diff_matters
+    !ipv6_build_matches
+    !ipv6_state_matches
+    !ipv6_seeded_differs
+    !socket_writer_matches
+    !socket_same_matches
+    !socket_port_matters
+    !socket_flow_matters
+    !socket_scope_matters
+    !socket_build_matches
+    !socket_state_matches
+    !socket_seeded_differs
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !builder
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10591)
+
+L_PASS:
+    !ok
+    return 0
+
+
+
+@test "sa_std net enum address hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    ipv4 = stack_alloc NetIpv4Addr_SIZE
+    ipv6 = stack_alloc NetIpv6Addr_SIZE
+    ip_v4 = stack_alloc NetIpAddr_SIZE
+    ip_v4_same = stack_alloc NetIpAddr_SIZE
+    ip_v6 = stack_alloc NetIpAddr_SIZE
+    ip_v6_diff = stack_alloc NetIpAddr_SIZE
+    ipv6_diff = stack_alloc NetIpv6Addr_SIZE
+    socket_v4 = stack_alloc NetSocketAddrV4_SIZE
+    socket_v6 = stack_alloc NetSocketAddrV6_SIZE
+    socket_enum_v4 = stack_alloc NetSocketAddr_SIZE
+    socket_enum_v4_same = stack_alloc NetSocketAddr_SIZE
+    socket_enum_v6 = stack_alloc NetSocketAddr_SIZE
+    socket_enum_v6_diff = stack_alloc NetSocketAddr_SIZE
+
+    EXPAND NET_IPV4_NEW ipv4, 127, 0, 0, 1
+    EXPAND NET_IPV6_NEW ipv6, 0x2001, 0xdb8, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IP_ADDR_V4_NEW ip_v4, ipv4
+    EXPAND NET_IP_ADDR_V4_NEW ip_v4_same, ipv4
+    EXPAND NET_IP_ADDR_V6_NEW ip_v6, ipv6
+    EXPAND NET_IPV6_NEW ipv6_diff, 0x2001, 0xdb8, 0, 0, 0, 0, 0, 2
+    EXPAND NET_IP_ADDR_V6_NEW ip_v6_diff, ipv6_diff
+    EXPAND NET_SOCKET_ADDR_V4_NEW socket_v4, ipv4, 8080
+    EXPAND NET_SOCKET_ADDR_V6_NEW socket_v6, ipv6, 8080, 7, 9
+    EXPAND NET_SOCKET_ADDR_FROM_V4 socket_enum_v4, socket_v4
+    EXPAND NET_SOCKET_ADDR_FROM_V4 socket_enum_v4_same, socket_v4
+    EXPAND NET_SOCKET_ADDR_FROM_V6 socket_enum_v6, socket_v6
+    EXPAND NET_SOCKET_ADDR_V6_SET_SCOPE_ID socket_v6, 10
+    EXPAND NET_SOCKET_ADDR_FROM_V6 socket_enum_v6_diff, socket_v6
+
+    EXPAND NET_IP_ADDR_HASH ip_v4_hash, ip_v4
+    EXPAND NET_IP_ADDR_HASH ip_v4_same_hash, ip_v4_same
+    EXPAND NET_IP_ADDR_HASH ip_v6_hash, ip_v6
+    EXPAND NET_IP_ADDR_HASH ip_v6_diff_hash, ip_v6_diff
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NET_IP_ADDR build_ip_hash, builder, ip_v6
+
+    EXPAND NET_SOCKET_ADDR_HASH socket_v4_hash, socket_enum_v4
+    EXPAND NET_SOCKET_ADDR_HASH socket_v4_same_hash, socket_enum_v4_same
+    EXPAND NET_SOCKET_ADDR_HASH socket_v6_hash, socket_enum_v6
+    EXPAND NET_SOCKET_ADDR_HASH socket_v6_diff_hash, socket_enum_v6_diff
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NET_SOCKET_ADDR build_socket_hash, builder, socket_enum_v6
+
+    ip_v4_same_ok = eq ip_v4_hash, ip_v4_same_hash
+    ip_v6_diff_ok = ne ip_v6_hash, ip_v6_diff_hash
+    ip_family_diff_ok = ne ip_v4_hash, ip_v6_hash
+    ip_build_ok = eq build_ip_hash, ip_v6_hash
+    socket_v4_same_ok = eq socket_v4_hash, socket_v4_same_hash
+    socket_family_diff_ok = ne socket_v4_hash, socket_v6_hash
+    socket_metadata_diff_ok = ne socket_v6_hash, socket_v6_diff_hash
+    socket_build_ok = eq build_socket_hash, socket_v6_hash
+
+    c01 = and ip_v4_same_ok, ip_v6_diff_ok
+    c02 = and c01, ip_family_diff_ok
+    c03 = and c02, ip_build_ok
+    c04 = and c03, socket_v4_same_ok
+    c05 = and c04, socket_family_diff_ok
+    c06 = and c05, socket_metadata_diff_ok
+    ok = and c06, socket_build_ok
+
+    !ip_v4_hash
+    !ip_v4_same_hash
+    !ip_v6_hash
+    !ip_v6_diff_hash
+    !build_ip_hash
+    !socket_v4_hash
+    !socket_v4_same_hash
+    !socket_v6_hash
+    !socket_v6_diff_hash
+    !build_socket_hash
+    !ip_v4_same_ok
+    !ip_v6_diff_ok
+    !ip_family_diff_ok
+    !ip_build_ok
+    !socket_v4_same_ok
+    !socket_family_diff_ok
+    !socket_metadata_diff_ok
+    !socket_build_ok
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !builder
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10592)
+
+L_PASS:
+    !ok
+    return 0

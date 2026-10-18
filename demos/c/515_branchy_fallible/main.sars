@@ -1,0 +1,32 @@
+@import "sa_std/io/print.sai"
+@import "picker/pick.sars"
+
+@const OUT = utf8:"515\n"
+
+// 515 - Branchy fallible pick across files (0 -> 100, 1 -> 415;
+// sum is 515); each side unpacks before returning.
+@main() -> i32:
+L_ENTRY:
+    z = 0 as i64
+    r0 = call @pick_value(z)
+    v0 = ?r0
+    o = 1 as i64
+    r1 = call @pick_value(o)
+    v1 = ?r1
+    s = add v0, v1
+    ok = eq s, 515
+    !z
+    !r0
+    !v0
+    !o
+    !r1
+    !v1
+    !s
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

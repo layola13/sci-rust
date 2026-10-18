@@ -1,0 +1,35 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec push pop"():
+L_ENTRY:
+    EXPAND VEC_NEW v
+    EXPAND VEC_PUSH_U64 v, 10
+    EXPAND VEC_PUSH_U64 v, 20
+    EXPAND VEC_LEN ln, v
+    EXPAND VEC_POP_U64 pop_ok, pop, v
+    EXPAND VEC_GET_U64 g0, v, 0
+    EXPAND VEC_FREE v
+    a = eq ln, 2
+    b = eq pop_ok, 1
+    c = eq pop, 20
+    d = eq g0, 10
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok = and ok02, d
+    !ln
+    !pop_ok
+    !pop
+    !g0
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10925)

@@ -7,7 +7,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const suite_path = "tests/unit_framework/feature_suite.sa";
+    const suite_path = "tests/unit_framework/feature_suite.sars";
     var file = try sio.cwd().openFile(suite_path, .{});
     defer file.close();
     const source = try file.readToEndAlloc(allocator, 10 * 1024 * 1024);

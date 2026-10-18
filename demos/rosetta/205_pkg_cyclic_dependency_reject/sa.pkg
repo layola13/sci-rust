@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "saasm-0.6"
 
 [packages]
-pkg_a = "pkg_a/main.sa"
-pkg_b = "pkg_b/main.sa"
+pkg_a = "pkg_a/main.sars"
+pkg_b = "pkg_b/main.sars"
 
 [negative]
 expected = "import cycle rejection"

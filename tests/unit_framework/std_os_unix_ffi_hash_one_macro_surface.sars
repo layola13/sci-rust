@@ -1,0 +1,199 @@
+@import "sa_std/os/unix_ffi.sars"
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std os unix ffi hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    base_data = alloc 4
+    store base_data+0, 102 as u8
+    store base_data+1, 111 as u8
+    store base_data+2, 111 as u8
+    store base_data+3, 255 as u8
+    base_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW base_slice, base_data, 4
+
+    same_data = alloc 4
+    store same_data+0, 102 as u8
+    store same_data+1, 111 as u8
+    store same_data+2, 111 as u8
+    store same_data+3, 255 as u8
+    same_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW same_slice, same_data, 4
+
+    short_data = alloc 3
+    store short_data+0, 102 as u8
+    store short_data+1, 111 as u8
+    store short_data+2, 111 as u8
+    short_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW short_slice, short_data, 3
+
+    diff_data = alloc 4
+    store diff_data+0, 102 as u8
+    store diff_data+1, 111 as u8
+    store diff_data+2, 111 as u8
+    store diff_data+3, 254 as u8
+    diff_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW diff_slice, diff_data, 4
+
+    suffix_data = alloc 1
+    store suffix_data+0, 33 as u8
+    suffix_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW suffix_slice, suffix_data, 1
+
+    EXPAND OS_STR_FROM_BYTES os_str, base_slice
+    EXPAND OS_STR_FROM_BYTES same_os_str, same_slice
+    EXPAND OS_STR_FROM_BYTES short_os_str, short_slice
+    EXPAND OS_STR_FROM_BYTES diff_os_str, diff_slice
+    EXPAND OS_STRING_FROM_OS_STR os_string, os_str
+    EXPAND OS_STRING_FROM_OS_STR same_os_string, same_os_str
+
+    os_str_writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW os_str_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_OS_STR os_str_writer_hasher, os_str
+    EXPAND DEFAULT_HASHER_FINISH os_str_writer_hash, os_str_writer_hasher
+
+    os_string_writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW os_string_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_OS_STRING os_string_writer_hasher, os_string
+    EXPAND DEFAULT_HASHER_FINISH os_string_writer_hash, os_string_writer_hasher
+
+    EXPAND OS_STR_HASH os_str_hash, os_str
+    EXPAND HASH_SLICE_U8 slice_hash, base_slice
+    EXPAND HASH_STR str_hash, base_slice
+    EXPAND OS_STR_HASH same_os_str_hash, same_os_str
+    EXPAND OS_STR_HASH short_os_str_hash, short_os_str
+    EXPAND OS_STR_HASH diff_os_str_hash, diff_os_str
+    EXPAND OS_STRING_HASH os_string_hash, os_string
+    EXPAND OS_STRING_HASH same_os_string_hash, same_os_string
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_OS_STR build_os_str_hash, builder, os_str
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SLICE_U8 build_slice_hash, builder, base_slice
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_OS_STRING build_os_string_hash, builder, os_string
+
+    state = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+    EXPAND RANDOM_STATE_HASH_ONE_OS_STR state_os_str_hash, state, os_str
+    EXPAND RANDOM_STATE_HASH_ONE_SLICE_U8 state_slice_hash, state, base_slice
+    EXPAND RANDOM_STATE_HASH_ONE_OS_STRING state_os_string_hash, state, os_string
+
+    EXPAND OS_STRING_PUSH_SLICE os_string, suffix_slice
+    EXPAND OS_STRING_AS_OS_STR changed_os_str, os_string
+    EXPAND OS_STRING_HASH changed_os_string_hash, os_string
+    EXPAND OS_STR_HASH changed_os_str_hash, changed_os_str
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_OS_STRING changed_build_hash, builder, os_string
+
+    os_str_writer_matches = eq os_str_writer_hash, os_str_hash
+    os_str_matches_slice = eq os_str_hash, slice_hash
+    os_str_not_str_hash = ne os_str_hash, str_hash
+    same_bytes_match = eq same_os_str_hash, os_str_hash
+    length_matters = ne short_os_str_hash, os_str_hash
+    value_matters = ne diff_os_str_hash, os_str_hash
+    os_string_writer_matches = eq os_string_writer_hash, os_string_hash
+    os_string_forwards = eq os_string_hash, os_str_hash
+    same_os_string_match = eq same_os_string_hash, os_string_hash
+    build_os_str_matches_slice = eq build_os_str_hash, build_slice_hash
+    build_os_string_matches = eq build_os_string_hash, os_string_hash
+    state_os_str_matches_slice = eq state_os_str_hash, state_slice_hash
+    state_os_string_matches = eq state_os_string_hash, state_os_str_hash
+    seeded_differs_default = ne state_os_str_hash, os_str_hash
+    changed_forwards = eq changed_os_string_hash, changed_os_str_hash
+    changed_build_matches = eq changed_build_hash, changed_os_string_hash
+    mutation_matters = ne changed_os_string_hash, os_string_hash
+
+    c01 = and os_str_writer_matches, os_str_matches_slice
+    c02 = and c01, os_str_not_str_hash
+    c03 = and c02, same_bytes_match
+    c04 = and c03, length_matters
+    c05 = and c04, value_matters
+    c06 = and c05, os_string_writer_matches
+    c07 = and c06, os_string_forwards
+    c08 = and c07, same_os_string_match
+    c09 = and c08, build_os_str_matches_slice
+    c10 = and c09, build_os_string_matches
+    c11 = and c10, state_os_str_matches_slice
+    c12 = and c11, state_os_string_matches
+    c13 = and c12, seeded_differs_default
+    c14 = and c13, changed_forwards
+    c15 = and c14, changed_build_matches
+    ok = and c15, mutation_matters
+
+    !os_str_writer_hash
+    !os_string_writer_hash
+    !os_str_hash
+    !slice_hash
+    !str_hash
+    !same_os_str_hash
+    !short_os_str_hash
+    !diff_os_str_hash
+    !os_string_hash
+    !same_os_string_hash
+    !build_os_str_hash
+    !build_slice_hash
+    !build_os_string_hash
+    !state_os_str_hash
+    !state_slice_hash
+    !state_os_string_hash
+    !changed_os_string_hash
+    !changed_os_str_hash
+    !changed_build_hash
+    !os_str_writer_matches
+    !os_str_matches_slice
+    !os_str_not_str_hash
+    !same_bytes_match
+    !length_matters
+    !value_matters
+    !os_string_writer_matches
+    !os_string_forwards
+    !same_os_string_match
+    !build_os_str_matches_slice
+    !build_os_string_matches
+    !state_os_str_matches_slice
+    !state_os_string_matches
+    !seeded_differs_default
+    !changed_forwards
+    !changed_build_matches
+    !mutation_matters
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !changed_os_str
+    EXPAND OS_STRING_FREE os_string
+    EXPAND OS_STRING_FREE same_os_string
+    !os_str
+    !same_os_str
+    !short_os_str
+    !diff_os_str
+    !builder
+    !base_slice
+    !base_data
+    !same_slice
+    !same_data
+    !short_slice
+    !short_data
+    !diff_slice
+    !diff_data
+    !suffix_slice
+    !suffix_data
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10587)
+
+L_PASS:
+    !ok
+    return 0

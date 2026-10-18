@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/hashmap.sa"
+@import "sa_std/hashmap.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@
 下面的完整 SA 程序展示了如何创建 HashMap、插入自定义键值对、检索命中状态、安全移除，以及最终释放字典对象的内存：
 
 ```sa
-@import "sa_std/hashmap.sa"
+@import "sa_std/hashmap.sars"
 
 @main() -> i32:
 L_ENTRY:

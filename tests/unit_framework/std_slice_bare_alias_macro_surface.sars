@@ -1,0 +1,250 @@
+@import "sa_std/core/slice.sars"
+
+@slice_bare_partition_lt_30(value: u64) -> u64:
+L_ENTRY:
+    keep = ult value, 30
+    !value
+    return keep
+
+@test "sa_std slice bare alias macro surface"():
+L_ENTRY:
+    values = stack_alloc 40
+    store values+0, 50 as u64
+    store values+8, 10 as u64
+    store values+16, 30 as u64
+    store values+24, 20 as u64
+    store values+32, 40 as u64
+
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 5
+
+    // Bare accessors (Rust method-name aliases over *_U64 helpers).
+    EXPAND SLICE_GET_LEN len, slice
+    EXPAND SLICE_IS_EMPTY empty, slice
+    EXPAND SLICE_GET mid, slice, 2
+    EXPAND SLICE_FIRST first, slice
+    EXPAND SLICE_LAST last, slice
+    EXPAND SLICE_CONTAINS has_30, slice, 30
+    EXPAND SLICE_CONTAINS has_99, slice, 99
+
+    // Mutate via bare mut-ptr alias, then re-read with bare get.
+    EXPAND SLICE_GET_MUT_PTR mut_ptr, slice, 0
+    store mut_ptr+0, 5 as u64
+    EXPAND SLICE_GET after_mut, slice, 0
+
+    // Sort / reverse / swap / fill via bare names.
+    EXPAND SLICE_SORT slice
+    EXPAND SLICE_GET sorted0, slice, 0
+    EXPAND SLICE_GET sorted2, slice, 2
+    EXPAND SLICE_GET sorted4, slice, 4
+
+    EXPAND SLICE_TRY_BINARY_SEARCH bs_hit_ok, bs_hit_idx, slice, 20
+    EXPAND SLICE_TRY_BINARY_SEARCH bs_miss_ok, bs_miss_idx, slice, 25
+    EXPAND SLICE_PARTITION_POINT partition_idx, slice, @slice_bare_partition_lt_30
+    EXPAND SLICE_LOWER_BOUND lower_20, slice, 20
+    EXPAND SLICE_UPPER_BOUND upper_20, slice, 20
+    EXPAND SLICE_EQUAL_RANGE eq20_start, eq20_end, slice, 20
+
+    // Chunks via bare aliases.
+    EXPAND SLICE_CHUNK_COUNT chunk_count, slice, 2
+    EXPAND SLICE_TRY_CHUNK_AT chunk0_ok, chunk0, slice, 2, 0
+    EXPAND SLICE_GET_LEN chunk0_len, chunk0
+    EXPAND SLICE_GET chunk0_first, chunk0, 0
+    EXPAND SLICE_CHUNKS_EXACT_COUNT exact_count, slice, 2
+    EXPAND SLICE_CHUNKS_EXACT_REMAINDER exact_rem, slice, 2
+    EXPAND SLICE_GET_LEN exact_rem_len, exact_rem
+    EXPAND SLICE_GET exact_rem_first, exact_rem, 0
+
+    EXPAND SLICE_SWAP slice, 0, 4
+    EXPAND SLICE_GET swap0, slice, 0
+    EXPAND SLICE_GET swap4, slice, 4
+    EXPAND SLICE_REVERSE slice
+    EXPAND SLICE_GET rev0, slice, 0
+    EXPAND SLICE_FILL slice, 7
+    EXPAND SLICE_GET fill0, slice, 0
+    EXPAND SLICE_GET fill4, slice, 4
+    EXPAND SLICE_GET_LEN fill_len, slice
+    EXPAND SLICE_IS_EMPTY fill_empty, slice
+
+    ok_len = eq len, 5
+    ok_empty = eq empty, 0
+    ok_mid = eq mid, 30
+    ok_first = eq first, 50
+    ok_last = eq last, 40
+    ok_has_30 = eq has_30, 1
+    ok_has_99 = eq has_99, 0
+    ok_after_mut = eq after_mut, 5
+    ok_sorted0 = eq sorted0, 5
+    ok_sorted2 = eq sorted2, 20
+    ok_sorted4 = eq sorted4, 40
+    ok_bs_hit_flag = eq bs_hit_ok, 1
+    ok_bs_hit_idx = eq bs_hit_idx, 2
+    ok_bs_miss_flag = eq bs_miss_ok, 0
+    ok_bs_miss_idx = eq bs_miss_idx, 3
+    ok_partition = eq partition_idx, 3
+    ok_lower_20 = eq lower_20, 2
+    ok_upper_20 = eq upper_20, 3
+    ok_eq_start = eq eq20_start, 2
+    ok_eq_end = eq eq20_end, 3
+    ok_chunk_count = eq chunk_count, 3
+    ok_chunk0_flag = eq chunk0_ok, 1
+    ok_chunk0_len = eq chunk0_len, 2
+    ok_chunk0_first = eq chunk0_first, 5
+    ok_exact_count = eq exact_count, 2
+    ok_exact_rem_len = eq exact_rem_len, 1
+    ok_exact_rem_first = eq exact_rem_first, 40
+    ok_swap0 = eq swap0, 40
+    ok_swap4 = eq swap4, 5
+    ok_rev0 = eq rev0, 5
+    ok_fill0 = eq fill0, 7
+    ok_fill4 = eq fill4, 7
+    ok_fill_len = eq fill_len, 5
+    ok_fill_empty = eq fill_empty, 0
+
+    ok01 = and ok_len, ok_empty
+    ok02 = and ok01, ok_mid
+    ok03 = and ok02, ok_first
+    ok04 = and ok03, ok_last
+    ok05 = and ok04, ok_has_30
+    ok06 = and ok05, ok_has_99
+    ok07 = and ok06, ok_after_mut
+    ok08 = and ok07, ok_sorted0
+    ok09 = and ok08, ok_sorted2
+    ok10 = and ok09, ok_sorted4
+    ok11 = and ok10, ok_bs_hit_flag
+    ok12 = and ok11, ok_bs_hit_idx
+    ok13 = and ok12, ok_bs_miss_flag
+    ok14 = and ok13, ok_bs_miss_idx
+    ok15 = and ok14, ok_partition
+    ok16 = and ok15, ok_lower_20
+    ok17 = and ok16, ok_upper_20
+    ok18 = and ok17, ok_eq_start
+    ok19 = and ok18, ok_eq_end
+    ok20 = and ok19, ok_chunk_count
+    ok21 = and ok20, ok_chunk0_flag
+    ok22 = and ok21, ok_chunk0_len
+    ok23 = and ok22, ok_chunk0_first
+    ok24 = and ok23, ok_exact_count
+    ok25 = and ok24, ok_exact_rem_len
+    ok26 = and ok25, ok_exact_rem_first
+    ok27 = and ok26, ok_swap0
+    ok28 = and ok27, ok_swap4
+    ok29 = and ok28, ok_rev0
+    ok30 = and ok29, ok_fill0
+    ok31 = and ok30, ok_fill4
+    ok32 = and ok31, ok_fill_len
+    ok = and ok32, ok_fill_empty
+
+    !mut_ptr
+    !len
+    !empty
+    !mid
+    !first
+    !last
+    !has_30
+    !has_99
+    !after_mut
+    !sorted0
+    !sorted2
+    !sorted4
+    !bs_hit_ok
+    !bs_hit_idx
+    !bs_miss_ok
+    !bs_miss_idx
+    !partition_idx
+    !lower_20
+    !upper_20
+    !eq20_start
+    !eq20_end
+    !chunk_count
+    !chunk0_ok
+    !chunk0_len
+    !chunk0_first
+    !exact_count
+    !exact_rem_len
+    !exact_rem_first
+    !swap0
+    !swap4
+    !rev0
+    !fill0
+    !fill4
+    !fill_len
+    !fill_empty
+    !ok_len
+    !ok_empty
+    !ok_mid
+    !ok_first
+    !ok_last
+    !ok_has_30
+    !ok_has_99
+    !ok_after_mut
+    !ok_sorted0
+    !ok_sorted2
+    !ok_sorted4
+    !ok_bs_hit_flag
+    !ok_bs_hit_idx
+    !ok_bs_miss_flag
+    !ok_bs_miss_idx
+    !ok_partition
+    !ok_lower_20
+    !ok_upper_20
+    !ok_eq_start
+    !ok_eq_end
+    !ok_chunk_count
+    !ok_chunk0_flag
+    !ok_chunk0_len
+    !ok_chunk0_first
+    !ok_exact_count
+    !ok_exact_rem_len
+    !ok_exact_rem_first
+    !ok_swap0
+    !ok_swap4
+    !ok_rev0
+    !ok_fill0
+    !ok_fill4
+    !ok_fill_len
+    !ok_fill_empty
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !exact_rem
+    !chunk0
+    !slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10859)
+
+L_PASS:
+    !ok
+    return 0

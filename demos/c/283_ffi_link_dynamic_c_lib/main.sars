@@ -1,0 +1,28 @@
+@import "sa_std/io/print.sai"
+@import "bridge/dynamic_gate.sars"
+
+@const RESULT_OK = utf8:"283\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 283 - Ffi Link Dynamic C Lib
+// The shared-object layout is separated into bridge code and host loader notes.
+
+@main() -> i32:
+L_ENTRY:
+    probe = alloc 4
+    store probe+0, 283 as i32
+    value = call @dynamic_probe_gate(*probe)
+    ok = eq value, 283
+    !value
+    !probe
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

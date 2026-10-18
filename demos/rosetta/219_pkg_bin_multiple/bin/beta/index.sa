@@ -1,6 +1,0 @@
-@import "bin/beta/helpers/index.sa"
-
-@beta_total_value() -> i32:
-L_ENTRY:
-    value = call @beta_impl_value()
-    return value

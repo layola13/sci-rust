@@ -1,0 +1,171 @@
+@import "borrow.sal"
+@import "core/slice.sal"
+@import "hash.sars"
+
+[MACRO] BORROW_REF_NEW %borrow_ref, %ptr
+    store %borrow_ref+BorrowRef_ptr, %ptr as ptr
+[END_MACRO]
+
+[MACRO] BORROW_REF_GET %out_ptr, %borrow_ref
+    %out_ptr = load %borrow_ref+BorrowRef_ptr as ptr
+[END_MACRO]
+
+[MACRO] BORROW_MUT_NEW %borrow_mut, %ptr
+    store %borrow_mut+BorrowMut_ptr, %ptr as ptr
+[END_MACRO]
+
+[MACRO] BORROW_MUT_GET %out_ptr, %borrow_mut
+    %out_ptr = load %borrow_mut+BorrowMut_ptr as ptr
+[END_MACRO]
+
+[MACRO] BORROW_PTR %out_ptr, %ptr
+    %out_ptr = ptr_add %ptr, 0
+[END_MACRO]
+
+[MACRO] BORROW_MUT_PTR %out_ptr, %ptr
+    %out_ptr = ptr_add %ptr, 0
+[END_MACRO]
+
+[MACRO] COW_SLICE_BORROWED %cow, %slice
+    __cow_borrowed_ptr_%cow = load %slice+Slice_ptr as ptr
+    __cow_borrowed_len_%cow = load %slice+Slice_len as u64
+    store %cow+CowSlice_tag, COW_BORROWED as u64
+    store %cow+CowSlice_ptr, __cow_borrowed_ptr_%cow as ptr
+    store %cow+CowSlice_len, __cow_borrowed_len_%cow as u64
+    !__cow_borrowed_len_%cow
+    !__cow_borrowed_ptr_%cow
+[END_MACRO]
+
+[MACRO] COW_SLICE_OWNED %cow, %slice
+    __cow_owned_ptr_%cow = load %slice+Slice_ptr as ptr
+    __cow_owned_len_%cow = load %slice+Slice_len as u64
+    store %cow+CowSlice_tag, COW_OWNED as u64
+    store %cow+CowSlice_ptr, __cow_owned_ptr_%cow as ptr
+    store %cow+CowSlice_len, __cow_owned_len_%cow as u64
+    !__cow_owned_len_%cow
+    !__cow_owned_ptr_%cow
+[END_MACRO]
+
+[MACRO] COW_SLICE_IS_BORROWED %out_bool, %cow
+    __cow_tag_%out_bool = load %cow+CowSlice_tag as u64
+    %out_bool = eq __cow_tag_%out_bool, COW_BORROWED
+    !__cow_tag_%out_bool
+[END_MACRO]
+
+[MACRO] COW_SLICE_IS_OWNED %out_bool, %cow
+    __cow_tag_%out_bool = load %cow+CowSlice_tag as u64
+    %out_bool = eq __cow_tag_%out_bool, COW_OWNED
+    !__cow_tag_%out_bool
+[END_MACRO]
+
+[MACRO] COW_SLICE_AS_SLICE %out_slice, %cow
+    __cow_slice_ptr_%out_slice = load %cow+CowSlice_ptr as ptr
+    __cow_slice_len_%out_slice = load %cow+CowSlice_len as u64
+    store %out_slice+Slice_ptr, __cow_slice_ptr_%out_slice as ptr
+    store %out_slice+Slice_len, __cow_slice_len_%out_slice as u64
+    !__cow_slice_len_%out_slice
+    !__cow_slice_ptr_%out_slice
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_COW_SLICE_U64 %hasher, %cow
+    __cow_hash_slice_%hasher = stack_alloc Slice_SIZE
+    EXPAND COW_SLICE_AS_SLICE __cow_hash_slice_%hasher, %cow
+    EXPAND DEFAULT_HASHER_WRITE_SLICE_U64 %hasher, __cow_hash_slice_%hasher
+[END_MACRO]
+
+// Rust method-name alias over DEFAULT_HASHER_WRITE_COW_SLICE_U64.
+[MACRO] DEFAULT_HASHER_WRITE_COW_SLICE %hasher, %cow
+    EXPAND DEFAULT_HASHER_WRITE_COW_SLICE_U64 %hasher, %cow
+[END_MACRO]
+
+[MACRO] COW_SLICE_HASH_U64 %out_hash, %cow
+    __cow_hash_one_slice_%out_hash = stack_alloc Slice_SIZE
+    EXPAND COW_SLICE_AS_SLICE __cow_hash_one_slice_%out_hash, %cow
+    EXPAND SLICE_HASH_U64 %out_hash, __cow_hash_one_slice_%out_hash
+[END_MACRO]
+
+// Rust method-name alias over COW_SLICE_HASH_U64.
+[MACRO] COW_SLICE_HASH %out_hash, %cow
+    EXPAND COW_SLICE_HASH_U64 %out_hash, %cow
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_COW_SLICE_U64 %out_hash, %builder, %cow
+    __build_hash_one_cow_slice_u64_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_cow_slice_u64_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_COW_SLICE_U64 __build_hash_one_cow_slice_u64_hasher_%out_hash, %cow
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_cow_slice_u64_hasher_%out_hash
+[END_MACRO]
+
+// Rust method-name alias over BUILD_HASHER_DEFAULT_HASH_ONE_COW_SLICE_U64.
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_COW_SLICE %out_hash, %builder, %cow
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_COW_SLICE_U64 %out_hash, %builder, %cow
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_COW_SLICE_U64 %out_hash, %state, %cow
+    __random_state_hash_one_cow_slice_u64_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_cow_slice_u64_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_COW_SLICE_U64 __random_state_hash_one_cow_slice_u64_hasher_%out_hash, %cow
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_cow_slice_u64_hasher_%out_hash
+[END_MACRO]
+
+// Rust method-name alias over RANDOM_STATE_HASH_ONE_COW_SLICE_U64.
+[MACRO] RANDOM_STATE_HASH_ONE_COW_SLICE %out_hash, %state, %cow
+    EXPAND RANDOM_STATE_HASH_ONE_COW_SLICE_U64 %out_hash, %state, %cow
+[END_MACRO]
+
+[MACRO] COW_SLICE_TO_MUT %out_ok, %out_slice, %cow
+    EXPAND COW_SLICE_IS_OWNED __cow_to_mut_owned_%out_ok, %cow
+    br __cow_to_mut_owned_%out_ok -> L_COW_TO_MUT_OWNED_%out_ok, L_COW_TO_MUT_BORROWED_%out_ok
+
+L_COW_TO_MUT_OWNED_%out_ok:
+    EXPAND COW_SLICE_AS_SLICE %out_slice, %cow
+    %out_ok = add 0, 1
+    !__cow_to_mut_owned_%out_ok
+    jmp L_COW_TO_MUT_END_%out_ok
+
+L_COW_TO_MUT_BORROWED_%out_ok:
+    store %out_slice+Slice_ptr, 0 as ptr
+    store %out_slice+Slice_len, 0 as u64
+    %out_ok = add 0, 0
+    !__cow_to_mut_owned_%out_ok
+
+L_COW_TO_MUT_END_%out_ok:
+[END_MACRO]
+
+[MACRO] COW_SLICE_INTO_OWNED %out_ok, %out_slice, %cow
+    EXPAND COW_SLICE_TO_MUT %out_ok, %out_slice, %cow
+[END_MACRO]
+
+[MACRO] COW_SLICE_LEN %out_len, %cow
+    %out_len = load %cow+CowSlice_len as u64
+[END_MACRO]
+
+[MACRO] COW_SLICE_PTR %out_ptr, %cow
+    %out_ptr = load %cow+CowSlice_ptr as ptr
+[END_MACRO]
+
+// Clone the Cow header (shared view). Models supportable Clone for concrete
+// CowSlice without generic ToOwned allocation for borrowed→owned upgrade.
+[MACRO] COW_SLICE_CLONE %out_cow, %cow
+    __cow_c_tag_%out_cow = load %cow+CowSlice_tag as u64
+    __cow_c_ptr_%out_cow = load %cow+CowSlice_ptr as ptr
+    __cow_c_len_%out_cow = load %cow+CowSlice_len as u64
+    store %out_cow+CowSlice_tag, __cow_c_tag_%out_cow as u64
+    store %out_cow+CowSlice_ptr, __cow_c_ptr_%out_cow as ptr
+    store %out_cow+CowSlice_len, __cow_c_len_%out_cow as u64
+    !__cow_c_len_%out_cow
+    !__cow_c_ptr_%out_cow
+    !__cow_c_tag_%out_cow
+[END_MACRO]
+
+[MACRO] COW_SLICE_EQ_U64 %out_bool, %left_cow, %right_cow
+    __cow_eq_l_%out_bool = stack_alloc Slice_SIZE
+    __cow_eq_r_%out_bool = stack_alloc Slice_SIZE
+    EXPAND COW_SLICE_AS_SLICE __cow_eq_l_%out_bool, %left_cow
+    EXPAND COW_SLICE_AS_SLICE __cow_eq_r_%out_bool, %right_cow
+    EXPAND SLICE_EQ_U64 %out_bool, __cow_eq_l_%out_bool, __cow_eq_r_%out_bool
+[END_MACRO]
+
+[MACRO] COW_SLICE_EQ %out_bool, %left_cow, %right_cow
+    EXPAND COW_SLICE_EQ_U64 %out_bool, %left_cow, %right_cow
+[END_MACRO]

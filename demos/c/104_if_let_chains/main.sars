@@ -1,0 +1,90 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/option.sars"
+
+@const RESULT_OK = utf8:"9\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@main() -> i32:
+L_ENTRY:
+    left = alloc Option_SIZE
+    middle = alloc Option_SIZE
+    right = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME left, 2
+    EXPAND OPTION_SET_SOME middle, 3
+    EXPAND OPTION_SET_SOME right, 4
+
+    EXPAND OPTION_IS_SOME left_ok, left
+    br left_ok -> L_LEFT_SOME, L_FAIL_LEFT
+
+L_LEFT_SOME:
+    EXPAND OPTION_GET x, left
+    EXPAND OPTION_IS_SOME middle_ok, middle
+    br middle_ok -> L_MIDDLE_SOME, L_FAIL_MIDDLE
+
+L_MIDDLE_SOME:
+    EXPAND OPTION_GET y, middle
+    EXPAND OPTION_IS_SOME right_ok, right
+    br right_ok -> L_RIGHT_SOME, L_FAIL_RIGHT
+
+L_RIGHT_SOME:
+    EXPAND OPTION_GET z, right
+    partial = add x, y
+    result = add partial, z
+    ok = eq result, 9
+    !z
+    !partial
+    !right_ok
+    !y
+    !middle_ok
+    !x
+    !left_ok
+    !right
+    !middle
+    !left
+    br ok -> L_OK, L_ERR
+
+L_FAIL_RIGHT:
+    result = add 0, 0
+    ok = eq result, 9
+    !right_ok
+    !middle_ok
+    !y
+    !x
+    !left_ok
+    !right
+    !middle
+    !left
+    br ok -> L_OK, L_ERR
+
+L_FAIL_MIDDLE:
+    result = add 0, 0
+    ok = eq result, 9
+    !middle_ok
+    !x
+    !left_ok
+    !right
+    !middle
+    !left
+    br ok -> L_OK, L_ERR
+
+L_FAIL_LEFT:
+    result = add 0, 0
+    ok = eq result, 9
+    !left_ok
+    !right
+    !middle
+    !left
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !result
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    !result
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

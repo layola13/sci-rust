@@ -1336,11 +1336,11 @@ fn expectOperandEqual(expected: inst.Operand, got: inst.Operand) !void {
 }
 
 test "sab v4 preserves structured instruction metadata required by SA backends" {
-    const symbols = [_][]const u8{ "ok", "slot", "base", "offset", "old", "new", "pkg", "pkg/main.sa", "native_name" };
+    const symbols = [_][]const u8{ "ok", "slot", "base", "offset", "old", "new", "pkg", "pkg/main.sars", "native_name" };
     var hash: [32]u8 = std.mem.zeroes([32]u8);
     hash[0] = 0xaa;
 
-    var item = inst.makeInstruction(.cmpxchg, 9, 0, .{ .file = "pkg/main.sa", .line = 9, .col = 5 }, "ok, old = cmpxchg base+offset, old => new seq_cst seq_cst as i64");
+    var item = inst.makeInstruction(.cmpxchg, 9, 0, .{ .file = "pkg/main.sars", .line = 9, .col = 5 }, "ok, old = cmpxchg base+offset, old => new seq_cst seq_cst as i64");
     item.operands[0] = .{ .reg = 0 };
     item.operands[1] = .{ .reg = 1 };
     item.operands[2] = .{ .reg = 2 };
@@ -1367,7 +1367,7 @@ test "sab v4 preserves structured instruction metadata required by SA backends" 
     try std.testing.expectEqualStrings("native_name", got.native_reg_names[0]);
     try std.testing.expectEqualStrings("pkg", got.package_identity.?);
     try std.testing.expectEqual(@as(u8, 0xaa), got.package_source_sha256.?[0]);
-    try std.testing.expectEqualStrings("pkg/main.sa", got.upstream_loc.?.file);
+    try std.testing.expectEqualStrings("pkg/main.sars", got.upstream_loc.?.file);
     try std.testing.expectEqual(@as(u32, 9), got.upstream_loc.?.line);
     try std.testing.expectEqual(@as(u32, 5), got.upstream_loc.?.col);
     try std.testing.expectEqualStrings("", got.raw_text);
@@ -1504,8 +1504,8 @@ test "sab function signatures roundtrip without function header text" {
         .return_ty = .i32,
         .entry_inst_idx = 0,
         .is_ffi_wrapper = false,
-        .upstream_file = "src/main.sa",
-        .upstream_loc = .{ .file = "src/main.sa", .line = 11, .col = 2 },
+        .upstream_file = "src/main.sars",
+        .upstream_loc = .{ .file = "src/main.sars", .line = 11, .col = 2 },
         .param_ids = param_ids[0..],
         .reg_ids = reg_ids[0..],
         .llvm_name = "saasm_main",
@@ -1521,8 +1521,8 @@ test "sab function signatures roundtrip without function header text" {
     try std.testing.expectEqualStrings("main", decoded.function_sigs[0].name);
     try std.testing.expectEqual(sig.PrimType.i32, decoded.function_sigs[0].return_ty);
     try std.testing.expectEqualStrings("argc", decoded.function_sigs[0].params[0].name);
-    try std.testing.expectEqualStrings("src/main.sa", decoded.function_sigs[0].upstream_file.?);
-    try std.testing.expectEqualStrings("src/main.sa", decoded.function_sigs[0].upstream_loc.?.file);
+    try std.testing.expectEqualStrings("src/main.sars", decoded.function_sigs[0].upstream_file.?);
+    try std.testing.expectEqualStrings("src/main.sars", decoded.function_sigs[0].upstream_loc.?.file);
     try std.testing.expectEqual(@as(u32, 11), decoded.function_sigs[0].upstream_loc.?.line);
     try std.testing.expectEqual(@as(u32, 2), decoded.function_sigs[0].upstream_loc.?.col);
     try std.testing.expectEqualStrings("saasm_main", decoded.function_sigs[0].llvm_name.?);

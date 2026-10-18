@@ -1,0 +1,43 @@
+@import "../sa_std/core/slice.sal"
+@import "../sa_std/core/slice.sars"
+@import "../sa_std/core/option.sal"
+@import "../sa_std/core/option.sars"
+
+@test "env macros expand into concrete literals"():
+L_ENV:
+    env_slice = alloc Slice_SIZE
+    option_slice = alloc Option_SIZE
+    EXPAND ENV! env_slice, "SAASM_ENV_MACRO_TEST"
+    EXPAND OPTION_ENV! option_slice, "__SAASM_ENV_SHOULD_NOT_EXIST__"
+    env_ptr = load env_slice+Slice_ptr as ptr
+    env_len = load env_slice+Slice_len as u64
+    option_tag = load option_slice+Option_tag as u64
+    option_value = load option_slice+Option_value as ptr
+    env_ok = ne env_ptr, 0
+    env_len_ok = eq env_len, 5
+    option_none_ok = eq option_tag, Option_NONE
+    !env_ptr
+    !env_len
+    !option_tag
+    !option_value
+    !env_ok
+    !env_len_ok
+    !option_none_ok
+    !env_slice
+    !option_slice
+    return
+
+@test "stringify macro emits source text slice"():
+L_ENTRY:
+    out = alloc Slice_SIZE
+    EXPAND STRINGIFY! out, alpha + beta
+    ptr = load out+Slice_ptr as ptr
+    len = load out+Slice_len as u64
+    ok1 = ne ptr, 0
+    ok2 = eq len, 12
+    !ptr
+    !len
+    !ok1
+    !ok2
+    !out
+    return

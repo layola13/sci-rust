@@ -1192,7 +1192,7 @@ zig test test_lib.zig --object lib.o
 
 使用：
 ```
-@import "sa_core.sa"
+@import "sa_core.sars"
 
 @main:
 L_ENTRY:

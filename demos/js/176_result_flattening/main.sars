@@ -1,0 +1,82 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/result.sal"
+@import "sa_std/core/result.sars"
+@import "sa_std/core/panic.sars"
+
+@const RESULT_OK = utf8:"2\n"
+@const RESULT_ERR = utf8:"error\n"
+
+#def Outer_SIZE = 24
+#def Outer_tag = +0
+#def Outer_inner_tag = +8
+#def Outer_inner_value = +16
+
+@make_inner(&slot: ptr) -> i32!:
+L_ENTRY:
+    EXPAND RESULT_SET_OK slot, 2
+    !slot
+    return 0
+
+@make_outer(&slot: ptr) -> i32!:
+L_ENTRY:
+    EXPAND RESULT_SET_OK slot, 0
+    inner_slot = ptr_add slot, Outer_inner_tag
+    inner_res = call @make_inner(&inner_slot)
+    inner_code = ? inner_res
+    !inner_res
+    !inner_slot
+    !slot
+    return inner_code
+
+@flatten_result(&outer: ptr) -> i32!:
+L_ENTRY:
+    EXPAND RESULT_IS_ERR outer_bad, outer
+    br outer_bad -> L_OUTER_ERR, L_OUTER_OK
+
+L_OUTER_OK:
+    inner_ptr = ptr_add outer, Outer_inner_tag
+    EXPAND RESULT_IS_ERR inner_bad, inner_ptr
+    br inner_bad -> L_INNER_ERR, L_INNER_OK
+
+L_INNER_OK:
+    EXPAND RESULT_GET_OK value, inner_ptr
+    !outer_bad
+    !inner_bad
+    !outer
+    return value
+
+L_OUTER_ERR:
+    !outer_bad
+    !outer
+    EXPAND PANIC_MSG 17, *RESULT_ERR, 6
+    return 0
+
+L_INNER_ERR:
+    !outer_bad
+    !inner_bad
+    !outer
+    EXPAND PANIC_MSG 17, *RESULT_ERR, 6
+    return 0
+
+@main() -> i32!:
+L_ENTRY:
+    outer = alloc Outer_SIZE
+    outer_res = call @make_outer(&outer)
+    outer_code = ? outer_res
+    flat_res = call @flatten_result(&outer)
+    value = ? flat_res
+    ok = eq value, 2
+    !value
+    !outer_code
+    !flat_res
+    !outer_res
+    !outer
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

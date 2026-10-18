@@ -1,0 +1,31 @@
+@import "sa_std/io/print.sai"
+@import "consumer/ownership_float_consumer.sars"
+
+@const OUT = utf8:"479\n"
+
+// 479 - Contract Resource Ownership (float): the bridge allocates a
+// slot holding 2.5 and transfers ownership; the consumer reads it,
+// releases it, and returns the value.
+@main() -> i32:
+L_ENTRY:
+    value = call @ownership_float_consumer_value()
+    five = 5 as i32
+    two_i = 2 as i32
+    five_f = sitofp five as f64
+    two_f = sitofp two_i as f64
+    expect = fdiv five_f, two_f
+    ok = fcmp_eq value, expect
+    !value
+    !five
+    !two_i
+    !five_f
+    !two_f
+    !expect
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

@@ -1,0 +1,13 @@
+@import "consumer/../bridge/param_vtable.sars"
+
+@param_vtable_consumer_value(x: f64) -> f64:
+L_ENTRY:
+    t = &PARAM_VT
+    fp = load t + 0 as ptr
+    ctx = alloc 8
+    v = call_indirect fp(x, ctx)
+    !x
+    !t
+    !fp
+    !ctx
+    return v

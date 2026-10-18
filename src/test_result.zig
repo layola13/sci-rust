@@ -287,7 +287,7 @@ test "panic text extracts numeric panic code" {
 
     const message = parsePanicInfo("PANIC[103]: assert_values.sa:8:5: expected=42 actual=41\n") orelse return error.TestUnexpectedResult;
     try std.testing.expectEqual(@as(u32, 103), message.code);
-    try std.testing.expectEqualStrings("assert_values.sa", message.location.?.file);
+    try std.testing.expectEqualStrings("assert_values.sars", message.location.?.file);
     try std.testing.expectEqual(@as(u32, 8), message.location.?.line);
     try std.testing.expectEqual(@as(u32, 5), message.location.?.col);
 }
@@ -304,8 +304,8 @@ test "failure formatting surfaces assertion values before raw stderr" {
             .expected = "42",
             .actual = "41",
         },
-        .location = .{ .file = "tests/assert_values.sa", .line = 4, .col = 1 },
-        .panic = .{ .code = 103, .location = .{ .file = "assert_values.sa", .line = 8, .col = 5 } },
+        .location = .{ .file = "tests/assert_values.sars", .line = 4, .col = 1 },
+        .panic = .{ .code = 103, .location = .{ .file = "assert_values.sars", .line = 8, .col = 5 } },
         .selector_name = "_saasm_test_1",
     });
 

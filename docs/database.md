@@ -785,7 +785,7 @@ src/db/
 ```sa
 // 在查询模块中
 @import "github.com/xiaoming/sa-db-shop/flash_sale.sadb-schema"
-@import "github.com/xiaoming/sa-db-shop/queries.sa"
+@import "github.com/xiaoming/sa-db-shop/queries.sars"
 ```
 
 ### 12.2 `sa.mod` 扩展（不新增 `sadb.mod`）

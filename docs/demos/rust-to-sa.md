@@ -1686,7 +1686,7 @@ L_ENTRY:
 ### SA（v0.3：使用 libsa_async 宏）
 ```
 // 引入标准异步宏库
-@import "libsa_async.sa"
+@import "libsa_async.sars"
 
 // 状态机上下文布局（仍需手写，因为跨 await 变量是业务特定的）
 #def Ctx_SIZE      = 40

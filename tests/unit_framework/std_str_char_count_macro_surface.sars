@@ -1,0 +1,18 @@
+@import "sa_std/string.sars"
+@import "sa_std/core/slice.sars"
+
+@const S = utf8:"hello"
+
+@test "sa_std str char_count"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS s, &S, 5
+    EXPAND STR_CHAR_COUNT n, s
+    ok = eq n, 5
+    !n
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10907)

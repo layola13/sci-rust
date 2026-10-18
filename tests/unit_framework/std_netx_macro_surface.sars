@@ -1,0 +1,73 @@
+@import "sa_std/netx.sars"
+
+// Netx SA 宏层的表面测试。
+// 不依赖 live io_uring/socket：手工填充一块 Ticket_SIZE 缓冲区，
+// 再通过 NETX_TICKET_* 宏直读回来，验证偏移/类型宽度与 netx.sal 常量一致。
+@test "sa_std netx ticket macro surface"():
+L_ENTRY:
+    ticket = stack_alloc Ticket_SIZE
+
+    // 手工写入一张 raw_bytes 票据的头部字段。
+    store ticket+Ticket_slot_id, 4242 as u32
+    store ticket+Ticket_op_code, NETX_OP_RAW_BYTES as u16
+    store ticket+Ticket_proto, NetxProto_RAW as u8
+    store ticket+Ticket_flags, NETX_FLAG_EOF as u8
+    store ticket+Ticket_payload_len, 7 as u32
+
+    // 逐字段宏直读。
+    EXPAND NETX_TICKET_SLOT_ID slot_id, ticket
+    EXPAND NETX_TICKET_OP_CODE op, ticket
+    EXPAND NETX_TICKET_PROTO proto, ticket
+    EXPAND NETX_TICKET_FLAGS flags, ticket
+    EXPAND NETX_TICKET_PAYLOAD_LEN plen, ticket
+
+    ok_slot = eq slot_id, 4242
+    ok_op = eq op, NETX_OP_RAW_BYTES
+    ok_proto = eq proto, NetxProto_RAW
+    ok_flags = eq flags, NETX_FLAG_EOF
+    ok_plen = eq plen, 7
+
+    // 复合头部宏一次读三字段。
+    EXPAND NETX_TICKET_HEADER hop, hslot, hproto, ticket
+    ok_hop = eq hop, NETX_OP_RAW_BYTES
+    ok_hslot = eq hslot, 4242
+    ok_hproto = eq hproto, NetxProto_RAW
+
+    // op 判定宏：命中与不命中各一。
+    EXPAND NETX_TICKET_IS_OP is_raw, ticket, NETX_OP_RAW_BYTES
+    EXPAND NETX_TICKET_IS_OP is_accept, ticket, NETX_OP_ACCEPT
+    ok_is_raw = eq is_raw, 1
+    ok_is_accept = eq is_accept, 0
+
+    ok01 = and ok_slot, ok_op
+    ok02 = and ok01, ok_proto
+    ok03 = and ok02, ok_flags
+    ok04 = and ok03, ok_plen
+    ok05 = and ok04, ok_hop
+    ok06 = and ok05, ok_hslot
+    ok07 = and ok06, ok_hproto
+    ok08 = and ok07, ok_is_raw
+    ok = and ok08, ok_is_accept
+
+    !is_accept
+    !is_raw
+    !hproto
+    !hslot
+    !hop
+    !plen
+    !flags
+    !proto
+    !op
+    !slot_id
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10160)
+
+L_PASS:
+    return 0
+
+// 引擎生命周期宏 (NETX_INIT / NETX_LISTEN / NETX_RECV_TICKET / NETX_PUSH_OUTBOUND /
+// NETX_BROADCAST / NETX_CLOSE_SLOT / NETX_SHUTDOWN) 会拉起真实的 io_uring reactor
+// 线程，其端到端往返由 src/runtime/sa_net_uring.zig 的 Zig 测试全套覆盖
+// (listen→accept→recv_ticket→push_outbound→broadcast→close)，此处不重复真机路径。

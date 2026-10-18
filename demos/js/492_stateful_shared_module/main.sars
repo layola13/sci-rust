@@ -1,0 +1,38 @@
+@import "sa_std/io/print.sai"
+@import "maker/maker.sars"
+@import "adder/adder.sars"
+
+@const OUT = utf8:"492\n"
+
+// 492 - Stateful shared module: the maker owns allocation (1.5),
+// the adder mutates through the borrowed handle (+2.5 == 4.0),
+// main releases the handle.
+@main() -> i32:
+L_ENTRY:
+    buf = call @make_acc()
+    five = 5 as i32
+    two_i = 2 as i32
+    five_f = sitofp five as f64
+    two_f = sitofp two_i as f64
+    two_half = fdiv five_f, two_f
+    r = call @acc_add(buf, two_half)
+    four_i = 4 as i32
+    four = sitofp four_i as f64
+    ok = fcmp_eq r, four
+    !buf
+    !five
+    !two_i
+    !five_f
+    !two_f
+    !two_half
+    !r
+    !four_i
+    !four
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

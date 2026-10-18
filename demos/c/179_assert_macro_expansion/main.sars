@@ -1,0 +1,36 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/panic.sars"
+
+@const RESULT_OK = utf8:"2\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@assert_eq(lhs: i32, rhs: i32) -> i32:
+L_ENTRY:
+    ok = eq lhs, rhs
+    br ok -> L_PASS, L_PANIC
+
+L_PASS:
+    !lhs
+    !rhs
+    return 1
+
+L_PANIC:
+    EXPAND PANIC_MSG 17, *RESULT_ERR, 6
+    return 0
+
+@main() -> i32:
+L_ENTRY:
+    lhs = add 1, 1
+    pass = call @assert_eq(lhs, 2)
+    ok = eq pass, 1
+    !lhs
+    !pass
+    br ok -> L_OK, L_PANIC
+
+L_OK:
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_PANIC:
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

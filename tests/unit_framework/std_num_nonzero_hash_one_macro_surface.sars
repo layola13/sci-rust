@@ -1,0 +1,183 @@
+@import "sa_std/num.sars"
+@import "sa_std/hash.sars"
+
+@test "sa_std nonzero integer hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+    state = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 77, 88
+
+    nz_u8 = stack_alloc NonZeroU8_SIZE
+    nz_u16 = stack_alloc NonZeroU16_SIZE
+    nz_u32 = stack_alloc NonZeroU32_SIZE
+    nz_u64 = stack_alloc NonZeroU64_SIZE
+    nz_usize = stack_alloc NonZeroUsize_SIZE
+    nz_i8 = stack_alloc NonZeroI8_SIZE
+    nz_i16 = stack_alloc NonZeroI16_SIZE
+    nz_i32 = stack_alloc NonZeroI32_SIZE
+    nz_i64 = stack_alloc NonZeroI64_SIZE
+    nz_isize = stack_alloc NonZeroIsize_SIZE
+    nz_u64_diff = stack_alloc NonZeroU64_SIZE
+
+    EXPAND NONZERO_U8_NEW ok_u8, nz_u8, 7
+    EXPAND NONZERO_U16_NEW ok_u16, nz_u16, 300
+    EXPAND NONZERO_U32_NEW ok_u32, nz_u32, 70000
+    EXPAND NONZERO_U64_NEW ok_u64, nz_u64, 9000000
+    EXPAND NONZERO_USIZE_NEW ok_usize, nz_usize, 11
+    EXPAND NONZERO_I8_NEW ok_i8, nz_i8, -7
+    EXPAND NONZERO_I16_NEW ok_i16, nz_i16, -300
+    EXPAND NONZERO_I32_NEW ok_i32, nz_i32, -70000
+    EXPAND NONZERO_I64_NEW ok_i64, nz_i64, -9000000
+    EXPAND NONZERO_ISIZE_NEW ok_isize, nz_isize, -11
+    EXPAND NONZERO_U64_NEW ok_u64_diff, nz_u64_diff, 9000001
+
+    EXPAND NONZERO_U8_HASH nz_u8_hash, nz_u8
+    EXPAND HASH_U8 u8_hash, 7
+    EXPAND NONZERO_U16_HASH nz_u16_hash, nz_u16
+    EXPAND HASH_U16 u16_hash, 300
+    EXPAND NONZERO_U32_HASH nz_u32_hash, nz_u32
+    EXPAND HASH_U32 u32_hash, 70000
+    EXPAND NONZERO_U64_HASH nz_u64_hash, nz_u64
+    EXPAND HASH_U64 u64_hash, 9000000
+    EXPAND NONZERO_USIZE_HASH nz_usize_hash, nz_usize
+    EXPAND HASH_USIZE usize_hash, 11
+    EXPAND NONZERO_I8_HASH nz_i8_hash, nz_i8
+    EXPAND HASH_I8 i8_hash, -7
+    EXPAND NONZERO_I16_HASH nz_i16_hash, nz_i16
+    EXPAND HASH_I16 i16_hash, -300
+    EXPAND NONZERO_I32_HASH nz_i32_hash, nz_i32
+    EXPAND HASH_I32 i32_hash, -70000
+    EXPAND NONZERO_I64_HASH nz_i64_hash, nz_i64
+    EXPAND HASH_I64 i64_hash, -9000000
+    EXPAND NONZERO_ISIZE_HASH nz_isize_hash, nz_isize
+    EXPAND HASH_ISIZE isize_hash, -11
+    EXPAND NONZERO_U64_HASH nz_u64_diff_hash, nz_u64_diff
+
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_U8 build_nz_u8, builder, nz_u8
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U8 build_u8, builder, 7
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_U16 build_nz_u16, builder, nz_u16
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U16 build_u16, builder, 300
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_U32 build_nz_u32, builder, nz_u32
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U32 build_u32, builder, 70000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_U64 build_nz_u64, builder, nz_u64
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U64 build_u64, builder, 9000000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_USIZE build_nz_usize, builder, nz_usize
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_USIZE build_usize, builder, 11
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_I8 build_nz_i8, builder, nz_i8
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I8 build_i8, builder, -7
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_I16 build_nz_i16, builder, nz_i16
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I16 build_i16, builder, -300
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_I32 build_nz_i32, builder, nz_i32
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I32 build_i32, builder, -70000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_I64 build_nz_i64, builder, nz_i64
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I64 build_i64, builder, -9000000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_NONZERO_ISIZE build_nz_isize, builder, nz_isize
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_ISIZE build_isize, builder, -11
+
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_U8 state_nz_u8, state, nz_u8
+    EXPAND RANDOM_STATE_HASH_ONE_U8 state_u8, state, 7
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_U16 state_nz_u16, state, nz_u16
+    EXPAND RANDOM_STATE_HASH_ONE_U16 state_u16, state, 300
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_U32 state_nz_u32, state, nz_u32
+    EXPAND RANDOM_STATE_HASH_ONE_U32 state_u32, state, 70000
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_U64 state_nz_u64, state, nz_u64
+    EXPAND RANDOM_STATE_HASH_ONE_U64 state_u64, state, 9000000
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_USIZE state_nz_usize, state, nz_usize
+    EXPAND RANDOM_STATE_HASH_ONE_USIZE state_usize, state, 11
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_I8 state_nz_i8, state, nz_i8
+    EXPAND RANDOM_STATE_HASH_ONE_I8 state_i8, state, -7
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_I16 state_nz_i16, state, nz_i16
+    EXPAND RANDOM_STATE_HASH_ONE_I16 state_i16, state, -300
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_I32 state_nz_i32, state, nz_i32
+    EXPAND RANDOM_STATE_HASH_ONE_I32 state_i32, state, -70000
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_I64 state_nz_i64, state, nz_i64
+    EXPAND RANDOM_STATE_HASH_ONE_I64 state_i64, state, -9000000
+    EXPAND RANDOM_STATE_HASH_ONE_NONZERO_ISIZE state_nz_isize, state, nz_isize
+    EXPAND RANDOM_STATE_HASH_ONE_ISIZE state_isize, state, -11
+
+    ok_unsigned_new_01 = and ok_u8, ok_u16
+    ok_unsigned_new_02 = and ok_u32, ok_u64
+    ok_unsigned_new_03 = and ok_usize, ok_u64_diff
+    ok_unsigned_new_04 = and ok_unsigned_new_01, ok_unsigned_new_02
+    ok_unsigned_new = and ok_unsigned_new_04, ok_unsigned_new_03
+    ok_signed_new_01 = and ok_i8, ok_i16
+    ok_signed_new_02 = and ok_i32, ok_i64
+    ok_signed_new_03 = and ok_signed_new_01, ok_signed_new_02
+    ok_signed_new = and ok_signed_new_03, ok_isize
+    ok_new = and ok_unsigned_new, ok_signed_new
+
+    direct_u_01 = eq nz_u8_hash, u8_hash
+    direct_u_02 = eq nz_u16_hash, u16_hash
+    direct_u_03 = eq nz_u32_hash, u32_hash
+    direct_u_04 = eq nz_u64_hash, u64_hash
+    direct_u_05 = eq nz_usize_hash, usize_hash
+    direct_u_06 = and direct_u_01, direct_u_02
+    direct_u_07 = and direct_u_03, direct_u_04
+    direct_unsigned = and direct_u_06, direct_u_07
+    direct_unsigned_all = and direct_unsigned, direct_u_05
+    direct_i_01 = eq nz_i8_hash, i8_hash
+    direct_i_02 = eq nz_i16_hash, i16_hash
+    direct_i_03 = eq nz_i32_hash, i32_hash
+    direct_i_04 = eq nz_i64_hash, i64_hash
+    direct_i_05 = eq nz_isize_hash, isize_hash
+    direct_i_06 = and direct_i_01, direct_i_02
+    direct_i_07 = and direct_i_03, direct_i_04
+    direct_signed = and direct_i_06, direct_i_07
+    direct_signed_all = and direct_signed, direct_i_05
+    direct_all = and direct_unsigned_all, direct_signed_all
+    value_matters = ne nz_u64_hash, nz_u64_diff_hash
+
+    build_u_01 = eq build_nz_u8, build_u8
+    build_u_02 = eq build_nz_u16, build_u16
+    build_u_03 = eq build_nz_u32, build_u32
+    build_u_04 = eq build_nz_u64, build_u64
+    build_u_05 = eq build_nz_usize, build_usize
+    build_i_01 = eq build_nz_i8, build_i8
+    build_i_02 = eq build_nz_i16, build_i16
+    build_i_03 = eq build_nz_i32, build_i32
+    build_i_04 = eq build_nz_i64, build_i64
+    build_i_05 = eq build_nz_isize, build_isize
+    build_c01 = and build_u_01, build_u_02
+    build_c02 = and build_u_03, build_u_04
+    build_c03 = and build_i_01, build_i_02
+    build_c04 = and build_i_03, build_i_04
+    build_c05 = and build_c01, build_c02
+    build_c06 = and build_c03, build_c04
+    build_c07 = and build_c05, build_u_05
+    build_c08 = and build_c06, build_i_05
+    build_all = and build_c07, build_c08
+
+    state_u_01 = eq state_nz_u8, state_u8
+    state_u_02 = eq state_nz_u16, state_u16
+    state_u_03 = eq state_nz_u32, state_u32
+    state_u_04 = eq state_nz_u64, state_u64
+    state_u_05 = eq state_nz_usize, state_usize
+    state_i_01 = eq state_nz_i8, state_i8
+    state_i_02 = eq state_nz_i16, state_i16
+    state_i_03 = eq state_nz_i32, state_i32
+    state_i_04 = eq state_nz_i64, state_i64
+    state_i_05 = eq state_nz_isize, state_isize
+    state_c01 = and state_u_01, state_u_02
+    state_c02 = and state_u_03, state_u_04
+    state_c03 = and state_i_01, state_i_02
+    state_c04 = and state_i_03, state_i_04
+    state_c05 = and state_c01, state_c02
+    state_c06 = and state_c03, state_c04
+    state_c07 = and state_c05, state_u_05
+    state_c08 = and state_c06, state_i_05
+    state_all = and state_c07, state_c08
+
+    c01 = and ok_new, direct_all
+    c02 = and c01, value_matters
+    c03 = and c02, build_all
+    ok = and c03, state_all
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10591)
+
+L_PASS:
+    !ok
+    return 0

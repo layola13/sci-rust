@@ -1,0 +1,18 @@
+@import "consumer/../layout/dims.sal"
+@import "consumer/../left/bridge.sars"
+@import "consumer/../right/bridge.sars"
+
+@consumer_sum() -> f64:
+L_ENTRY:
+    slot = alloc Dims_SIZE
+    a = call @left_write(&slot)
+    b = call @right_write(&slot)
+    x = load slot+Dims_x as f64
+    y = load slot+Dims_y as f64
+    s = fadd x, y
+    !slot
+    !a
+    !b
+    !x
+    !y
+    return s

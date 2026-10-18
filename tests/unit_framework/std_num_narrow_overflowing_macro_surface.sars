@@ -1,0 +1,82 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_NARROW_OVERFLOWING_EQ %out_acc, %prev_acc, %value, %expected
+    __test_narrow_overflowing_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_narrow_overflowing_eq_%out_acc
+    !__test_narrow_overflowing_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std narrow unsigned primitive overflowing macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_OVERFLOWING_ADD u8_add_value, u8_add_over, NUM_U8_MAX, 1
+    EXPAND NUM_U16_OVERFLOWING_ADD u16_add_value, u16_add_over, NUM_U16_MAX, 1
+    EXPAND NUM_U32_OVERFLOWING_ADD u32_add_value, u32_add_over, NUM_U32_MAX, 1
+    EXPAND NUM_U8_OVERFLOWING_SUB u8_sub_value, u8_sub_over, 0, 1
+    EXPAND NUM_U16_OVERFLOWING_SUB u16_sub_value, u16_sub_over, 0, 1
+    EXPAND NUM_U32_OVERFLOWING_SUB u32_sub_value, u32_sub_over, 0, 1
+    EXPAND NUM_U8_OVERFLOWING_MUL u8_mul_value, u8_mul_over, 128, 2
+    EXPAND NUM_U16_OVERFLOWING_MUL u16_mul_value, u16_mul_over, 32768, 2
+    EXPAND NUM_U32_OVERFLOWING_MUL u32_mul_value, u32_mul_over, 2147483648, 2
+    EXPAND NUM_U8_OVERFLOWING_SHL u8_shl_value, u8_shl_over, 1, 8
+    EXPAND NUM_U16_OVERFLOWING_SHL u16_shl_value, u16_shl_over, 1, 16
+    EXPAND NUM_U32_OVERFLOWING_SHL u32_shl_value, u32_shl_over, 1, 32
+    EXPAND NUM_U8_OVERFLOWING_SHR u8_shr_value, u8_shr_over, 16, 8
+    EXPAND NUM_U16_OVERFLOWING_SHR u16_shr_value, u16_shr_over, 256, 16
+    EXPAND NUM_U32_OVERFLOWING_SHR u32_shr_value, u32_shr_over, 65536, 32
+
+    EXPAND NUM_U8_OVERFLOWING_ADD u8_add_ok_value, u8_add_ok_over, 5, 2
+    EXPAND NUM_U16_OVERFLOWING_SUB u16_sub_ok_value, u16_sub_ok_over, 5, 2
+    EXPAND NUM_U32_OVERFLOWING_MUL u32_mul_ok_value, u32_mul_ok_over, 7, 6
+    EXPAND NUM_U8_OVERFLOWING_SHL u8_shl_ok_value, u8_shl_ok_over, 1, 4
+    EXPAND NUM_U16_OVERFLOWING_SHR u16_shr_ok_value, u16_shr_ok_over, 256, 4
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_01, acc_00, u8_add_value, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_02, acc_01, u8_add_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_03, acc_02, u16_add_value, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_04, acc_03, u16_add_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_05, acc_04, u32_add_value, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_06, acc_05, u32_add_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_07, acc_06, u8_sub_value, NUM_U8_MAX
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_08, acc_07, u8_sub_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_09, acc_08, u16_sub_value, NUM_U16_MAX
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_10, acc_09, u16_sub_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_11, acc_10, u32_sub_value, NUM_U32_MAX
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_12, acc_11, u32_sub_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_13, acc_12, u8_mul_value, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_14, acc_13, u8_mul_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_15, acc_14, u16_mul_value, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_16, acc_15, u16_mul_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_17, acc_16, u32_mul_value, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_18, acc_17, u32_mul_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_19, acc_18, u8_shl_value, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_20, acc_19, u8_shl_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_21, acc_20, u16_shl_value, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_22, acc_21, u16_shl_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_23, acc_22, u32_shl_value, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_24, acc_23, u32_shl_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_25, acc_24, u8_shr_value, 16
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_26, acc_25, u8_shr_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_27, acc_26, u16_shr_value, 256
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_28, acc_27, u16_shr_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_29, acc_28, u32_shr_value, 65536
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_30, acc_29, u32_shr_over, 1
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_31, acc_30, u8_add_ok_value, 7
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_32, acc_31, u8_add_ok_over, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_33, acc_32, u16_sub_ok_value, 3
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_34, acc_33, u16_sub_ok_over, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_35, acc_34, u32_mul_ok_value, 42
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_36, acc_35, u32_mul_ok_over, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_37, acc_36, u8_shl_ok_value, 16
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_38, acc_37, u8_shl_ok_over, 0
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_39, acc_38, u16_shr_ok_value, 16
+    EXPAND TEST_NARROW_OVERFLOWING_EQ acc_40, acc_39, u16_shr_ok_over, 0
+    br acc_40 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_40
+    panic(10652)
+
+L_PASS:
+    !acc_40
+    return 0

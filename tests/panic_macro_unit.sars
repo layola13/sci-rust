@@ -1,0 +1,13 @@
+@import "../sa_std/core/sa_core.sars"
+
+@test should_panic "todo macro panics"():
+L_ENTRY:
+    EXPAND TODO
+
+@test should_panic "unimplemented macro panics"():
+L_ENTRY:
+    EXPAND UNIMPLEMENTED
+
+@test should_panic "unreachable macro panics"():
+L_ENTRY:
+    EXPAND UNREACHABLE

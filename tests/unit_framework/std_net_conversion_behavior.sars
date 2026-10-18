@@ -1,0 +1,82 @@
+@import "sa_std/net.sars"
+
+@test "sa_std ipv4 ipv6 conversion and canonical behavior"():
+L_ENTRY:
+    ipv4 = stack_alloc NetIpv4Addr_SIZE
+    compatible = stack_alloc NetIpv6Addr_SIZE
+    mapped = stack_alloc NetIpv6Addr_SIZE
+    ordinary = stack_alloc NetIpv6Addr_SIZE
+    out_v4_compatible = stack_alloc NetIpv4Addr_SIZE
+    out_v4_compatible_mapped = stack_alloc NetIpv4Addr_SIZE
+    out_v4_mapped = stack_alloc NetIpv4Addr_SIZE
+    out_v4_mapped_mapped = stack_alloc NetIpv4Addr_SIZE
+    out_v4_ordinary = stack_alloc NetIpv4Addr_SIZE
+    canonical_mapped = stack_alloc NetIpAddr_SIZE
+    canonical_v4 = stack_alloc NetIpAddr_SIZE
+    ip_v4 = stack_alloc NetIpAddr_SIZE
+    ip_v6 = stack_alloc NetIpAddr_SIZE
+    out_ip_v4 = stack_alloc NetIpv4Addr_SIZE
+    out_ip_v4_from_v6 = stack_alloc NetIpv4Addr_SIZE
+    out_ip_v6 = stack_alloc NetIpv6Addr_SIZE
+    out_ip_v6_from_v4 = stack_alloc NetIpv6Addr_SIZE
+
+    EXPAND NET_IPV4_NEW ipv4, 192, 0, 2, 33
+    EXPAND NET_IPV4_TO_IPV6_COMPATIBLE compatible, ipv4
+    EXPAND NET_IPV4_TO_IPV6_MAPPED mapped, ipv4
+    EXPAND NET_IPV6_NEW ordinary, 8193, 3512, 0, 0, 0, 0, 0, 1
+
+    EXPAND NET_IPV6_IS_IPV4_MAPPED mapped_is_mapped, mapped
+    EXPAND NET_IPV6_IS_IPV4_MAPPED compatible_is_mapped, compatible
+    EXPAND NET_IPV6_IS_IPV4_MAPPED ordinary_is_mapped, ordinary
+    EXPAND NET_IPV6_TO_IPV4 compatible_ok, out_v4_compatible, compatible
+    EXPAND NET_IPV6_TO_IPV4_MAPPED compatible_mapped_ok, out_v4_compatible_mapped, compatible
+    EXPAND NET_IPV6_TO_IPV4 mapped_ok, out_v4_mapped, mapped
+    EXPAND NET_IPV6_TO_IPV4_MAPPED mapped_mapped_ok, out_v4_mapped_mapped, mapped
+    EXPAND NET_IPV6_TO_IPV4 ordinary_ok, out_v4_ordinary, ordinary
+    EXPAND NET_IPV4_EQ compatible_eq, out_v4_compatible, ipv4
+    EXPAND NET_IPV4_EQ mapped_eq, out_v4_mapped, ipv4
+
+    EXPAND NET_IP_ADDR_V4_NEW ip_v4, ipv4
+    EXPAND NET_IP_ADDR_V6_NEW ip_v6, mapped
+    EXPAND NET_IP_ADDR_TO_IPV4 ip_v4_ok, out_ip_v4, ip_v4
+    EXPAND NET_IP_ADDR_TO_IPV4 ip_v6_ok, out_ip_v4_from_v6, ip_v6
+    EXPAND NET_IP_ADDR_TO_IPV6 ip_v4_to6_ok, out_ip_v6_from_v4, ip_v4
+    EXPAND NET_IP_ADDR_TO_IPV6 ip_v6_to6_ok, out_ip_v6, ip_v6
+    EXPAND NET_IP_ADDR_TO_CANONICAL canonical_mapped, ip_v6
+    EXPAND NET_IP_ADDR_TO_CANONICAL canonical_v4, ip_v4
+    EXPAND NET_IP_ADDR_IS_IPV4 canonical_mapped_is_v4, canonical_mapped
+    EXPAND NET_IP_ADDR_IS_IPV4 canonical_v4_is_v4, canonical_v4
+    EXPAND NET_IP_ADDR_EQ canonical_mapped_eq, canonical_mapped, ip_v4
+    EXPAND NET_IP_ADDR_EQ canonical_v4_eq, canonical_v4, ip_v4
+
+    compatible_mapped_zero = eq compatible_mapped_ok, 0
+    ordinary_ok_zero = eq ordinary_ok, 0
+    compatible_not_mapped = eq compatible_is_mapped, 0
+    ordinary_not_mapped = eq ordinary_is_mapped, 0
+    ip_v4_to6_zero = eq ip_v4_to6_ok, 0
+    canonical_mapped_v4 = eq canonical_mapped_is_v4, 1
+    canonical_v4_v4 = eq canonical_v4_is_v4, 1
+
+    ok01 = and mapped_is_mapped, compatible_mapped_zero
+    ok02 = and ok01, ordinary_not_mapped
+    ok03 = and ok02, compatible_ok
+    ok04 = and ok03, mapped_ok
+    ok05 = and ok04, mapped_mapped_ok
+    ok06 = and ok05, ordinary_ok_zero
+    ok07 = and ok06, compatible_eq
+    ok08 = and ok07, mapped_eq
+    ok09 = and ok08, ip_v4_ok
+    ok10 = and ok09, ip_v6_ok
+    ok11 = and ok10, ip_v4_to6_zero
+    ok12 = and ok11, ip_v6_to6_ok
+    ok13 = and ok12, canonical_mapped_v4
+    ok14 = and ok13, canonical_v4_v4
+    ok15 = and ok14, canonical_mapped_eq
+    ok16 = and ok15, canonical_v4_eq
+    ok = and ok16, compatible_not_mapped
+
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    panic(10610)
+L_PASS:
+    return 0

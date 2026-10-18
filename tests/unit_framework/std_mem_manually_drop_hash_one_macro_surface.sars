@@ -1,0 +1,89 @@
+@import "sa_std/mem.sars"
+
+@test "sa_std ManuallyDrop hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    state = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 41, 42
+
+    manual = stack_alloc ManuallyDropU64_SIZE
+    manual_same = stack_alloc ManuallyDropU64_SIZE
+    manual_other = stack_alloc ManuallyDropU64_SIZE
+    EXPAND MANUALLY_DROP_U64_NEW manual, 88
+    EXPAND MANUALLY_DROP_U64_NEW manual_same, 88
+    EXPAND MANUALLY_DROP_U64_NEW manual_other, 89
+
+    writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_MANUALLY_DROP_U64 writer_hasher, manual
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, writer_hasher
+    EXPAND MANUALLY_DROP_U64_HASH manual_hash, manual
+    EXPAND MANUALLY_DROP_U64_HASH manual_same_hash, manual_same
+    EXPAND MANUALLY_DROP_U64_HASH manual_other_hash, manual_other
+    EXPAND HASH_U64 primitive_hash, 88
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_MANUALLY_DROP_U64 build_hash, builder, manual
+    EXPAND RANDOM_STATE_HASH_ONE_MANUALLY_DROP_U64 state_hash, state, manual
+
+    state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_U64 state_hasher, 88
+    EXPAND DEFAULT_HASHER_FINISH manual_state_hash, state_hasher
+
+    EXPAND MANUALLY_DROP_U64_AS_MUT_PTR manual_mut_ptr, manual
+    store manual_mut_ptr+0, 90 as u64
+    EXPAND MANUALLY_DROP_U64_HASH changed_hash, manual
+    EXPAND HASH_U64 changed_primitive_hash, 90
+
+    ok_writer = eq writer_hash, manual_hash
+    ok_primitive = eq manual_hash, primitive_hash
+    ok_same = eq manual_hash, manual_same_hash
+    ok_value = ne manual_hash, manual_other_hash
+    ok_build = eq build_hash, manual_hash
+    ok_state = eq state_hash, manual_state_hash
+    ok_changed_primitive = eq changed_hash, changed_primitive_hash
+    ok_changed_value = ne changed_hash, manual_hash
+
+    c01 = and ok_writer, ok_primitive
+    c02 = and c01, ok_same
+    c03 = and c02, ok_value
+    c04 = and c03, ok_build
+    c05 = and c04, ok_state
+    c06 = and c05, ok_changed_primitive
+    ok = and c06, ok_changed_value
+
+    !builder
+    !writer_hash
+    !manual_hash
+    !manual_same_hash
+    !manual_other_hash
+    !primitive_hash
+    !build_hash
+    !state_hash
+    !manual_state_hash
+    !manual_mut_ptr
+    !changed_hash
+    !changed_primitive_hash
+    !ok_writer
+    !ok_primitive
+    !ok_same
+    !ok_value
+    !ok_build
+    !ok_state
+    !ok_changed_primitive
+    !ok_changed_value
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10598)
+
+L_PASS:
+    !ok
+    return 0

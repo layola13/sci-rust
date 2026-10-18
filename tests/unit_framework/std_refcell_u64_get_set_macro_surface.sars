@@ -1,0 +1,34 @@
+@import "sa_std/core/refcell.sars"
+
+@test "sa_std refcell_u64 get set"():
+L_ENTRY:
+    EXPAND REFCELL_U64_NEW cell, 5
+    EXPAND REFCELL_U64_GET v0, cell
+    EXPAND REFCELL_U64_SET cell, 9
+    EXPAND REFCELL_U64_GET v1, cell
+    EXPAND REFCELL_U64_REPLACE old, cell, 11
+    EXPAND REFCELL_U64_GET v2, cell
+    a = eq v0, 5
+    b = eq v1, 9
+    c = eq old, 9
+    d = eq v2, 11
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok = and ok02, d
+    !v0
+    !v1
+    !old
+    !v2
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10956)

@@ -1,8 +1,0 @@
-@import "consumer/../impl/float_const_impl.sa"
-
-@float_consumer_value() -> f64:
-L_ENTRY:
-    v = call @float_const_value()
-    d = fadd v, v
-    !v
-    return d

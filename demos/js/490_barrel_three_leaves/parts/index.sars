@@ -1,0 +1,16 @@
+@import "parts/a.sars"
+@import "parts/b.sars"
+@import "parts/c.sars"
+
+@export barrel_value() -> i32:
+L_ENTRY:
+    a = call @part_a()
+    b = call @part_b()
+    c = call @part_c()
+    s1 = add a, b
+    s = add s1, c
+    !a
+    !b
+    !c
+    !s1
+    return s

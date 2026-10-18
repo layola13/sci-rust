@@ -29,7 +29,7 @@ pub const UpdateResult = struct {
 };
 
 fn rejectGlobalProjectRoot(project_root: []const u8) !void {
-    if (std.mem.startsWith(u8, project_root, "~/.sa/") or std.mem.eql(u8, project_root, "~/.sa")) {
+    if (std.mem.startsWith(u8, project_root, "~/.sa/") or std.mem.eql(u8, project_root, "~/.sars")) {
         return error.ForbiddenGlobalConfig;
     }
     if (std.mem.startsWith(u8, project_root, "/etc/sa/") or std.mem.eql(u8, project_root, "/etc/sa")) {
@@ -289,7 +289,7 @@ test "updateProjectLock creates a project-local lock and is idempotent" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "call @sys_print(*MSG, 2)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "call @sys_print(*MSG, 2)\n" });
     const pkg_root = try tmp.dir.realPathFileAlloc(std.testing.io, "pkg", std.testing.allocator);
     defer std.testing.allocator.free(pkg_root);
     const project_root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
@@ -332,7 +332,7 @@ test "updateProjectLock clears stale target hashes when source changes" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "call @sys_print(*MSG, 2)\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "call @sys_print(*MSG, 2)\n" });
     const pkg_root = try tmp.dir.realPathFileAlloc(std.testing.io, "pkg", std.testing.allocator);
     defer std.testing.allocator.free(pkg_root);
     const project_root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
@@ -346,7 +346,7 @@ test "updateProjectLock clears stale target hashes when source changes" {
     defer wasm.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(u8, 2), wasm.target_count);
 
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "call @sys_print(*MSG, 2)\ncall @sys_time_now()\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "call @sys_print(*MSG, 2)\ncall @sys_time_now()\n" });
     var changed_report = try audit.auditPackage(std.testing.allocator, "github.com/example/pkg", "v1", pkg_root, &.{ .io_write, .time_now });
     defer changed_report.deinit(std.testing.allocator);
     try std.testing.expectError(error.UpstreamShaMismatch, updateProjectLock(std.testing.allocator, project_root, changed_report, hashArtifactBytes("native-v2"), .{ .target_key = "native" }));
@@ -367,7 +367,7 @@ test "updateProjectLock rejects global state paths" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     try tmp.dir.createDirPath(std.testing.io, "pkg");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sa", .data = "@main() -> i32:\nreturn 0\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "pkg/index.sars", .data = "@main() -> i32:\nreturn 0\n" });
     const pkg_root = try tmp.dir.realPathFileAlloc(std.testing.io, "pkg", std.testing.allocator);
     defer std.testing.allocator.free(pkg_root);
     var report = try audit.auditPackage(std.testing.allocator, "github.com/example/pkg", "v1", pkg_root, &.{});

@@ -1,0 +1,51 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+
+@const RESULT_OK = utf8:"6\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@sum_queue(&slice: ptr) -> i32:
+L_ENTRY:
+    EXPAND SLICE_GET_PTR data, slice
+    first = load data+0 as i32
+    second_ptr = ptr_add data, 4
+    second = load second_ptr+0 as i32
+    third_ptr = ptr_add data, 8
+    third = load third_ptr+0 as i32
+    partial = add first, second
+    total = add partial, third
+    !first
+    !second
+    !third
+    !partial
+    !third_ptr
+    !second_ptr
+    !data
+    !slice
+    return total
+
+@main() -> i32:
+L_ENTRY:
+    buf = alloc 12
+    store buf+0, 1 as i32
+    store buf+4, 2 as i32
+    store buf+8, 3 as i32
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, buf, 3
+    total = call @sum_queue(&slice)
+    ok = eq total, 6
+    !total
+    !slice
+    !buf
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

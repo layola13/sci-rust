@@ -1,0 +1,23 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap is_empty"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_IS_EMPTY e0, heap
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_IS_EMPTY e1, heap
+    EXPAND BINARY_HEAP_FREE heap
+    a = eq e0, 1
+    b = eq e1, 0
+    ok = and a, b
+    !e0
+    !e1
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10975)

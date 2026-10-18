@@ -4431,7 +4431,7 @@ fn injectImportedFile(
     cache_dependency: ?*ExpandedImportCacheDependency,
 ) anyerror!void {
     const entry_path = imported.entry_path;
-    if (!std.mem.endsWith(u8, entry_path, ".sa") and !std.mem.endsWith(u8, entry_path, ".sars")) return;
+    if (!std.mem.endsWith(u8, entry_path, ".sars") and !std.mem.endsWith(u8, entry_path, ".sars")) return;
 
     const effective_package_identity = if (imported.package_identity) |identity| blk: {
         break :blk try rememberPackageIdentity(allocator, seen_package_identities, identity);
@@ -5340,7 +5340,7 @@ test "symbol id remap clones full function signatures" {
         .return_fallible = true,
         .entry_inst_idx = 12,
         .is_ffi_wrapper = false,
-        .upstream_file = try std.testing.allocator.dupe(u8, "test.sa"),
+        .upstream_file = try std.testing.allocator.dupe(u8, "test.sars"),
         .upstream_loc = null,
         .param_ids = try std.testing.allocator.dupe(u32, &.{ lhs_id, rhs_id }),
         .reg_ids = try std.testing.allocator.dupe(u32, &.{ lhs_id, rhs_id, tmp_id }),
@@ -5369,7 +5369,7 @@ test "symbol id remap clones full function signatures" {
     try std.testing.expect(cloned.param_ids.ptr != source_sig.param_ids.ptr);
     try std.testing.expect(cloned.reg_ids.ptr != source_sig.reg_ids.ptr);
     try std.testing.expect(cloned.upstream_file.?.ptr != source_sig.upstream_file.?.ptr);
-    try std.testing.expectEqualStrings("test.sa", cloned.upstream_file.?);
+    try std.testing.expectEqualStrings("test.sars", cloned.upstream_file.?);
     try std.testing.expectEqualStrings(cloned.upstream_file.?, cloned.upstream_loc.?.file);
     try std.testing.expectEqual(@as(u32, 9), cloned.upstream_loc.?.line);
     try std.testing.expectEqual(@as(u32, 4), cloned.upstream_loc.?.col);
@@ -5424,7 +5424,7 @@ test "frontend cache merge keeps identical defs and rejects conflicts" {
 }
 
 test "frontend cache merge clones const declarations and rejects conflicts" {
-    const upstream_file = try std.testing.allocator.dupe(u8, "module.sa");
+    const upstream_file = try std.testing.allocator.dupe(u8, "module.sars");
     var source_decl = try common_const_decl.parseConstDecl(
         std.testing.allocator,
         "@const HELLO = utf8:\"hello\"",
@@ -5491,7 +5491,7 @@ test "frontend cache clone remaps instruction symbols and owned metadata" {
         .call,
         7,
         3,
-        .{ .file = try std.testing.allocator.dupe(u8, "source.sa"), .line = 40, .col = 5 },
+        .{ .file = try std.testing.allocator.dupe(u8, "source.sars"), .line = 40, .col = 5 },
         "dst = call callee(value)",
     );
     defer std.testing.allocator.free(source.upstream_loc.?.file);
@@ -5528,7 +5528,7 @@ test "frontend cache clone remaps instruction symbols and owned metadata" {
     try std.testing.expectEqualStrings("pkg/core", cloned.package_identity.?);
     try std.testing.expect(cloned.package_identity.?.ptr != source.package_identity.?.ptr);
     try std.testing.expectEqual(@as(u8, 7), cloned.package_source_sha256.?[0]);
-    try std.testing.expectEqualStrings("source.sa", cloned.upstream_loc.?.file);
+    try std.testing.expectEqualStrings("source.sars", cloned.upstream_loc.?.file);
     try std.testing.expect(cloned.upstream_loc.?.file.ptr != source.upstream_loc.?.file.ptr);
     try std.testing.expectEqual(@as(u32, 40), cloned.upstream_loc.?.line);
     try std.testing.expectEqual(@as(u32, 5), cloned.upstream_loc.?.col);
@@ -6141,7 +6141,7 @@ test "flattenFile expands relative @import files" {
     try iface.writeAll("@extern sa_print_bytes(&msg: ptr, len: u64) -> void\n");
     iface.close();
 
-    var main_file = try tdir.createFile("main.sa", .{ .truncate = true });
+    var main_file = try tdir.createFile("main.sars", .{ .truncate = true });
     try main_file.writeAll(
         \\@import "sa_std/io/print.sai"
         \\@main() -> i32:
@@ -6150,10 +6150,10 @@ test "flattenFile expands relative @import files" {
     );
     main_file.close();
 
-    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sars", 4096);
     defer std.testing.allocator.free(source);
 
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sars");
     defer std.testing.allocator.free(source_path);
 
     var result = try flattenFile(std.testing.allocator, source_path, source);
@@ -6171,7 +6171,7 @@ test "flattenFile tags imported functions with imported source path" {
     defer tmp.cleanup();
     var tdir: sio.Dir = .{ .inner = tmp.dir };
 
-    var module_file = try tdir.createFile("module.sa", .{ .truncate = true });
+    var module_file = try tdir.createFile("module.sars", .{ .truncate = true });
     try module_file.writeAll(
         \\@helper() -> i32:
         \\L_ENTRY:
@@ -6179,21 +6179,21 @@ test "flattenFile tags imported functions with imported source path" {
     );
     module_file.close();
 
-    var main_file = try tdir.createFile("main.sa", .{ .truncate = true });
+    var main_file = try tdir.createFile("main.sars", .{ .truncate = true });
     try main_file.writeAll(
-        \\@import "module.sa"
+        \\@import "module.sars"
         \\@main() -> i32:
         \\L_ENTRY:
         \\    return 0
     );
     main_file.close();
 
-    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sars", 4096);
     defer std.testing.allocator.free(source);
 
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sars");
     defer std.testing.allocator.free(source_path);
-    const module_path = try tdir.realpathAlloc(std.testing.allocator, "module.sa");
+    const module_path = try tdir.realpathAlloc(std.testing.allocator, "module.sars");
     defer std.testing.allocator.free(module_path);
 
     var result = try flattenFile(std.testing.allocator, source_path, source);
@@ -6294,7 +6294,7 @@ test "expanded import cache reuses expanded std fragments across flatten calls" 
         try file.writeAll("#def EXPANDED_CACHE_VALUE = 7\n");
     }
     {
-        var file = try tdir.createFile("main_a.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_a.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@import "sa_std/core/cache_expanded.sai"
@@ -6304,7 +6304,7 @@ test "expanded import cache reuses expanded std fragments across flatten calls" 
         );
     }
     {
-        var file = try tdir.createFile("main_b.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_b.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@import "sa_std/core/cache_expanded.sai"
@@ -6320,18 +6320,18 @@ test "expanded import cache reuses expanded std fragments across flatten calls" 
     defer std.testing.allocator.free(std_root);
     const resolve_ctx = ResolveContext{ .options = .{ .project_root = project_root, .std_root = std_root } };
 
-    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sa", 4096);
+    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sars", 4096);
     defer std.testing.allocator.free(source_a);
-    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sa");
+    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sars");
     defer std.testing.allocator.free(source_path_a);
     var first = try flattenFileWithPackages(std.testing.allocator, source_path_a, source_a, resolve_ctx);
     defer first.deinit(std.testing.allocator);
     try std.testing.expect(test_expanded_import_cache_stores > 0);
     try std.testing.expectEqual(@as(usize, 0), test_expanded_import_cache_hits);
 
-    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sa", 4096);
+    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sars", 4096);
     defer std.testing.allocator.free(source_b);
-    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sa");
+    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sars");
     defer std.testing.allocator.free(source_path_b);
     var second = try flattenFileWithPackages(std.testing.allocator, source_path_b, source_b, resolve_ctx);
     defer second.deinit(std.testing.allocator);
@@ -6362,12 +6362,12 @@ test "expanded import cache invalidates when transitive import changes" {
         \\
     ;
     {
-        var file = try tdir.createFile("main_a.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_a.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(main_source);
     }
     {
-        var file = try tdir.createFile("main_b.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_b.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(main_source);
     }
@@ -6378,9 +6378,9 @@ test "expanded import cache invalidates when transitive import changes" {
     defer std.testing.allocator.free(std_root);
     const resolve_ctx = ResolveContext{ .options = .{ .project_root = project_root, .std_root = std_root } };
 
-    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sa", 4096);
+    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sars", 4096);
     defer std.testing.allocator.free(source_a);
-    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sa");
+    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sars");
     defer std.testing.allocator.free(source_path_a);
     var first = try flattenFileWithPackages(std.testing.allocator, source_path_a, source_a, resolve_ctx);
     defer first.deinit(std.testing.allocator);
@@ -6392,9 +6392,9 @@ test "expanded import cache invalidates when transitive import changes" {
         try file.writeAll("#def EXPANDED_CACHE_VALUE = 777\n");
     }
     test_expanded_import_cache_hits = 0;
-    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sa", 4096);
+    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sars", 4096);
     defer std.testing.allocator.free(source_b);
-    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sa");
+    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sars");
     defer std.testing.allocator.free(source_path_b);
     var second = try flattenFileWithPackages(std.testing.allocator, source_path_b, source_b, resolve_ctx);
     defer second.deinit(std.testing.allocator);
@@ -6414,7 +6414,7 @@ test "expanded import cache does not store fragments that skipped caller-seen im
 
     try tdir.makePath("sa_std/core");
     {
-        var file = try tdir.createFile("sa_std/core/dep.sa", .{ .truncate = true });
+        var file = try tdir.createFile("sa_std/core/dep.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@dep_value() -> u64:
@@ -6424,10 +6424,10 @@ test "expanded import cache does not store fragments that skipped caller-seen im
         );
     }
     {
-        var file = try tdir.createFile("sa_std/core/wrapper.sa", .{ .truncate = true });
+        var file = try tdir.createFile("sa_std/core/wrapper.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
-            \\@import "dep.sa"
+            \\@import "dep.sars"
             \\
             \\[MACRO] WRAP_CALL %out
             \\    %out = call @dep_value()
@@ -6436,11 +6436,11 @@ test "expanded import cache does not store fragments that skipped caller-seen im
         );
     }
     {
-        var file = try tdir.createFile("main_a.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_a.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
-            \\@import "sa_std/core/dep.sa"
-            \\@import "sa_std/core/wrapper.sa"
+            \\@import "sa_std/core/dep.sars"
+            \\@import "sa_std/core/wrapper.sars"
             \\@main() -> i32:
             \\L_ENTRY:
             \\    EXPAND WRAP_CALL value
@@ -6450,10 +6450,10 @@ test "expanded import cache does not store fragments that skipped caller-seen im
         );
     }
     {
-        var file = try tdir.createFile("main_b.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_b.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
-            \\@import "sa_std/core/wrapper.sa"
+            \\@import "sa_std/core/wrapper.sars"
             \\@main() -> i32:
             \\L_ENTRY:
             \\    EXPAND WRAP_CALL value
@@ -6469,16 +6469,16 @@ test "expanded import cache does not store fragments that skipped caller-seen im
     defer std.testing.allocator.free(std_root);
     const resolve_ctx = ResolveContext{ .options = .{ .project_root = project_root, .std_root = std_root } };
 
-    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sa", 4096);
+    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sars", 4096);
     defer std.testing.allocator.free(source_a);
-    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sa");
+    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sars");
     defer std.testing.allocator.free(source_path_a);
     var first = try flattenFileWithPackages(std.testing.allocator, source_path_a, source_a, resolve_ctx);
     defer first.deinit(std.testing.allocator);
 
-    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sa", 4096);
+    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sars", 4096);
     defer std.testing.allocator.free(source_b);
-    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sa");
+    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sars");
     defer std.testing.allocator.free(source_path_b);
     var second = try flattenFileWithPackages(std.testing.allocator, source_path_b, source_b, resolve_ctx);
     defer second.deinit(std.testing.allocator);
@@ -6513,7 +6513,7 @@ test "expanded import cache LRU is opt-in" {
         try file.writeAll("#def EXPANDED_CACHE_VALUE = 22\n");
     }
     {
-        var file = try tdir.createFile("main_a.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_a.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@import "sa_std/core/cache_lru_a.sai"
@@ -6523,7 +6523,7 @@ test "expanded import cache LRU is opt-in" {
         );
     }
     {
-        var file = try tdir.createFile("main_b.sa", .{ .truncate = true });
+        var file = try tdir.createFile("main_b.sars", .{ .truncate = true });
         defer file.close();
         try file.writeAll(
             \\@import "sa_std/core/cache_lru_b.sai"
@@ -6539,16 +6539,16 @@ test "expanded import cache LRU is opt-in" {
     defer std.testing.allocator.free(std_root);
     const resolve_ctx = ResolveContext{ .options = .{ .project_root = project_root, .std_root = std_root } };
 
-    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sa", 4096);
+    const source_a = try tdir.readFileAlloc(std.testing.allocator, "main_a.sars", 4096);
     defer std.testing.allocator.free(source_a);
-    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sa");
+    const source_path_a = try tdir.realpathAlloc(std.testing.allocator, "main_a.sars");
     defer std.testing.allocator.free(source_path_a);
     var first_a = try flattenFileWithPackages(std.testing.allocator, source_path_a, source_a, resolve_ctx);
     defer first_a.deinit(std.testing.allocator);
 
-    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sa", 4096);
+    const source_b = try tdir.readFileAlloc(std.testing.allocator, "main_b.sars", 4096);
     defer std.testing.allocator.free(source_b);
-    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sa");
+    const source_path_b = try tdir.realpathAlloc(std.testing.allocator, "main_b.sars");
     defer std.testing.allocator.free(source_path_b);
     var first_b = try flattenFileWithPackages(std.testing.allocator, source_path_b, source_b, resolve_ctx);
     defer first_b.deinit(std.testing.allocator);
@@ -6581,7 +6581,7 @@ test "layout import exposes sibling extern declarations from sai" {
         try sal.writeAll("@import \"db.sai\"\n");
     }
     {
-        var main = try tdir.createFile("main.sa", .{ .truncate = true });
+        var main = try tdir.createFile("main.sars", .{ .truncate = true });
         defer main.close();
         try main.writeAll(
             \\@import "db.sal"
@@ -6601,9 +6601,9 @@ test "layout import exposes sibling extern declarations from sai" {
     const project_root = try tdir.realpathAlloc(std.testing.allocator, ".");
     defer std.testing.allocator.free(project_root);
     const resolve_ctx = ResolveContext{ .options = .{ .project_root = project_root } };
-    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sars", 4096);
     defer std.testing.allocator.free(source);
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sars");
     defer std.testing.allocator.free(source_path);
 
     var result = try flattenFileWithPackages(std.testing.allocator, source_path, source, resolve_ctx);
@@ -6666,7 +6666,7 @@ test "stable import roots participate in import source cache" {
     var tdir: sio.Dir = .{ .inner = tmp.dir };
 
     try tdir.makePath("tests/unit_framework/support");
-    var support = try tdir.createFile("tests/unit_framework/support/index.sa", .{ .truncate = true });
+    var support = try tdir.createFile("tests/unit_framework/support/index.sars", .{ .truncate = true });
     try support.writeAll("@support_value() -> i32:\nreturn 42\n");
     support.close();
 
@@ -6679,12 +6679,12 @@ test "stable import roots participate in import source cache" {
     const stable_roots = [_][]const u8{stable_root};
     const resolve_ctx = ResolveContext{ .options = .{ .project_root = project_root, .stable_import_roots = stable_roots[0..] } };
 
-    var first = try readImportFile(std.testing.allocator, base_dir, "support/index.sa", resolve_ctx);
+    var first = try readImportFile(std.testing.allocator, base_dir, "support/index.sars", resolve_ctx);
     defer first.deinit(std.testing.allocator);
     try std.testing.expect(first.owned_source != null);
     try std.testing.expectEqualStrings("@support_value() -> i32:\nreturn 42\n", first.source);
 
-    var second = try readImportFile(std.testing.allocator, base_dir, "support/index.sa", resolve_ctx);
+    var second = try readImportFile(std.testing.allocator, base_dir, "support/index.sars", resolve_ctx);
     defer second.deinit(std.testing.allocator);
     try std.testing.expect(second.owned_source == null);
     try std.testing.expectEqualStrings(first.source, second.source);
@@ -6697,7 +6697,7 @@ test "flattenFileWithPackages injects package iface and namespaced layout defs o
 
     try tdir.makePath("sa_vendor/github.com/example/pkg");
 
-    var pkg_main = try tdir.createFile("sa_vendor/github.com/example/pkg/index.sa", .{ .truncate = true });
+    var pkg_main = try tdir.createFile("sa_vendor/github.com/example/pkg/index.sars", .{ .truncate = true });
     try pkg_main.writeAll("// package body intentionally empty\n");
     pkg_main.close();
 
@@ -6712,7 +6712,7 @@ test "flattenFileWithPackages injects package iface and namespaced layout defs o
     );
     pkg_layout.close();
 
-    var main_file = try tdir.createFile("main.sa", .{ .truncate = true });
+    var main_file = try tdir.createFile("main.sars", .{ .truncate = true });
     try main_file.writeAll(
         \\@import "github.com/example/pkg"
         \\
@@ -6722,10 +6722,10 @@ test "flattenFileWithPackages injects package iface and namespaced layout defs o
     );
     main_file.close();
 
-    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sars", 4096);
     defer std.testing.allocator.free(source);
 
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sars");
     defer std.testing.allocator.free(source_path);
 
     const project_root = try tdir.realpathAlloc(std.testing.allocator, ".");
@@ -6761,7 +6761,7 @@ test "flattenFileWithPackages preserves package identity on imported instruction
 
     try tdir.makePath("sa_vendor/github.com/example/pkg");
 
-    var pkg_main = try tdir.createFile("sa_vendor/github.com/example/pkg/index.sa", .{ .truncate = true });
+    var pkg_main = try tdir.createFile("sa_vendor/github.com/example/pkg/index.sars", .{ .truncate = true });
     try pkg_main.writeAll(
         \\@main() -> i32:
         \\L_ENTRY:
@@ -6774,16 +6774,16 @@ test "flattenFileWithPackages preserves package identity on imported instruction
     );
     pkg_main.close();
 
-    var main_file = try tdir.createFile("main.sa", .{ .truncate = true });
+    var main_file = try tdir.createFile("main.sars", .{ .truncate = true });
     try main_file.writeAll(
         \\@import "github.com/example/pkg"
     );
     main_file.close();
 
-    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sars", 4096);
     defer std.testing.allocator.free(source);
 
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sars");
     defer std.testing.allocator.free(source_path);
 
     const project_root = try tdir.realpathAlloc(std.testing.allocator, ".");
@@ -6833,18 +6833,18 @@ test "flattenFile rejects import cycles" {
     defer tmp.cleanup();
     var tdir: sio.Dir = .{ .inner = tmp.dir };
 
-    var a_file = try tdir.createFile("a.sa", .{ .truncate = true });
+    var a_file = try tdir.createFile("a.sars", .{ .truncate = true });
     try a_file.writeAll("@import \"b.sa\"\n");
     a_file.close();
 
-    var b_file = try tdir.createFile("b.sa", .{ .truncate = true });
+    var b_file = try tdir.createFile("b.sars", .{ .truncate = true });
     try b_file.writeAll("@import \"a.sa\"\n");
     b_file.close();
 
-    const source = try tdir.readFileAlloc(std.testing.allocator, "a.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "a.sars", 4096);
     defer std.testing.allocator.free(source);
 
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "a.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "a.sars");
     defer std.testing.allocator.free(source_path);
 
     try std.testing.expectError(error.ImportCycle, flattenFile(std.testing.allocator, source_path, source));
@@ -6855,7 +6855,7 @@ test "flatten expands source location macros from upstream location and file pat
     defer tmp.cleanup();
     var tdir: sio.Dir = .{ .inner = tmp.dir };
 
-    var main_file = try tdir.createFile("main.sa", .{ .truncate = true });
+    var main_file = try tdir.createFile("main.sars", .{ .truncate = true });
     try main_file.writeAll(
         \\#loc "up.rs":42:7
         \\@main() -> i32:
@@ -6870,10 +6870,10 @@ test "flatten expands source location macros from upstream location and file pat
     );
     main_file.close();
 
-    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sa", 4096);
+    const source = try tdir.readFileAlloc(std.testing.allocator, "main.sars", 4096);
     defer std.testing.allocator.free(source);
 
-    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sa");
+    const source_path = try tdir.realpathAlloc(std.testing.allocator, "main.sars");
     defer std.testing.allocator.free(source_path);
 
     var result = try flattenFile(std.testing.allocator, source_path, source);

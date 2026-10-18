@@ -1,0 +1,141 @@
+@import "sa_std/rust_core.sars"
+
+@test "sa_std box u64 rust-style macros"():
+L_ENTRY:
+    EXPAND BOX_NEW box_a, 41
+    EXPAND BOX_GET_U64 value0, box_a
+    EXPAND BOX_SET_U64 box_a, 42
+    EXPAND BOX_GET_U64 value1, box_a
+    EXPAND BOX_AS_PTR ptr_a, box_a
+    EXPAND BOX_AS_MUT_PTR mut_ptr_a, box_a
+    store mut_ptr_a+0, 43 as u64
+    EXPAND BOX_GET_U64 value2, box_a
+    EXPAND BOX_PTR_EQ ptr_eq_self, box_a, box_a
+
+    EXPAND BOX_CLONE_U64 box_clone, box_a
+    EXPAND BOX_GET_U64 clone_value, box_clone
+    EXPAND BOX_PTR_EQ ptr_eq_clone, box_a, box_clone
+
+    EXPAND BOX_REPLACE_U64 old_replace, box_a, 55
+    EXPAND BOX_GET_U64 replaced_value, box_a
+    EXPAND BOX_TAKE_U64 old_take, box_a
+    EXPAND BOX_GET_U64 taken_value, box_a
+
+    EXPAND BOX_DEFAULT_U64 box_default
+    EXPAND BOX_GET_U64 default_value, box_default
+
+    raw_slot = stack_alloc Box_SIZE
+    store raw_slot+Box_value, 77 as u64
+    EXPAND BOX_FROM_RAW raw_box, raw_slot
+    EXPAND BOX_GET_U64 raw_value, raw_box
+
+    EXPAND BOX_NEW raw_owned, 88
+    EXPAND BOX_INTO_RAW raw_ptr, raw_owned
+    raw_ptr_value = load raw_ptr+0 as u64
+
+    EXPAND BOX_NEW leak_box, 99
+    EXPAND BOX_LEAK leak_ptr, leak_box
+    leak_value = load leak_ptr+0 as u64
+
+    EXPAND BOX_NEW inner_box, 123
+    EXPAND BOX_INTO_INNER_U64 inner_value, inner_box
+
+    ok_value0 = eq value0, 41
+    ok_value1 = eq value1, 42
+    ok_ptr_a = eq ptr_a, box_a
+    ok_mut_ptr_a = eq mut_ptr_a, box_a
+    ok_value2 = eq value2, 43
+    ok_clone = eq clone_value, 43
+    ok_clone_ptr_diff = eq ptr_eq_clone, 0
+    ok_old_replace = eq old_replace, 43
+    ok_replaced = eq replaced_value, 55
+    ok_old_take = eq old_take, 55
+    ok_taken = eq taken_value, 0
+    ok_default = eq default_value, 0
+    ok_raw = eq raw_value, 77
+    ok_raw_ptr = eq raw_ptr_value, 88
+    ok_leak = eq leak_value, 99
+    ok_inner = eq inner_value, 123
+
+    ok01 = and ok_value0, ok_value1
+    ok02 = and ok01, ok_ptr_a
+    ok03 = and ok02, ok_mut_ptr_a
+    ok04 = and ok03, ok_value2
+    ok05 = and ok04, ptr_eq_self
+    ok06 = and ok05, ok_clone
+    ok07 = and ok06, ok_clone_ptr_diff
+    ok08 = and ok07, ok_old_replace
+    ok09 = and ok08, ok_replaced
+    ok10 = and ok09, ok_old_take
+    ok11 = and ok10, ok_taken
+    ok12 = and ok11, ok_default
+    ok13 = and ok12, ok_raw
+    ok14 = and ok13, ok_raw_ptr
+    ok15 = and ok14, ok_leak
+    ok = and ok15, ok_inner
+
+    !value0
+    !value1
+    !ptr_a
+    !mut_ptr_a
+    !value2
+    !ptr_eq_self
+    !clone_value
+    !ptr_eq_clone
+    !old_replace
+    !replaced_value
+    !old_take
+    !taken_value
+    !default_value
+    !raw_value
+    !raw_ptr
+    !raw_ptr_value
+    !leak_ptr
+    !leak_value
+    !inner_value
+    !ok_value0
+    !ok_value1
+    !ok_ptr_a
+    !ok_mut_ptr_a
+    !ok_value2
+    !ok_clone
+    !ok_clone_ptr_diff
+    !ok_old_replace
+    !ok_replaced
+    !ok_old_take
+    !ok_taken
+    !ok_default
+    !ok_raw
+    !ok_raw_ptr
+    !ok_leak
+    !ok_inner
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !raw_box
+
+    EXPAND BOX_FREE box_a
+    EXPAND BOX_FREE box_clone
+    EXPAND BOX_FREE box_default
+    EXPAND BOX_FREE raw_owned
+    EXPAND BOX_FREE leak_box
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10028)
+
+L_PASS:
+    return 0

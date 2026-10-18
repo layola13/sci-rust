@@ -1,0 +1,311 @@
+@import "sa_std/vec.sars"
+
+@vec_leak_from_fn_double(index: u64) -> u64:
+L_ENTRY:
+    value = mul index, 2
+    !index
+    return value
+
+@test "sa_std vec leak spare try_remove from_fn aliases"():
+L_ENTRY:
+    // --- VEC_FROM_FN bare (elem_size form) ---
+    EXPAND VEC_FROM_FN from_fn_vec, 4, @vec_leak_from_fn_double, 8
+    EXPAND VEC_FROM_FN empty_from_fn, 0, @vec_leak_from_fn_double, 8
+    EXPAND VEC_LEN from_fn_len, from_fn_vec
+    EXPAND VEC_LEN empty_from_fn_len, empty_from_fn
+    EXPAND VEC_TRY_GET_U64 ff0_ok, ff0, from_fn_vec, 0
+    EXPAND VEC_TRY_GET_U64 ff1_ok, ff1, from_fn_vec, 1
+    EXPAND VEC_TRY_GET_U64 ff2_ok, ff2, from_fn_vec, 2
+    EXPAND VEC_TRY_GET_U64 ff3_ok, ff3, from_fn_vec, 3
+    EXPAND VEC_FREE empty_from_fn
+    EXPAND VEC_FREE from_fn_vec
+
+    // --- VEC_TRY_REMOVE bare (elem_size form) ---
+    EXPAND VEC_WITH_CAPACITY_U64 remove_vec, 4
+    EXPAND VEC_PUSH_U64 remove_vec, 10
+    EXPAND VEC_PUSH_U64 remove_vec, 20
+    EXPAND VEC_PUSH_U64 remove_vec, 30
+    EXPAND VEC_PUSH_U64 remove_vec, 40
+    EXPAND VEC_TRY_REMOVE remove_ok, removed, remove_vec, 1, 8
+    EXPAND VEC_LEN remove_len, remove_vec
+    EXPAND VEC_TRY_GET_U64 rm0_ok, rm0, remove_vec, 0
+    EXPAND VEC_TRY_GET_U64 rm1_ok, rm1, remove_vec, 1
+    EXPAND VEC_TRY_GET_U64 rm2_ok, rm2, remove_vec, 2
+    EXPAND VEC_TRY_GET_U64 rm3_ok, rm3, remove_vec, 3
+    EXPAND VEC_TRY_REMOVE remove_miss_ok, remove_miss, remove_vec, 9, 8
+    EXPAND VEC_LEN remove_miss_len, remove_vec
+    EXPAND VEC_FREE remove_vec
+
+    // --- VEC_LEAK bare ---
+    EXPAND VEC_WITH_CAPACITY_U64 leak_vec, 4
+    EXPAND VEC_PUSH_U64 leak_vec, 7
+    EXPAND VEC_PUSH_U64 leak_vec, 9
+    EXPAND VEC_LEAK leaked, leak_vec
+    EXPAND SLICE_GET_LEN leaked_len, leaked
+    EXPAND SLICE_TRY_GET_U64 leak0_ok, leak0, leaked, 0
+    EXPAND SLICE_TRY_GET_U64 leak1_ok, leak1, leaked, 1
+    EXPAND SLICE_GET_MUT_PTR_U64 leak1_ptr, leaked, 1
+    store leak1_ptr+0, 99 as u64
+    EXPAND SLICE_TRY_GET_U64 leak_mut_ok, leak_mut, leaked, 1
+    !leaked
+
+    // --- VEC_SPARE_CAPACITY_MUT / VEC_SPLIT_AT_SPARE_MUT bare ---
+    EXPAND VEC_WITH_CAPACITY_U64 spare_vec, 4
+    EXPAND VEC_PUSH_U64 spare_vec, 11
+    EXPAND VEC_PUSH_U64 spare_vec, 22
+    EXPAND VEC_CAPACITY spare_cap, spare_vec
+    expected_spare_len = sub spare_cap, 2
+    EXPAND VEC_SPARE_CAPACITY_MUT spare, spare_vec, 8
+    EXPAND SLICE_GET_LEN spare_len, spare
+    EXPAND SLICE_GET_MUT_PTR_U64 spare0, spare, 0
+    EXPAND SLICE_GET_MUT_PTR_U64 spare1, spare, 1
+    store spare0+0, 33 as u64
+    store spare1+0, 44 as u64
+    EXPAND VEC_SET_LEN spare_vec, 4
+    EXPAND VEC_TRY_GET_U64 sp0_ok, sp0, spare_vec, 0
+    EXPAND VEC_TRY_GET_U64 sp2_ok, sp2, spare_vec, 2
+    EXPAND VEC_TRY_GET_U64 sp3_ok, sp3, spare_vec, 3
+    EXPAND VEC_SPLIT_AT_SPARE_MUT init, spare_after, spare_vec, 8
+    EXPAND SLICE_GET_LEN init_len, init
+    EXPAND SLICE_GET_LEN spare_after_len, spare_after
+    expected_spare_after_len = sub spare_cap, 4
+    EXPAND SLICE_GET_MUT_PTR_U64 init0, init, 0
+    store init0+0, 10 as u64
+    EXPAND VEC_TRY_GET_U64 sp_mut_ok, sp_mut, spare_vec, 0
+    EXPAND VEC_FREE spare_vec
+    !spare
+    !init
+    !spare_after
+
+    // --- checks: from_fn ---
+    from_fn_len_ok = eq from_fn_len, 4
+    empty_from_fn_len_ok = eq empty_from_fn_len, 0
+    ff0_flag_ok = eq ff0_ok, 1
+    ff0_value_ok = eq ff0, 0
+    ff1_flag_ok = eq ff1_ok, 1
+    ff1_value_ok = eq ff1, 2
+    ff2_flag_ok = eq ff2_ok, 1
+    ff2_value_ok = eq ff2, 4
+    ff3_flag_ok = eq ff3_ok, 1
+    ff3_value_ok = eq ff3, 6
+
+    // --- checks: try_remove ---
+    remove_flag_ok = eq remove_ok, 1
+    remove_value_ok = eq removed, 20
+    remove_len_ok = eq remove_len, 3
+    rm0_flag_ok = eq rm0_ok, 1
+    rm0_value_ok = eq rm0, 10
+    rm1_flag_ok = eq rm1_ok, 1
+    rm1_value_ok = eq rm1, 30
+    rm2_flag_ok = eq rm2_ok, 1
+    rm2_value_ok = eq rm2, 40
+    rm3_flag_ok = eq rm3_ok, 0
+    remove_miss_flag_ok = eq remove_miss_ok, 0
+    remove_miss_value_ok = eq remove_miss, 0
+    remove_miss_len_ok = eq remove_miss_len, 3
+
+    // --- checks: leak ---
+    leaked_len_ok = eq leaked_len, 2
+    leak0_flag_ok = eq leak0_ok, 1
+    leak0_value_ok = eq leak0, 7
+    leak1_flag_ok = eq leak1_ok, 1
+    leak1_value_ok = eq leak1, 9
+    leak_mut_flag_ok = eq leak_mut_ok, 1
+    leak_mut_value_ok = eq leak_mut, 99
+
+    // --- checks: spare ---
+    spare_cap_ok = uge spare_cap, 4
+    spare_len_ok = eq spare_len, expected_spare_len
+    sp0_flag_ok = eq sp0_ok, 1
+    sp0_value_ok = eq sp0, 11
+    sp2_flag_ok = eq sp2_ok, 1
+    sp2_value_ok = eq sp2, 33
+    sp3_flag_ok = eq sp3_ok, 1
+    sp3_value_ok = eq sp3, 44
+    init_len_ok = eq init_len, 4
+    spare_after_len_ok = eq spare_after_len, expected_spare_after_len
+    sp_mut_flag_ok = eq sp_mut_ok, 1
+    sp_mut_value_ok = eq sp_mut, 10
+
+    ok01 = and from_fn_len_ok, empty_from_fn_len_ok
+    ok02 = and ok01, ff0_flag_ok
+    ok03 = and ok02, ff0_value_ok
+    ok04 = and ok03, ff1_flag_ok
+    ok05 = and ok04, ff1_value_ok
+    ok06 = and ok05, ff2_flag_ok
+    ok07 = and ok06, ff2_value_ok
+    ok08 = and ok07, ff3_flag_ok
+    ok09 = and ok08, ff3_value_ok
+    ok10 = and ok09, remove_flag_ok
+    ok11 = and ok10, remove_value_ok
+    ok12 = and ok11, remove_len_ok
+    ok13 = and ok12, rm0_flag_ok
+    ok14 = and ok13, rm0_value_ok
+    ok15 = and ok14, rm1_flag_ok
+    ok16 = and ok15, rm1_value_ok
+    ok17 = and ok16, rm2_flag_ok
+    ok18 = and ok17, rm2_value_ok
+    ok19 = and ok18, rm3_flag_ok
+    ok20 = and ok19, remove_miss_flag_ok
+    ok21 = and ok20, remove_miss_value_ok
+    ok22 = and ok21, remove_miss_len_ok
+    ok23 = and ok22, leaked_len_ok
+    ok24 = and ok23, leak0_flag_ok
+    ok25 = and ok24, leak0_value_ok
+    ok26 = and ok25, leak1_flag_ok
+    ok27 = and ok26, leak1_value_ok
+    ok28 = and ok27, leak_mut_flag_ok
+    ok29 = and ok28, leak_mut_value_ok
+    ok30 = and ok29, spare_cap_ok
+    ok31 = and ok30, spare_len_ok
+    ok32 = and ok31, sp0_flag_ok
+    ok33 = and ok32, sp0_value_ok
+    ok34 = and ok33, sp2_flag_ok
+    ok35 = and ok34, sp2_value_ok
+    ok36 = and ok35, sp3_flag_ok
+    ok37 = and ok36, sp3_value_ok
+    ok38 = and ok37, init_len_ok
+    ok39 = and ok38, spare_after_len_ok
+    ok40 = and ok39, sp_mut_flag_ok
+    ok = and ok40, sp_mut_value_ok
+
+    !from_fn_len
+    !empty_from_fn_len
+    !ff0_ok
+    !ff0
+    !ff1_ok
+    !ff1
+    !ff2_ok
+    !ff2
+    !ff3_ok
+    !ff3
+    !remove_ok
+    !removed
+    !remove_len
+    !rm0_ok
+    !rm0
+    !rm1_ok
+    !rm1
+    !rm2_ok
+    !rm2
+    !rm3_ok
+    !rm3
+    !remove_miss_ok
+    !remove_miss
+    !remove_miss_len
+    !leaked_len
+    !leak0_ok
+    !leak0
+    !leak1_ok
+    !leak1
+    !leak1_ptr
+    !leak_mut_ok
+    !leak_mut
+    !spare_cap
+    !expected_spare_len
+    !spare_len
+    !spare0
+    !spare1
+    !sp0_ok
+    !sp0
+    !sp2_ok
+    !sp2
+    !sp3_ok
+    !sp3
+    !init_len
+    !spare_after_len
+    !expected_spare_after_len
+    !init0
+    !sp_mut_ok
+    !sp_mut
+    !from_fn_len_ok
+    !empty_from_fn_len_ok
+    !ff0_flag_ok
+    !ff0_value_ok
+    !ff1_flag_ok
+    !ff1_value_ok
+    !ff2_flag_ok
+    !ff2_value_ok
+    !ff3_flag_ok
+    !ff3_value_ok
+    !remove_flag_ok
+    !remove_value_ok
+    !remove_len_ok
+    !rm0_flag_ok
+    !rm0_value_ok
+    !rm1_flag_ok
+    !rm1_value_ok
+    !rm2_flag_ok
+    !rm2_value_ok
+    !rm3_flag_ok
+    !remove_miss_flag_ok
+    !remove_miss_value_ok
+    !remove_miss_len_ok
+    !leaked_len_ok
+    !leak0_flag_ok
+    !leak0_value_ok
+    !leak1_flag_ok
+    !leak1_value_ok
+    !leak_mut_flag_ok
+    !leak_mut_value_ok
+    !spare_cap_ok
+    !spare_len_ok
+    !sp0_flag_ok
+    !sp0_value_ok
+    !sp2_flag_ok
+    !sp2_value_ok
+    !sp3_flag_ok
+    !sp3_value_ok
+    !init_len_ok
+    !spare_after_len_ok
+    !sp_mut_flag_ok
+    !sp_mut_value_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10856)
+
+L_OK:
+    !ok
+    return

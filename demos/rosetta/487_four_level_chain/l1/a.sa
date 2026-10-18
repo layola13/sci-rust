@@ -1,8 +1,0 @@
-@import "l1/l2/b.sa"
-
-@export a_value() -> i32:
-L_ENTRY:
-    b = call @b_value()
-    value = add b, 400
-    !b
-    return value

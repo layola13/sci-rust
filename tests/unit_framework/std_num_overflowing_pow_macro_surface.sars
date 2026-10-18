@@ -1,0 +1,58 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_OVERFLOWING_POW_EQ %out_acc, %prev_acc, %value, %expected
+    __test_overflowing_pow_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_overflowing_pow_eq_%out_acc
+    !__test_overflowing_pow_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std unsigned primitive overflowing pow macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_OVERFLOWING_POW u8_ok_value, u8_ok_over, 3, 5
+    EXPAND NUM_U16_OVERFLOWING_POW u16_ok_value, u16_ok_over, 3, 5
+    EXPAND NUM_U32_OVERFLOWING_POW u32_ok_value, u32_ok_over, 3, 5
+    EXPAND NUM_U64_OVERFLOWING_POW u64_ok_value, u64_ok_over, 3, 5
+    EXPAND NUM_USIZE_OVERFLOWING_POW usize_ok_value, usize_ok_over, 3, 5
+
+    EXPAND NUM_U8_OVERFLOWING_POW u8_zero_value, u8_zero_over, 0, 0
+    EXPAND NUM_U8_OVERFLOWING_POW u8_doc_value, u8_doc_over, 3, 6
+    EXPAND NUM_U8_OVERFLOWING_POW u8_wrap_value, u8_wrap_over, 2, 8
+    EXPAND NUM_U16_OVERFLOWING_POW u16_wrap_value, u16_wrap_over, 2, 16
+    EXPAND NUM_U32_OVERFLOWING_POW u32_wrap_value, u32_wrap_over, 2, 32
+    EXPAND NUM_U64_OVERFLOWING_POW u64_wrap_value, u64_wrap_over, 2, 64
+    EXPAND NUM_USIZE_OVERFLOWING_POW usize_wrap_value, usize_wrap_over, 2, 64
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_01, acc_00, u8_ok_value, 243
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_02, acc_01, u8_ok_over, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_03, acc_02, u16_ok_value, 243
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_04, acc_03, u16_ok_over, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_05, acc_04, u32_ok_value, 243
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_06, acc_05, u32_ok_over, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_07, acc_06, u64_ok_value, 243
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_08, acc_07, u64_ok_over, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_09, acc_08, usize_ok_value, 243
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_10, acc_09, usize_ok_over, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_11, acc_10, u8_zero_value, 1
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_12, acc_11, u8_zero_over, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_13, acc_12, u8_doc_value, 217
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_14, acc_13, u8_doc_over, 1
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_15, acc_14, u8_wrap_value, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_16, acc_15, u8_wrap_over, 1
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_17, acc_16, u16_wrap_value, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_18, acc_17, u16_wrap_over, 1
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_19, acc_18, u32_wrap_value, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_20, acc_19, u32_wrap_over, 1
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_21, acc_20, u64_wrap_value, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_22, acc_21, u64_wrap_over, 1
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_23, acc_22, usize_wrap_value, 0
+    EXPAND TEST_OVERFLOWING_POW_EQ acc_24, acc_23, usize_wrap_over, 1
+    br acc_24 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_24
+    panic(10654)
+
+L_PASS:
+    !acc_24
+    return 0

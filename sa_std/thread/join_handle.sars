@@ -1,0 +1,3 @@
+// JoinHandle namespace facade.
+@import "../thread.sal"
+@import "../thread.sars"

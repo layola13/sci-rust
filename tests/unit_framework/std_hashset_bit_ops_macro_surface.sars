@@ -1,0 +1,166 @@
+@import "sa_std/collections/hashset.sars"
+
+@const KEY_A = utf8:"a"
+@const KEY_B = utf8:"b"
+@const KEY_C = utf8:"c"
+
+@test "sa_std hashset bit-operator aliases"():
+L_ENTRY:
+    EXPAND SET_NEW left
+    EXPAND SET_NEW right
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+    EXPAND SET_INSERT left_ins_a, left, key_a
+    EXPAND SET_INSERT left_ins_b, left, key_b
+    EXPAND SET_INSERT right_ins_b, right, key_b
+    EXPAND SET_INSERT right_ins_c, right, key_c
+
+    EXPAND SET_BITOR bitor_set, left, right
+    EXPAND SET_BITAND bitand_set, left, right
+    EXPAND SET_SUB sub_set, left, right
+    EXPAND SET_BITXOR bitxor_set, left, right
+
+    EXPAND SET_LEN bitor_len, bitor_set
+    EXPAND SET_LEN bitand_len, bitand_set
+    EXPAND SET_LEN sub_len, sub_set
+    EXPAND SET_LEN bitxor_len, bitxor_set
+
+    EXPAND SET_CONTAINS bitor_has_a, bitor_set, key_a
+    EXPAND SET_CONTAINS bitor_has_b, bitor_set, key_b
+    EXPAND SET_CONTAINS bitor_has_c, bitor_set, key_c
+    EXPAND SET_CONTAINS bitand_has_a, bitand_set, key_a
+    EXPAND SET_CONTAINS bitand_has_b, bitand_set, key_b
+    EXPAND SET_CONTAINS bitand_has_c, bitand_set, key_c
+    EXPAND SET_CONTAINS sub_has_a, sub_set, key_a
+    EXPAND SET_CONTAINS sub_has_b, sub_set, key_b
+    EXPAND SET_CONTAINS sub_has_c, sub_set, key_c
+    EXPAND SET_CONTAINS bitxor_has_a, bitxor_set, key_a
+    EXPAND SET_CONTAINS bitxor_has_b, bitxor_set, key_b
+    EXPAND SET_CONTAINS bitxor_has_c, bitxor_set, key_c
+
+    EXPAND SET_LEN left_len_after, left
+    EXPAND SET_LEN right_len_after, right
+
+    ok_left_ins_a = eq left_ins_a, 1
+    ok_left_ins_b = eq left_ins_b, 1
+    ok_right_ins_b = eq right_ins_b, 1
+    ok_right_ins_c = eq right_ins_c, 1
+    ok_bitor_len = eq bitor_len, 3
+    ok_bitand_len = eq bitand_len, 1
+    ok_sub_len = eq sub_len, 1
+    ok_bitxor_len = eq bitxor_len, 2
+    ok_bitor_has_a = eq bitor_has_a, 1
+    ok_bitor_has_b = eq bitor_has_b, 1
+    ok_bitor_has_c = eq bitor_has_c, 1
+    ok_bitand_has_a = eq bitand_has_a, 0
+    ok_bitand_has_b = eq bitand_has_b, 1
+    ok_bitand_has_c = eq bitand_has_c, 0
+    ok_sub_has_a = eq sub_has_a, 1
+    ok_sub_has_b = eq sub_has_b, 0
+    ok_sub_has_c = eq sub_has_c, 0
+    ok_bitxor_has_a = eq bitxor_has_a, 1
+    ok_bitxor_has_b = eq bitxor_has_b, 0
+    ok_bitxor_has_c = eq bitxor_has_c, 1
+    ok_left_len_after = eq left_len_after, 2
+    ok_right_len_after = eq right_len_after, 2
+
+    ok01 = and ok_left_ins_a, ok_left_ins_b
+    ok02 = and ok01, ok_right_ins_b
+    ok03 = and ok02, ok_right_ins_c
+    ok04 = and ok03, ok_bitor_len
+    ok05 = and ok04, ok_bitand_len
+    ok06 = and ok05, ok_sub_len
+    ok07 = and ok06, ok_bitxor_len
+    ok08 = and ok07, ok_bitor_has_a
+    ok09 = and ok08, ok_bitor_has_b
+    ok10 = and ok09, ok_bitor_has_c
+    ok11 = and ok10, ok_bitand_has_a
+    ok12 = and ok11, ok_bitand_has_b
+    ok13 = and ok12, ok_bitand_has_c
+    ok14 = and ok13, ok_sub_has_a
+    ok15 = and ok14, ok_sub_has_b
+    ok16 = and ok15, ok_sub_has_c
+    ok17 = and ok16, ok_bitxor_has_a
+    ok18 = and ok17, ok_bitxor_has_b
+    ok19 = and ok18, ok_bitxor_has_c
+    ok20 = and ok19, ok_left_len_after
+    ok = and ok20, ok_right_len_after
+
+    !left_ins_a
+    !left_ins_b
+    !right_ins_b
+    !right_ins_c
+    !bitor_len
+    !bitand_len
+    !sub_len
+    !bitxor_len
+    !bitor_has_a
+    !bitor_has_b
+    !bitor_has_c
+    !bitand_has_a
+    !bitand_has_b
+    !bitand_has_c
+    !sub_has_a
+    !sub_has_b
+    !sub_has_c
+    !bitxor_has_a
+    !bitxor_has_b
+    !bitxor_has_c
+    !left_len_after
+    !right_len_after
+    !ok_left_ins_a
+    !ok_left_ins_b
+    !ok_right_ins_b
+    !ok_right_ins_c
+    !ok_bitor_len
+    !ok_bitand_len
+    !ok_sub_len
+    !ok_bitxor_len
+    !ok_bitor_has_a
+    !ok_bitor_has_b
+    !ok_bitor_has_c
+    !ok_bitand_has_a
+    !ok_bitand_has_b
+    !ok_bitand_has_c
+    !ok_sub_has_a
+    !ok_sub_has_b
+    !ok_sub_has_c
+    !ok_bitxor_has_a
+    !ok_bitxor_has_b
+    !ok_bitxor_has_c
+    !ok_left_len_after
+    !ok_right_len_after
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND SET_FREE bitxor_set
+    EXPAND SET_FREE sub_set
+    EXPAND SET_FREE bitand_set
+    EXPAND SET_FREE bitor_set
+    EXPAND SET_FREE right
+    EXPAND SET_FREE left
+    return 0
+
+L_FAIL:
+    panic(10811)

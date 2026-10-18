@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/core/box.sa"
+@import "sa_std/core/box.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@
 下面的完整 SA 程序展示了如何将数据推入堆分配的 Box，将其转移，并最终释放其底层堆空间：
 
 ```sa
-@import "sa_std/core/box.sa"
+@import "sa_std/core/box.sars"
 
 @main() -> i32:
 L_ENTRY:

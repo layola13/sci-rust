@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "saasm-0.6"
 
 [dependencies]
-git_dep = { git = "https://example.invalid/demo-203.git", rev = "d17c0de", path = "vendor/git_dep.sa" }
+git_dep = { git = "https://example.invalid/demo-203.git", rev = "d17c0de", path = "vendor/git_dep.sars" }
 
 [targets]
-entry = "main.sa"
-lib = "src/lib.sa"
+entry = "main.sars"
+lib = "src/lib.sars"
 
 [notes]
 compiler_input = false

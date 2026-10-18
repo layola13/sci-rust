@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/core/slice.sa"
+@import "sa_std/core/slice.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@
 下面的完整 SA 程序演示了如何为一块已分配的内存构建切片，并展示了在安全切片防护下的数据读取与修改（如果越界会被分支安全拦截）：
 
 ```sa
-@import "sa_std/core/slice.sa"
+@import "sa_std/core/slice.sars"
 
 @main() -> i32:
 L_ENTRY:

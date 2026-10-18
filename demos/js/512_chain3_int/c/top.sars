@@ -1,0 +1,10 @@
+@import "c/../b/mid.sars"
+
+@export chain_c() -> i32!:
+L_ENTRY:
+    r = call @chain_b()
+    v = ?r
+    s = add v, 2
+    !r
+    !v
+    return s

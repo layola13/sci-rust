@@ -1,0 +1,23 @@
+@import "sa_std/collections/vec_deque.sars"
+
+@test "sa_std vec_deque is_empty"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_NEW d
+    EXPAND VEC_DEQUE_IS_EMPTY e0, d
+    EXPAND VEC_DEQUE_PUSH_BACK d, 1
+    EXPAND VEC_DEQUE_IS_EMPTY e1, d
+    EXPAND VEC_DEQUE_FREE d
+    a = eq e0, 1
+    b = eq e1, 0
+    ok = and a, b
+    !e0
+    !e1
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10977)

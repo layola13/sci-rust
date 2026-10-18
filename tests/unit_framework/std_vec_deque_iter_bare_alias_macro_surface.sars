@@ -1,0 +1,113 @@
+@import "sa_std/collections/vec_deque.sars"
+@import "sa_std/vec.sars"
+
+@test "sa_std vec_deque iter bare aliases"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 40
+    EXPAND VEC_DEQUE_TRY_POP_FRONT popped_ok, popped, deque
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 50
+
+    EXPAND VEC_DEQUE_ITER iter, iter_backing, deque
+    EXPAND VEC_DEQUE_ITER_NEXT iter_front_has, iter_front, iter
+    EXPAND VEC_DEQUE_ITER_NEXT_BACK iter_back_has, iter_back, iter
+    EXPAND VEC_DEQUE_ITER_NEXT iter_mid_has, iter_mid, iter
+    EXPAND VEC_DEQUE_ITER_NEXT iter_last_has, iter_last, iter
+    EXPAND VEC_DEQUE_ITER_NEXT iter_done_has, iter_done, iter
+    EXPAND VEC_DEQUE_LEN len_after_borrow, deque
+
+    EXPAND VEC_DEQUE_INTO_ITER into_iter, into_backing, deque
+    EXPAND VEC_DEQUE_INTO_ITER_NEXT into_front_has, into_front, into_iter
+    EXPAND VEC_DEQUE_INTO_ITER_NEXT into_second_has, into_second, into_iter
+    EXPAND VEC_DEQUE_INTO_ITER_NEXT into_third_has, into_third, into_iter
+    EXPAND VEC_DEQUE_INTO_ITER_NEXT into_fourth_has, into_fourth, into_iter
+    EXPAND VEC_DEQUE_INTO_ITER_NEXT into_done_has, into_done, into_iter
+    EXPAND VEC_DEQUE_IS_EMPTY deque_empty, deque
+
+    EXPAND VEC_FREE iter_backing
+    EXPAND VEC_FREE into_backing
+    EXPAND VEC_DEQUE_FREE deque
+
+    ok = eq popped_ok, 1
+    check = eq popped, 10
+    ok = and ok, check
+    check = eq iter_front_has, 1
+    ok = and ok, check
+    check = eq iter_front, 20
+    ok = and ok, check
+    check = eq iter_back_has, 1
+    ok = and ok, check
+    check = eq iter_back, 50
+    ok = and ok, check
+    check = eq iter_mid_has, 1
+    ok = and ok, check
+    check = eq iter_mid, 30
+    ok = and ok, check
+    check = eq iter_last_has, 1
+    ok = and ok, check
+    check = eq iter_last, 40
+    ok = and ok, check
+    check = eq iter_done_has, 0
+    ok = and ok, check
+    check = eq len_after_borrow, 4
+    ok = and ok, check
+    check = eq into_front_has, 1
+    ok = and ok, check
+    check = eq into_front, 20
+    ok = and ok, check
+    check = eq into_second_has, 1
+    ok = and ok, check
+    check = eq into_second, 30
+    ok = and ok, check
+    check = eq into_third_has, 1
+    ok = and ok, check
+    check = eq into_third, 40
+    ok = and ok, check
+    check = eq into_fourth_has, 1
+    ok = and ok, check
+    check = eq into_fourth, 50
+    ok = and ok, check
+    check = eq into_done_has, 0
+    ok = and ok, check
+    check = eq deque_empty, 1
+    ok = and ok, check
+
+    !popped_ok
+    !popped
+    !iter_front_has
+    !iter_front
+    !iter_back_has
+    !iter_back
+    !iter_mid_has
+    !iter_mid
+    !iter_last_has
+    !iter_last
+    !iter_done_has
+    !iter_done
+    !len_after_borrow
+    !into_front_has
+    !into_front
+    !into_second_has
+    !into_second
+    !into_third_has
+    !into_third
+    !into_fourth_has
+    !into_fourth
+    !into_done_has
+    !into_done
+    !deque_empty
+    !check
+    !iter
+    !into_iter
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10843)
+
+L_OK:
+    !ok
+    return

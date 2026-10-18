@@ -18,7 +18,7 @@
 ```sa
 @import "sa_std/netx.sal"
 @import "sa_std/netx.sai"
-@import "sa_std/io.sa"
+@import "sa_std/io.sars"
 
 @const PREFIX = utf8:"ECHO: "
 @const MSG = utf8:"Echo Server listening on 8080..."

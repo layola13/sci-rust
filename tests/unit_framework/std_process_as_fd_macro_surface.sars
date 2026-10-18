@@ -1,0 +1,241 @@
+@import "sa_std/process.sars"
+@import "sa_std/os/fd.sars"
+
+@const TRUE_BIN = utf8:"/bin/true"
+
+#def TRUE_BIN_LEN = 9
+#def TRUE_ARGV1_SIZE = 16
+#def PIDFD_CREATE = 1
+
+@test "sa_std process pidfd and child pipe AsFd aliases"():
+L_ENTRY:
+    argv = stack_alloc TRUE_ARGV1_SIZE
+    dummy = stack_alloc 1
+    EXPAND PROCESS_ARGV_SET_CONST argv, 0, TRUE_BIN, TRUE_BIN_LEN
+
+    EXPAND PROCESS_COMMAND_BUILDER_NEW cwd_len0, has_cwd0, arg0_len0, has_arg00, pgroup0, has_pgroup0, setsid0
+    EXPAND PROCESS_COMMAND_BUILDER_SPAWN_STREAM_PIDFD stream_status, stream_process, stream_stdout, stream_stderr, argv, 1, dummy, cwd_len0, has_cwd0, dummy, arg0_len0, has_arg00, pgroup0, has_pgroup0, setsid0, PIDFD_CREATE
+    stream_status_ok = eq stream_status, SA_PROCESS_OK
+    stream_process_ok = ne stream_process, 0
+    stream_stdout_ok = ne stream_stdout, 0
+    stream_stderr_ok = ne stream_stderr, 0
+    stream01 = and stream_status_ok, stream_process_ok
+    stream02 = and stream01, stream_stdout_ok
+    stream_ok = and stream02, stream_stderr_ok
+    br stream_ok -> L_PIDFD, L_FAIL_STREAM
+
+L_FAIL_STREAM:
+    !stream_ok
+    !stream02
+    !stream01
+    !stream_stderr_ok
+    !stream_stdout_ok
+    !stream_process_ok
+    !stream_status_ok
+    !stream_stderr
+    !stream_stdout
+    !stream_process
+    !stream_status
+    !cwd_len0
+    !has_cwd0
+    !arg0_len0
+    !has_arg00
+    !pgroup0
+    !has_pgroup0
+    !setsid0
+    panic(10696)
+
+L_PIDFD:
+    EXPAND PROCESS_PIDFD pidfd_status, pidfd, stream_process
+    pidfd_status_ok = eq pidfd_status, SA_PROCESS_OK
+    pidfd_ok = ne pidfd, 0
+    pidfd_all = and pidfd_status_ok, pidfd_ok
+    br pidfd_all -> L_CHECK_AS_FD, L_FAIL_PIDFD
+
+L_FAIL_PIDFD:
+    EXPAND PROCESS_WAIT fail_wait_status, fail_code, stream_process
+    EXPAND PROCESS_CLOSE fail_process_close_status, stream_process
+    EXPAND FS_CLOSE fail_stdout_close_status, stream_stdout
+    EXPAND FS_CLOSE fail_stderr_close_status, stream_stderr
+    !fail_wait_status
+    !fail_code
+    !fail_process_close_status
+    !fail_stdout_close_status
+    !fail_stderr_close_status
+    !pidfd_all
+    !pidfd_ok
+    !pidfd_status_ok
+    !pidfd
+    !pidfd_status
+    !stream_ok
+    !stream_stderr
+    !stream_stdout
+    !stream_process
+    panic(10696)
+
+L_CHECK_AS_FD:
+    EXPAND PIDFD_AS_FD pidfd_as_fd_status, pidfd_fd, pidfd
+    EXPAND PIDFD_AS_RAW_FD pidfd_raw_status, pidfd_raw_fd, pidfd
+    EXPAND FD_BORROWED_AS_RAW_FD pidfd_borrowed_status, pidfd_borrowed_fd, pidfd_fd
+    EXPAND PROCESS_CHILD_STDOUT_AS_FD stdout_as_fd_status, stdout_fd, stream_stdout
+    EXPAND PROCESS_CHILD_STDOUT_AS_RAW_FD stdout_raw_status, stdout_raw_fd, stream_stdout
+    EXPAND FD_BORROWED_AS_RAW_FD stdout_borrowed_status, stdout_borrowed_fd, stdout_fd
+    EXPAND PROCESS_CHILD_STDERR_AS_FD stderr_as_fd_status, stderr_fd, stream_stderr
+    EXPAND PROCESS_CHILD_STDERR_AS_RAW_FD stderr_raw_status, stderr_raw_fd, stream_stderr
+    EXPAND FD_BORROWED_AS_RAW_FD stderr_borrowed_status, stderr_borrowed_fd, stderr_fd
+    EXPAND PROCESS_WAIT stream_wait_status, stream_code, stream_process
+    EXPAND PROCESS_CLOSE pidfd_close_status, pidfd
+    EXPAND PROCESS_CLOSE process_close_status, stream_process
+    EXPAND FS_CLOSE stdout_close_status, stream_stdout
+    EXPAND FS_CLOSE stderr_close_status, stream_stderr
+
+    pidfd_as_fd_ok = eq pidfd_as_fd_status, SA_FD_OK
+    pidfd_fd_ok = ne pidfd_fd, -1
+    pidfd_raw_ok = eq pidfd_raw_status, SA_FD_OK
+    pidfd_raw_same_ok = eq pidfd_raw_fd, pidfd_fd
+    pidfd_borrowed_ok = eq pidfd_borrowed_status, SA_FD_OK
+    pidfd_borrowed_same_ok = eq pidfd_borrowed_fd, pidfd_fd
+    stdout_as_fd_ok = eq stdout_as_fd_status, SA_FD_OK
+    stdout_fd_ok = ne stdout_fd, -1
+    stdout_raw_ok = eq stdout_raw_status, SA_FD_OK
+    stdout_raw_same_ok = eq stdout_raw_fd, stdout_fd
+    stdout_borrowed_ok = eq stdout_borrowed_status, SA_FD_OK
+    stdout_borrowed_same_ok = eq stdout_borrowed_fd, stdout_fd
+    stderr_as_fd_ok = eq stderr_as_fd_status, SA_FD_OK
+    stderr_fd_ok = ne stderr_fd, -1
+    stderr_raw_ok = eq stderr_raw_status, SA_FD_OK
+    stderr_raw_same_ok = eq stderr_raw_fd, stderr_fd
+    stderr_borrowed_ok = eq stderr_borrowed_status, SA_FD_OK
+    stderr_borrowed_same_ok = eq stderr_borrowed_fd, stderr_fd
+    wait_ok = eq stream_wait_status, SA_PROCESS_OK
+    code_ok = eq stream_code, 0
+    pidfd_close_ok = eq pidfd_close_status, SA_PROCESS_OK
+    process_close_ok = eq process_close_status, SA_PROCESS_OK
+    stdout_close_ok = eq stdout_close_status, SA_PROCESS_OK
+    stderr_close_ok = eq stderr_close_status, SA_PROCESS_OK
+    close01 = and pidfd_close_ok, process_close_ok
+    close02 = and close01, stdout_close_ok
+    close_ok = and close02, stderr_close_ok
+    ok01 = and pidfd_as_fd_ok, pidfd_fd_ok
+    ok02 = and ok01, pidfd_raw_ok
+    ok03 = and ok02, pidfd_raw_same_ok
+    ok04 = and ok03, pidfd_borrowed_ok
+    ok05 = and ok04, pidfd_borrowed_same_ok
+    ok06 = and ok05, stdout_as_fd_ok
+    ok07 = and ok06, stdout_fd_ok
+    ok08 = and ok07, stdout_raw_ok
+    ok09 = and ok08, stdout_raw_same_ok
+    ok10 = and ok09, stdout_borrowed_ok
+    ok11 = and ok10, stdout_borrowed_same_ok
+    ok12 = and ok11, stderr_as_fd_ok
+    ok13 = and ok12, stderr_fd_ok
+    ok14 = and ok13, stderr_raw_ok
+    ok15 = and ok14, stderr_raw_same_ok
+    ok16 = and ok15, stderr_borrowed_ok
+    ok17 = and ok16, stderr_borrowed_same_ok
+    ok18 = and ok17, wait_ok
+    ok19 = and ok18, code_ok
+    ok = and ok19, close_ok
+
+    !pidfd_as_fd_status
+    !pidfd_fd
+    !pidfd_raw_status
+    !pidfd_raw_fd
+    !pidfd_borrowed_status
+    !pidfd_borrowed_fd
+    !stdout_as_fd_status
+    !stdout_fd
+    !stdout_raw_status
+    !stdout_raw_fd
+    !stdout_borrowed_status
+    !stdout_borrowed_fd
+    !stderr_as_fd_status
+    !stderr_fd
+    !stderr_raw_status
+    !stderr_raw_fd
+    !stderr_borrowed_status
+    !stderr_borrowed_fd
+    !stream_wait_status
+    !stream_code
+    !pidfd_close_status
+    !process_close_status
+    !stdout_close_status
+    !stderr_close_status
+    !pidfd_as_fd_ok
+    !pidfd_fd_ok
+    !pidfd_raw_ok
+    !pidfd_raw_same_ok
+    !pidfd_borrowed_ok
+    !pidfd_borrowed_same_ok
+    !stdout_as_fd_ok
+    !stdout_fd_ok
+    !stdout_raw_ok
+    !stdout_raw_same_ok
+    !stdout_borrowed_ok
+    !stdout_borrowed_same_ok
+    !stderr_as_fd_ok
+    !stderr_fd_ok
+    !stderr_raw_ok
+    !stderr_raw_same_ok
+    !stderr_borrowed_ok
+    !stderr_borrowed_same_ok
+    !wait_ok
+    !code_ok
+    !pidfd_close_ok
+    !process_close_ok
+    !stdout_close_ok
+    !stderr_close_ok
+    !close01
+    !close02
+    !close_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !pidfd_all
+    !pidfd_ok
+    !pidfd_status_ok
+    !pidfd
+    !pidfd_status
+    !stream_ok
+    !stream02
+    !stream01
+    !stream_stderr_ok
+    !stream_stdout_ok
+    !stream_process_ok
+    !stream_status_ok
+    !stream_stderr
+    !stream_stdout
+    !stream_process
+    !stream_status
+    !cwd_len0
+    !has_cwd0
+    !arg0_len0
+    !has_arg00
+    !pgroup0
+    !has_pgroup0
+    !setsid0
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10696)
+
+L_PASS:
+    !ok
+    return 0

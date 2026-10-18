@@ -1,0 +1,129 @@
+@import "sa_std/net.sars"
+
+@const CLONE_HOST = utf8:"127.0.0.1"
+
+@test "sa_std tcp udp try_clone ownership"():
+L_ENTRY:
+    EXPAND NET_TCP_LISTENER_BIND_PORT listen_status, listener, bound_port, CLONE_HOST, 9, 0
+    listen_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    port_ok = ne bound_port, 0
+    listen_all = and listen_ok, listener_ok
+    listen_all2 = and listen_all, port_ok
+    br listen_all2 -> L_CLONE_LISTENER, L_FAIL_LISTEN
+L_FAIL_LISTEN:
+    !listen_all2
+    !listen_all
+    !port_ok
+    !listener_ok
+    !listen_ok
+    !bound_port
+    !listener
+    !listen_status
+    panic(10110)
+L_CLONE_LISTENER:
+    EXPAND NET_TCP_LISTENER_TRY_CLONE listener_clone_status, listener_clone, listener
+    listener_clone_status_ok = eq listener_clone_status, SA_NET_OK
+    listener_clone_ok = ne listener_clone, 0
+    listener_clone_all = and listener_clone_status_ok, listener_clone_ok
+    br listener_clone_all -> L_BIND_UDP, L_FAIL_LISTENER_CLONE
+L_FAIL_LISTENER_CLONE:
+    !listener_clone_all
+    !listener_clone_ok
+    !listener_clone_status_ok
+    !listener_clone
+    !listener_clone_status
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed, listener
+    !listener_close_failed
+    !listener
+    panic(10111)
+L_BIND_UDP:
+    EXPAND NET_UDP_BIND udp_status, udp, CLONE_HOST, 9, 0
+    udp_status_ok = eq udp_status, SA_NET_OK
+    udp_ok = ne udp, 0
+    udp_all = and udp_status_ok, udp_ok
+    br udp_all -> L_CLONE_UDP, L_FAIL_UDP
+L_FAIL_UDP:
+    !udp_all
+    !udp_ok
+    !udp_status_ok
+    !udp
+    !udp_status
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed2, listener
+    !listener_close_failed2
+    !listener
+    EXPAND NET_TCP_LISTENER_CLOSE listener_clone_close_failed, listener_clone
+    !listener_clone_close_failed
+    !listener_clone
+    panic(10112)
+L_CLONE_UDP:
+    EXPAND NET_UDP_TRY_CLONE udp_clone_status, udp_clone, udp
+    udp_clone_status_ok = eq udp_clone_status, SA_NET_OK
+    udp_clone_ok = ne udp_clone, 0
+    udp_clone_all = and udp_clone_status_ok, udp_clone_ok
+    br udp_clone_all -> L_CLOSE, L_FAIL_UDP_CLONE
+L_FAIL_UDP_CLONE:
+    !udp_clone_all
+    !udp_clone_ok
+    !udp_clone_status_ok
+    !udp_clone
+    !udp_clone_status
+    EXPAND NET_UDP_CLOSE udp_close_failed, udp
+    !udp_close_failed
+    !udp
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed3, listener
+    !listener_close_failed3
+    !listener
+    EXPAND NET_TCP_LISTENER_CLOSE listener_clone_close_failed2, listener_clone
+    !listener_clone_close_failed2
+    !listener_clone
+    panic(10113)
+L_CLOSE:
+    EXPAND NET_UDP_CLOSE udp_clone_close_status, udp_clone
+    EXPAND NET_UDP_CLOSE udp_close_status, udp
+    EXPAND NET_TCP_LISTENER_CLOSE listener_clone_close_status, listener_clone
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status, listener
+    udp_clone_close_ok = eq udp_clone_close_status, SA_NET_OK
+    udp_close_ok = eq udp_close_status, SA_NET_OK
+    listener_clone_close_ok = eq listener_clone_close_status, SA_NET_OK
+    listener_close_ok = eq listener_close_status, SA_NET_OK
+    ok1 = and udp_clone_close_ok, udp_close_ok
+    ok2 = and ok1, listener_clone_close_ok
+    ok = and ok2, listener_close_ok
+    br ok -> L_OK, L_FAIL_CLOSE
+L_FAIL_CLOSE:
+    !ok
+    !ok2
+    !ok1
+    !listener_close_ok
+    !listener_clone_close_ok
+    !udp_close_ok
+    !udp_clone_close_ok
+    !listener_close_status
+    !listener_clone_close_status
+    !udp_close_status
+    !udp_clone_close_status
+    !udp_clone
+    !udp
+    !listener_clone
+    !listener
+    !bound_port
+    return
+L_OK:
+    !ok
+    !ok2
+    !ok1
+    !listener_close_ok
+    !listener_clone_close_ok
+    !udp_close_ok
+    !udp_clone_close_ok
+    !listener_close_status
+    !listener_clone_close_status
+    !udp_close_status
+    !udp_clone_close_status
+    !udp_clone
+    !udp
+    !listener_clone
+    !listener
+    !bound_port
+    return

@@ -1,0 +1,88 @@
+@import "sa_std/sync/mpsc.sars"
+
+@test "sa_std mpsc timeout error wrappers"():
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 2
+    EXPAND MPSC_TRY_RECV_TIMEOUT_ERROR timeout_ok, timeout_error, timeout_value, chan, 0
+    EXPAND MPSC_RECV_TIMEOUT_ERROR_KIND timeout_kind, timeout_error
+    EXPAND MPSC_TRY_SEND send_ok, chan, 17
+    EXPAND MPSC_TRY_RECV_TIMEOUT_ERROR success_ok, success_error, success_value, chan, 0
+    EXPAND MPSC_TRY_RECV_TIMEOUT_ERROR disconnected_ok, disconnected_error, disconnected_value, 0, 0
+    EXPAND MPSC_RECV_TIMEOUT_ERROR_KIND disconnected_kind, disconnected_error
+    EXPAND MPSC_TRY_RECV_TIMEOUT_ERROR_MS overflow_ok, overflow_error, overflow_value, chan, 18446744073709551615
+    EXPAND MPSC_RECV_TIMEOUT_ERROR_KIND overflow_kind, overflow_error
+    EXPAND MPSC_FREE chan
+
+    c0 = eq timeout_ok, 0
+    c1 = eq timeout_kind, RECV_TIMEOUT_ERROR_TIMEOUT
+    c2 = eq timeout_value, 0
+    c3 = eq send_ok, 1
+    c4 = eq success_ok, 1
+    c5 = eq success_value, 17
+    c6 = eq success_error, 0
+    c7 = eq disconnected_ok, 0
+    c8 = eq disconnected_kind, RECV_TIMEOUT_ERROR_DISCONNECTED
+    c9 = eq disconnected_value, 0
+    c10 = eq overflow_ok, 0
+    c11 = eq overflow_kind, RECV_TIMEOUT_ERROR_TIMEOUT
+    c12 = eq overflow_value, 0
+    a0 = and c0, c1
+    a1 = and a0, c2
+    a2 = and a1, c3
+    a3 = and a2, c4
+    a4 = and a3, c5
+    a5 = and a4, c6
+    a6 = and a5, c7
+    a7 = and a6, c8
+    a8 = and a7, c9
+    a9 = and a8, c10
+    a10 = and a9, c11
+    a11 = and a10, c12
+    ok = a11
+    !timeout_ok
+    !timeout_error
+    !timeout_value
+    !timeout_kind
+    !send_ok
+    !success_ok
+    !success_error
+    !success_value
+    !disconnected_ok
+    !disconnected_error
+    !disconnected_kind
+    !disconnected_value
+    !overflow_ok
+    !overflow_error
+    !overflow_kind
+    !overflow_value
+    !c0
+    !c1
+    !c2
+    !c3
+    !c4
+    !c5
+    !c6
+    !c7
+    !c8
+    !c9
+    !c10
+    !c11
+    !c12
+    !a0
+    !a1
+    !a2
+    !a3
+    !a4
+    !a5
+    !a6
+    !a7
+    !a8
+    !a9
+    !a10
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11004)

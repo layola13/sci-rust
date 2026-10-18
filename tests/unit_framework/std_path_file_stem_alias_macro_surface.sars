@@ -1,0 +1,34 @@
+@import "sa_std/path.sars"
+@import "sa_std/string.sars"
+@import "sa_std/core/slice.sars"
+
+@const P = utf8:"/tmp/demo.txt"
+
+@test "sa_std path file_stem name ext"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS path, &P, 13
+    EXPAND PATH_FILE_STEM stem, path
+    EXPAND PATH_FILE_NAME name, path
+    EXPAND PATH_EXTENSION ext, path
+    EXPAND SLICE_GET_LEN stem_len, stem
+    EXPAND SLICE_GET_LEN name_len, name
+    EXPAND SLICE_GET_LEN ext_len, ext
+    a = eq stem_len, 4
+    b = eq name_len, 8
+    c = eq ext_len, 3
+    ok01 = and a, b
+    ok = and ok01, c
+    !stem_len
+    !name_len
+    !ext_len
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10912)

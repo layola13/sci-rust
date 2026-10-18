@@ -4,8 +4,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/math.sa"
-@import "sa_std/hash.sa"
+@import "sa_std/math.sars"
+@import "sa_std/hash.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -13,9 +13,9 @@
 下面的完整 SA 程序展示了如何获取两个数值间的最大与最小值，以及对输入内存切片进行散列运算生成唯一哈希指纹的过程：
 
 ```sa
-@import "sa_std/math.sa"
-@import "sa_std/hash.sa"
-@import "sa_std/core/slice.sa"
+@import "sa_std/math.sars"
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
 
 @main() -> i32:
 L_ENTRY:

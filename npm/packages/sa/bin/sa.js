@@ -228,7 +228,7 @@ function main() {
       const metaDir = path.dirname(require.resolve('@salang/sa/package.json'));
       const bundled = path.join(metaDir, 'sa_std');
       fs.accessSync(path.join(bundled, 'io', 'print.sai'));
-      fs.accessSync(path.join(bundled, 'core', 'sa_core.sa'));
+      fs.accessSync(path.join(bundled, 'core', 'sa_core.sars'));
       process.env.SA_STD_DIR = bundled;
     } catch {}
   }

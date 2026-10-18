@@ -1,0 +1,92 @@
+@import "sa_std/sync/atomic.sars"
+
+@test "sa_std AtomicOrdering layout and validation macros"():
+L_ENTRY:
+    ordering = stack_alloc AtomicOrdering_SIZE
+    EXPAND ATOMIC_ORDERING_NEW ordering, ATOMIC_ORDERING_ACQ_REL
+    EXPAND ATOMIC_ORDERING_GET ordering_value, ordering
+
+    EXPAND ATOMIC_ORDERING_IS_LOAD_VALID load_relaxed, ATOMIC_ORDERING_RELAXED
+    EXPAND ATOMIC_ORDERING_IS_LOAD_VALID load_release, ATOMIC_ORDERING_RELEASE
+    EXPAND ATOMIC_ORDERING_IS_LOAD_VALID load_acquire, ATOMIC_ORDERING_ACQUIRE
+    EXPAND ATOMIC_ORDERING_IS_LOAD_VALID load_acqrel, ATOMIC_ORDERING_ACQ_REL
+    EXPAND ATOMIC_ORDERING_IS_LOAD_VALID load_seq, ATOMIC_ORDERING_SEQ_CST
+
+    EXPAND ATOMIC_ORDERING_IS_STORE_VALID store_relaxed, ATOMIC_ORDERING_RELAXED
+    EXPAND ATOMIC_ORDERING_IS_STORE_VALID store_release, ATOMIC_ORDERING_RELEASE
+    EXPAND ATOMIC_ORDERING_IS_STORE_VALID store_acquire, ATOMIC_ORDERING_ACQUIRE
+    EXPAND ATOMIC_ORDERING_IS_STORE_VALID store_acqrel, ATOMIC_ORDERING_ACQ_REL
+    EXPAND ATOMIC_ORDERING_IS_STORE_VALID store_seq, ATOMIC_ORDERING_SEQ_CST
+
+    EXPAND ATOMIC_ORDERING_IS_FAILURE_VALID failure_relaxed, ATOMIC_ORDERING_RELAXED
+    EXPAND ATOMIC_ORDERING_IS_FAILURE_VALID failure_release, ATOMIC_ORDERING_RELEASE
+    EXPAND ATOMIC_ORDERING_IS_FAILURE_VALID failure_acquire, ATOMIC_ORDERING_ACQUIRE
+    EXPAND ATOMIC_ORDERING_IS_FAILURE_VALID failure_acqrel, ATOMIC_ORDERING_ACQ_REL
+    EXPAND ATOMIC_ORDERING_IS_FAILURE_VALID failure_seq, ATOMIC_ORDERING_SEQ_CST
+
+    EXPAND ATOMIC_ORDERING_IS_FENCE_VALID fence_relaxed, ATOMIC_ORDERING_RELAXED
+    EXPAND ATOMIC_ORDERING_IS_FENCE_VALID fence_release, ATOMIC_ORDERING_RELEASE
+    EXPAND ATOMIC_ORDERING_IS_FENCE_VALID fence_acquire, ATOMIC_ORDERING_ACQUIRE
+    EXPAND ATOMIC_ORDERING_IS_FENCE_VALID fence_acqrel, ATOMIC_ORDERING_ACQ_REL
+    EXPAND ATOMIC_ORDERING_IS_FENCE_VALID fence_seq, ATOMIC_ORDERING_SEQ_CST
+
+    ok_size = eq AtomicOrdering_SIZE, 1
+    ok_align = eq AtomicOrdering_ALIGN, 1
+    ok_value_off = eq AtomicOrdering_value, +0
+    ok_value = eq ordering_value, ATOMIC_ORDERING_ACQ_REL
+
+    ok_load_relaxed = eq load_relaxed, 1
+    ok_load_release = eq load_release, 0
+    ok_load_acquire = eq load_acquire, 1
+    ok_load_acqrel = eq load_acqrel, 0
+    ok_load_seq = eq load_seq, 1
+
+    ok_store_relaxed = eq store_relaxed, 1
+    ok_store_release = eq store_release, 1
+    ok_store_acquire = eq store_acquire, 0
+    ok_store_acqrel = eq store_acqrel, 0
+    ok_store_seq = eq store_seq, 1
+
+    ok_failure_relaxed = eq failure_relaxed, 1
+    ok_failure_release = eq failure_release, 0
+    ok_failure_acquire = eq failure_acquire, 1
+    ok_failure_acqrel = eq failure_acqrel, 0
+    ok_failure_seq = eq failure_seq, 1
+
+    ok_fence_relaxed = eq fence_relaxed, 0
+    ok_fence_release = eq fence_release, 1
+    ok_fence_acquire = eq fence_acquire, 1
+    ok_fence_acqrel = eq fence_acqrel, 1
+    ok_fence_seq = eq fence_seq, 1
+
+    c01 = and ok_size, ok_align
+    c02 = and c01, ok_value_off
+    c03 = and c02, ok_value
+    c04 = and c03, ok_load_relaxed
+    c05 = and c04, ok_load_release
+    c06 = and c05, ok_load_acquire
+    c07 = and c06, ok_load_acqrel
+    c08 = and c07, ok_load_seq
+    c09 = and c08, ok_store_relaxed
+    c10 = and c09, ok_store_release
+    c11 = and c10, ok_store_acquire
+    c12 = and c11, ok_store_acqrel
+    c13 = and c12, ok_store_seq
+    c14 = and c13, ok_failure_relaxed
+    c15 = and c14, ok_failure_release
+    c16 = and c15, ok_failure_acquire
+    c17 = and c16, ok_failure_acqrel
+    c18 = and c17, ok_failure_seq
+    c19 = and c18, ok_fence_relaxed
+    c20 = and c19, ok_fence_release
+    c21 = and c20, ok_fence_acquire
+    c22 = and c21, ok_fence_acqrel
+    ok = and c22, ok_fence_seq
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10507)
+
+L_PASS:
+    return 0

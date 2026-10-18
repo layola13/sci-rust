@@ -1,0 +1,61 @@
+@import "sa_std/ops.sars"
+
+@test "sa_std ops Bound range is_empty macros"():
+L_ENTRY:
+    unbounded = stack_alloc BoundU64_SIZE
+    inc1 = stack_alloc BoundU64_SIZE
+    inc2 = stack_alloc BoundU64_SIZE
+    exc1 = stack_alloc BoundU64_SIZE
+    exc2 = stack_alloc BoundU64_SIZE
+    inc_usize = stack_alloc BoundUsize_SIZE
+    exc_usize = stack_alloc BoundUsize_SIZE
+    unbounded_usize = stack_alloc BoundUsize_SIZE
+
+    EXPAND BOUND_U64_UNBOUNDED_NEW unbounded
+    EXPAND BOUND_U64_INCLUDED_NEW inc1, 1
+    EXPAND BOUND_U64_INCLUDED_NEW inc2, 2
+    EXPAND BOUND_U64_EXCLUDED_NEW exc1, 1
+    EXPAND BOUND_U64_EXCLUDED_NEW exc2, 2
+    EXPAND BOUND_USIZE_INCLUDED_NEW inc_usize, 4
+    EXPAND BOUND_USIZE_EXCLUDED_NEW exc_usize, 4
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW unbounded_usize
+
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_unbounded, unbounded, inc1
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_inc_equal, inc1, inc1
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_inc_reverse, inc2, inc1
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_inc_exclusive_open, inc1, exc2
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_inc_exclusive_equal, inc2, exc2
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_exclusive_inc_open, exc1, inc2
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_exclusive_inc_equal, exc2, inc2
+    EXPAND BOUND_U64_RANGE_IS_EMPTY empty_exclusive_equal, exc1, exc1
+    EXPAND BOUND_USIZE_RANGE_IS_EMPTY empty_usize_inc_exclusive_equal, inc_usize, exc_usize
+    EXPAND BOUND_USIZE_RANGE_IS_EMPTY empty_usize_unbounded, unbounded_usize, exc_usize
+
+    ok_unbounded = eq empty_unbounded, 0
+    ok_inc_equal = eq empty_inc_equal, 0
+    ok_inc_reverse = eq empty_inc_reverse, 1
+    ok_inc_exclusive_open = eq empty_inc_exclusive_open, 0
+    ok_inc_exclusive_equal = eq empty_inc_exclusive_equal, 1
+    ok_exclusive_inc_open = eq empty_exclusive_inc_open, 0
+    ok_exclusive_inc_equal = eq empty_exclusive_inc_equal, 1
+    ok_exclusive_equal = eq empty_exclusive_equal, 1
+    ok_usize_inc_exclusive_equal = eq empty_usize_inc_exclusive_equal, 1
+    ok_usize_unbounded = eq empty_usize_unbounded, 0
+
+    c01 = and ok_unbounded, ok_inc_equal
+    c02 = and c01, ok_inc_reverse
+    c03 = and c02, ok_inc_exclusive_open
+    c04 = and c03, ok_inc_exclusive_equal
+    c05 = and c04, ok_exclusive_inc_open
+    c06 = and c05, ok_exclusive_inc_equal
+    c07 = and c06, ok_exclusive_equal
+    c08 = and c07, ok_usize_inc_exclusive_equal
+    ok = and c08, ok_usize_unbounded
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10513)
+
+L_PASS:
+    return 0

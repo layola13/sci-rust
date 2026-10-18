@@ -1,0 +1,61 @@
+// HTTP server v2 facade.
+// accept_v2 timeout/would_block are cooperative Pending states; a request is
+// Ready(ptr); closed/invalid/io_error are terminal PollResult errors.
+@import "plugin_async.sars"
+
+[MACRO] SA_HTTP_SERVER_ACCEPT_V2 %out_poll, %server, %timeout_ms
+    __sa_http_server_req_slot_%out_poll = stack_alloc 8
+    store __sa_http_server_req_slot_%out_poll+0, 0 as u64
+    __sa_http_server_status_%out_poll = call @sa_http_server_accept_v2(%server, %timeout_ms, &__sa_http_server_req_slot_%out_poll)
+    __sa_http_server_req_%out_poll = load __sa_http_server_req_slot_%out_poll+0 as ptr
+    __sa_http_server_is_ok_%out_poll = eq __sa_http_server_status_%out_poll, PluginAsync_STATUS_OK
+    __sa_http_server_is_would_block_%out_poll = eq __sa_http_server_status_%out_poll, PluginAsync_STATUS_WOULD_BLOCK
+    __sa_http_server_is_timeout_%out_poll = eq __sa_http_server_status_%out_poll, PluginAsync_STATUS_TIMEOUT
+    __sa_http_server_is_pending_%out_poll = or __sa_http_server_is_would_block_%out_poll, __sa_http_server_is_timeout_%out_poll
+    br __sa_http_server_is_pending_%out_poll -> L_SA_HTTP_SERVER_PENDING_%out_poll, L_SA_HTTP_SERVER_STATUS_%out_poll
+L_SA_HTTP_SERVER_PENDING_%out_poll:
+    EXPAND POLL_RESULT_PENDING %out_poll
+    jmp L_SA_HTTP_SERVER_DONE_%out_poll
+L_SA_HTTP_SERVER_STATUS_%out_poll:
+    br __sa_http_server_is_ok_%out_poll -> L_SA_HTTP_SERVER_READY_%out_poll, L_SA_HTTP_SERVER_ERROR_%out_poll
+L_SA_HTTP_SERVER_READY_%out_poll:
+    EXPAND POLL_RESULT_READY_OK %out_poll, __sa_http_server_req_%out_poll
+    jmp L_SA_HTTP_SERVER_DONE_%out_poll
+L_SA_HTTP_SERVER_ERROR_%out_poll:
+    EXPAND POLL_RESULT_READY_ERR %out_poll, __sa_http_server_status_%out_poll
+L_SA_HTTP_SERVER_DONE_%out_poll:
+    !__sa_http_server_is_pending_%out_poll
+    !__sa_http_server_is_timeout_%out_poll
+    !__sa_http_server_is_would_block_%out_poll
+    !__sa_http_server_is_ok_%out_poll
+    !__sa_http_server_req_%out_poll
+    !__sa_http_server_status_%out_poll
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_RESP_SEND_V2 %out_status, %resp, %body, %body_len, %timeout_ms
+    %out_status = call @sa_http_server_resp_send_v2(%resp, %body, %body_len, %timeout_ms)
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_STREAM_WRITE_V2 %out_status, %stream, %body, %body_len, %timeout_ms
+    %out_status = call @sa_http_server_resp_stream_write_v2(%stream, %body, %body_len, %timeout_ms)
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_STREAM_END_V2 %out_status, %stream, %timeout_ms
+    %out_status = call @sa_http_server_resp_stream_end_v2(%stream, %timeout_ms)
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_REQ_FREE_V2 %req
+    call @sa_http_server_req_free_v2(%req)
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_RESP_FREE_V2 %resp
+    call @sa_http_server_resp_free_v2(%resp)
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_STREAM_FREE_V2 %stream
+    call @sa_http_server_resp_stream_free_v2(%stream)
+[END_MACRO]
+
+[MACRO] SA_HTTP_SERVER_FREE_V2 %server
+    call @sa_http_server_free_v2(%server)
+[END_MACRO]

@@ -1,0 +1,433 @@
+@import "sa_std/net.sars"
+
+@const VEC_HOST = utf8:"127.0.0.1"
+#def VEC_HOST_LEN = 9
+@const VEC_MSG1 = utf8:"hello"
+@const VEC_MSG2 = utf8:"world"
+@const VEC_MSG3 = utf8:"!"
+#def VEC_MSG1_LEN = 5
+#def VEC_MSG2_LEN = 5
+#def VEC_MSG3_LEN = 1
+// sa_std_net_* vectored fns return raw SA_STD status codes (SA_STD_ERR_INVALID_ARGUMENT = 1),
+// not the mapped SA_NET_ERROR_CODE_* values.
+#def VEC_ERR_INVALID_ARGUMENT = 1
+// Fixed UDP port for vectored test (receiver). Sender uses ephemeral port.
+#def VEC_UDP_PORT = 29781
+
+@test "sa_std tcp udp vectored io behavior"():
+L_ENTRY:
+    EXPAND NET_TCP_LISTENER_BIND_PORT listen_status, listener, bound_port, VEC_HOST, VEC_HOST_LEN, 0
+    listen_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    port_ok = ne bound_port, 0
+    listen_all = and listen_ok, listener_ok
+    listen_all2 = and listen_all, port_ok
+    br listen_all2 -> L_CONNECT, L_FAIL_LISTEN
+L_FAIL_LISTEN:
+    !listen_all2
+    !listen_all
+    !port_ok
+    !listener_ok
+    !listen_ok
+    !bound_port
+    !listener
+    !listen_status
+    panic(10700)
+L_CONNECT:
+    EXPAND NET_TCP_CONNECT connect_status, client, VEC_HOST, VEC_HOST_LEN, bound_port
+    connect_ok = eq connect_status, SA_NET_OK
+    client_ok = ne client, 0
+    connect_all = and connect_ok, client_ok
+    br connect_all -> L_ACCEPT, L_FAIL_CONNECT
+L_FAIL_CONNECT:
+    !connect_all
+    !client_ok
+    !connect_ok
+    !client
+    !connect_status
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed, listener
+    !listener_close_failed
+    !listener
+    panic(10701)
+L_ACCEPT:
+    EXPAND NET_TCP_LISTENER_ACCEPT accept_status, server, listener
+    accept_ok = eq accept_status, SA_NET_OK
+    server_ok = ne server, 0
+    accept_all = and accept_ok, server_ok
+    br accept_all -> L_TCP_WRITE_VEC, L_FAIL_ACCEPT
+L_FAIL_ACCEPT:
+    !accept_all
+    !server_ok
+    !accept_ok
+    !server
+    !accept_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed, client
+    !client_close_failed
+    !client
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed2, listener
+    !listener_close_failed2
+    !listener
+    panic(10702)
+L_TCP_WRITE_VEC:
+    iovs_w = stack_alloc 32
+    buf1_w = stack_alloc 8
+    buf2_w = stack_alloc 8
+    buf3_w = stack_alloc 8
+    store buf1_w+0, 104 as u8
+    store buf1_w+1, 101 as u8
+    store buf1_w+2, 108 as u8
+    store buf1_w+3, 108 as u8
+    store buf1_w+4, 111 as u8
+    store buf2_w+0, 119 as u8
+    store buf2_w+1, 111 as u8
+    store buf2_w+2, 114 as u8
+    store buf2_w+3, 108 as u8
+    store buf2_w+4, 100 as u8
+    store buf3_w+0, 33 as u8
+    store iovs_w+0, buf1_w as u64
+    store iovs_w+8, 5 as u64
+    store iovs_w+16, buf2_w as u64
+    store iovs_w+24, 5 as u64
+    EXPAND NET_TCP_STREAM_WRITE_VECTORED write_vec_status, write_vec_len, client, iovs_w, 2
+    write_vec_ok = eq write_vec_status, SA_NET_OK
+    write_vec_len_ok = eq write_vec_len, 10
+    write_vec_all = and write_vec_ok, write_vec_len_ok
+    br write_vec_all -> L_TCP_READ_VEC, L_FAIL_TCP_WRITE_VEC
+L_FAIL_TCP_WRITE_VEC:
+    !write_vec_all
+    !write_vec_len_ok
+    !write_vec_ok
+    !write_vec_len
+    !write_vec_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed2, client
+    !client_close_failed2
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed, server
+    !server_close_failed
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed3, listener
+    !listener_close_failed3
+    !listener
+    panic(10703)
+L_TCP_READ_VEC:
+    iovs_r = stack_alloc 32
+    buf1_r = stack_alloc 8
+    buf2_r = stack_alloc 8
+    store iovs_r+0, buf1_r as u64
+    store iovs_r+8, 5 as u64
+    store iovs_r+16, buf2_r as u64
+    store iovs_r+24, 5 as u64
+    EXPAND NET_TCP_STREAM_READ_VECTORED read_vec_status, read_vec_len, server, iovs_r, 2
+    read_vec_ok = eq read_vec_status, SA_NET_OK
+    read_vec_len_ok = eq read_vec_len, 10
+    r_b0 = load buf1_r+0 as u8
+    r_b1 = load buf1_r+1 as u8
+    r_b2 = load buf1_r+2 as u8
+    r_b3 = load buf1_r+3 as u8
+    r_b4 = load buf1_r+4 as u8
+    r_c0 = load buf2_r+0 as u8
+    r_c1 = load buf2_r+1 as u8
+    r_c2 = load buf2_r+2 as u8
+    r_c3 = load buf2_r+3 as u8
+    r_c4 = load buf2_r+4 as u8
+    r_b0_ok = eq r_b0, 104
+    r_b1_ok = eq r_b1, 101
+    r_b2_ok = eq r_b2, 108
+    r_b3_ok = eq r_b3, 108
+    r_b4_ok = eq r_b4, 111
+    r_c0_ok = eq r_c0, 119
+    r_c1_ok = eq r_c1, 111
+    r_c2_ok = eq r_c2, 114
+    r_c3_ok = eq r_c3, 108
+    r_c4_ok = eq r_c4, 100
+    r_match1 = and r_b0_ok, r_b1_ok
+    r_match2 = and r_match1, r_b2_ok
+    r_match3 = and r_match2, r_b3_ok
+    r_match4 = and r_match3, r_b4_ok
+    r_match5 = and r_match4, r_c0_ok
+    r_match6 = and r_match5, r_c1_ok
+    r_match7 = and r_match6, r_c2_ok
+    r_match8 = and r_match7, r_c3_ok
+    r_match9 = and r_match8, r_c4_ok
+    read_vec_match = and read_vec_ok, read_vec_len_ok
+    read_vec_all = and read_vec_match, r_match9
+    br read_vec_all -> L_TCP_READ_EMPTY, L_FAIL_TCP_READ_VEC
+L_FAIL_TCP_READ_VEC:
+    !read_vec_all
+    !r_match9
+    !r_match8
+    !r_match7
+    !r_match6
+    !r_match5
+    !r_match4
+    !r_match3
+    !r_match2
+    !r_match1
+    !r_b0_ok
+    !r_b1_ok
+    !r_b2_ok
+    !r_b3_ok
+    !r_b4_ok
+    !r_c0_ok
+    !r_c1_ok
+    !r_c2_ok
+    !r_c3_ok
+    !r_c4_ok
+    !read_vec_len_ok
+    !read_vec_ok
+    !read_vec_len
+    !read_vec_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed3, client
+    !client_close_failed3
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed2, server
+    !server_close_failed2
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed4, listener
+    !listener_close_failed4
+    !listener
+    panic(10704)
+L_TCP_READ_EMPTY:
+    EXPAND NET_TCP_STREAM_READ_VECTORED empty_status, empty_len, server, iovs_r, 0
+    empty_status_err = eq empty_status, VEC_ERR_INVALID_ARGUMENT
+    empty_len_zero = eq empty_len, 0
+    empty_all = and empty_status_err, empty_len_zero
+    br empty_all -> L_UDP_BIND, L_FAIL_TCP_READ_EMPTY
+L_FAIL_TCP_READ_EMPTY:
+    !empty_all
+    !empty_len_zero
+    !empty_status_err
+    !empty_len
+    !empty_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed4, client
+    !client_close_failed4
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed3, server
+    !server_close_failed3
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed5, listener
+    !listener_close_failed5
+    !listener
+    panic(10705)
+L_UDP_BIND:
+    EXPAND NET_UDP_BIND udp_status, udp, VEC_HOST, VEC_HOST_LEN, VEC_UDP_PORT
+    udp_status_ok = eq udp_status, SA_NET_OK
+    udp_ok = ne udp, 0
+    udp_all = and udp_status_ok, udp_ok
+    br udp_all -> L_UDP_SEND_VEC, L_FAIL_UDP_BIND
+L_FAIL_UDP_BIND:
+    !udp_all
+    !udp_ok
+    !udp_status_ok
+    !udp
+    !udp_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed5, client
+    !client_close_failed5
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed4, server
+    !server_close_failed4
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed6, listener
+    !listener_close_failed6
+    !listener
+    panic(10706)
+L_UDP_SEND_VEC:
+    !udp_all
+    !udp_ok
+    !udp_status_ok
+    !udp_status
+    iovs_uw = stack_alloc 32
+    ubuf1 = stack_alloc 8
+    ubuf2 = stack_alloc 8
+    store ubuf1+0, 72 as u8
+    store ubuf1+1, 105 as u8
+    store ubuf2+0, 33 as u8
+    store ubuf2+1, 33 as u8
+    store ubuf2+2, 33 as u8
+    ubuf1_len = 2
+    ubuf2_len = 3
+    store iovs_uw+0, ubuf1 as u64
+    store iovs_uw+8, ubuf1_len as u64
+    store iovs_uw+16, ubuf2 as u64
+    store iovs_uw+24, ubuf2_len as u64
+    EXPAND NET_UDP_SEND_TO_VECTORED udp_send_vec_status, udp_send_vec_len, udp, iovs_uw, 2, VEC_HOST, VEC_HOST_LEN, VEC_UDP_PORT
+    udp_send_vec_ok = eq udp_send_vec_status, SA_NET_OK
+    // If seccomp blocks sendmsg(2) (EPERM), skip UDP vectored test (environment restriction).
+    br udp_send_vec_ok -> L_UDP_SEND_VEC_OK, L_UDP_SKIP_BLOCKED
+L_UDP_SKIP_BLOCKED:
+    !udp_send_vec_ok
+    !udp_send_vec_len
+    !udp_send_vec_status
+    EXPAND NET_UDP_CLOSE udp_close_skip, udp
+    !udp_close_skip
+    !udp
+    EXPAND NET_TCP_STREAM_CLOSE client_close_skip, client
+    !client_close_skip
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_skip, server
+    !server_close_skip
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_skip, listener
+    !listener_close_skip
+    !listener
+    !bound_port
+    return 0
+L_UDP_SEND_VEC_OK:
+    udp_send_vec_len_ok = eq udp_send_vec_len, 5
+    udp_send_vec_all = and udp_send_vec_ok, udp_send_vec_len_ok
+    br udp_send_vec_all -> L_UDP_RECV_VEC, L_FAIL_UDP_SEND_VEC
+L_FAIL_UDP_SEND_VEC:
+    !udp_send_vec_all
+    !udp_send_vec_len_ok
+    !udp_send_vec_ok
+    !udp_send_vec_len
+    !udp_send_vec_status
+    EXPAND NET_UDP_CLOSE udp_close_failed, udp
+    !udp_close_failed
+    !udp
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed6, client
+    !client_close_failed6
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed5, server
+    !server_close_failed5
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed7, listener
+    !listener_close_failed7
+    !listener
+    panic(10707)
+L_UDP_RECV_VEC:
+    !udp_send_vec_all
+    !udp_send_vec_len_ok
+    !udp_send_vec_ok
+    !udp_send_vec_len
+    !udp_send_vec_status
+    iovs_ur = stack_alloc 32
+    urecv1 = stack_alloc 8
+    urecv2 = stack_alloc 8
+    store iovs_ur+0, urecv1 as u64
+    store iovs_ur+8, 2 as u64
+    store iovs_ur+16, urecv2 as u64
+    store iovs_ur+24, 3 as u64
+    udp_recv_vec_status = SA_NET_STATUS_INVALID_HANDLE
+    udp_recv_vec_len = 99
+    udp_recv_from_addr = 99
+    EXPAND NET_UDP_RECV_FROM_VECTORED udp_recv_vec_status, udp_recv_vec_len, udp_recv_from_addr, udp, iovs_ur, 2
+    udp_recv_vec_ok = eq udp_recv_vec_status, SA_NET_OK
+    udp_recv_vec_len_ok = eq udp_recv_vec_len, 5
+    udp_recv_addr_ok = ne udp_recv_from_addr, 0
+    ur_b0 = load urecv1+0 as u8
+    ur_b1 = load urecv1+1 as u8
+    ur_b2 = load urecv2+0 as u8
+    ur_b3 = load urecv2+1 as u8
+    ur_b4 = load urecv2+2 as u8
+    ur_match1 = eq ur_b0, 72
+    ur_match2 = eq ur_b1, 105
+    udp_recv_match = and ur_match1, ur_match2
+    udp_recv_all = and udp_recv_vec_ok, udp_recv_vec_len_ok
+    udp_recv_all2 = and udp_recv_all, udp_recv_match
+    udp_recv_all3 = and udp_recv_all2, udp_recv_addr_ok
+    br udp_recv_all3 -> L_UDP_EMPTY, L_FAIL_UDP_RECV_VEC
+L_FAIL_UDP_RECV_VEC:
+    !udp_recv_all3
+    !udp_recv_all2
+    !udp_recv_all
+    !udp_recv_match
+    !ur_match1
+    !ur_match2
+    !ur_b0
+    !ur_b1
+    !ur_b2
+    !ur_b3
+    !ur_b4
+    !udp_recv_addr_ok
+    !udp_recv_vec_len_ok
+    !udp_recv_vec_ok
+    !udp_recv_vec_len
+    !udp_recv_vec_status
+    EXPAND NET_UDP_CLOSE udp_close_failed2, udp
+    !udp_close_failed2
+    !udp
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed7, client
+    !client_close_failed7
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed6, server
+    !server_close_failed6
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed8, listener
+    !listener_close_failed8
+    !listener
+    panic(10708)
+L_UDP_EMPTY:
+    EXPAND NET_UDP_SEND_TO_VECTORED udp_empty_status, udp_empty_len, udp, iovs_uw, 0, VEC_HOST, VEC_HOST_LEN, VEC_UDP_PORT
+    udp_empty_status_err = eq udp_empty_status, VEC_ERR_INVALID_ARGUMENT
+    udp_empty_len_zero = eq udp_empty_len, 0
+    udp_empty_all = and udp_empty_status_err, udp_empty_len_zero
+    br udp_empty_all -> L_CLOSE, L_FAIL_UDP_EMPTY
+L_FAIL_UDP_EMPTY:
+    !udp_empty_all
+    !udp_empty_len_zero
+    !udp_empty_status_err
+    !udp_empty_len
+    !udp_empty_status
+    EXPAND NET_UDP_CLOSE udp_close_failed3, udp
+    !udp_close_failed3
+    !udp
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed8, client
+    !client_close_failed8
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed7, server
+    !server_close_failed7
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed9, listener
+    !listener_close_failed9
+    !listener
+    panic(10709)
+L_CLOSE:
+    EXPAND NET_UDP_CLOSE udp_close_status, udp
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status, client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_status, server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status, listener
+    udp_close_ok = eq udp_close_status, SA_NET_OK
+    client_close_ok = eq client_close_status, SA_NET_OK
+    server_close_ok = eq server_close_status, SA_NET_OK
+    listener_close_ok = eq listener_close_status, SA_NET_OK
+    ok1 = and udp_close_ok, client_close_ok
+    ok2 = and ok1, server_close_ok
+    ok = and ok2, listener_close_ok
+    br ok -> L_PASS, L_FAIL_CLOSE
+L_FAIL_CLOSE:
+    !ok
+    !ok2
+    !ok1
+    !listener_close_ok
+    !server_close_ok
+    !client_close_ok
+    !udp_close_ok
+    !listener_close_status
+    !server_close_status
+    !client_close_status
+    !udp_close_status
+    !listener
+    !server
+    !client
+    !udp
+    !bound_port
+    return
+L_PASS:
+    !ok
+    !ok2
+    !ok1
+    !listener_close_ok
+    !server_close_ok
+    !client_close_ok
+    !udp_close_ok
+    !listener_close_status
+    !server_close_status
+    !client_close_status
+    !udp_close_status
+    !listener
+    !server
+    !client
+    !udp
+    !bound_port
+    return

@@ -1,0 +1,173 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec into_iter trait alias macro surface"():
+L_ENTRY:
+    EXPAND VEC_NEW vec
+    EXPAND VEC_PUSH_U64 vec, 9
+    EXPAND VEC_PUSH_U64 vec, 10
+    EXPAND VEC_PUSH_U64 vec, 11
+
+    EXPAND VEC_INTO_ITER_U64 iter, backing_vec, vec
+    as_ref_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_REF_SLICE_U64 as_ref_slice, iter
+    as_ref_len = load as_ref_slice+Slice_len as u64
+    EXPAND SLICE_GET_U64 as_ref_first, as_ref_slice, 0
+    EXPAND VEC_INTO_ITER_SIZE_HINT_U64 hint_lower_initial, hint_upper_initial, iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_LEN_U64 exact_len_initial, iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_initial, iter
+
+    EXPAND ITER_NEXT_U64 first_ok, first, iter
+    EXPAND ITER_NEXT_BACK_U64 back_ok, back, iter
+    rem_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_REF_SLICE_U64 rem_slice, iter
+    rem_len = load rem_slice+Slice_len as u64
+    EXPAND SLICE_GET_U64 rem_first, rem_slice, 0
+    EXPAND VEC_INTO_ITER_SIZE_HINT_U64 hint_lower_remaining, hint_upper_remaining, iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_LEN_U64 exact_len_remaining, iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_remaining, iter
+
+    EXPAND ITER_NEXT_U64 last_ok, last, iter
+    EXPAND VEC_INTO_ITER_SIZE_HINT_U64 hint_lower_done, hint_upper_done, iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_LEN_U64 exact_len_done, iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_done, iter
+    EXPAND ITER_NEXT_U64 done_ok, done_value, iter
+
+    EXPAND VEC_INTO_ITER_DEFAULT_U64 empty_iter, empty_backing
+    empty_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_REF_SLICE_U64 empty_slice, empty_iter
+    empty_slice_len = load empty_slice+Slice_len as u64
+    EXPAND VEC_INTO_ITER_SIZE_HINT_U64 empty_hint_lower, empty_hint_upper, empty_iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_LEN_U64 empty_exact_len, empty_iter
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_exact_bool, empty_iter
+
+    EXPAND VEC_FREE backing_vec
+    EXPAND VEC_FREE empty_backing
+
+    ok_as_ref_len = eq as_ref_len, 3
+    ok_as_ref_first = eq as_ref_first, 9
+    ok_hint_lower_initial = eq hint_lower_initial, 3
+    ok_hint_upper_initial = eq hint_upper_initial, 3
+    ok_exact_len_initial = eq exact_len_initial, 3
+    ok_empty_initial = eq empty_initial, 0
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 9
+    ok_back_flag = eq back_ok, 1
+    ok_back = eq back, 11
+    ok_rem_len = eq rem_len, 1
+    ok_rem_first = eq rem_first, 10
+    ok_hint_lower_remaining = eq hint_lower_remaining, 1
+    ok_hint_upper_remaining = eq hint_upper_remaining, 1
+    ok_exact_len_remaining = eq exact_len_remaining, 1
+    ok_empty_remaining = eq empty_remaining, 0
+    ok_last_flag = eq last_ok, 1
+    ok_last = eq last, 10
+    ok_hint_lower_done = eq hint_lower_done, 0
+    ok_hint_upper_done = eq hint_upper_done, 0
+    ok_exact_len_done = eq exact_len_done, 0
+    ok_empty_done = eq empty_done, 1
+    ok_done_flag = eq done_ok, 0
+    ok_done_value = eq done_value, 0
+    ok_empty_slice_len = eq empty_slice_len, 0
+    ok_empty_hint_lower = eq empty_hint_lower, 0
+    ok_empty_hint_upper = eq empty_hint_upper, 0
+    ok_empty_exact_len = eq empty_exact_len, 0
+    ok_empty_exact_bool = eq empty_exact_bool, 1
+
+    ok = and ok_as_ref_len, ok_as_ref_first
+    ok = and ok, ok_hint_lower_initial
+    ok = and ok, ok_hint_upper_initial
+    ok = and ok, ok_exact_len_initial
+    ok = and ok, ok_empty_initial
+    ok = and ok, ok_first_flag
+    ok = and ok, ok_first
+    ok = and ok, ok_back_flag
+    ok = and ok, ok_back
+    ok = and ok, ok_rem_len
+    ok = and ok, ok_rem_first
+    ok = and ok, ok_hint_lower_remaining
+    ok = and ok, ok_hint_upper_remaining
+    ok = and ok, ok_exact_len_remaining
+    ok = and ok, ok_empty_remaining
+    ok = and ok, ok_last_flag
+    ok = and ok, ok_last
+    ok = and ok, ok_hint_lower_done
+    ok = and ok, ok_hint_upper_done
+    ok = and ok, ok_exact_len_done
+    ok = and ok, ok_empty_done
+    ok = and ok, ok_done_flag
+    ok = and ok, ok_done_value
+    ok = and ok, ok_empty_slice_len
+    ok = and ok, ok_empty_hint_lower
+    ok = and ok, ok_empty_hint_upper
+    ok = and ok, ok_empty_exact_len
+    ok = and ok, ok_empty_exact_bool
+
+    !as_ref_len
+    !as_ref_first
+    !hint_lower_initial
+    !hint_upper_initial
+    !exact_len_initial
+    !empty_initial
+    !first_ok
+    !first
+    !back_ok
+    !back
+    !rem_len
+    !rem_first
+    !hint_lower_remaining
+    !hint_upper_remaining
+    !exact_len_remaining
+    !empty_remaining
+    !last_ok
+    !last
+    !hint_lower_done
+    !hint_upper_done
+    !exact_len_done
+    !empty_done
+    !done_ok
+    !done_value
+    !empty_slice_len
+    !empty_hint_lower
+    !empty_hint_upper
+    !empty_exact_len
+    !empty_exact_bool
+    !ok_as_ref_len
+    !ok_as_ref_first
+    !ok_hint_lower_initial
+    !ok_hint_upper_initial
+    !ok_exact_len_initial
+    !ok_empty_initial
+    !ok_first_flag
+    !ok_first
+    !ok_back_flag
+    !ok_back
+    !ok_rem_len
+    !ok_rem_first
+    !ok_hint_lower_remaining
+    !ok_hint_upper_remaining
+    !ok_exact_len_remaining
+    !ok_empty_remaining
+    !ok_last_flag
+    !ok_last
+    !ok_hint_lower_done
+    !ok_hint_upper_done
+    !ok_exact_len_done
+    !ok_empty_done
+    !ok_done_flag
+    !ok_done_value
+    !ok_empty_slice_len
+    !ok_empty_hint_lower
+    !ok_empty_hint_upper
+    !ok_empty_exact_len
+    !ok_empty_exact_bool
+    !iter
+    !empty_iter
+    br ok -> L_VEC_INTO_ITER_TRAIT_ALIAS_OK, L_VEC_INTO_ITER_TRAIT_ALIAS_FAIL
+
+L_VEC_INTO_ITER_TRAIT_ALIAS_FAIL:
+    !ok
+    panic(10711)
+
+L_VEC_INTO_ITER_TRAIT_ALIAS_OK:
+    !ok
+    return

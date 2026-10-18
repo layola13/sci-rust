@@ -1,0 +1,209 @@
+@import "sa_std/num.sars"
+
+@test "sa_std narrow unsigned primitive bit position macro surface"():
+L_ENTRY:
+    u32_high = shl 1, 31
+    u64_high = shl 1, 63
+
+    EXPAND NUM_U8_BIT_WIDTH u8_bw_zero, 0
+    EXPAND NUM_U8_BIT_WIDTH u8_bw_mixed, 44
+    EXPAND NUM_U8_BIT_WIDTH u8_bw_mask, 300
+    EXPAND NUM_U8_ISOLATE_HIGHEST_ONE u8_iso_high_zero, 0
+    EXPAND NUM_U8_ISOLATE_HIGHEST_ONE u8_iso_high_mixed, 44
+    EXPAND NUM_U8_ISOLATE_LOWEST_ONE u8_iso_low_zero, 0
+    EXPAND NUM_U8_ISOLATE_LOWEST_ONE u8_iso_low_mixed, 44
+    EXPAND NUM_U8_HIGHEST_ONE u8_high_zero_ok, u8_high_zero_idx, 0
+    EXPAND NUM_U8_HIGHEST_ONE u8_high_mixed_ok, u8_high_mixed_idx, 44
+    EXPAND NUM_U8_HIGHEST_ONE u8_high_mask_ok, u8_high_mask_idx, 300
+    EXPAND NUM_U8_LOWEST_ONE u8_low_zero_ok, u8_low_zero_idx, 0
+    EXPAND NUM_U8_LOWEST_ONE u8_low_mixed_ok, u8_low_mixed_idx, 44
+
+    EXPAND NUM_U16_BIT_WIDTH u16_bw_zero, 0
+    EXPAND NUM_U16_BIT_WIDTH u16_bw_mixed, 44
+    EXPAND NUM_U16_BIT_WIDTH u16_bw_high, 32768
+    EXPAND NUM_U16_ISOLATE_HIGHEST_ONE u16_iso_high_zero, 0
+    EXPAND NUM_U16_ISOLATE_HIGHEST_ONE u16_iso_high_mixed, 44
+    EXPAND NUM_U16_ISOLATE_HIGHEST_ONE u16_iso_high_high, 32768
+    EXPAND NUM_U16_ISOLATE_LOWEST_ONE u16_iso_low_zero, 0
+    EXPAND NUM_U16_ISOLATE_LOWEST_ONE u16_iso_low_mixed, 44
+    EXPAND NUM_U16_HIGHEST_ONE u16_high_zero_ok, u16_high_zero_idx, 0
+    EXPAND NUM_U16_HIGHEST_ONE u16_high_mixed_ok, u16_high_mixed_idx, 44
+    EXPAND NUM_U16_HIGHEST_ONE u16_high_high_ok, u16_high_high_idx, 32768
+    EXPAND NUM_U16_LOWEST_ONE u16_low_zero_ok, u16_low_zero_idx, 0
+    EXPAND NUM_U16_LOWEST_ONE u16_low_mixed_ok, u16_low_mixed_idx, 44
+
+    EXPAND NUM_U32_BIT_WIDTH u32_bw_zero, 0
+    EXPAND NUM_U32_BIT_WIDTH u32_bw_mixed, 44
+    EXPAND NUM_U32_BIT_WIDTH u32_bw_high, u32_high
+    EXPAND NUM_U32_ISOLATE_HIGHEST_ONE u32_iso_high_zero, 0
+    EXPAND NUM_U32_ISOLATE_HIGHEST_ONE u32_iso_high_mixed, 44
+    EXPAND NUM_U32_ISOLATE_HIGHEST_ONE u32_iso_high_high, u32_high
+    EXPAND NUM_U32_ISOLATE_LOWEST_ONE u32_iso_low_zero, 0
+    EXPAND NUM_U32_ISOLATE_LOWEST_ONE u32_iso_low_mixed, 44
+    EXPAND NUM_U32_HIGHEST_ONE u32_high_zero_ok, u32_high_zero_idx, 0
+    EXPAND NUM_U32_HIGHEST_ONE u32_high_mixed_ok, u32_high_mixed_idx, 44
+    EXPAND NUM_U32_HIGHEST_ONE u32_high_high_ok, u32_high_high_idx, u32_high
+    EXPAND NUM_U32_LOWEST_ONE u32_low_zero_ok, u32_low_zero_idx, 0
+    EXPAND NUM_U32_LOWEST_ONE u32_low_mixed_ok, u32_low_mixed_idx, 44
+
+    EXPAND NUM_USIZE_BIT_WIDTH usize_bw_zero, 0
+    EXPAND NUM_USIZE_BIT_WIDTH usize_bw_mixed, 44
+    EXPAND NUM_USIZE_BIT_WIDTH usize_bw_high, u64_high
+    EXPAND NUM_USIZE_ISOLATE_HIGHEST_ONE usize_iso_high_zero, 0
+    EXPAND NUM_USIZE_ISOLATE_HIGHEST_ONE usize_iso_high_mixed, 44
+    EXPAND NUM_USIZE_ISOLATE_HIGHEST_ONE usize_iso_high_high, u64_high
+    EXPAND NUM_USIZE_ISOLATE_LOWEST_ONE usize_iso_low_zero, 0
+    EXPAND NUM_USIZE_ISOLATE_LOWEST_ONE usize_iso_low_mixed, 44
+    EXPAND NUM_USIZE_HIGHEST_ONE usize_high_zero_ok, usize_high_zero_idx, 0
+    EXPAND NUM_USIZE_HIGHEST_ONE usize_high_mixed_ok, usize_high_mixed_idx, 44
+    EXPAND NUM_USIZE_HIGHEST_ONE usize_high_high_ok, usize_high_high_idx, u64_high
+    EXPAND NUM_USIZE_LOWEST_ONE usize_low_zero_ok, usize_low_zero_idx, 0
+    EXPAND NUM_USIZE_LOWEST_ONE usize_low_mixed_ok, usize_low_mixed_idx, 44
+
+    ok01 = eq u8_bw_zero, 0
+    ok02 = eq u8_bw_mixed, 6
+    ok03 = eq u8_bw_mask, 6
+    ok04 = eq u8_iso_high_zero, 0
+    ok05 = eq u8_iso_high_mixed, 32
+    ok06 = eq u8_iso_low_zero, 0
+    ok07 = eq u8_iso_low_mixed, 4
+    ok08 = eq u8_high_zero_ok, 0
+    ok09 = eq u8_high_zero_idx, 0
+    ok10 = eq u8_high_mixed_ok, 1
+    ok11 = eq u8_high_mixed_idx, 5
+    ok12 = eq u8_high_mask_ok, 1
+    ok13 = eq u8_high_mask_idx, 5
+    ok14 = eq u8_low_zero_ok, 0
+    ok15 = eq u8_low_zero_idx, 0
+    ok16 = eq u8_low_mixed_ok, 1
+    ok17 = eq u8_low_mixed_idx, 2
+
+    ok18 = eq u16_bw_zero, 0
+    ok19 = eq u16_bw_mixed, 6
+    ok20 = eq u16_bw_high, 16
+    ok21 = eq u16_iso_high_zero, 0
+    ok22 = eq u16_iso_high_mixed, 32
+    ok23 = eq u16_iso_high_high, 32768
+    ok24 = eq u16_iso_low_zero, 0
+    ok25 = eq u16_iso_low_mixed, 4
+    ok26 = eq u16_high_zero_ok, 0
+    ok27 = eq u16_high_mixed_ok, 1
+    ok28 = eq u16_high_mixed_idx, 5
+    ok29 = eq u16_high_high_ok, 1
+    ok30 = eq u16_high_high_idx, 15
+    ok31 = eq u16_low_zero_ok, 0
+    ok32 = eq u16_low_mixed_ok, 1
+    ok33 = eq u16_low_mixed_idx, 2
+
+    ok34 = eq u32_bw_zero, 0
+    ok35 = eq u32_bw_mixed, 6
+    ok36 = eq u32_bw_high, 32
+    ok37 = eq u32_iso_high_zero, 0
+    ok38 = eq u32_iso_high_mixed, 32
+    ok39 = eq u32_iso_high_high, u32_high
+    ok40 = eq u32_iso_low_zero, 0
+    ok41 = eq u32_iso_low_mixed, 4
+    ok42 = eq u32_high_zero_ok, 0
+    ok43 = eq u32_high_mixed_ok, 1
+    ok44 = eq u32_high_mixed_idx, 5
+    ok45 = eq u32_high_high_ok, 1
+    ok46 = eq u32_high_high_idx, 31
+    ok47 = eq u32_low_zero_ok, 0
+    ok48 = eq u32_low_mixed_ok, 1
+    ok49 = eq u32_low_mixed_idx, 2
+
+    ok50 = eq usize_bw_zero, 0
+    ok51 = eq usize_bw_mixed, 6
+    ok52 = eq usize_bw_high, 64
+    ok53 = eq usize_iso_high_zero, 0
+    ok54 = eq usize_iso_high_mixed, 32
+    ok55 = eq usize_iso_high_high, u64_high
+    ok56 = eq usize_iso_low_zero, 0
+    ok57 = eq usize_iso_low_mixed, 4
+    ok58 = eq usize_high_zero_ok, 0
+    ok59 = eq usize_high_mixed_ok, 1
+    ok60 = eq usize_high_mixed_idx, 5
+    ok61 = eq usize_high_high_ok, 1
+    ok62 = eq usize_high_high_idx, 63
+    ok63 = eq usize_low_zero_ok, 0
+    ok64 = eq usize_low_mixed_ok, 1
+    ok65 = eq usize_low_mixed_idx, 2
+
+    chain01 = and ok01, ok02
+    chain02 = and chain01, ok03
+    chain03 = and chain02, ok04
+    chain04 = and chain03, ok05
+    chain05 = and chain04, ok06
+    chain06 = and chain05, ok07
+    chain07 = and chain06, ok08
+    chain08 = and chain07, ok09
+    chain09 = and chain08, ok10
+    chain10 = and chain09, ok11
+    chain11 = and chain10, ok12
+    chain12 = and chain11, ok13
+    chain13 = and chain12, ok14
+    chain14 = and chain13, ok15
+    chain15 = and chain14, ok16
+    chain16 = and chain15, ok17
+    chain17 = and chain16, ok18
+    chain18 = and chain17, ok19
+    chain19 = and chain18, ok20
+    chain20 = and chain19, ok21
+    chain21 = and chain20, ok22
+    chain22 = and chain21, ok23
+    chain23 = and chain22, ok24
+    chain24 = and chain23, ok25
+    chain25 = and chain24, ok26
+    chain26 = and chain25, ok27
+    chain27 = and chain26, ok28
+    chain28 = and chain27, ok29
+    chain29 = and chain28, ok30
+    chain30 = and chain29, ok31
+    chain31 = and chain30, ok32
+    chain32 = and chain31, ok33
+    chain33 = and chain32, ok34
+    chain34 = and chain33, ok35
+    chain35 = and chain34, ok36
+    chain36 = and chain35, ok37
+    chain37 = and chain36, ok38
+    chain38 = and chain37, ok39
+    chain39 = and chain38, ok40
+    chain40 = and chain39, ok41
+    chain41 = and chain40, ok42
+    chain42 = and chain41, ok43
+    chain43 = and chain42, ok44
+    chain44 = and chain43, ok45
+    chain45 = and chain44, ok46
+    chain46 = and chain45, ok47
+    chain47 = and chain46, ok48
+    chain48 = and chain47, ok49
+    chain49 = and chain48, ok50
+    chain50 = and chain49, ok51
+    chain51 = and chain50, ok52
+    chain52 = and chain51, ok53
+    chain53 = and chain52, ok54
+    chain54 = and chain53, ok55
+    chain55 = and chain54, ok56
+    chain56 = and chain55, ok57
+    chain57 = and chain56, ok58
+    chain58 = and chain57, ok59
+    chain59 = and chain58, ok60
+    chain60 = and chain59, ok61
+    chain61 = and chain60, ok62
+    chain62 = and chain61, ok63
+    chain63 = and chain62, ok64
+    ok = and chain63, ok65
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u32_high
+    !u64_high
+    panic(10663)
+
+L_PASS:
+    !ok
+    !u32_high
+    !u64_high
+    return 0

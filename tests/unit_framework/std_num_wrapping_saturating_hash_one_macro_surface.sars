@@ -1,0 +1,275 @@
+@import "sa_std/hash.sars"
+@import "sa_std/num.sars"
+
+@test "sa_std Wrapping and Saturating hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    state = alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 1001, 1002
+
+    wrap_u64 = alloc WrappingU64_SIZE
+    wrap_u64_other = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_NEW wrap_u64, 42
+    EXPAND WRAPPING_U64_NEW wrap_u64_other, 43
+
+    wrap_u64_writer_hasher = alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW wrap_u64_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_WRAPPING_U64 wrap_u64_writer_hasher, wrap_u64
+    EXPAND DEFAULT_HASHER_FINISH wrap_u64_writer_hash, wrap_u64_writer_hasher
+    EXPAND WRAPPING_U64_HASH wrap_u64_hash, wrap_u64
+    EXPAND WRAPPING_U64_HASH wrap_u64_other_hash, wrap_u64_other
+    EXPAND HASH_U64 wrap_u64_primitive_hash, 42
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_WRAPPING_U64 wrap_u64_build_hash, builder, wrap_u64
+    EXPAND RANDOM_STATE_HASH_ONE_WRAPPING_U64 wrap_u64_state_hash, state, wrap_u64
+    wrap_u64_state_hasher = alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD wrap_u64_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_WRAPPING_U64 wrap_u64_state_hasher, wrap_u64
+    EXPAND DEFAULT_HASHER_FINISH wrap_u64_manual_state_hash, wrap_u64_state_hasher
+
+    wrap_u32 = alloc WrappingU32_SIZE
+    wrap_u32_other = alloc WrappingU32_SIZE
+    EXPAND WRAPPING_U32_NEW wrap_u32, 42
+    EXPAND WRAPPING_U32_NEW wrap_u32_other, 43
+
+    wrap_u32_writer_hasher = alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW wrap_u32_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_WRAPPING_U32 wrap_u32_writer_hasher, wrap_u32
+    EXPAND DEFAULT_HASHER_FINISH wrap_u32_writer_hash, wrap_u32_writer_hasher
+    EXPAND WRAPPING_U32_HASH wrap_u32_hash, wrap_u32
+    EXPAND WRAPPING_U32_HASH wrap_u32_other_hash, wrap_u32_other
+    EXPAND HASH_U32 wrap_u32_primitive_hash, 42
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_WRAPPING_U32 wrap_u32_build_hash, builder, wrap_u32
+    EXPAND RANDOM_STATE_HASH_ONE_WRAPPING_U32 wrap_u32_state_hash, state, wrap_u32
+    wrap_u32_state_hasher = alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD wrap_u32_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_WRAPPING_U32 wrap_u32_state_hasher, wrap_u32
+    EXPAND DEFAULT_HASHER_FINISH wrap_u32_manual_state_hash, wrap_u32_state_hasher
+
+    wrap_i64 = alloc WrappingI64_SIZE
+    wrap_i64_other = alloc WrappingI64_SIZE
+    EXPAND WRAPPING_I64_NEW wrap_i64, -42
+    EXPAND WRAPPING_I64_NEW wrap_i64_other, -43
+
+    wrap_i64_writer_hasher = alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW wrap_i64_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_WRAPPING_I64 wrap_i64_writer_hasher, wrap_i64
+    EXPAND DEFAULT_HASHER_FINISH wrap_i64_writer_hash, wrap_i64_writer_hasher
+    EXPAND WRAPPING_I64_HASH wrap_i64_hash, wrap_i64
+    EXPAND WRAPPING_I64_HASH wrap_i64_other_hash, wrap_i64_other
+    EXPAND HASH_I64 wrap_i64_primitive_hash, -42
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_WRAPPING_I64 wrap_i64_build_hash, builder, wrap_i64
+    EXPAND RANDOM_STATE_HASH_ONE_WRAPPING_I64 wrap_i64_state_hash, state, wrap_i64
+    wrap_i64_state_hasher = alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD wrap_i64_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_WRAPPING_I64 wrap_i64_state_hasher, wrap_i64
+    EXPAND DEFAULT_HASHER_FINISH wrap_i64_manual_state_hash, wrap_i64_state_hasher
+
+    sat_u64 = alloc SaturatingU64_SIZE
+    sat_u64_other = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_NEW sat_u64, 42
+    EXPAND SATURATING_U64_NEW sat_u64_other, 43
+
+    sat_u64_writer_hasher = alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW sat_u64_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_SATURATING_U64 sat_u64_writer_hasher, sat_u64
+    EXPAND DEFAULT_HASHER_FINISH sat_u64_writer_hash, sat_u64_writer_hasher
+    EXPAND SATURATING_U64_HASH sat_u64_hash, sat_u64
+    EXPAND SATURATING_U64_HASH sat_u64_other_hash, sat_u64_other
+    EXPAND HASH_U64 sat_u64_primitive_hash, 42
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SATURATING_U64 sat_u64_build_hash, builder, sat_u64
+    EXPAND RANDOM_STATE_HASH_ONE_SATURATING_U64 sat_u64_state_hash, state, sat_u64
+    sat_u64_state_hasher = alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD sat_u64_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_SATURATING_U64 sat_u64_state_hasher, sat_u64
+    EXPAND DEFAULT_HASHER_FINISH sat_u64_manual_state_hash, sat_u64_state_hasher
+
+    sat_i64 = alloc SaturatingI64_SIZE
+    sat_i64_other = alloc SaturatingI64_SIZE
+    EXPAND SATURATING_I64_NEW sat_i64, -42
+    EXPAND SATURATING_I64_NEW sat_i64_other, -43
+
+    sat_i64_writer_hasher = alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW sat_i64_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_SATURATING_I64 sat_i64_writer_hasher, sat_i64
+    EXPAND DEFAULT_HASHER_FINISH sat_i64_writer_hash, sat_i64_writer_hasher
+    EXPAND SATURATING_I64_HASH sat_i64_hash, sat_i64
+    EXPAND SATURATING_I64_HASH sat_i64_other_hash, sat_i64_other
+    EXPAND HASH_I64 sat_i64_primitive_hash, -42
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SATURATING_I64 sat_i64_build_hash, builder, sat_i64
+    EXPAND RANDOM_STATE_HASH_ONE_SATURATING_I64 sat_i64_state_hash, state, sat_i64
+    sat_i64_state_hasher = alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD sat_i64_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_SATURATING_I64 sat_i64_state_hasher, sat_i64
+    EXPAND DEFAULT_HASHER_FINISH sat_i64_manual_state_hash, sat_i64_state_hasher
+
+    ok_wr64_writer = eq wrap_u64_writer_hash, wrap_u64_hash
+    ok_wr64_primitive = eq wrap_u64_hash, wrap_u64_primitive_hash
+    ok_wr64_value = ne wrap_u64_hash, wrap_u64_other_hash
+    ok_wr64_build = eq wrap_u64_build_hash, wrap_u64_hash
+    ok_wr64_state = eq wrap_u64_state_hash, wrap_u64_manual_state_hash
+
+    ok_wr32_writer = eq wrap_u32_writer_hash, wrap_u32_hash
+    ok_wr32_primitive = eq wrap_u32_hash, wrap_u32_primitive_hash
+    ok_wr32_value = ne wrap_u32_hash, wrap_u32_other_hash
+    ok_wr32_build = eq wrap_u32_build_hash, wrap_u32_hash
+    ok_wr32_state = eq wrap_u32_state_hash, wrap_u32_manual_state_hash
+
+    ok_wri64_writer = eq wrap_i64_writer_hash, wrap_i64_hash
+    ok_wri64_primitive = eq wrap_i64_hash, wrap_i64_primitive_hash
+    ok_wri64_value = ne wrap_i64_hash, wrap_i64_other_hash
+    ok_wri64_build = eq wrap_i64_build_hash, wrap_i64_hash
+    ok_wri64_state = eq wrap_i64_state_hash, wrap_i64_manual_state_hash
+
+    ok_sat64_writer = eq sat_u64_writer_hash, sat_u64_hash
+    ok_sat64_primitive = eq sat_u64_hash, sat_u64_primitive_hash
+    ok_sat64_value = ne sat_u64_hash, sat_u64_other_hash
+    ok_sat64_build = eq sat_u64_build_hash, sat_u64_hash
+    ok_sat64_state = eq sat_u64_state_hash, sat_u64_manual_state_hash
+
+    ok_sati64_writer = eq sat_i64_writer_hash, sat_i64_hash
+    ok_sati64_primitive = eq sat_i64_hash, sat_i64_primitive_hash
+    ok_sati64_value = ne sat_i64_hash, sat_i64_other_hash
+    ok_sati64_build = eq sat_i64_build_hash, sat_i64_hash
+    ok_sati64_state = eq sat_i64_state_hash, sat_i64_manual_state_hash
+
+    c01 = and ok_wr64_writer, ok_wr64_primitive
+    c02 = and c01, ok_wr64_value
+    c03 = and c02, ok_wr64_build
+    c04 = and c03, ok_wr64_state
+    c05 = and c04, ok_wr32_writer
+    c06 = and c05, ok_wr32_primitive
+    c07 = and c06, ok_wr32_value
+    c08 = and c07, ok_wr32_build
+    c09 = and c08, ok_wr32_state
+    c10 = and c09, ok_wri64_writer
+    c11 = and c10, ok_wri64_primitive
+    c12 = and c11, ok_wri64_value
+    c13 = and c12, ok_wri64_build
+    c14 = and c13, ok_wri64_state
+    c15 = and c14, ok_sat64_writer
+    c16 = and c15, ok_sat64_primitive
+    c17 = and c16, ok_sat64_value
+    c18 = and c17, ok_sat64_build
+    c19 = and c18, ok_sat64_state
+    c20 = and c19, ok_sati64_writer
+    c21 = and c20, ok_sati64_primitive
+    c22 = and c21, ok_sati64_value
+    c23 = and c22, ok_sati64_build
+    ok = and c23, ok_sati64_state
+
+    !wrap_u64
+    !wrap_u64_other
+    !wrap_u64_writer_hasher
+    !wrap_u64_writer_hash
+    !wrap_u64_hash
+    !wrap_u64_other_hash
+    !wrap_u64_primitive_hash
+    !wrap_u64_build_hash
+    !wrap_u64_state_hash
+    !wrap_u64_state_hasher
+    !wrap_u64_manual_state_hash
+    !wrap_u32
+    !wrap_u32_other
+    !wrap_u32_writer_hasher
+    !wrap_u32_writer_hash
+    !wrap_u32_hash
+    !wrap_u32_other_hash
+    !wrap_u32_primitive_hash
+    !wrap_u32_build_hash
+    !wrap_u32_state_hash
+    !wrap_u32_state_hasher
+    !wrap_u32_manual_state_hash
+    !wrap_i64
+    !wrap_i64_other
+    !wrap_i64_writer_hasher
+    !wrap_i64_writer_hash
+    !wrap_i64_hash
+    !wrap_i64_other_hash
+    !wrap_i64_primitive_hash
+    !wrap_i64_build_hash
+    !wrap_i64_state_hash
+    !wrap_i64_state_hasher
+    !wrap_i64_manual_state_hash
+    !sat_u64
+    !sat_u64_other
+    !sat_u64_writer_hasher
+    !sat_u64_writer_hash
+    !sat_u64_hash
+    !sat_u64_other_hash
+    !sat_u64_primitive_hash
+    !sat_u64_build_hash
+    !sat_u64_state_hash
+    !sat_u64_state_hasher
+    !sat_u64_manual_state_hash
+    !sat_i64
+    !sat_i64_other
+    !sat_i64_writer_hasher
+    !sat_i64_writer_hash
+    !sat_i64_hash
+    !sat_i64_other_hash
+    !sat_i64_primitive_hash
+    !sat_i64_build_hash
+    !sat_i64_state_hash
+    !sat_i64_state_hasher
+    !sat_i64_manual_state_hash
+    !ok_wr64_writer
+    !ok_wr64_primitive
+    !ok_wr64_value
+    !ok_wr64_build
+    !ok_wr64_state
+    !ok_wr32_writer
+    !ok_wr32_primitive
+    !ok_wr32_value
+    !ok_wr32_build
+    !ok_wr32_state
+    !ok_wri64_writer
+    !ok_wri64_primitive
+    !ok_wri64_value
+    !ok_wri64_build
+    !ok_wri64_state
+    !ok_sat64_writer
+    !ok_sat64_primitive
+    !ok_sat64_value
+    !ok_sat64_build
+    !ok_sat64_state
+    !ok_sati64_writer
+    !ok_sati64_primitive
+    !ok_sati64_value
+    !ok_sati64_build
+    !ok_sati64_state
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !c18
+    !c19
+    !c20
+    !c21
+    !c22
+    !c23
+    !builder
+    !state
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10595)
+
+L_PASS:
+    !ok
+    return 0

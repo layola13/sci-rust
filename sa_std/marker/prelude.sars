@@ -1,0 +1,4 @@
+// Stable marker namespace aggregation.
+@import "phantom_data.sars"
+@import "../manually_drop.sars"
+@import "../marker.sars"

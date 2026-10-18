@@ -1,0 +1,74 @@
+@import "sa_std/collections/vec_deque.sars"
+@import "sa_std/vec.sars"
+
+@extract_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    out = eq rem, 0
+    !rem
+    !value
+    return out
+
+@test "sa_std vec_deque extract_if alias"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 1
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 4
+    EXPAND VEC_DEQUE_EXTRACT_IF remain_len, extracted, deque, @extract_even
+    EXPAND VEC_LEN extracted_len, extracted
+    EXPAND VEC_GET_U64 e0, extracted, 0
+    EXPAND VEC_GET_U64 e1, extracted, 1
+    EXPAND VEC_DEQUE_LEN deque_len, deque
+    EXPAND VEC_DEQUE_TRY_GET r0_ok, r0, deque, 0
+    EXPAND VEC_DEQUE_TRY_GET r1_ok, r1, deque, 1
+
+    ok_remain = eq remain_len, 2
+    ok_extracted_len = eq extracted_len, 2
+    ok_e0 = eq e0, 2
+    ok_e1 = eq e1, 4
+    ok_deque_len = eq deque_len, 2
+    ok_r0_flag = eq r0_ok, 1
+    ok_r0 = eq r0, 1
+    ok_r1_flag = eq r1_ok, 1
+    ok_r1 = eq r1, 3
+
+    ok = and ok_remain, ok_extracted_len
+    ok = and ok, ok_e0
+    ok = and ok, ok_e1
+    ok = and ok, ok_deque_len
+    ok = and ok, ok_r0_flag
+    ok = and ok, ok_r0
+    ok = and ok, ok_r1_flag
+    ok = and ok, ok_r1
+
+    EXPAND VEC_FREE extracted
+    EXPAND VEC_DEQUE_FREE deque
+    !remain_len
+    !extracted_len
+    !e0
+    !e1
+    !deque_len
+    !r0_ok
+    !r0
+    !r1_ok
+    !r1
+    !ok_remain
+    !ok_extracted_len
+    !ok_e0
+    !ok_e1
+    !ok_deque_len
+    !ok_r0_flag
+    !ok_r0
+    !ok_r1_flag
+    !ok_r1
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10827)
+
+L_OK:
+    !ok
+    return

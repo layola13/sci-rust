@@ -1,0 +1,192 @@
+@import "sa_std/core/slice.sars"
+@import "sa_std/iter.sars"
+
+@iter_sorted_le(left: u64, right: u64) -> u64:
+L_ENTRY:
+    out = ule left, right
+    !right
+    !left
+    return out
+
+@iter_sorted_lt(left: u64, right: u64) -> u64:
+L_ENTRY:
+    out = ult left, right
+    !right
+    !left
+    return out
+
+@iter_sorted_key_tens(value: u64) -> u64:
+L_ENTRY:
+    key = udiv value, 10
+    !value
+    return key
+
+@test "sa_std iter is_sorted macro surface"():
+L_ENTRY:
+    sorted_data = stack_alloc 32
+    unsorted_data = stack_alloc 24
+    dup_data = stack_alloc 24
+    key_sorted_data = stack_alloc 24
+    key_unsorted_data = stack_alloc 24
+    empty_data = stack_alloc 8
+
+    store sorted_data+0, 1 as u64
+    store sorted_data+8, 2 as u64
+    store sorted_data+16, 2 as u64
+    store sorted_data+24, 4 as u64
+    store unsorted_data+0, 1 as u64
+    store unsorted_data+8, 3 as u64
+    store unsorted_data+16, 2 as u64
+    store dup_data+0, 1 as u64
+    store dup_data+8, 2 as u64
+    store dup_data+16, 2 as u64
+    store key_sorted_data+0, 10 as u64
+    store key_sorted_data+8, 20 as u64
+    store key_sorted_data+16, 25 as u64
+    store key_unsorted_data+0, 20 as u64
+    store key_unsorted_data+8, 19 as u64
+    store key_unsorted_data+16, 31 as u64
+
+    sorted_slice = alloc Slice_SIZE
+    unsorted_slice = alloc Slice_SIZE
+    dup_slice = alloc Slice_SIZE
+    key_sorted_slice = alloc Slice_SIZE
+    key_unsorted_slice = alloc Slice_SIZE
+    empty_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW sorted_slice, sorted_data, 4
+    EXPAND SLICE_NEW unsorted_slice, unsorted_data, 3
+    EXPAND SLICE_NEW dup_slice, dup_data, 3
+    EXPAND SLICE_NEW key_sorted_slice, key_sorted_data, 3
+    EXPAND SLICE_NEW key_unsorted_slice, key_unsorted_data, 3
+    EXPAND SLICE_NEW empty_slice, empty_data, 0
+
+    EXPAND ITER_FROM_SLICE sorted_iter, sorted_slice
+    EXPAND ITER_NEXT_U64 sorted_skip_ok, sorted_skip_value, sorted_iter
+    EXPAND ITER_IS_SORTED_U64 sorted_tail_ok, sorted_iter
+    EXPAND ITER_IS_EMPTY sorted_tail_empty, sorted_iter
+
+    EXPAND ITER_FROM_SLICE unsorted_iter, unsorted_slice
+    EXPAND ITER_IS_SORTED_U64 unsorted_ok, unsorted_iter
+    EXPAND ITER_IS_EMPTY unsorted_empty, unsorted_iter
+
+    EXPAND ITER_FROM_SLICE dup_le_iter, dup_slice
+    EXPAND ITER_IS_SORTED_BY_U64 dup_by_le, dup_le_iter, @iter_sorted_le
+    EXPAND ITER_IS_EMPTY dup_le_empty, dup_le_iter
+
+    EXPAND ITER_FROM_SLICE dup_lt_iter, dup_slice
+    EXPAND ITER_IS_SORTED_BY_U64 dup_by_lt, dup_lt_iter, @iter_sorted_lt
+    EXPAND ITER_IS_EMPTY dup_lt_empty, dup_lt_iter
+
+    EXPAND ITER_FROM_SLICE key_sorted_iter, key_sorted_slice
+    EXPAND ITER_IS_SORTED_BY_KEY_U64 key_sorted_ok, key_sorted_iter, @iter_sorted_key_tens
+    EXPAND ITER_IS_EMPTY key_sorted_empty, key_sorted_iter
+
+    EXPAND ITER_FROM_SLICE key_unsorted_iter, key_unsorted_slice
+    EXPAND ITER_IS_SORTED_BY_KEY_U64 key_unsorted_ok, key_unsorted_iter, @iter_sorted_key_tens
+    EXPAND ITER_IS_EMPTY key_unsorted_empty, key_unsorted_iter
+
+    EXPAND ITER_FROM_SLICE empty_iter, empty_slice
+    EXPAND ITER_IS_SORTED_U64 empty_sorted_ok, empty_iter
+    EXPAND ITER_IS_EMPTY empty_sorted_empty, empty_iter
+
+    ok_skip_flag = eq sorted_skip_ok, 1
+    ok_skip_value = eq sorted_skip_value, 1
+    ok_sorted_tail = eq sorted_tail_ok, 1
+    ok_sorted_tail_empty = eq sorted_tail_empty, 1
+    ok_unsorted = eq unsorted_ok, 0
+    ok_unsorted_empty = eq unsorted_empty, 1
+    ok_dup_le = eq dup_by_le, 1
+    ok_dup_le_empty = eq dup_le_empty, 1
+    ok_dup_lt = eq dup_by_lt, 0
+    ok_dup_lt_empty = eq dup_lt_empty, 1
+    ok_key_sorted = eq key_sorted_ok, 1
+    ok_key_sorted_empty = eq key_sorted_empty, 1
+    ok_key_unsorted = eq key_unsorted_ok, 0
+    ok_key_unsorted_empty = eq key_unsorted_empty, 1
+    ok_empty_sorted = eq empty_sorted_ok, 1
+    ok_empty_empty = eq empty_sorted_empty, 1
+
+    c01 = and ok_skip_flag, ok_skip_value
+    c02 = and c01, ok_sorted_tail
+    c03 = and c02, ok_sorted_tail_empty
+    c04 = and c03, ok_unsorted
+    c05 = and c04, ok_unsorted_empty
+    c06 = and c05, ok_dup_le
+    c07 = and c06, ok_dup_le_empty
+    c08 = and c07, ok_dup_lt
+    c09 = and c08, ok_dup_lt_empty
+    c10 = and c09, ok_key_sorted
+    c11 = and c10, ok_key_sorted_empty
+    c12 = and c11, ok_key_unsorted
+    c13 = and c12, ok_key_unsorted_empty
+    c14 = and c13, ok_empty_sorted
+    ok = and c14, ok_empty_empty
+
+    !sorted_skip_ok
+    !sorted_skip_value
+    !sorted_tail_ok
+    !sorted_tail_empty
+    !unsorted_ok
+    !unsorted_empty
+    !dup_by_le
+    !dup_le_empty
+    !dup_by_lt
+    !dup_lt_empty
+    !key_sorted_ok
+    !key_sorted_empty
+    !key_unsorted_ok
+    !key_unsorted_empty
+    !empty_sorted_ok
+    !empty_sorted_empty
+    !ok_skip_flag
+    !ok_skip_value
+    !ok_sorted_tail
+    !ok_sorted_tail_empty
+    !ok_unsorted
+    !ok_unsorted_empty
+    !ok_dup_le
+    !ok_dup_le_empty
+    !ok_dup_lt
+    !ok_dup_lt_empty
+    !ok_key_sorted
+    !ok_key_sorted_empty
+    !ok_key_unsorted
+    !ok_key_unsorted_empty
+    !ok_empty_sorted
+    !ok_empty_empty
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !empty_iter
+    !key_unsorted_iter
+    !key_sorted_iter
+    !dup_lt_iter
+    !dup_le_iter
+    !unsorted_iter
+    !sorted_iter
+    !empty_slice
+    !key_unsorted_slice
+    !key_sorted_slice
+    !dup_slice
+    !unsorted_slice
+    !sorted_slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10533)
+
+L_PASS:
+    !ok
+    return 0

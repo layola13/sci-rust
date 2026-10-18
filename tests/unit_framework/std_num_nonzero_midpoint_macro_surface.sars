@@ -1,0 +1,77 @@
+@import "sa_std/num.sars"
+
+@test "sa_std nonzero unsigned midpoint macro surface"():
+L_ENTRY:
+    u8_left = stack_alloc NonZeroU8_SIZE
+    u8_right = stack_alloc NonZeroU8_SIZE
+    u8_out = stack_alloc NonZeroU8_SIZE
+    u16_left = stack_alloc NonZeroU16_SIZE
+    u16_right = stack_alloc NonZeroU16_SIZE
+    u16_out = stack_alloc NonZeroU16_SIZE
+    u32_left = stack_alloc NonZeroU32_SIZE
+    u32_right = stack_alloc NonZeroU32_SIZE
+    u32_out = stack_alloc NonZeroU32_SIZE
+    u64_left = stack_alloc NonZeroU64_SIZE
+    u64_right = stack_alloc NonZeroU64_SIZE
+    u64_out = stack_alloc NonZeroU64_SIZE
+    usize_left = stack_alloc NonZeroUsize_SIZE
+    usize_right = stack_alloc NonZeroUsize_SIZE
+    usize_out = stack_alloc NonZeroUsize_SIZE
+
+    u64_mid = shl 1, 63
+
+    EXPAND NONZERO_U8_NEW ok_u8_left, u8_left, 1
+    EXPAND NONZERO_U8_NEW ok_u8_right, u8_right, 4
+    EXPAND NONZERO_U16_NEW ok_u16_left, u16_left, NUM_U16_MAX
+    EXPAND NONZERO_U16_NEW ok_u16_right, u16_right, 1
+    EXPAND NONZERO_U32_NEW ok_u32_left, u32_left, NUM_U32_MAX
+    EXPAND NONZERO_U32_NEW ok_u32_right, u32_right, 1
+    EXPAND NONZERO_U64_NEW ok_u64_left, u64_left, NUM_U64_MAX
+    EXPAND NONZERO_U64_NEW ok_u64_right, u64_right, 1
+    EXPAND NONZERO_USIZE_NEW ok_usize_left, usize_left, NUM_U64_MAX
+    EXPAND NONZERO_USIZE_NEW ok_usize_right, usize_right, 1
+
+    EXPAND NONZERO_U8_MIDPOINT u8_out, u8_left, u8_right
+    EXPAND NONZERO_U16_MIDPOINT u16_out, u16_left, u16_right
+    EXPAND NONZERO_U32_MIDPOINT u32_out, u32_left, u32_right
+    EXPAND NONZERO_U64_MIDPOINT u64_out, u64_left, u64_right
+    EXPAND NONZERO_USIZE_MIDPOINT usize_out, usize_left, usize_right
+
+    EXPAND NONZERO_U8_GET u8_value, u8_out
+    EXPAND NONZERO_U16_GET u16_value, u16_out
+    EXPAND NONZERO_U32_GET u32_value, u32_out
+    EXPAND NONZERO_U64_GET u64_value, u64_out
+    EXPAND NONZERO_USIZE_GET usize_value, usize_out
+
+    ok_new_01 = and ok_u8_left, ok_u8_right
+    ok_new_02 = and ok_new_01, ok_u16_left
+    ok_new_03 = and ok_new_02, ok_u16_right
+    ok_new_04 = and ok_new_03, ok_u32_left
+    ok_new_05 = and ok_new_04, ok_u32_right
+    ok_new_06 = and ok_new_05, ok_u64_left
+    ok_new_07 = and ok_new_06, ok_u64_right
+    ok_new_08 = and ok_new_07, ok_usize_left
+    ok_new_all = and ok_new_08, ok_usize_right
+
+    ok_u8_value = eq u8_value, 2
+    ok_u16_value = eq u16_value, 32768
+    ok_u32_value = eq u32_value, 2147483648
+    ok_u64_value = eq u64_value, u64_mid
+    ok_usize_value = eq usize_value, u64_mid
+
+    ok_value_01 = and ok_new_all, ok_u8_value
+    ok_value_02 = and ok_value_01, ok_u16_value
+    ok_value_03 = and ok_value_02, ok_u32_value
+    ok_value_04 = and ok_value_03, ok_u64_value
+    ok = and ok_value_04, ok_usize_value
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u64_mid
+    panic(10613)
+
+L_PASS:
+    !ok
+    !u64_mid
+    return 0

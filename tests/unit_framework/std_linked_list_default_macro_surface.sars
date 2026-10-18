@@ -1,0 +1,22 @@
+@import "sa_std/collections/linked_list.sars"
+
+@test "sa_std linked_list default"():
+L_ENTRY:
+    EXPAND LINKED_LIST_DEFAULT list
+    EXPAND LINKED_LIST_IS_EMPTY e, list
+    EXPAND LINKED_LIST_LEN ln, list
+    EXPAND LINKED_LIST_FREE list
+    a = eq e, 1
+    b = eq ln, 0
+    ok = and a, b
+    !e
+    !ln
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10998)

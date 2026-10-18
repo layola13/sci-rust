@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "workspace/index.sars"
+
+@const RESULT_OK = utf8:"211\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 211 - Pkg Workspace Inheritance
+// Members inherit a shared config folder that exports layout constants.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @workspace_total()
+    ok = eq value, 211
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

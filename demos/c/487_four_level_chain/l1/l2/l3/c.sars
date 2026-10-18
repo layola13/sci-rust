@@ -1,0 +1,8 @@
+@import "l1/l2/l3/l4/seed.sars"
+
+@export c_value() -> i32:
+L_ENTRY:
+    seed = call @seed_value()
+    value = add seed, 40
+    !seed
+    return value

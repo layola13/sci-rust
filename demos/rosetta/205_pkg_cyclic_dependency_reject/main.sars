@@ -1,0 +1,10 @@
+@import "pkg_a/main.sars"
+
+// 205 - Package Cyclic Dependency Reject
+// Intentional cycle: pkg_a -> pkg_b -> pkg_a.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @pkg_a_value()
+    !value
+    return 205

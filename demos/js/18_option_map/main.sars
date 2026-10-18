@@ -1,0 +1,34 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/option.sars"
+
+@const RESULT_OK = utf8:"8\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@double(x: u64) -> u64:
+L_ENTRY:
+    y = add x, x
+    return y
+
+@main() -> i32:
+L_ENTRY:
+    opt = alloc Option_SIZE
+    store opt+Option_tag, Option_SOME as u64
+    store opt+Option_value, 3 as u64
+    !opt
+    mapped = call @double(3)
+    result = add mapped, 5
+    ok = eq result, 11
+    !result
+    !mapped
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

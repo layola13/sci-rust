@@ -238,7 +238,7 @@ Focused verification:
 ```sh
 tools/test_steps_timed.sh --heartbeat 10 --timeout 240 --log-dir logs/test_steps/unit-framework-log3-20260709T083000Z unit-framework
 rg -n "feature_suite\\.sa all modes elapsed|assert_diag\\.sa elapsed|mock_io_test\\.sa elapsed|\\[unit-framework\\] FAIL" logs/test_steps/unit-framework-log3-20260709T083000Z/01-unit-framework.log
-rg -n "START file=tests/unit_framework/feature_suite\\.sa|END   file=tests/unit_framework/feature_suite\\.sa|START file=assert_diag\\.sa|END   file=assert_diag\\.sa|START file=mock_io_test\\.sa|END   file=mock_io_test\\.sa" logs/test_steps/unit-framework-log3-20260709T083000Z/01-unit-framework.log
+rg -n "START file=tests/unit_framework/feature_suite\\.sa|END   file=tests/unit_framework/feature_suite\\.sa|START file=assert_diag\\.sa|END   file=assert_diag\\.sa|START file=mock_io_test\\.sa|END   file=mock_io_test\\.sars" logs/test_steps/unit-framework-log3-20260709T083000Z/01-unit-framework.log
 ```
 
 Result: `unit-framework` passed (`5/5 tests passed`). The first grep returned no matches for the old elapsed-only formats or misleading `[unit-framework] FAIL`; the second grep found the new START/END lines.

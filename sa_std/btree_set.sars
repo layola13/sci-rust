@@ -1,0 +1,1072 @@
+@import "btree_set.sal"
+@import "btree_map.sars"
+
+#def BTreeSet_VALUE_SENTINEL = 1
+
+@btree_set_hash_entries_str(&hasher: ptr, entries: ptr, len: u64, idx: u64) -> void:
+L_ENTRY:
+    done = eq idx, len
+    br done -> L_BTREE_SET_HASH_DONE, L_BTREE_SET_HASH_BODY
+
+L_BTREE_SET_HASH_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    EXPAND DEFAULT_HASHER_WRITE_STR hasher, entry
+    next_idx = add idx, 1
+    call @btree_set_hash_entries_str(&hasher, entries, len, next_idx)
+    !next_idx
+    !entry
+    !entry_off
+    !done
+    !idx
+    !len
+    !entries
+    !hasher
+    return
+
+L_BTREE_SET_HASH_DONE:
+    !done
+    !idx
+    !len
+    !entries
+    !hasher
+    return
+
+@btree_set_write_hash_str(&hasher: ptr, &set: ptr) -> void:
+L_ENTRY:
+    len = load set+BTreeSet_len as u64
+    entries = load set+BTreeSet_entries as ptr
+    EXPAND DEFAULT_HASHER_WRITE_LENGTH_PREFIX hasher, len
+    call @btree_set_hash_entries_str(&hasher, entries, len, 0)
+    !entries
+    !len
+    !set
+    !hasher
+    return
+
+@btree_set_insert_all(&dst: ptr, &src: ptr) -> void:
+L_ENTRY:
+    entries = load src+BTreeSet_entries as ptr
+    len = load src+BTreeSet_len as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_BTREE_SET_INSERT_ALL_HEAD
+
+L_BTREE_SET_INSERT_ALL_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_BTREE_SET_INSERT_ALL_DONE, L_BTREE_SET_INSERT_ALL_BODY
+
+L_BTREE_SET_INSERT_ALL_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    inserted = call @sa_btree_set_insert(&dst, &entry)
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !inserted
+    !entry
+    !entry_off
+    !done
+    !idx
+    jmp L_BTREE_SET_INSERT_ALL_HEAD
+
+L_BTREE_SET_INSERT_ALL_DONE:
+    !done
+    !idx
+    !len
+    !entries
+    !src
+    !dst
+    return
+
+@btree_set_insert_intersection(&dst: ptr, &src: ptr, &other: ptr) -> void:
+L_ENTRY:
+    entries = load src+BTreeSet_entries as ptr
+    len = load src+BTreeSet_len as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_BTREE_SET_INTERSECTION_HEAD
+
+L_BTREE_SET_INTERSECTION_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_BTREE_SET_INTERSECTION_DONE, L_BTREE_SET_INTERSECTION_BODY
+
+L_BTREE_SET_INTERSECTION_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    contains = call @sa_btree_set_contains(&other, &entry)
+    keep = ne contains, 0
+    br keep -> L_BTREE_SET_INTERSECTION_KEEP, L_BTREE_SET_INTERSECTION_SKIP
+
+L_BTREE_SET_INTERSECTION_KEEP:
+    inserted = call @sa_btree_set_insert(&dst, &entry)
+    !inserted
+    !keep
+    !contains
+    jmp L_BTREE_SET_INTERSECTION_NEXT
+
+L_BTREE_SET_INTERSECTION_SKIP:
+    !keep
+    !contains
+    jmp L_BTREE_SET_INTERSECTION_NEXT
+
+L_BTREE_SET_INTERSECTION_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !entry
+    !entry_off
+    !done
+    !idx
+    jmp L_BTREE_SET_INTERSECTION_HEAD
+
+L_BTREE_SET_INTERSECTION_DONE:
+    !done
+    !idx
+    !len
+    !entries
+    !other
+    !src
+    !dst
+    return
+
+@btree_set_insert_difference(&dst: ptr, &src: ptr, &other: ptr) -> void:
+L_ENTRY:
+    entries = load src+BTreeSet_entries as ptr
+    len = load src+BTreeSet_len as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_BTREE_SET_DIFFERENCE_HEAD
+
+L_BTREE_SET_DIFFERENCE_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_BTREE_SET_DIFFERENCE_DONE, L_BTREE_SET_DIFFERENCE_BODY
+
+L_BTREE_SET_DIFFERENCE_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    contains = call @sa_btree_set_contains(&other, &entry)
+    keep = eq contains, 0
+    br keep -> L_BTREE_SET_DIFFERENCE_KEEP, L_BTREE_SET_DIFFERENCE_SKIP
+
+L_BTREE_SET_DIFFERENCE_KEEP:
+    inserted = call @sa_btree_set_insert(&dst, &entry)
+    !inserted
+    !keep
+    !contains
+    jmp L_BTREE_SET_DIFFERENCE_NEXT
+
+L_BTREE_SET_DIFFERENCE_SKIP:
+    !keep
+    !contains
+    jmp L_BTREE_SET_DIFFERENCE_NEXT
+
+L_BTREE_SET_DIFFERENCE_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !entry
+    !entry_off
+    !done
+    !idx
+    jmp L_BTREE_SET_DIFFERENCE_HEAD
+
+L_BTREE_SET_DIFFERENCE_DONE:
+    !done
+    !idx
+    !len
+    !entries
+    !other
+    !src
+    !dst
+    return
+
+@export sa_btree_set_new() -> ^ptr:
+L_ENTRY:
+    set = call @sa_btree_map_new()
+    return set
+
+@export sa_btree_set_free(^set: ptr) -> void:
+L_ENTRY:
+    call @sa_btree_map_free(^set)
+    return
+
+@export sa_btree_set_len(&set: ptr) -> u64:
+L_ENTRY:
+    len = call @sa_btree_map_len(&set)
+    !set
+    return len
+
+@export sa_btree_set_is_empty(&set: ptr) -> i32:
+L_ENTRY:
+    empty = call @sa_btree_map_is_empty(&set)
+    !set
+    return empty
+
+@export sa_btree_set_contains(&set: ptr, &key: ptr) -> i32:
+L_ENTRY:
+    contains = call @sa_btree_map_contains_key(&set, &key)
+    !key
+    !set
+    return contains
+
+@export sa_btree_set_get(&set: ptr, &key: ptr, &out_key: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_btree_map_try_get_key_value(&set, &key, &out_key, &value_slot)
+    !out_key
+    !key
+    !set
+    return found
+
+@export sa_btree_set_first(&set: ptr, &out_key: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_btree_map_first_key_value(&set, &out_key, &value_slot)
+    !out_key
+    !set
+    return found
+
+@export sa_btree_set_last(&set: ptr, &out_key: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_btree_map_last_key_value(&set, &out_key, &value_slot)
+    !out_key
+    !set
+    return found
+
+@export sa_btree_set_take(&set: ptr, &key: ptr, &out_key: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_btree_map_remove_entry(&set, &key, &out_key, &value_slot)
+    !out_key
+    !key
+    !set
+    return found
+
+@export sa_btree_set_replace(&set: ptr, &key: ptr, &out_old_key: ptr) -> i32:
+L_ENTRY:
+    replaced = call @sa_btree_set_take(&set, &key, &out_old_key)
+    call @sa_btree_map_insert(&set, &key, BTreeSet_VALUE_SENTINEL)
+    !out_old_key
+    !key
+    !set
+    return replaced
+
+@export sa_btree_set_pop_first(&set: ptr, &out_key: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_btree_map_pop_first(&set, &out_key, &value_slot)
+    !out_key
+    !set
+    return found
+
+@export sa_btree_set_pop_last(&set: ptr, &out_key: ptr) -> i32:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    found = call @sa_btree_map_pop_last(&set, &out_key, &value_slot)
+    !out_key
+    !set
+    return found
+
+@export sa_btree_set_is_subset(&set: ptr, &other: ptr) -> i32:
+L_ENTRY:
+    len = load set+BTreeSet_len as u64
+    other_len = load other+BTreeSet_len as u64
+    too_large = ugt len, other_len
+    br too_large -> L_SUBSET_FALSE_FAST, L_SUBSET_SCAN_INIT
+
+L_SUBSET_SCAN_INIT:
+    entries = load set+BTreeSet_entries as ptr
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_SUBSET_HEAD
+
+L_SUBSET_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_SUBSET_TRUE, L_SUBSET_BODY
+
+L_SUBSET_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    contains = call @sa_btree_set_contains(&other, &entry)
+    has_key = ne contains, 0
+    br has_key -> L_SUBSET_NEXT, L_SUBSET_FALSE
+
+L_SUBSET_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !has_key
+    !contains
+    !entry
+    !entry_off
+    !done
+    !idx
+    jmp L_SUBSET_HEAD
+
+L_SUBSET_TRUE:
+    !done
+    !idx
+    !entries
+    !too_large
+    !other_len
+    !len
+    !other
+    !set
+    return 1
+
+L_SUBSET_FALSE:
+    !has_key
+    !contains
+    !entry
+    !entry_off
+    !done
+    !idx
+    !entries
+    !too_large
+    !other_len
+    !len
+    !other
+    !set
+    return 0
+
+L_SUBSET_FALSE_FAST:
+    !too_large
+    !other_len
+    !len
+    !other
+    !set
+    return 0
+
+@export sa_btree_set_is_superset(&set: ptr, &other: ptr) -> i32:
+L_ENTRY:
+    result = call @sa_btree_set_is_subset(&other, &set)
+    !other
+    !set
+    return result
+
+@export sa_btree_set_is_disjoint(&set: ptr, &other: ptr) -> i32:
+L_ENTRY:
+    entries = load set+BTreeSet_entries as ptr
+    len = load set+BTreeSet_len as u64
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_DISJOINT_HEAD
+
+L_DISJOINT_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_DISJOINT_TRUE, L_DISJOINT_BODY
+
+L_DISJOINT_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    contains = call @sa_btree_set_contains(&other, &entry)
+    overlaps = ne contains, 0
+    br overlaps -> L_DISJOINT_FALSE, L_DISJOINT_NEXT
+
+L_DISJOINT_NEXT:
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !overlaps
+    !contains
+    !entry
+    !entry_off
+    !done
+    !idx
+    jmp L_DISJOINT_HEAD
+
+L_DISJOINT_TRUE:
+    !done
+    !idx
+    !len
+    !entries
+    !other
+    !set
+    return 1
+
+L_DISJOINT_FALSE:
+    !overlaps
+    !contains
+    !entry
+    !entry_off
+    !done
+    !idx
+    !len
+    !entries
+    !other
+    !set
+    return 0
+
+@export sa_btree_set_append(&set: ptr, &other: ptr) -> void:
+L_ENTRY:
+    call @sa_btree_map_append(&set, &other)
+    !other
+    !set
+    return
+
+@export sa_btree_set_split_off(&set: ptr, &key: ptr) -> ^ptr:
+L_ENTRY:
+    tail = call @sa_btree_map_split_off(&set, &key)
+    !key
+    !set
+    return tail
+
+@export sa_btree_set_range(&set: ptr, &start_key: ptr, &end_key: ptr) -> ^ptr:
+L_ENTRY:
+    out_set = call @sa_btree_map_range(&set, &start_key, &end_key)
+    !end_key
+    !start_key
+    !set
+    return out_set
+
+@export sa_btree_set_clear(&set: ptr) -> void:
+L_ENTRY:
+    call @sa_btree_map_clear(&set)
+    !set
+    return
+
+@export sa_btree_set_insert(&set: ptr, &key: ptr) -> i32:
+L_ENTRY:
+    len_before = call @sa_btree_map_len(&set)
+    call @sa_btree_map_insert(&set, &key, BTreeSet_VALUE_SENTINEL)
+    len_after = call @sa_btree_map_len(&set)
+    inserted = ne len_after, len_before
+    result = inserted as i32
+    !len_after
+    !len_before
+    !key
+    !set
+    return result
+
+@export sa_btree_set_remove(&set: ptr, &key: ptr) -> i32:
+L_ENTRY:
+    removed = call @sa_btree_map_remove(&set, &key)
+    present = ne removed, 0
+    result = present as i32
+    !removed
+    !key
+    !set
+    return result
+
+@export sa_btree_set_union(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    out_set = call @sa_btree_set_new()
+    call @btree_set_insert_all(&out_set, &set)
+    call @btree_set_insert_all(&out_set, &other)
+    !other
+    !set
+    return out_set
+
+@export sa_btree_set_intersection(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    len = load set+BTreeSet_len as u64
+    other_len = load other+BTreeSet_len as u64
+    left_smaller = ule len, other_len
+    br left_smaller -> L_BTREE_SET_INTERSECTION_LEFT, L_BTREE_SET_INTERSECTION_RIGHT
+
+L_BTREE_SET_INTERSECTION_LEFT:
+    out_set = call @sa_btree_set_new()
+    call @btree_set_insert_intersection(&out_set, &set, &other)
+    !left_smaller
+    !other_len
+    !len
+    !other
+    !set
+    return out_set
+
+L_BTREE_SET_INTERSECTION_RIGHT:
+    out_set = call @sa_btree_set_new()
+    call @btree_set_insert_intersection(&out_set, &other, &set)
+    !left_smaller
+    !other_len
+    !len
+    !other
+    !set
+    return out_set
+
+@export sa_btree_set_difference(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    out_set = call @sa_btree_set_new()
+    call @btree_set_insert_difference(&out_set, &set, &other)
+    !other
+    !set
+    return out_set
+
+@export sa_btree_set_symmetric_difference(&set: ptr, &other: ptr) -> ^ptr:
+L_ENTRY:
+    out_set = call @sa_btree_set_new()
+    call @btree_set_insert_difference(&out_set, &set, &other)
+    call @btree_set_insert_difference(&out_set, &other, &set)
+    !other
+    !set
+    return out_set
+
+@export sa_btree_set_iter_vec(&set: ptr) -> ^ptr:
+L_ENTRY:
+    len = load set+BTreeSet_len as u64
+    EXPAND NUM_U64_CHECKED_MUL btree_set_iter_cap_ok, btree_set_iter_cap, len, 2
+    br btree_set_iter_cap_ok -> L_BTREE_SET_ITER_CAP_OK, L_BTREE_SET_ITER_CAP_OVERFLOW
+
+L_BTREE_SET_ITER_CAP_OVERFLOW:
+    panic(2206)
+
+L_BTREE_SET_ITER_CAP_OK:
+    out_vec = call @sa_vec_with_capacity(btree_set_iter_cap, 8)
+    entries = load set+BTreeSet_entries as ptr
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_BTREE_SET_ITER_HEAD
+
+L_BTREE_SET_ITER_HEAD:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_BTREE_SET_ITER_DONE, L_BTREE_SET_ITER_BODY
+
+L_BTREE_SET_ITER_BODY:
+    entry_off = mul idx, BTreeMapEntry_SIZE
+    entry = ptr_add entries, entry_off
+    key_ptr = load entry+BTreeMapEntry_key_ptr as ptr
+    key_len = load entry+BTreeMapEntry_key_len as u64
+    key_ptr_bits = bitcast key_ptr as u64
+    out_vec = call @sa_vec_push(^out_vec, key_ptr_bits, 8)
+    out_vec = call @sa_vec_push(^out_vec, key_len, 8)
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !next_idx
+    !key_ptr_bits
+    !key_len
+    !key_ptr
+    !entry
+    !entry_off
+    !done
+    !idx
+    jmp L_BTREE_SET_ITER_HEAD
+
+L_BTREE_SET_ITER_DONE:
+    !done
+    !idx
+    !entries
+    !btree_set_iter_cap_ok
+    !btree_set_iter_cap
+    !len
+    !set
+    return out_vec
+
+[MACRO] BTREE_SET_NEW %out_set
+    %out_set = call @sa_btree_set_new()
+[END_MACRO]
+
+[MACRO] BTREE_SET_FREE %set_reg
+    call @sa_btree_set_free(^%set_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_LEN %out_len, %set_reg
+    %out_len = call @sa_btree_set_len(&%set_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_IS_EMPTY %out_flag, %set_reg
+    %out_flag = call @sa_btree_set_is_empty(&%set_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_CONTAINS %out_flag, %set_reg, %key_reg
+    %out_flag = call @sa_btree_set_contains(&%set_reg, &%key_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_GET %out_ok, %out_key, %set_reg, %key_reg
+    %out_key = alloc Slice_SIZE
+    %out_ok = call @sa_btree_set_get(&%set_reg, &%key_reg, &%out_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key_reg
+    %out_inserted = call @sa_btree_set_insert(&%set_reg, &%key_reg)
+    %out_key = alloc Slice_SIZE
+    __btree_set_get_or_insert_ok_%out_inserted = call @sa_btree_set_get(&%set_reg, &%key_reg, &%out_key)
+    !__btree_set_get_or_insert_ok_%out_inserted
+[END_MACRO]
+
+[MACRO] BTREE_SET_ENTRY_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key_reg
+    EXPAND BTREE_SET_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key_reg
+[END_MACRO]
+
+// Rust method-name bare alias for the common set entry path (get_or_insert).
+[MACRO] BTREE_SET_ENTRY %out_inserted, %out_key, %set_reg, %key_reg
+    EXPAND BTREE_SET_ENTRY_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key_reg
+[END_MACRO]
+
+[MACRO] BTREE_SET_OR_INSERT %out_inserted, %out_key, %set_reg, %key_reg
+    EXPAND BTREE_SET_GET_OR_INSERT %out_inserted, %out_key, %set_reg, %key_reg
+[END_MACRO]
+
+[MACRO] BTREE_SET_FIRST %out_ok, %out_key, %set_reg
+    %out_key = alloc Slice_SIZE
+    %out_ok = call @sa_btree_set_first(&%set_reg, &%out_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_LAST %out_ok, %out_key, %set_reg
+    %out_key = alloc Slice_SIZE
+    %out_ok = call @sa_btree_set_last(&%set_reg, &%out_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_CLEAR %set_reg
+    call @sa_btree_set_clear(&%set_reg)
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_BTREE_SET_STR %hasher, %set_reg
+    call @btree_set_write_hash_str(&%hasher, &%set_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_HASH_STR %out_hash, %set_reg
+    __btree_set_hash_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW __btree_set_hash_hasher_%out_hash
+    EXPAND DEFAULT_HASHER_WRITE_BTREE_SET_STR __btree_set_hash_hasher_%out_hash, %set_reg
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __btree_set_hash_hasher_%out_hash
+[END_MACRO]
+
+// Rust method-name bare alias over BTREE_SET_HASH_STR.
+[MACRO] BTREE_SET_HASH %out_hash, %set_reg
+    EXPAND BTREE_SET_HASH_STR %out_hash, %set_reg
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_SET_STR %out_hash, %builder, %set_reg
+    __build_hash_one_btree_set_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_btree_set_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_BTREE_SET_STR __build_hash_one_btree_set_hasher_%out_hash, %set_reg
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_btree_set_hasher_%out_hash
+[END_MACRO]
+
+// Rust method-name bare alias over BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_SET_STR.
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_SET %out_hash, %builder, %set_reg
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_SET_STR %out_hash, %builder, %set_reg
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_BTREE_SET_STR %out_hash, %state, %set_reg
+    __random_state_hash_one_btree_set_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_btree_set_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_BTREE_SET_STR __random_state_hash_one_btree_set_hasher_%out_hash, %set_reg
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_btree_set_hasher_%out_hash
+[END_MACRO]
+
+// Rust method-name bare alias over RANDOM_STATE_HASH_ONE_BTREE_SET_STR.
+[MACRO] RANDOM_STATE_HASH_ONE_BTREE_SET %out_hash, %state, %set_reg
+    EXPAND RANDOM_STATE_HASH_ONE_BTREE_SET_STR %out_hash, %state, %set_reg
+[END_MACRO]
+
+[MACRO] BTREE_SET_RETAIN %out_len, %set_reg, %pred_fn
+    __btree_set_retain_entries_%out_len = load %set_reg+BTreeSet_entries as ptr
+    __btree_set_retain_len_%out_len = load %set_reg+BTreeSet_len as u64
+    __btree_set_retain_read_slot_%out_len = stack_alloc 8
+    __btree_set_retain_write_slot_%out_len = stack_alloc 8
+    store __btree_set_retain_read_slot_%out_len+0, 0 as u64
+    store __btree_set_retain_write_slot_%out_len+0, 0 as u64
+    jmp L_BTREE_SET_RETAIN_HEAD_%out_len
+
+L_BTREE_SET_RETAIN_HEAD_%out_len:
+    __btree_set_retain_read_%out_len = load __btree_set_retain_read_slot_%out_len+0 as u64
+    __btree_set_retain_done_%out_len = eq __btree_set_retain_read_%out_len, __btree_set_retain_len_%out_len
+    br __btree_set_retain_done_%out_len -> L_BTREE_SET_RETAIN_CLEAR_HEAD_%out_len, L_BTREE_SET_RETAIN_BODY_%out_len
+
+L_BTREE_SET_RETAIN_BODY_%out_len:
+    __btree_set_retain_read_off_%out_len = mul __btree_set_retain_read_%out_len, BTreeMapEntry_SIZE
+    __btree_set_retain_read_entry_%out_len = ptr_add __btree_set_retain_entries_%out_len, __btree_set_retain_read_off_%out_len
+    __btree_set_retain_pred_%out_len = call %pred_fn(&__btree_set_retain_read_entry_%out_len)
+    __btree_set_retain_keep_%out_len = ne __btree_set_retain_pred_%out_len, 0
+    br __btree_set_retain_keep_%out_len -> L_BTREE_SET_RETAIN_KEEP_%out_len, L_BTREE_SET_RETAIN_SKIP_%out_len
+
+L_BTREE_SET_RETAIN_KEEP_%out_len:
+    __btree_set_retain_write_%out_len = load __btree_set_retain_write_slot_%out_len+0 as u64
+    __btree_set_retain_same_slot_%out_len = eq __btree_set_retain_write_%out_len, __btree_set_retain_read_%out_len
+    br __btree_set_retain_same_slot_%out_len -> L_BTREE_SET_RETAIN_KEEP_ADVANCE_%out_len, L_BTREE_SET_RETAIN_COPY_%out_len
+
+L_BTREE_SET_RETAIN_COPY_%out_len:
+    __btree_set_retain_write_off_%out_len = mul __btree_set_retain_write_%out_len, BTreeMapEntry_SIZE
+    __btree_set_retain_write_entry_%out_len = ptr_add __btree_set_retain_entries_%out_len, __btree_set_retain_write_off_%out_len
+    __btree_set_retain_key_ptr_%out_len = load __btree_set_retain_read_entry_%out_len+BTreeMapEntry_key_ptr as ptr
+    __btree_set_retain_key_len_%out_len = load __btree_set_retain_read_entry_%out_len+BTreeMapEntry_key_len as u64
+    __btree_set_retain_value_%out_len = load __btree_set_retain_read_entry_%out_len+BTreeMapEntry_value as u64
+    store __btree_set_retain_write_entry_%out_len+BTreeMapEntry_key_ptr, __btree_set_retain_key_ptr_%out_len as ptr
+    store __btree_set_retain_write_entry_%out_len+BTreeMapEntry_key_len, __btree_set_retain_key_len_%out_len as u64
+    store __btree_set_retain_write_entry_%out_len+BTreeMapEntry_value, __btree_set_retain_value_%out_len as u64
+    !__btree_set_retain_value_%out_len
+    !__btree_set_retain_key_len_%out_len
+    !__btree_set_retain_key_ptr_%out_len
+    !__btree_set_retain_write_entry_%out_len
+    !__btree_set_retain_write_off_%out_len
+    jmp L_BTREE_SET_RETAIN_KEEP_ADVANCE_%out_len
+
+L_BTREE_SET_RETAIN_KEEP_ADVANCE_%out_len:
+    __btree_set_retain_next_write_%out_len = add __btree_set_retain_write_%out_len, 1
+    store __btree_set_retain_write_slot_%out_len+0, __btree_set_retain_next_write_%out_len as u64
+    !__btree_set_retain_next_write_%out_len
+    !__btree_set_retain_same_slot_%out_len
+    !__btree_set_retain_write_%out_len
+    jmp L_BTREE_SET_RETAIN_NEXT_%out_len
+
+L_BTREE_SET_RETAIN_SKIP_%out_len:
+    jmp L_BTREE_SET_RETAIN_NEXT_%out_len
+
+L_BTREE_SET_RETAIN_NEXT_%out_len:
+    __btree_set_retain_next_read_%out_len = add __btree_set_retain_read_%out_len, 1
+    store __btree_set_retain_read_slot_%out_len+0, __btree_set_retain_next_read_%out_len as u64
+    !__btree_set_retain_next_read_%out_len
+    !__btree_set_retain_keep_%out_len
+    !__btree_set_retain_pred_%out_len
+    !__btree_set_retain_read_entry_%out_len
+    !__btree_set_retain_read_off_%out_len
+    !__btree_set_retain_done_%out_len
+    !__btree_set_retain_read_%out_len
+    jmp L_BTREE_SET_RETAIN_HEAD_%out_len
+
+L_BTREE_SET_RETAIN_CLEAR_HEAD_%out_len:
+    __btree_set_retain_clear_slot_%out_len = stack_alloc 8
+    __btree_set_retain_kept_len_%out_len = load __btree_set_retain_write_slot_%out_len+0 as u64
+    store __btree_set_retain_clear_slot_%out_len+0, __btree_set_retain_kept_len_%out_len as u64
+    jmp L_BTREE_SET_RETAIN_CLEAR_LOOP_%out_len
+
+L_BTREE_SET_RETAIN_CLEAR_LOOP_%out_len:
+    __btree_set_retain_clear_idx_%out_len = load __btree_set_retain_clear_slot_%out_len+0 as u64
+    __btree_set_retain_clear_done_%out_len = eq __btree_set_retain_clear_idx_%out_len, __btree_set_retain_len_%out_len
+    br __btree_set_retain_clear_done_%out_len -> L_BTREE_SET_RETAIN_DONE_%out_len, L_BTREE_SET_RETAIN_CLEAR_BODY_%out_len
+
+L_BTREE_SET_RETAIN_CLEAR_BODY_%out_len:
+    __btree_set_retain_clear_off_%out_len = mul __btree_set_retain_clear_idx_%out_len, BTreeMapEntry_SIZE
+    __btree_set_retain_clear_entry_%out_len = ptr_add __btree_set_retain_entries_%out_len, __btree_set_retain_clear_off_%out_len
+    store __btree_set_retain_clear_entry_%out_len+BTreeMapEntry_key_ptr, 0 as ptr
+    store __btree_set_retain_clear_entry_%out_len+BTreeMapEntry_key_len, 0 as u64
+    store __btree_set_retain_clear_entry_%out_len+BTreeMapEntry_value, 0 as u64
+    __btree_set_retain_next_clear_%out_len = add __btree_set_retain_clear_idx_%out_len, 1
+    store __btree_set_retain_clear_slot_%out_len+0, __btree_set_retain_next_clear_%out_len as u64
+    !__btree_set_retain_next_clear_%out_len
+    !__btree_set_retain_clear_entry_%out_len
+    !__btree_set_retain_clear_off_%out_len
+    !__btree_set_retain_clear_done_%out_len
+    !__btree_set_retain_clear_idx_%out_len
+    jmp L_BTREE_SET_RETAIN_CLEAR_LOOP_%out_len
+
+L_BTREE_SET_RETAIN_DONE_%out_len:
+    %out_len = load __btree_set_retain_write_slot_%out_len+0 as u64
+    store %set_reg+BTreeSet_len, %out_len as u64
+    !__btree_set_retain_clear_done_%out_len
+    !__btree_set_retain_clear_idx_%out_len
+    !__btree_set_retain_kept_len_%out_len
+    !__btree_set_retain_done_%out_len
+    !__btree_set_retain_read_%out_len
+    !__btree_set_retain_len_%out_len
+    !__btree_set_retain_entries_%out_len
+[END_MACRO]
+
+[MACRO] BTREE_SET_EXTRACT_IF %out_len, %out_set, %set_reg, %pred_fn
+    EXPAND BTREE_SET_NEW %out_set
+    __btree_set_extract_entries_%out_len = load %set_reg+BTreeSet_entries as ptr
+    __btree_set_extract_len_%out_len = load %set_reg+BTreeSet_len as u64
+    __btree_set_extract_read_slot_%out_len = stack_alloc 8
+    __btree_set_extract_write_slot_%out_len = stack_alloc 8
+    store __btree_set_extract_read_slot_%out_len+0, 0 as u64
+    store __btree_set_extract_write_slot_%out_len+0, 0 as u64
+    jmp L_BTREE_SET_EXTRACT_HEAD_%out_len
+
+L_BTREE_SET_EXTRACT_HEAD_%out_len:
+    __btree_set_extract_read_%out_len = load __btree_set_extract_read_slot_%out_len+0 as u64
+    __btree_set_extract_done_%out_len = eq __btree_set_extract_read_%out_len, __btree_set_extract_len_%out_len
+    br __btree_set_extract_done_%out_len -> L_BTREE_SET_EXTRACT_CLEAR_HEAD_%out_len, L_BTREE_SET_EXTRACT_BODY_%out_len
+
+L_BTREE_SET_EXTRACT_BODY_%out_len:
+    __btree_set_extract_read_off_%out_len = mul __btree_set_extract_read_%out_len, BTreeMapEntry_SIZE
+    __btree_set_extract_read_entry_%out_len = ptr_add __btree_set_extract_entries_%out_len, __btree_set_extract_read_off_%out_len
+    __btree_set_extract_pred_%out_len = call %pred_fn(&__btree_set_extract_read_entry_%out_len)
+    __btree_set_extract_take_%out_len = ne __btree_set_extract_pred_%out_len, 0
+    br __btree_set_extract_take_%out_len -> L_BTREE_SET_EXTRACT_TAKE_%out_len, L_BTREE_SET_EXTRACT_KEEP_%out_len
+
+L_BTREE_SET_EXTRACT_TAKE_%out_len:
+    __btree_set_extract_inserted_%out_len = call @sa_btree_set_insert(&%out_set, &__btree_set_extract_read_entry_%out_len)
+    !__btree_set_extract_inserted_%out_len
+    jmp L_BTREE_SET_EXTRACT_NEXT_%out_len
+
+L_BTREE_SET_EXTRACT_KEEP_%out_len:
+    __btree_set_extract_write_%out_len = load __btree_set_extract_write_slot_%out_len+0 as u64
+    __btree_set_extract_same_slot_%out_len = eq __btree_set_extract_write_%out_len, __btree_set_extract_read_%out_len
+    br __btree_set_extract_same_slot_%out_len -> L_BTREE_SET_EXTRACT_KEEP_ADVANCE_%out_len, L_BTREE_SET_EXTRACT_COPY_%out_len
+
+L_BTREE_SET_EXTRACT_COPY_%out_len:
+    __btree_set_extract_write_off_%out_len = mul __btree_set_extract_write_%out_len, BTreeMapEntry_SIZE
+    __btree_set_extract_write_entry_%out_len = ptr_add __btree_set_extract_entries_%out_len, __btree_set_extract_write_off_%out_len
+    __btree_set_extract_key_ptr_%out_len = load __btree_set_extract_read_entry_%out_len+BTreeMapEntry_key_ptr as ptr
+    __btree_set_extract_key_len_%out_len = load __btree_set_extract_read_entry_%out_len+BTreeMapEntry_key_len as u64
+    __btree_set_extract_value_%out_len = load __btree_set_extract_read_entry_%out_len+BTreeMapEntry_value as u64
+    store __btree_set_extract_write_entry_%out_len+BTreeMapEntry_key_ptr, __btree_set_extract_key_ptr_%out_len as ptr
+    store __btree_set_extract_write_entry_%out_len+BTreeMapEntry_key_len, __btree_set_extract_key_len_%out_len as u64
+    store __btree_set_extract_write_entry_%out_len+BTreeMapEntry_value, __btree_set_extract_value_%out_len as u64
+    !__btree_set_extract_value_%out_len
+    !__btree_set_extract_key_len_%out_len
+    !__btree_set_extract_key_ptr_%out_len
+    !__btree_set_extract_write_entry_%out_len
+    !__btree_set_extract_write_off_%out_len
+    jmp L_BTREE_SET_EXTRACT_KEEP_ADVANCE_%out_len
+
+L_BTREE_SET_EXTRACT_KEEP_ADVANCE_%out_len:
+    __btree_set_extract_next_write_%out_len = add __btree_set_extract_write_%out_len, 1
+    store __btree_set_extract_write_slot_%out_len+0, __btree_set_extract_next_write_%out_len as u64
+    !__btree_set_extract_next_write_%out_len
+    !__btree_set_extract_same_slot_%out_len
+    !__btree_set_extract_write_%out_len
+    jmp L_BTREE_SET_EXTRACT_NEXT_%out_len
+
+L_BTREE_SET_EXTRACT_NEXT_%out_len:
+    __btree_set_extract_next_read_%out_len = add __btree_set_extract_read_%out_len, 1
+    store __btree_set_extract_read_slot_%out_len+0, __btree_set_extract_next_read_%out_len as u64
+    !__btree_set_extract_next_read_%out_len
+    !__btree_set_extract_take_%out_len
+    !__btree_set_extract_pred_%out_len
+    !__btree_set_extract_read_entry_%out_len
+    !__btree_set_extract_read_off_%out_len
+    !__btree_set_extract_done_%out_len
+    !__btree_set_extract_read_%out_len
+    jmp L_BTREE_SET_EXTRACT_HEAD_%out_len
+
+L_BTREE_SET_EXTRACT_CLEAR_HEAD_%out_len:
+    __btree_set_extract_clear_slot_%out_len = stack_alloc 8
+    __btree_set_extract_kept_len_%out_len = load __btree_set_extract_write_slot_%out_len+0 as u64
+    store __btree_set_extract_clear_slot_%out_len+0, __btree_set_extract_kept_len_%out_len as u64
+    jmp L_BTREE_SET_EXTRACT_CLEAR_LOOP_%out_len
+
+L_BTREE_SET_EXTRACT_CLEAR_LOOP_%out_len:
+    __btree_set_extract_clear_idx_%out_len = load __btree_set_extract_clear_slot_%out_len+0 as u64
+    __btree_set_extract_clear_done_%out_len = eq __btree_set_extract_clear_idx_%out_len, __btree_set_extract_len_%out_len
+    br __btree_set_extract_clear_done_%out_len -> L_BTREE_SET_EXTRACT_DONE_%out_len, L_BTREE_SET_EXTRACT_CLEAR_BODY_%out_len
+
+L_BTREE_SET_EXTRACT_CLEAR_BODY_%out_len:
+    __btree_set_extract_clear_off_%out_len = mul __btree_set_extract_clear_idx_%out_len, BTreeMapEntry_SIZE
+    __btree_set_extract_clear_entry_%out_len = ptr_add __btree_set_extract_entries_%out_len, __btree_set_extract_clear_off_%out_len
+    store __btree_set_extract_clear_entry_%out_len+BTreeMapEntry_key_ptr, 0 as ptr
+    store __btree_set_extract_clear_entry_%out_len+BTreeMapEntry_key_len, 0 as u64
+    store __btree_set_extract_clear_entry_%out_len+BTreeMapEntry_value, 0 as u64
+    __btree_set_extract_next_clear_%out_len = add __btree_set_extract_clear_idx_%out_len, 1
+    store __btree_set_extract_clear_slot_%out_len+0, __btree_set_extract_next_clear_%out_len as u64
+    !__btree_set_extract_next_clear_%out_len
+    !__btree_set_extract_clear_entry_%out_len
+    !__btree_set_extract_clear_off_%out_len
+    !__btree_set_extract_clear_done_%out_len
+    !__btree_set_extract_clear_idx_%out_len
+    jmp L_BTREE_SET_EXTRACT_CLEAR_LOOP_%out_len
+
+L_BTREE_SET_EXTRACT_DONE_%out_len:
+    %out_len = load __btree_set_extract_write_slot_%out_len+0 as u64
+    store %set_reg+BTreeSet_len, %out_len as u64
+    !__btree_set_extract_clear_done_%out_len
+    !__btree_set_extract_clear_idx_%out_len
+    !__btree_set_extract_kept_len_%out_len
+    !__btree_set_extract_done_%out_len
+    !__btree_set_extract_read_%out_len
+    !__btree_set_extract_len_%out_len
+    !__btree_set_extract_entries_%out_len
+[END_MACRO]
+
+[MACRO] BTREE_SET_EXTRACT_IF_RANGE %out_len, %out_set, %set_reg, %start_key, %end_key, %pred_fn
+    EXPAND BTREE_SET_NEW %out_set
+    EXPAND BTREE_SET_RANGE __btree_set_extract_range_snapshot_%out_len, %set_reg, %start_key, %end_key
+    __btree_set_extract_range_entries_%out_len = load __btree_set_extract_range_snapshot_%out_len+BTreeSet_entries as ptr
+    __btree_set_extract_range_len_%out_len = load __btree_set_extract_range_snapshot_%out_len+BTreeSet_len as u64
+    __btree_set_extract_range_idx_slot_%out_len = stack_alloc 8
+    store __btree_set_extract_range_idx_slot_%out_len+0, 0 as u64
+    jmp L_BTREE_SET_EXTRACT_RANGE_HEAD_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_HEAD_%out_len:
+    __btree_set_extract_range_idx_%out_len = load __btree_set_extract_range_idx_slot_%out_len+0 as u64
+    __btree_set_extract_range_done_%out_len = eq __btree_set_extract_range_idx_%out_len, __btree_set_extract_range_len_%out_len
+    br __btree_set_extract_range_done_%out_len -> L_BTREE_SET_EXTRACT_RANGE_REMOVE_INIT_%out_len, L_BTREE_SET_EXTRACT_RANGE_BODY_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_BODY_%out_len:
+    __btree_set_extract_range_off_%out_len = mul __btree_set_extract_range_idx_%out_len, BTreeMapEntry_SIZE
+    __btree_set_extract_range_entry_%out_len = ptr_add __btree_set_extract_range_entries_%out_len, __btree_set_extract_range_off_%out_len
+    __btree_set_extract_range_pred_%out_len = call %pred_fn(&__btree_set_extract_range_entry_%out_len)
+    __btree_set_extract_range_take_%out_len = ne __btree_set_extract_range_pred_%out_len, 0
+    br __btree_set_extract_range_take_%out_len -> L_BTREE_SET_EXTRACT_RANGE_TAKE_%out_len, L_BTREE_SET_EXTRACT_RANGE_NEXT_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_TAKE_%out_len:
+    __btree_set_extract_range_inserted_%out_len = call @sa_btree_set_insert(&%out_set, &__btree_set_extract_range_entry_%out_len)
+    !__btree_set_extract_range_inserted_%out_len
+    jmp L_BTREE_SET_EXTRACT_RANGE_NEXT_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_NEXT_%out_len:
+    __btree_set_extract_range_next_idx_%out_len = add __btree_set_extract_range_idx_%out_len, 1
+    store __btree_set_extract_range_idx_slot_%out_len+0, __btree_set_extract_range_next_idx_%out_len as u64
+    !__btree_set_extract_range_next_idx_%out_len
+    !__btree_set_extract_range_take_%out_len
+    !__btree_set_extract_range_pred_%out_len
+    !__btree_set_extract_range_entry_%out_len
+    !__btree_set_extract_range_off_%out_len
+    !__btree_set_extract_range_done_%out_len
+    !__btree_set_extract_range_idx_%out_len
+    jmp L_BTREE_SET_EXTRACT_RANGE_HEAD_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_REMOVE_INIT_%out_len:
+    call @sa_btree_set_free(^__btree_set_extract_range_snapshot_%out_len)
+    __btree_set_extract_range_remove_entries_%out_len = load %out_set+BTreeSet_entries as ptr
+    __btree_set_extract_range_remove_len_%out_len = load %out_set+BTreeSet_len as u64
+    __btree_set_extract_range_remove_slot_%out_len = stack_alloc 8
+    store __btree_set_extract_range_remove_slot_%out_len+0, 0 as u64
+    jmp L_BTREE_SET_EXTRACT_RANGE_REMOVE_HEAD_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_REMOVE_HEAD_%out_len:
+    __btree_set_extract_range_remove_idx_%out_len = load __btree_set_extract_range_remove_slot_%out_len+0 as u64
+    __btree_set_extract_range_remove_done_%out_len = eq __btree_set_extract_range_remove_idx_%out_len, __btree_set_extract_range_remove_len_%out_len
+    br __btree_set_extract_range_remove_done_%out_len -> L_BTREE_SET_EXTRACT_RANGE_DONE_%out_len, L_BTREE_SET_EXTRACT_RANGE_REMOVE_BODY_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_REMOVE_BODY_%out_len:
+    __btree_set_extract_range_remove_off_%out_len = mul __btree_set_extract_range_remove_idx_%out_len, BTreeMapEntry_SIZE
+    __btree_set_extract_range_remove_entry_%out_len = ptr_add __btree_set_extract_range_remove_entries_%out_len, __btree_set_extract_range_remove_off_%out_len
+    __btree_set_extract_range_removed_%out_len = call @sa_btree_set_remove(&%set_reg, &__btree_set_extract_range_remove_entry_%out_len)
+    __btree_set_extract_range_remove_next_%out_len = add __btree_set_extract_range_remove_idx_%out_len, 1
+    store __btree_set_extract_range_remove_slot_%out_len+0, __btree_set_extract_range_remove_next_%out_len as u64
+    !__btree_set_extract_range_remove_next_%out_len
+    !__btree_set_extract_range_removed_%out_len
+    !__btree_set_extract_range_remove_entry_%out_len
+    !__btree_set_extract_range_remove_off_%out_len
+    !__btree_set_extract_range_remove_done_%out_len
+    !__btree_set_extract_range_remove_idx_%out_len
+    jmp L_BTREE_SET_EXTRACT_RANGE_REMOVE_HEAD_%out_len
+
+L_BTREE_SET_EXTRACT_RANGE_DONE_%out_len:
+    %out_len = load %set_reg+BTreeSet_len as u64
+    !__btree_set_extract_range_remove_done_%out_len
+    !__btree_set_extract_range_remove_idx_%out_len
+    !__btree_set_extract_range_remove_len_%out_len
+    !__btree_set_extract_range_remove_entries_%out_len
+    !__btree_set_extract_range_done_%out_len
+    !__btree_set_extract_range_idx_%out_len
+    !__btree_set_extract_range_len_%out_len
+    !__btree_set_extract_range_entries_%out_len
+[END_MACRO]
+
+[MACRO] BTREE_SET_INSERT %out_ok, %set_reg, %key_reg
+    %out_ok = call @sa_btree_set_insert(&%set_reg, &%key_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_REMOVE %out_ok, %set_reg, %key_reg
+    %out_ok = call @sa_btree_set_remove(&%set_reg, &%key_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_TAKE %out_ok, %out_key, %set_reg, %key_reg
+    %out_key = alloc Slice_SIZE
+    %out_ok = call @sa_btree_set_take(&%set_reg, &%key_reg, &%out_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_REPLACE %out_replaced, %out_old_key, %set_reg, %key_reg
+    %out_old_key = alloc Slice_SIZE
+    %out_replaced = call @sa_btree_set_replace(&%set_reg, &%key_reg, &%out_old_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_POP_FIRST %out_ok, %out_key, %set_reg
+    %out_key = alloc Slice_SIZE
+    %out_ok = call @sa_btree_set_pop_first(&%set_reg, &%out_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_POP_LAST %out_ok, %out_key, %set_reg
+    %out_key = alloc Slice_SIZE
+    %out_ok = call @sa_btree_set_pop_last(&%set_reg, &%out_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_IS_DISJOINT %out_ok, %set_reg, %other_set
+    %out_ok = call @sa_btree_set_is_disjoint(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_IS_SUBSET %out_ok, %set_reg, %other_set
+    %out_ok = call @sa_btree_set_is_subset(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_IS_SUPERSET %out_ok, %set_reg, %other_set
+    %out_ok = call @sa_btree_set_is_superset(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_APPEND %set_reg, %other_set
+    call @sa_btree_set_append(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_SPLIT_OFF %out_set, %set_reg, %key_reg
+    %out_set = call @sa_btree_set_split_off(&%set_reg, &%key_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_RANGE %out_set, %set_reg, %start_key, %end_key
+    %out_set = call @sa_btree_set_range(&%set_reg, &%start_key, &%end_key)
+[END_MACRO]
+
+[MACRO] BTREE_SET_UNION %out_set, %set_reg, %other_set
+    %out_set = call @sa_btree_set_union(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_INTERSECTION %out_set, %set_reg, %other_set
+    %out_set = call @sa_btree_set_intersection(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_DIFFERENCE %out_set, %set_reg, %other_set
+    %out_set = call @sa_btree_set_difference(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_SYMMETRIC_DIFFERENCE %out_set, %set_reg, %other_set
+    %out_set = call @sa_btree_set_symmetric_difference(&%set_reg, &%other_set)
+[END_MACRO]
+
+[MACRO] BTREE_SET_BITOR %out_set, %set_reg, %other_set
+    EXPAND BTREE_SET_UNION %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] BTREE_SET_BITAND %out_set, %set_reg, %other_set
+    EXPAND BTREE_SET_INTERSECTION %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] BTREE_SET_SUB %out_set, %set_reg, %other_set
+    EXPAND BTREE_SET_DIFFERENCE %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] BTREE_SET_BITXOR %out_set, %set_reg, %other_set
+    EXPAND BTREE_SET_SYMMETRIC_DIFFERENCE %out_set, %set_reg, %other_set
+[END_MACRO]
+
+[MACRO] BTREE_SET_ITER %out_vec, %set_reg
+    %out_vec = call @sa_btree_set_iter_vec(&%set_reg)
+[END_MACRO]
+
+[MACRO] BTREE_SET_REF_INTO_ITER %out_vec, %set_reg
+    EXPAND BTREE_SET_ITER %out_vec, %set_reg
+[END_MACRO]
+
+[MACRO] BTREE_SET_INTO_ITER %out_vec, %set_reg
+    EXPAND BTREE_SET_ITER %out_vec, %set_reg
+    EXPAND BTREE_SET_CLEAR %set_reg
+[END_MACRO]
+
+[MACRO] BTREE_SET_LIT1 %out_set, %key1
+    EXPAND BTREE_SET_NEW %out_set
+    EXPAND BTREE_SET_INSERT __btree_set_lit1_ok_1_%out_set, %out_set, %key1
+    !__btree_set_lit1_ok_1_%out_set
+[END_MACRO]
+
+[MACRO] BTREE_SET_LIT2 %out_set, %key1, %key2
+    EXPAND BTREE_SET_NEW %out_set
+    EXPAND BTREE_SET_INSERT __btree_set_lit2_ok_1_%out_set, %out_set, %key1
+    EXPAND BTREE_SET_INSERT __btree_set_lit2_ok_2_%out_set, %out_set, %key2
+    !__btree_set_lit2_ok_1_%out_set
+    !__btree_set_lit2_ok_2_%out_set
+[END_MACRO]
+
+[MACRO] BTREE_SET_LIT3 %out_set, %key1, %key2, %key3
+    EXPAND BTREE_SET_NEW %out_set
+    EXPAND BTREE_SET_INSERT __btree_set_lit3_ok_1_%out_set, %out_set, %key1
+    EXPAND BTREE_SET_INSERT __btree_set_lit3_ok_2_%out_set, %out_set, %key2
+    EXPAND BTREE_SET_INSERT __btree_set_lit3_ok_3_%out_set, %out_set, %key3
+    !__btree_set_lit3_ok_1_%out_set
+    !__btree_set_lit3_ok_2_%out_set
+    !__btree_set_lit3_ok_3_%out_set
+[END_MACRO]
+
+// Rust Default-style empty BTreeSet constructor alias.
+
+[MACRO] BTREE_SET_DEFAULT %out_set
+    EXPAND BTREE_SET_NEW %out_set
+[END_MACRO]

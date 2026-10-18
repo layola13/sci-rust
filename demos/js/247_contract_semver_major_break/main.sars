@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "consumer/major_consumer.sars"
+
+@const RESULT_OK = utf8:"247\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 247 - Contract Semver Major Break
+// The tree keeps both v1 and v2 interfaces so the major break is explicit.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @major_consumer_value()
+    ok = eq value, 247
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

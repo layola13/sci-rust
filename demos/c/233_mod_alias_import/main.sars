@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "alias/index.sars"
+
+@const RESULT_OK = utf8:"233\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 233 - Mod Alias Import
+// A short wrapper module stands in for an alias import.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @alias_value()
+    ok = eq value, 233
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

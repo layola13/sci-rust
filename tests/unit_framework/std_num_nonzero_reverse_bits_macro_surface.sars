@@ -1,0 +1,154 @@
+@import "sa_std/num.sars"
+
+@test "sa_std nonzero integer reverse bits macro surface"():
+L_ENTRY:
+    u8_nz = stack_alloc NonZeroU8_SIZE
+    u8_rev = stack_alloc NonZeroU8_SIZE
+    u16_nz = stack_alloc NonZeroU16_SIZE
+    u16_rev = stack_alloc NonZeroU16_SIZE
+    u32_nz = stack_alloc NonZeroU32_SIZE
+    u32_rev = stack_alloc NonZeroU32_SIZE
+    u64_nz = stack_alloc NonZeroU64_SIZE
+    u64_rev = stack_alloc NonZeroU64_SIZE
+    usize_nz = stack_alloc NonZeroUsize_SIZE
+    usize_rev = stack_alloc NonZeroUsize_SIZE
+    i8_nz = stack_alloc NonZeroI8_SIZE
+    i8_rev = stack_alloc NonZeroI8_SIZE
+    i8_one = stack_alloc NonZeroI8_SIZE
+    i8_one_rev = stack_alloc NonZeroI8_SIZE
+    i16_nz = stack_alloc NonZeroI16_SIZE
+    i16_rev = stack_alloc NonZeroI16_SIZE
+    i16_one = stack_alloc NonZeroI16_SIZE
+    i16_one_rev = stack_alloc NonZeroI16_SIZE
+    i32_nz = stack_alloc NonZeroI32_SIZE
+    i32_rev = stack_alloc NonZeroI32_SIZE
+    i32_one = stack_alloc NonZeroI32_SIZE
+    i32_one_rev = stack_alloc NonZeroI32_SIZE
+    i64_nz = stack_alloc NonZeroI64_SIZE
+    i64_rev = stack_alloc NonZeroI64_SIZE
+    i64_one = stack_alloc NonZeroI64_SIZE
+    i64_one_rev = stack_alloc NonZeroI64_SIZE
+    isize_nz = stack_alloc NonZeroIsize_SIZE
+    isize_rev = stack_alloc NonZeroIsize_SIZE
+    isize_one = stack_alloc NonZeroIsize_SIZE
+    isize_one_rev = stack_alloc NonZeroIsize_SIZE
+
+    EXPAND NONZERO_U8_NEW ok_u8_new, u8_nz, 40
+    EXPAND NONZERO_U16_NEW ok_u16_new, u16_nz, 1032
+    EXPAND NONZERO_U32_NEW ok_u32_new, u32_nz, 16777232
+    EXPAND NONZERO_U64_NEW ok_u64_new, u64_nz, 281474976710688
+    EXPAND NONZERO_USIZE_NEW ok_usize_new, usize_nz, 128
+    EXPAND NONZERO_I8_NEW ok_i8_new, i8_nz, -8
+    EXPAND NONZERO_I8_NEW ok_i8_one_new, i8_one, 1
+    EXPAND NONZERO_I16_NEW ok_i16_new, i16_nz, -8
+    EXPAND NONZERO_I16_NEW ok_i16_one_new, i16_one, 1
+    EXPAND NONZERO_I32_NEW ok_i32_new, i32_nz, -16
+    EXPAND NONZERO_I32_NEW ok_i32_one_new, i32_one, 1
+    EXPAND NONZERO_I64_NEW ok_i64_new, i64_nz, -8
+    EXPAND NONZERO_I64_NEW ok_i64_one_new, i64_one, 1
+    EXPAND NONZERO_ISIZE_NEW ok_isize_new, isize_nz, -8
+    EXPAND NONZERO_ISIZE_NEW ok_isize_one_new, isize_one, 1
+
+    EXPAND NONZERO_U8_REVERSE_BITS ok_u8_rev, u8_rev, u8_nz
+    EXPAND NONZERO_U16_REVERSE_BITS ok_u16_rev, u16_rev, u16_nz
+    EXPAND NONZERO_U32_REVERSE_BITS ok_u32_rev, u32_rev, u32_nz
+    EXPAND NONZERO_U64_REVERSE_BITS ok_u64_rev, u64_rev, u64_nz
+    EXPAND NONZERO_USIZE_REVERSE_BITS ok_usize_rev, usize_rev, usize_nz
+    EXPAND NONZERO_I8_REVERSE_BITS ok_i8_rev, i8_rev, i8_nz
+    EXPAND NONZERO_I8_REVERSE_BITS ok_i8_one_rev, i8_one_rev, i8_one
+    EXPAND NONZERO_I16_REVERSE_BITS ok_i16_rev, i16_rev, i16_nz
+    EXPAND NONZERO_I16_REVERSE_BITS ok_i16_one_rev, i16_one_rev, i16_one
+    EXPAND NONZERO_I32_REVERSE_BITS ok_i32_rev, i32_rev, i32_nz
+    EXPAND NONZERO_I32_REVERSE_BITS ok_i32_one_rev, i32_one_rev, i32_one
+    EXPAND NONZERO_I64_REVERSE_BITS ok_i64_rev, i64_rev, i64_nz
+    EXPAND NONZERO_I64_REVERSE_BITS ok_i64_one_rev, i64_one_rev, i64_one
+    EXPAND NONZERO_ISIZE_REVERSE_BITS ok_isize_rev, isize_rev, isize_nz
+    EXPAND NONZERO_ISIZE_REVERSE_BITS ok_isize_one_rev, isize_one_rev, isize_one
+
+    EXPAND NONZERO_U8_GET u8_value, u8_rev
+    EXPAND NONZERO_U16_GET u16_value, u16_rev
+    EXPAND NONZERO_U32_GET u32_value, u32_rev
+    EXPAND NONZERO_U64_GET u64_value, u64_rev
+    EXPAND NONZERO_USIZE_GET usize_value, usize_rev
+    EXPAND NONZERO_I8_GET i8_value, i8_rev
+    EXPAND NONZERO_I8_GET i8_one_value, i8_one_rev
+    EXPAND NONZERO_I16_GET i16_value, i16_rev
+    EXPAND NONZERO_I16_GET i16_one_value, i16_one_rev
+    EXPAND NONZERO_I32_GET i32_value, i32_rev
+    EXPAND NONZERO_I32_GET i32_one_value, i32_one_rev
+    EXPAND NONZERO_I64_GET i64_value, i64_rev
+    EXPAND NONZERO_I64_GET i64_one_value, i64_one_rev
+    EXPAND NONZERO_ISIZE_GET isize_value, isize_rev
+    EXPAND NONZERO_ISIZE_GET isize_one_value, isize_one_rev
+
+    ok_new_01 = and ok_u8_new, ok_u16_new
+    ok_new_02 = and ok_new_01, ok_u32_new
+    ok_new_03 = and ok_new_02, ok_u64_new
+    ok_new_04 = and ok_new_03, ok_usize_new
+    ok_new_05 = and ok_new_04, ok_i8_new
+    ok_new_06 = and ok_new_05, ok_i8_one_new
+    ok_new_07 = and ok_new_06, ok_i16_new
+    ok_new_08 = and ok_new_07, ok_i16_one_new
+    ok_new_09 = and ok_new_08, ok_i32_new
+    ok_new_10 = and ok_new_09, ok_i32_one_new
+    ok_new_11 = and ok_new_10, ok_i64_new
+    ok_new_12 = and ok_new_11, ok_i64_one_new
+    ok_new_13 = and ok_new_12, ok_isize_new
+    ok_new_all = and ok_new_13, ok_isize_one_new
+
+    ok_rev_01 = and ok_u8_rev, ok_u16_rev
+    ok_rev_02 = and ok_rev_01, ok_u32_rev
+    ok_rev_03 = and ok_rev_02, ok_u64_rev
+    ok_rev_04 = and ok_rev_03, ok_usize_rev
+    ok_rev_05 = and ok_rev_04, ok_i8_rev
+    ok_rev_06 = and ok_rev_05, ok_i8_one_rev
+    ok_rev_07 = and ok_rev_06, ok_i16_rev
+    ok_rev_08 = and ok_rev_07, ok_i16_one_rev
+    ok_rev_09 = and ok_rev_08, ok_i32_rev
+    ok_rev_10 = and ok_rev_09, ok_i32_one_rev
+    ok_rev_11 = and ok_rev_10, ok_i64_rev
+    ok_rev_12 = and ok_rev_11, ok_i64_one_rev
+    ok_rev_13 = and ok_rev_12, ok_isize_rev
+    ok_rev_all = and ok_rev_13, ok_isize_one_rev
+
+    ok_u8_value = eq u8_value, 20
+    ok_u16_value = eq u16_value, 4128
+    ok_u32_value = eq u32_value, 134217856
+    ok_u64_value = eq u64_value, 288230376151744512
+    ok_usize_value = eq usize_value, 72057594037927936
+    ok_i8_value = eq i8_value, 31
+    ok_i8_one_value = eq i8_one_value, NUM_I8_MIN
+    ok_i16_value = eq i16_value, 8191
+    ok_i16_one_value = eq i16_one_value, NUM_I16_MIN
+    ok_i32_value = eq i32_value, 268435455
+    ok_i32_one_value = eq i32_one_value, NUM_I32_MIN
+    ok_i64_value = eq i64_value, 2305843009213693951
+    ok_i64_one_value = eq i64_one_value, NUM_I64_MIN
+    ok_isize_value = eq isize_value, 2305843009213693951
+    ok_isize_one_value = eq isize_one_value, NUM_ISIZE_MIN
+
+    ok_value_01 = and ok_new_all, ok_rev_all
+    ok_value_02 = and ok_value_01, ok_u8_value
+    ok_value_03 = and ok_value_02, ok_u16_value
+    ok_value_04 = and ok_value_03, ok_u32_value
+    ok_value_05 = and ok_value_04, ok_u64_value
+    ok_value_06 = and ok_value_05, ok_usize_value
+    ok_value_07 = and ok_value_06, ok_i8_value
+    ok_value_08 = and ok_value_07, ok_i8_one_value
+    ok_value_09 = and ok_value_08, ok_i16_value
+    ok_value_10 = and ok_value_09, ok_i16_one_value
+    ok_value_11 = and ok_value_10, ok_i32_value
+    ok_value_12 = and ok_value_11, ok_i32_one_value
+    ok_value_13 = and ok_value_12, ok_i64_value
+    ok_value_14 = and ok_value_13, ok_i64_one_value
+    ok_value_15 = and ok_value_14, ok_isize_value
+    ok = and ok_value_15, ok_isize_one_value
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10608)
+
+L_PASS:
+    !ok
+    return 0

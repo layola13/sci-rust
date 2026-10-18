@@ -1,0 +1,29 @@
+@import "sa_std/net.sars"
+
+@test "sa_std net ipv4 new loopback"():
+L_ENTRY:
+    ipv4 = stack_alloc NetIpv4Addr_SIZE
+    EXPAND NET_IPV4_NEW ipv4, 127, 0, 0, 1
+    EXPAND NET_IPV4_IS_LOOPBACK is_loop, ipv4
+    EXPAND NET_IPV4_AS_OCTETS_PTR p, ipv4
+    b0 = load p+0 as u8
+    b3 = load p+3 as u8
+    a = eq is_loop, 1
+    b = eq b0, 127
+    c = eq b3, 1
+    ok01 = and a, b
+    ok = and ok01, c
+    !is_loop
+    !b0
+    !b3
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10958)

@@ -1,0 +1,40 @@
+@import "sa_std/sync/condvar.sars"
+@import "sa_std/sync/barrier.sars"
+@import "sa_std/sync/mpsc.sars"
+@import "sa_std/sync/rwlock.sars"
+
+@test "sa_std sync defaults"():
+L_ENTRY:
+    EXPAND CONDVAR_DEFAULT c
+    EXPAND BARRIER_DEFAULT b
+    EXPAND MPSC_DEFAULT m
+    EXPAND RWLOCK_DEFAULT r
+    EXPAND CONDVAR_WAITERS cn, c
+    EXPAND BARRIER_N bn, b
+    EXPAND MPSC_IS_EMPTY me, m
+    EXPAND RWLOCK_IS_UNLOCKED ru, r
+    EXPAND MPSC_FREE m
+    a = eq cn, 0
+    b1 = eq bn, 2
+    c1 = eq me, 1
+    d = eq ru, 1
+    ok01 = and a, b1
+    ok02 = and ok01, c1
+    ok = and ok02, d
+    !cn
+    !bn
+    !me
+    !ru
+    !a
+    !b1
+    !c1
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10999)

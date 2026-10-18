@@ -6,7 +6,7 @@ SA 标准库近期对 `Mutex` 做了针对性的算法优化，由原来的激�
 
 ## 导入
 ```sa
-@import "sa_std/sync/mutex.sa"
+@import "sa_std/sync/mutex.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@ SA 标准库近期对 `Mutex` 做了针对性的算法优化，由原来的激�
 下面的完整 SA 程序展示了单线程下获取互斥锁并在进入临界区执行后再解除占用的全过程。在实际项目中，可以将其包裹在 `Arc` 中传给多线程系统：
 
 ```sa
-@import "sa_std/sync/mutex.sa"
+@import "sa_std/sync/mutex.sars"
 
 @main() -> i32:
 L_ENTRY:

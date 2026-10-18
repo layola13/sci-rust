@@ -4,7 +4,7 @@ HashSet 的底层逻辑由 `HashMap` 复用演变而来，用于验证唯一性�
 
 ## 导入
 ```sa
-@import "sa_std/hashset.sa"
+@import "sa_std/hashset.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@ HashSet 的底层逻辑由 `HashMap` 复用演变而来，用于验证唯一性�
 下面的完整 SA 程序展示了如何创建哈希集合、添加元素、查询集合中是否存在该元素以及销毁集合的完整示例：
 
 ```sa
-@import "sa_std/hashset.sa"
+@import "sa_std/hashset.sars"
 
 @main() -> i32:
 L_ENTRY:

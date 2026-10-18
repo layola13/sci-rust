@@ -1,0 +1,303 @@
+@import "sa_std/ops.sars"
+
+@test "sa_std ops range and bound u64 macros"():
+L_ENTRY:
+    data = stack_alloc 40
+    store data+0, 10 as u64
+    store data+8, 20 as u64
+    store data+16, 30 as u64
+    store data+24, 40 as u64
+    store data+32, 50 as u64
+
+    base_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW base_slice, data, 5
+
+    range = stack_alloc RangeU64_SIZE
+    EXPAND RANGE_U64_NEW range, 1, 4
+    EXPAND RANGE_U64_START range_start, range
+    EXPAND RANGE_U64_END range_end, range
+    EXPAND RANGE_U64_CONTAINS range_has1, range, 1
+    EXPAND RANGE_U64_CONTAINS range_has3, range, 3
+    EXPAND RANGE_U64_CONTAINS range_has4, range, 4
+    EXPAND RANGE_U64_IS_EMPTY range_empty, range
+    EXPAND RANGE_U64_LEN range_len, range
+    range_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_U64_TRY_GET_SLICE range_slice_ok, range_slice, base_slice, range
+    range_slice_ptr = load range_slice+Slice_ptr as ptr
+    range_slice_len = load range_slice+Slice_len as u64
+    range_slice_first = load range_slice_ptr+0 as u64
+    expected_range_slice_ptr = ptr_add data, 8
+    bad_range = stack_alloc RangeU64_SIZE
+    EXPAND RANGE_U64_NEW bad_range, 4, 9
+    bad_range_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_U64_TRY_GET_SLICE bad_range_ok, bad_range_slice, base_slice, bad_range
+
+    range_from = stack_alloc RangeFromU64_SIZE
+    EXPAND RANGE_FROM_U64_NEW range_from, 2
+    EXPAND RANGE_FROM_U64_START range_from_start, range_from
+    EXPAND RANGE_FROM_U64_CONTAINS range_from_has1, range_from, 1
+    EXPAND RANGE_FROM_U64_CONTAINS range_from_has5, range_from, 5
+    range_from_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_FROM_U64_TRY_GET_SLICE range_from_ok, range_from_slice, base_slice, range_from
+    range_from_len = load range_from_slice+Slice_len as u64
+    range_from_ptr = load range_from_slice+Slice_ptr as ptr
+    range_from_first = load range_from_ptr+0 as u64
+    expected_range_from_ptr = ptr_add data, 16
+
+    range_to = stack_alloc RangeToU64_SIZE
+    EXPAND RANGE_TO_U64_NEW range_to, 3
+    EXPAND RANGE_TO_U64_END range_to_end, range_to
+    EXPAND RANGE_TO_U64_CONTAINS range_to_has2, range_to, 2
+    EXPAND RANGE_TO_U64_CONTAINS range_to_has3, range_to, 3
+    range_to_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_TO_U64_TRY_GET_SLICE range_to_ok, range_to_slice, base_slice, range_to
+    range_to_len = load range_to_slice+Slice_len as u64
+
+    range_inc = stack_alloc RangeInclusiveU64_SIZE
+    EXPAND RANGE_INCLUSIVE_U64_NEW range_inc, 1, 3
+    EXPAND RANGE_INCLUSIVE_U64_START range_inc_start, range_inc
+    EXPAND RANGE_INCLUSIVE_U64_END range_inc_end, range_inc
+    EXPAND RANGE_INCLUSIVE_U64_CONTAINS range_inc_has1, range_inc, 1
+    EXPAND RANGE_INCLUSIVE_U64_CONTAINS range_inc_has3, range_inc, 3
+    EXPAND RANGE_INCLUSIVE_U64_CONTAINS range_inc_has4, range_inc, 4
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY range_inc_empty, range_inc
+    EXPAND RANGE_INCLUSIVE_U64_LEN range_inc_len, range_inc
+    range_inc_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_INCLUSIVE_U64_TRY_GET_SLICE range_inc_ok, range_inc_slice, base_slice, range_inc
+    range_inc_len_slice = load range_inc_slice+Slice_len as u64
+    EXPAND RANGE_INCLUSIVE_U64_SET_EXHAUSTED range_inc, 1
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY range_inc_exhausted_empty, range_inc
+    EXPAND RANGE_INCLUSIVE_U64_CONTAINS range_inc_exhausted_has, range_inc, 2
+
+    range_to_inc = stack_alloc RangeToInclusiveU64_SIZE
+    EXPAND RANGE_TO_INCLUSIVE_U64_NEW range_to_inc, 2
+    EXPAND RANGE_TO_INCLUSIVE_U64_END range_to_inc_end, range_to_inc
+    EXPAND RANGE_TO_INCLUSIVE_U64_CONTAINS range_to_inc_has2, range_to_inc, 2
+    EXPAND RANGE_TO_INCLUSIVE_U64_CONTAINS range_to_inc_has3, range_to_inc, 3
+    range_to_inc_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_TO_INCLUSIVE_U64_TRY_GET_SLICE range_to_inc_ok, range_to_inc_slice, base_slice, range_to_inc
+    range_to_inc_len = load range_to_inc_slice+Slice_len as u64
+
+    EXPAND RANGE_FULL_CONTAINS_U64 range_full_has, 999
+    range_full_slice = stack_alloc Slice_SIZE
+    EXPAND RANGE_FULL_GET_SLICE range_full_slice, base_slice
+    range_full_len = load range_full_slice+Slice_len as u64
+
+    bound_unbounded = stack_alloc BoundU64_SIZE
+    bound_included = stack_alloc BoundU64_SIZE
+    bound_excluded = stack_alloc BoundU64_SIZE
+    EXPAND BOUND_U64_UNBOUNDED_NEW bound_unbounded
+    EXPAND BOUND_U64_INCLUDED_NEW bound_included, 3
+    EXPAND BOUND_U64_EXCLUDED_NEW bound_excluded, 5
+    EXPAND BOUND_U64_TAG bound_inc_tag, bound_included
+    EXPAND BOUND_U64_VALUE bound_inc_value, bound_included
+    EXPAND BOUND_U64_IS_UNBOUNDED bound_is_unbounded, bound_unbounded
+    EXPAND BOUND_U64_IS_INCLUDED bound_is_included, bound_included
+    EXPAND BOUND_U64_IS_EXCLUDED bound_is_excluded, bound_excluded
+    EXPAND BOUND_U64_CONTAINS_START bound_start_has3, bound_included, 3
+    EXPAND BOUND_U64_CONTAINS_START bound_start_has2, bound_included, 2
+    EXPAND BOUND_U64_CONTAINS_END bound_end_has4, bound_excluded, 4
+    EXPAND BOUND_U64_CONTAINS_END bound_end_has5, bound_excluded, 5
+    EXPAND BOUND_U64_RANGE_CONTAINS bound_range_has4, bound_included, bound_excluded, 4
+    EXPAND BOUND_U64_RANGE_CONTAINS bound_range_has5, bound_included, bound_excluded, 5
+
+    range_iter = stack_alloc RangeU64_SIZE
+    EXPAND RANGE_U64_NEW range_iter, 2, 5
+    EXPAND RANGE_U64_NEXT range_next_ok, range_next_value, range_iter
+    EXPAND RANGE_U64_NEXT_BACK range_back_ok, range_back_value, range_iter
+    EXPAND RANGE_U64_NTH range_nth_ok, range_nth_value, range_iter, 0
+    EXPAND RANGE_U64_NEXT range_next_empty_ok, range_next_empty_value, range_iter
+    EXPAND RANGE_U64_IS_EMPTY range_iter_empty, range_iter
+
+    range_nth_miss = stack_alloc RangeU64_SIZE
+    EXPAND RANGE_U64_NEW range_nth_miss, 10, 12
+    EXPAND RANGE_U64_NTH range_nth_miss_ok, range_nth_miss_value, range_nth_miss, 5
+    EXPAND RANGE_U64_IS_EMPTY range_nth_miss_empty, range_nth_miss
+
+    range_count_iter = stack_alloc RangeU64_SIZE
+    EXPAND RANGE_U64_NEW range_count_iter, 7, 11
+    EXPAND RANGE_U64_COUNT range_count_value, range_count_iter
+    EXPAND RANGE_U64_IS_EMPTY range_count_empty, range_count_iter
+
+    range_inc_iter = stack_alloc RangeInclusiveU64_SIZE
+    EXPAND RANGE_INCLUSIVE_U64_NEW range_inc_iter, 1, 3
+    EXPAND RANGE_INCLUSIVE_U64_NEXT range_inc_next_ok, range_inc_next_value, range_inc_iter
+    EXPAND RANGE_INCLUSIVE_U64_NEXT_BACK range_inc_back_ok, range_inc_back_value, range_inc_iter
+    EXPAND RANGE_INCLUSIVE_U64_NEXT range_inc_last_ok, range_inc_last_value, range_inc_iter
+    EXPAND RANGE_INCLUSIVE_U64_NEXT range_inc_empty_ok, range_inc_empty_value, range_inc_iter
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY range_inc_iter_empty, range_inc_iter
+
+    range_inc_count_iter = stack_alloc RangeInclusiveU64_SIZE
+    EXPAND RANGE_INCLUSIVE_U64_NEW range_inc_count_iter, 8, 10
+    EXPAND RANGE_INCLUSIVE_U64_COUNT range_inc_count_value, range_inc_count_iter
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY range_inc_count_empty, range_inc_count_iter
+
+    ok_range_start = eq range_start, 1
+    ok_range_end = eq range_end, 4
+    ok_range_has1 = eq range_has1, 1
+    ok_range_has3 = eq range_has3, 1
+    ok_range_has4 = eq range_has4, 0
+    ok_range_empty = eq range_empty, 0
+    ok_range_len = eq range_len, 3
+    ok_range_slice = eq range_slice_ok, 1
+    ok_range_slice_ptr = eq range_slice_ptr, expected_range_slice_ptr
+    ok_range_slice_len = eq range_slice_len, 3
+    ok_range_slice_first = eq range_slice_first, 20
+    ok_bad_range = eq bad_range_ok, 0
+    ok_range_from_start = eq range_from_start, 2
+    ok_range_from_has1 = eq range_from_has1, 0
+    ok_range_from_has5 = eq range_from_has5, 1
+    ok_range_from = eq range_from_ok, 1
+    ok_range_from_len = eq range_from_len, 3
+    ok_range_from_ptr = eq range_from_ptr, expected_range_from_ptr
+    ok_range_from_first = eq range_from_first, 30
+    ok_range_to_end = eq range_to_end, 3
+    ok_range_to_has2 = eq range_to_has2, 1
+    ok_range_to_has3 = eq range_to_has3, 0
+    ok_range_to = eq range_to_ok, 1
+    ok_range_to_len = eq range_to_len, 3
+    ok_range_inc_start = eq range_inc_start, 1
+    ok_range_inc_end = eq range_inc_end, 3
+    ok_range_inc_has1 = eq range_inc_has1, 1
+    ok_range_inc_has3 = eq range_inc_has3, 1
+    ok_range_inc_has4 = eq range_inc_has4, 0
+    ok_range_inc_empty = eq range_inc_empty, 0
+    ok_range_inc_len = eq range_inc_len, 3
+    ok_range_inc = eq range_inc_ok, 1
+    ok_range_inc_len_slice = eq range_inc_len_slice, 3
+    ok_range_inc_exhausted_empty = eq range_inc_exhausted_empty, 1
+    ok_range_inc_exhausted_has = eq range_inc_exhausted_has, 0
+    ok_range_to_inc_end = eq range_to_inc_end, 2
+    ok_range_to_inc_has2 = eq range_to_inc_has2, 1
+    ok_range_to_inc_has3 = eq range_to_inc_has3, 0
+    ok_range_to_inc = eq range_to_inc_ok, 1
+    ok_range_to_inc_len = eq range_to_inc_len, 3
+    ok_range_full_has = eq range_full_has, 1
+    ok_range_full_len = eq range_full_len, 5
+    ok_bound_tag = eq bound_inc_tag, BOUND_U64_INCLUDED
+    ok_bound_value = eq bound_inc_value, 3
+    ok_bound_unbounded = eq bound_is_unbounded, 1
+    ok_bound_included = eq bound_is_included, 1
+    ok_bound_excluded = eq bound_is_excluded, 1
+    ok_bound_start3 = eq bound_start_has3, 1
+    ok_bound_start2 = eq bound_start_has2, 0
+    ok_bound_end4 = eq bound_end_has4, 1
+    ok_bound_end5 = eq bound_end_has5, 0
+    ok_bound_range4 = eq bound_range_has4, 1
+    ok_bound_range5 = eq bound_range_has5, 0
+    ok_range_next = eq range_next_value, 2
+    ok_range_next_flag = eq range_next_ok, 1
+    ok_range_back = eq range_back_value, 4
+    ok_range_back_flag = eq range_back_ok, 1
+    ok_range_nth = eq range_nth_value, 3
+    ok_range_nth_flag = eq range_nth_ok, 1
+    ok_range_next_empty_flag = eq range_next_empty_ok, 0
+    ok_range_next_empty_value = eq range_next_empty_value, 0
+    ok_range_iter_empty = eq range_iter_empty, 1
+    ok_range_nth_miss_flag = eq range_nth_miss_ok, 0
+    ok_range_nth_miss_value = eq range_nth_miss_value, 0
+    ok_range_nth_miss_empty = eq range_nth_miss_empty, 1
+    ok_range_count = eq range_count_value, 4
+    ok_range_count_empty = eq range_count_empty, 1
+    ok_range_inc_next_flag = eq range_inc_next_ok, 1
+    ok_range_inc_next = eq range_inc_next_value, 1
+    ok_range_inc_back_flag = eq range_inc_back_ok, 1
+    ok_range_inc_back = eq range_inc_back_value, 3
+    ok_range_inc_last_flag = eq range_inc_last_ok, 1
+    ok_range_inc_last = eq range_inc_last_value, 2
+    ok_range_inc_empty_flag = eq range_inc_empty_ok, 0
+    ok_range_inc_empty_value = eq range_inc_empty_value, 0
+    ok_range_inc_iter_empty = eq range_inc_iter_empty, 1
+    ok_range_inc_count = eq range_inc_count_value, 3
+    ok_range_inc_count_empty = eq range_inc_count_empty, 1
+
+    ok01 = and ok_range_start, ok_range_end
+    ok02 = and ok01, ok_range_has1
+    ok03 = and ok02, ok_range_has3
+    ok04 = and ok03, ok_range_has4
+    ok05 = and ok04, ok_range_empty
+    ok06 = and ok05, ok_range_len
+    ok07 = and ok06, ok_range_slice
+    ok08 = and ok07, ok_range_slice_ptr
+    ok09 = and ok08, ok_range_slice_len
+    ok10 = and ok09, ok_range_slice_first
+    ok11 = and ok10, ok_bad_range
+    ok12 = and ok11, ok_range_from_start
+    ok13 = and ok12, ok_range_from_has1
+    ok14 = and ok13, ok_range_from_has5
+    ok15 = and ok14, ok_range_from
+    ok16 = and ok15, ok_range_from_len
+    ok17 = and ok16, ok_range_from_ptr
+    ok18 = and ok17, ok_range_from_first
+    ok19 = and ok18, ok_range_to_end
+    ok20 = and ok19, ok_range_to_has2
+    ok21 = and ok20, ok_range_to_has3
+    ok22 = and ok21, ok_range_to
+    ok23 = and ok22, ok_range_to_len
+    ok24 = and ok23, ok_range_inc_start
+    ok25 = and ok24, ok_range_inc_end
+    ok26 = and ok25, ok_range_inc_has1
+    ok27 = and ok26, ok_range_inc_has3
+    ok28 = and ok27, ok_range_inc_has4
+    ok29 = and ok28, ok_range_inc_empty
+    ok30 = and ok29, ok_range_inc_len
+    ok31 = and ok30, ok_range_inc
+    ok32 = and ok31, ok_range_inc_len_slice
+    ok33 = and ok32, ok_range_inc_exhausted_empty
+    ok34 = and ok33, ok_range_inc_exhausted_has
+    ok35 = and ok34, ok_range_to_inc_end
+    ok36 = and ok35, ok_range_to_inc_has2
+    ok37 = and ok36, ok_range_to_inc_has3
+    ok38 = and ok37, ok_range_to_inc
+    ok39 = and ok38, ok_range_to_inc_len
+    ok40 = and ok39, ok_range_full_has
+    ok41 = and ok40, ok_range_full_len
+    ok42 = and ok41, ok_bound_tag
+    ok43 = and ok42, ok_bound_value
+    ok44 = and ok43, ok_bound_unbounded
+    ok45 = and ok44, ok_bound_included
+    ok46 = and ok45, ok_bound_excluded
+    ok47 = and ok46, ok_bound_start3
+    ok48 = and ok47, ok_bound_start2
+    ok49 = and ok48, ok_bound_end4
+    ok50 = and ok49, ok_bound_end5
+    ok51 = and ok50, ok_bound_range4
+    ok52 = and ok51, ok_bound_range5
+    ok53 = and ok52, ok_range_next
+    ok54 = and ok53, ok_range_next_flag
+    ok55 = and ok54, ok_range_back
+    ok56 = and ok55, ok_range_back_flag
+    ok57 = and ok56, ok_range_nth
+    ok58 = and ok57, ok_range_nth_flag
+    ok59 = and ok58, ok_range_next_empty_flag
+    ok60 = and ok59, ok_range_next_empty_value
+    ok61 = and ok60, ok_range_iter_empty
+    ok62 = and ok61, ok_range_nth_miss_flag
+    ok63 = and ok62, ok_range_nth_miss_value
+    ok64 = and ok63, ok_range_nth_miss_empty
+    ok65 = and ok64, ok_range_count
+    ok66 = and ok65, ok_range_count_empty
+    ok67 = and ok66, ok_range_inc_next_flag
+    ok68 = and ok67, ok_range_inc_next
+    ok69 = and ok68, ok_range_inc_back_flag
+    ok70 = and ok69, ok_range_inc_back
+    ok71 = and ok70, ok_range_inc_last_flag
+    ok72 = and ok71, ok_range_inc_last
+    ok73 = and ok72, ok_range_inc_empty_flag
+    ok74 = and ok73, ok_range_inc_empty_value
+    ok75 = and ok74, ok_range_inc_iter_empty
+    ok76 = and ok75, ok_range_inc_count
+    ok = and ok76, ok_range_inc_count_empty
+
+    !expected_range_from_ptr
+    !range_from_ptr
+    !expected_range_slice_ptr
+    !range_slice_ptr
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10173)
+
+L_PASS:
+    return 0

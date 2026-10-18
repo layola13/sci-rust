@@ -1,0 +1,93 @@
+@import "sa_std/collections/vec_deque.sars"
+
+@main() -> i32:
+L_ENTRY:
+    EXPAND VEC_DEQUE_NEW queue
+    EXPAND VEC_DEQUE_PUSH_BACK queue, 1
+    EXPAND VEC_DEQUE_PUSH_BACK queue, 2
+    EXPAND VEC_DEQUE_PUSH_FRONT queue, 0
+    EXPAND VEC_DEQUE_ROTATE_LEFT queue, 1
+    EXPAND VEC_DEQUE_LEN len0, queue
+    EXPAND VEC_DEQUE_CAPACITY cap0, queue
+    EXPAND VEC_DEQUE_IS_EMPTY empty0, queue
+    EXPAND VEC_DEQUE_FRONT front0, queue
+    EXPAND VEC_DEQUE_BACK back0, queue
+    EXPAND VEC_DEQUE_TRY_POP_FRONT ok_front, front, queue
+    EXPAND VEC_DEQUE_TRY_POP_BACK ok_back, back, queue
+    EXPAND VEC_DEQUE_GET remaining, queue, 0
+    EXPAND VEC_DEQUE_LEN len1, queue
+    EXPAND VEC_DEQUE_CLEAR queue
+    EXPAND VEC_DEQUE_LEN len2, queue
+    EXPAND VEC_DEQUE_IS_EMPTY empty1, queue
+    ok_len0 = eq len0, 3
+    ok_cap0 = eq cap0, 8
+    ok_empty0 = eq empty0, 0
+    ok_front0 = eq front0, 0
+    ok_back0 = eq back0, 2
+    ok_front_status = eq ok_front, 1
+    ok_back_status = eq ok_back, 1
+    ok_front_val = eq front, 1
+    ok_back_val = eq back, 0
+    ok_remaining = eq remaining, 2
+    ok_len1 = eq len1, 1
+    ok_len2 = eq len2, 0
+    ok_empty1 = eq empty1, 1
+    ok01 = and ok_len0, ok_cap0
+    ok02 = and ok01, ok_empty0
+    ok03 = and ok02, ok_front0
+    ok04 = and ok03, ok_back0
+    ok05 = and ok04, ok_front_status
+    ok06 = and ok05, ok_back_status
+    ok07 = and ok06, ok_front_val
+    ok08 = and ok07, ok_back_val
+    ok09 = and ok08, ok_remaining
+    ok10 = and ok09, ok_len1
+    ok11 = and ok10, ok_len2
+    ok = and ok11, ok_empty1
+    !cap0
+    !empty0
+    !front0
+    !back0
+    !front
+    !back
+    !remaining
+    !ok_front
+    !ok_back
+    !len0
+    !len1
+    !len2
+    !empty1
+    !ok_len0
+    !ok_cap0
+    !ok_empty0
+    !ok_front0
+    !ok_back0
+    !ok_front_status
+    !ok_back_status
+    !ok_front_val
+    !ok_back_val
+    !ok_remaining
+    !ok_len1
+    !ok_len2
+    !ok_empty1
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    EXPAND VEC_DEQUE_FREE queue
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

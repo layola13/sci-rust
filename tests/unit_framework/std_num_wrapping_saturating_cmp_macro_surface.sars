@@ -1,0 +1,231 @@
+@import "sa_std/num.sars"
+
+@test "sa_std Wrapping and Saturating comparison macro surface"():
+L_ENTRY:
+    wrap_u64_left = stack_alloc WrappingU64_SIZE
+    wrap_u64_same = stack_alloc WrappingU64_SIZE
+    wrap_u64_greater = stack_alloc WrappingU64_SIZE
+    wrap_u32_left = stack_alloc WrappingU32_SIZE
+    wrap_u32_same = stack_alloc WrappingU32_SIZE
+    wrap_u32_greater = stack_alloc WrappingU32_SIZE
+    wrap_i64_left = stack_alloc WrappingI64_SIZE
+    wrap_i64_same = stack_alloc WrappingI64_SIZE
+    wrap_i64_greater = stack_alloc WrappingI64_SIZE
+    sat_u64_left = stack_alloc SaturatingU64_SIZE
+    sat_u64_same = stack_alloc SaturatingU64_SIZE
+    sat_u64_greater = stack_alloc SaturatingU64_SIZE
+    sat_i64_left = stack_alloc SaturatingI64_SIZE
+    sat_i64_same = stack_alloc SaturatingI64_SIZE
+    sat_i64_greater = stack_alloc SaturatingI64_SIZE
+
+    EXPAND WRAPPING_U64_NEW wrap_u64_left, 7
+    EXPAND WRAPPING_U64_NEW wrap_u64_same, 7
+    EXPAND WRAPPING_U64_NEW wrap_u64_greater, 9
+    EXPAND WRAPPING_U32_NEW wrap_u32_left, 4294967303
+    EXPAND WRAPPING_U32_NEW wrap_u32_same, 7
+    EXPAND WRAPPING_U32_NEW wrap_u32_greater, 9
+    EXPAND WRAPPING_I64_NEW wrap_i64_left, -2
+    EXPAND WRAPPING_I64_NEW wrap_i64_same, -2
+    EXPAND WRAPPING_I64_NEW wrap_i64_greater, 3
+    EXPAND SATURATING_U64_NEW sat_u64_left, 7
+    EXPAND SATURATING_U64_NEW sat_u64_same, 7
+    EXPAND SATURATING_U64_NEW sat_u64_greater, 9
+    EXPAND SATURATING_I64_NEW sat_i64_left, -2
+    EXPAND SATURATING_I64_NEW sat_i64_same, -2
+    EXPAND SATURATING_I64_NEW sat_i64_greater, 3
+
+    EXPAND WRAPPING_U64_EQ wrap_u64_eq_same, wrap_u64_left, wrap_u64_same
+    EXPAND WRAPPING_U64_EQ wrap_u64_eq_greater, wrap_u64_left, wrap_u64_greater
+    EXPAND WRAPPING_U64_NE wrap_u64_ne_same, wrap_u64_left, wrap_u64_same
+    EXPAND WRAPPING_U64_NE wrap_u64_ne_greater, wrap_u64_left, wrap_u64_greater
+    EXPAND WRAPPING_U64_CMP wrap_u64_cmp_less, wrap_u64_left, wrap_u64_greater
+    EXPAND WRAPPING_U64_CMP wrap_u64_cmp_equal, wrap_u64_left, wrap_u64_same
+    EXPAND WRAPPING_U64_CMP wrap_u64_cmp_greater, wrap_u64_greater, wrap_u64_left
+    EXPAND WRAPPING_U64_PARTIAL_CMP wrap_u64_partial_less, wrap_u64_left, wrap_u64_greater
+    EXPAND WRAPPING_U64_LT wrap_u64_lt_less, wrap_u64_left, wrap_u64_greater
+    EXPAND WRAPPING_U64_LE wrap_u64_le_equal, wrap_u64_left, wrap_u64_same
+    EXPAND WRAPPING_U64_GT wrap_u64_gt_greater, wrap_u64_greater, wrap_u64_left
+    EXPAND WRAPPING_U64_GE wrap_u64_ge_equal, wrap_u64_left, wrap_u64_same
+
+    EXPAND WRAPPING_U32_EQ wrap_u32_eq_same, wrap_u32_left, wrap_u32_same
+    EXPAND WRAPPING_U32_EQ wrap_u32_eq_greater, wrap_u32_left, wrap_u32_greater
+    EXPAND WRAPPING_U32_NE wrap_u32_ne_same, wrap_u32_left, wrap_u32_same
+    EXPAND WRAPPING_U32_NE wrap_u32_ne_greater, wrap_u32_left, wrap_u32_greater
+    EXPAND WRAPPING_U32_CMP wrap_u32_cmp_less, wrap_u32_left, wrap_u32_greater
+    EXPAND WRAPPING_U32_CMP wrap_u32_cmp_equal, wrap_u32_left, wrap_u32_same
+    EXPAND WRAPPING_U32_CMP wrap_u32_cmp_greater, wrap_u32_greater, wrap_u32_left
+    EXPAND WRAPPING_U32_PARTIAL_CMP wrap_u32_partial_less, wrap_u32_left, wrap_u32_greater
+    EXPAND WRAPPING_U32_LT wrap_u32_lt_less, wrap_u32_left, wrap_u32_greater
+    EXPAND WRAPPING_U32_LE wrap_u32_le_equal, wrap_u32_left, wrap_u32_same
+    EXPAND WRAPPING_U32_GT wrap_u32_gt_greater, wrap_u32_greater, wrap_u32_left
+    EXPAND WRAPPING_U32_GE wrap_u32_ge_equal, wrap_u32_left, wrap_u32_same
+
+    EXPAND WRAPPING_I64_EQ wrap_i64_eq_same, wrap_i64_left, wrap_i64_same
+    EXPAND WRAPPING_I64_EQ wrap_i64_eq_greater, wrap_i64_left, wrap_i64_greater
+    EXPAND WRAPPING_I64_NE wrap_i64_ne_same, wrap_i64_left, wrap_i64_same
+    EXPAND WRAPPING_I64_NE wrap_i64_ne_greater, wrap_i64_left, wrap_i64_greater
+    EXPAND WRAPPING_I64_CMP wrap_i64_cmp_less, wrap_i64_left, wrap_i64_greater
+    EXPAND WRAPPING_I64_CMP wrap_i64_cmp_equal, wrap_i64_left, wrap_i64_same
+    EXPAND WRAPPING_I64_CMP wrap_i64_cmp_greater, wrap_i64_greater, wrap_i64_left
+    EXPAND WRAPPING_I64_PARTIAL_CMP wrap_i64_partial_less, wrap_i64_left, wrap_i64_greater
+    EXPAND WRAPPING_I64_LT wrap_i64_lt_less, wrap_i64_left, wrap_i64_greater
+    EXPAND WRAPPING_I64_LE wrap_i64_le_equal, wrap_i64_left, wrap_i64_same
+    EXPAND WRAPPING_I64_GT wrap_i64_gt_greater, wrap_i64_greater, wrap_i64_left
+    EXPAND WRAPPING_I64_GE wrap_i64_ge_equal, wrap_i64_left, wrap_i64_same
+
+    EXPAND SATURATING_U64_EQ sat_u64_eq_same, sat_u64_left, sat_u64_same
+    EXPAND SATURATING_U64_EQ sat_u64_eq_greater, sat_u64_left, sat_u64_greater
+    EXPAND SATURATING_U64_NE sat_u64_ne_same, sat_u64_left, sat_u64_same
+    EXPAND SATURATING_U64_NE sat_u64_ne_greater, sat_u64_left, sat_u64_greater
+    EXPAND SATURATING_U64_CMP sat_u64_cmp_less, sat_u64_left, sat_u64_greater
+    EXPAND SATURATING_U64_CMP sat_u64_cmp_equal, sat_u64_left, sat_u64_same
+    EXPAND SATURATING_U64_CMP sat_u64_cmp_greater, sat_u64_greater, sat_u64_left
+    EXPAND SATURATING_U64_PARTIAL_CMP sat_u64_partial_less, sat_u64_left, sat_u64_greater
+    EXPAND SATURATING_U64_LT sat_u64_lt_less, sat_u64_left, sat_u64_greater
+    EXPAND SATURATING_U64_LE sat_u64_le_equal, sat_u64_left, sat_u64_same
+    EXPAND SATURATING_U64_GT sat_u64_gt_greater, sat_u64_greater, sat_u64_left
+    EXPAND SATURATING_U64_GE sat_u64_ge_equal, sat_u64_left, sat_u64_same
+
+    EXPAND SATURATING_I64_EQ sat_i64_eq_same, sat_i64_left, sat_i64_same
+    EXPAND SATURATING_I64_EQ sat_i64_eq_greater, sat_i64_left, sat_i64_greater
+    EXPAND SATURATING_I64_NE sat_i64_ne_same, sat_i64_left, sat_i64_same
+    EXPAND SATURATING_I64_NE sat_i64_ne_greater, sat_i64_left, sat_i64_greater
+    EXPAND SATURATING_I64_CMP sat_i64_cmp_less, sat_i64_left, sat_i64_greater
+    EXPAND SATURATING_I64_CMP sat_i64_cmp_equal, sat_i64_left, sat_i64_same
+    EXPAND SATURATING_I64_CMP sat_i64_cmp_greater, sat_i64_greater, sat_i64_left
+    EXPAND SATURATING_I64_PARTIAL_CMP sat_i64_partial_less, sat_i64_left, sat_i64_greater
+    EXPAND SATURATING_I64_LT sat_i64_lt_less, sat_i64_left, sat_i64_greater
+    EXPAND SATURATING_I64_LE sat_i64_le_equal, sat_i64_left, sat_i64_same
+    EXPAND SATURATING_I64_GT sat_i64_gt_greater, sat_i64_greater, sat_i64_left
+    EXPAND SATURATING_I64_GE sat_i64_ge_equal, sat_i64_left, sat_i64_same
+
+    ok01 = eq wrap_u64_eq_same, 1
+    ok02 = eq wrap_u64_eq_greater, 0
+    ok03 = eq wrap_u64_ne_same, 0
+    ok04 = eq wrap_u64_ne_greater, 1
+    ok05 = eq wrap_u64_cmp_less, CMP_ORDERING_LESS
+    ok06 = eq wrap_u64_cmp_equal, CMP_ORDERING_EQUAL
+    ok07 = eq wrap_u64_cmp_greater, CMP_ORDERING_GREATER
+    ok08 = eq wrap_u64_partial_less, CMP_ORDERING_LESS
+    ok09 = eq wrap_u64_lt_less, 1
+    ok10 = eq wrap_u64_le_equal, 1
+    ok11 = eq wrap_u64_gt_greater, 1
+    ok12 = eq wrap_u64_ge_equal, 1
+    ok13 = eq wrap_u32_eq_same, 1
+    ok14 = eq wrap_u32_eq_greater, 0
+    ok15 = eq wrap_u32_ne_same, 0
+    ok16 = eq wrap_u32_ne_greater, 1
+    ok17 = eq wrap_u32_cmp_less, CMP_ORDERING_LESS
+    ok18 = eq wrap_u32_cmp_equal, CMP_ORDERING_EQUAL
+    ok19 = eq wrap_u32_cmp_greater, CMP_ORDERING_GREATER
+    ok20 = eq wrap_u32_partial_less, CMP_ORDERING_LESS
+    ok21 = eq wrap_u32_lt_less, 1
+    ok22 = eq wrap_u32_le_equal, 1
+    ok23 = eq wrap_u32_gt_greater, 1
+    ok24 = eq wrap_u32_ge_equal, 1
+    ok25 = eq wrap_i64_eq_same, 1
+    ok26 = eq wrap_i64_eq_greater, 0
+    ok27 = eq wrap_i64_ne_same, 0
+    ok28 = eq wrap_i64_ne_greater, 1
+    ok29 = eq wrap_i64_cmp_less, CMP_ORDERING_LESS
+    ok30 = eq wrap_i64_cmp_equal, CMP_ORDERING_EQUAL
+    ok31 = eq wrap_i64_cmp_greater, CMP_ORDERING_GREATER
+    ok32 = eq wrap_i64_partial_less, CMP_ORDERING_LESS
+    ok33 = eq wrap_i64_lt_less, 1
+    ok34 = eq wrap_i64_le_equal, 1
+    ok35 = eq wrap_i64_gt_greater, 1
+    ok36 = eq wrap_i64_ge_equal, 1
+    ok37 = eq sat_u64_eq_same, 1
+    ok38 = eq sat_u64_eq_greater, 0
+    ok39 = eq sat_u64_ne_same, 0
+    ok40 = eq sat_u64_ne_greater, 1
+    ok41 = eq sat_u64_cmp_less, CMP_ORDERING_LESS
+    ok42 = eq sat_u64_cmp_equal, CMP_ORDERING_EQUAL
+    ok43 = eq sat_u64_cmp_greater, CMP_ORDERING_GREATER
+    ok44 = eq sat_u64_partial_less, CMP_ORDERING_LESS
+    ok45 = eq sat_u64_lt_less, 1
+    ok46 = eq sat_u64_le_equal, 1
+    ok47 = eq sat_u64_gt_greater, 1
+    ok48 = eq sat_u64_ge_equal, 1
+    ok49 = eq sat_i64_eq_same, 1
+    ok50 = eq sat_i64_eq_greater, 0
+    ok51 = eq sat_i64_ne_same, 0
+    ok52 = eq sat_i64_ne_greater, 1
+    ok53 = eq sat_i64_cmp_less, CMP_ORDERING_LESS
+    ok54 = eq sat_i64_cmp_equal, CMP_ORDERING_EQUAL
+    ok55 = eq sat_i64_cmp_greater, CMP_ORDERING_GREATER
+    ok56 = eq sat_i64_partial_less, CMP_ORDERING_LESS
+    ok57 = eq sat_i64_lt_less, 1
+    ok58 = eq sat_i64_le_equal, 1
+    ok59 = eq sat_i64_gt_greater, 1
+    ok60 = eq sat_i64_ge_equal, 1
+
+    c01 = and ok01, ok02
+    c02 = and c01, ok03
+    c03 = and c02, ok04
+    c04 = and c03, ok05
+    c05 = and c04, ok06
+    c06 = and c05, ok07
+    c07 = and c06, ok08
+    c08 = and c07, ok09
+    c09 = and c08, ok10
+    c10 = and c09, ok11
+    c11 = and c10, ok12
+    c12 = and c11, ok13
+    c13 = and c12, ok14
+    c14 = and c13, ok15
+    c15 = and c14, ok16
+    c16 = and c15, ok17
+    c17 = and c16, ok18
+    c18 = and c17, ok19
+    c19 = and c18, ok20
+    c20 = and c19, ok21
+    c21 = and c20, ok22
+    c22 = and c21, ok23
+    c23 = and c22, ok24
+    c24 = and c23, ok25
+    c25 = and c24, ok26
+    c26 = and c25, ok27
+    c27 = and c26, ok28
+    c28 = and c27, ok29
+    c29 = and c28, ok30
+    c30 = and c29, ok31
+    c31 = and c30, ok32
+    c32 = and c31, ok33
+    c33 = and c32, ok34
+    c34 = and c33, ok35
+    c35 = and c34, ok36
+    c36 = and c35, ok37
+    c37 = and c36, ok38
+    c38 = and c37, ok39
+    c39 = and c38, ok40
+    c40 = and c39, ok41
+    c41 = and c40, ok42
+    c42 = and c41, ok43
+    c43 = and c42, ok44
+    c44 = and c43, ok45
+    c45 = and c44, ok46
+    c46 = and c45, ok47
+    c47 = and c46, ok48
+    c48 = and c47, ok49
+    c49 = and c48, ok50
+    c50 = and c49, ok51
+    c51 = and c50, ok52
+    c52 = and c51, ok53
+    c53 = and c52, ok54
+    c54 = and c53, ok55
+    c55 = and c54, ok56
+    c56 = and c55, ok57
+    c57 = and c56, ok58
+    c58 = and c57, ok59
+    ok = and c58, ok60
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10619)
+
+L_PASS:
+    !ok
+    return 0

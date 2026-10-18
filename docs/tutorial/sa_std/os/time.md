@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/time.sa"
+@import "sa_std/time.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@
 下面的完整 SA 程序展示了如何获取休眠前后的毫秒时间戳差，从而测算执行延迟：
 
 ```sa
-@import "sa_std/time.sa"
+@import "sa_std/time.sars"
 
 @main() -> i32:
 L_ENTRY:

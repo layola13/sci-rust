@@ -1,0 +1,24 @@
+@import "sa_std/mem.sars"
+
+@test "sa_std manually_drop bare aliases"():
+L_ENTRY:
+    slot = stack_alloc 8
+    EXPAND MANUALLY_DROP_NEW slot, 99
+    EXPAND MANUALLY_DROP_INTO_INNER v, slot
+    slot2 = stack_alloc 8
+    EXPAND MANUALLY_DROP_NEW slot2, 5
+    EXPAND MANUALLY_DROP_TAKE t, slot2
+    a = eq v, 99
+    b = eq t, 5
+    ok = and a, b
+    !v
+    !t
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10897)

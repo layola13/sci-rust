@@ -1,0 +1,187 @@
+@import "sa_std/num.sal"
+@import "sa_std/num.sars"
+@import "sa_std/ops.sal"
+@import "sa_std/ops.sars"
+
+@test "sa_std Wrapping/Saturating construction and access macros"():
+L_ENTRY:
+    buf_wr = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_NEW buf_wr, 255
+    EXPAND WRAPPING_U64_GET wr_val, buf_wr
+    ok_wr = eq wr_val, 255
+
+    EXPAND WRAPPING_U64_SET buf_wr, 42
+    EXPAND WRAPPING_U64_GET wr_val2, buf_wr
+    ok_wr_set = eq wr_val2, 42
+
+    buf_wr32 = alloc WrappingU32_SIZE
+    EXPAND WRAPPING_U32_NEW buf_wr32, 99
+    EXPAND WRAPPING_U32_GET wr32_val, buf_wr32
+    ok_wr32 = eq wr32_val, 99
+
+    buf_wri = alloc WrappingI64_SIZE
+    EXPAND WRAPPING_I64_NEW buf_wri, -1
+    EXPAND WRAPPING_I64_GET wri_val, buf_wri
+    ok_wri = eq wri_val, -1
+
+    buf_sat = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_NEW buf_sat, 77
+    EXPAND SATURATING_U64_GET sat_val, buf_sat
+    ok_sat = eq sat_val, 77
+
+    EXPAND SATURATING_U64_SET buf_sat, 88
+    EXPAND SATURATING_U64_GET sat_val2, buf_sat
+    ok_sat_set = eq sat_val2, 88
+
+    buf_sati = alloc SaturatingI64_SIZE
+    EXPAND SATURATING_I64_NEW buf_sati, -100
+    EXPAND SATURATING_I64_GET sati_val, buf_sati
+    ok_sati = eq sati_val, -100
+
+    c01 = and ok_wr, ok_wr_set
+    c02 = and c01, ok_wr32
+    c03 = and c02, ok_wri
+    c04 = and c03, ok_sat
+    c05 = and c04, ok_sat_set
+    c06 = and c05, ok_sati
+
+    !buf_wr
+    !wr_val
+    !wr_val2
+    !buf_wr32
+    !wr32_val
+    !buf_wri
+    !wri_val
+    !buf_sat
+    !sat_val
+    !sat_val2
+    !buf_sati
+    !sati_val
+
+    br c06 -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10475)
+
+L_PASS:
+    return 0
+
+@test "sa_std Range usize layout aliases and macros"():
+L_ENTRY:
+    ok_rsize = eq RangeUsize_SIZE, 16
+    ok_rstart = eq RangeUsize_start, +0
+    ok_rend = eq RangeUsize_end, +8
+
+    ok_risize = eq RangeInclusiveUsize_SIZE, 24
+    ok_ristart = eq RangeInclusiveUsize_start, +0
+    ok_riend = eq RangeInclusiveUsize_end, +8
+    ok_riexh = eq RangeInclusiveUsize_exhausted, +16
+
+    ok_rfsize = eq RangeFromUsize_SIZE, 8
+    ok_rfstart = eq RangeFromUsize_start, +0
+
+    ok_rtsize = eq RangeToUsize_SIZE, 8
+    ok_rtend = eq RangeToUsize_end, +0
+
+    ok_rtisize = eq RangeToInclusiveUsize_SIZE, 8
+    ok_rtiend = eq RangeToInclusiveUsize_end, +0
+
+    ok_bsize = eq BoundUsize_SIZE, 16
+    ok_btag = eq BoundUsize_tag, +0
+    ok_bval = eq BoundUsize_value, +8
+
+    buf_rng = alloc RangeUsize_SIZE
+    EXPAND RANGE_USIZE_NEW buf_rng, 5, 25
+    EXPAND RANGE_USIZE_START rs_start, buf_rng
+    EXPAND RANGE_USIZE_END rs_end, buf_rng
+    ok_rs_start = eq rs_start, 5
+    ok_rs_end = eq rs_end, 25
+
+    EXPAND RANGE_USIZE_CONTAINS rs_contained, buf_rng, 10
+    ok_rs_contained = eq rs_contained, 1
+
+    EXPAND RANGE_USIZE_IS_EMPTY rs_empty, buf_rng
+    ok_rs_not_empty = eq rs_empty, 0
+
+    EXPAND RANGE_USIZE_LEN rs_len, buf_rng
+    ok_rs_len = eq rs_len, 20
+
+    buf_rng_def = alloc RangeUsize_SIZE
+    EXPAND RANGE_USIZE_DEFAULT buf_rng_def
+    EXPAND RANGE_USIZE_START rs_def_start, buf_rng_def
+    EXPAND RANGE_USIZE_END rs_def_end, buf_rng_def
+    ok_rs_def_start = eq rs_def_start, 0
+    ok_rs_def_end = eq rs_def_end, 0
+
+    buf_rng_inc_def = alloc RangeInclusiveUsize_SIZE
+    EXPAND RANGE_INCLUSIVE_USIZE_DEFAULT buf_rng_inc_def
+    EXPAND RANGE_USIZE_START rs_inc_start, buf_rng_inc_def
+    ok_rs_inc_start = eq rs_inc_start, 0
+
+    buf_rng_from = alloc RangeFromUsize_SIZE
+    EXPAND RANGE_FROM_USIZE_DEFAULT buf_rng_from
+    EXPAND RANGE_USIZE_START rs_from_start, buf_rng_from
+    ok_rs_from_start = eq rs_from_start, 0
+
+    buf_rng_to = alloc RangeToUsize_SIZE
+    EXPAND RANGE_TO_USIZE_DEFAULT buf_rng_to
+    rs_to_end = load buf_rng_to+RangeToUsize_end as u64
+    ok_rs_to_end = eq rs_to_end, 0
+
+    buf_rng_toi = alloc RangeToInclusiveUsize_SIZE
+    EXPAND RANGE_TO_INCLUSIVE_USIZE_DEFAULT buf_rng_toi
+    rs_toi_end = load buf_rng_toi+RangeToInclusiveUsize_end as u64
+    ok_rs_toi_end = eq rs_toi_end, 0
+
+    c01 = and ok_rsize, ok_rstart
+    c02 = and c01, ok_rend
+    c03 = and c02, ok_risize
+    c04 = and c03, ok_ristart
+    c05 = and c04, ok_riend
+    c06 = and c05, ok_riexh
+    c07 = and c06, ok_rfsize
+    c08 = and c07, ok_rfstart
+    c09 = and c08, ok_rtsize
+    c10 = and c09, ok_rtend
+    c11 = and c10, ok_rtisize
+    c12 = and c11, ok_rtiend
+    c13 = and c12, ok_bsize
+    c14 = and c13, ok_btag
+    c15 = and c14, ok_bval
+    c16 = and c15, ok_rs_start
+    c17 = and c16, ok_rs_end
+    c18 = and c17, ok_rs_contained
+    c19 = and c18, ok_rs_not_empty
+    c20 = and c19, ok_rs_len
+    c21 = and c20, ok_rs_def_start
+    c22 = and c21, ok_rs_def_end
+    c23 = and c22, ok_rs_inc_start
+    c24 = and c23, ok_rs_from_start
+    c25 = and c24, ok_rs_to_end
+    c26 = and c25, ok_rs_toi_end
+
+    !buf_rng
+    !rs_start
+    !rs_end
+    !rs_contained
+    !rs_empty
+    !rs_len
+    !buf_rng_def
+    !rs_def_start
+    !rs_def_end
+    !buf_rng_inc_def
+    !rs_inc_start
+    !buf_rng_from
+    !rs_from_start
+    !buf_rng_to
+    !rs_to_end
+    !buf_rng_toi
+    !rs_toi_end
+
+    br c26 -> L_PASS2, L_FAIL2
+
+L_FAIL2:
+    panic(10476)
+
+L_PASS2:
+    return 0

@@ -1,0 +1,95 @@
+@import "sa_std/core/slice.sars"
+@import "sa_std/iter.sars"
+@import "sa_std/vec.sars"
+
+@iter_inspect_scale_return(value: u64) -> u64:
+L_ENTRY:
+    out = mul value, 100
+    !value
+    return out
+
+@test "sa_std iter inspect collect macro surface"():
+L_ENTRY:
+    values = stack_alloc 32
+    empty_values = stack_alloc 8
+
+    store values+0, 2 as u64
+    store values+8, 4 as u64
+    store values+16, 6 as u64
+    store values+24, 8 as u64
+
+    slice = alloc Slice_SIZE
+    empty_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 4
+    EXPAND SLICE_NEW empty_slice, empty_values, 0
+
+    EXPAND ITER_FROM_SLICE iter, slice
+    EXPAND ITER_INSPECT_COLLECT_U64 vec, iter, @iter_inspect_scale_return
+    EXPAND ITER_IS_EMPTY iter_empty, iter
+    EXPAND VEC_LEN vec_len, vec
+    EXPAND VEC_GET_U64 vec_0, vec, 0
+    EXPAND VEC_GET_U64 vec_1, vec, 1
+    EXPAND VEC_GET_U64 vec_2, vec, 2
+    EXPAND VEC_GET_U64 vec_3, vec, 3
+
+    EXPAND ITER_FROM_SLICE empty_iter, empty_slice
+    EXPAND ITER_INSPECT_COLLECT_U64 empty_vec, empty_iter, @iter_inspect_scale_return
+    EXPAND ITER_IS_EMPTY empty_iter_empty, empty_iter
+    EXPAND VEC_LEN empty_len, empty_vec
+
+    ok_iter_empty = eq iter_empty, 1
+    ok_len = eq vec_len, 4
+    ok_0 = eq vec_0, 2
+    ok_1 = eq vec_1, 4
+    ok_2 = eq vec_2, 6
+    ok_3 = eq vec_3, 8
+    ok_empty_iter = eq empty_iter_empty, 1
+    ok_empty_len = eq empty_len, 0
+
+    c01 = and ok_iter_empty, ok_len
+    c02 = and c01, ok_0
+    c03 = and c02, ok_1
+    c04 = and c03, ok_2
+    c05 = and c04, ok_3
+    c06 = and c05, ok_empty_iter
+    ok = and c06, ok_empty_len
+
+    !iter_empty
+    !vec_len
+    !vec_0
+    !vec_1
+    !vec_2
+    !vec_3
+    !empty_iter_empty
+    !empty_len
+    !ok_iter_empty
+    !ok_len
+    !ok_0
+    !ok_1
+    !ok_2
+    !ok_3
+    !ok_empty_iter
+    !ok_empty_len
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !empty_iter
+    !iter
+    !empty_slice
+    !slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    EXPAND VEC_FREE empty_vec
+    EXPAND VEC_FREE vec
+    panic(10539)
+
+L_PASS:
+    !ok
+    EXPAND VEC_FREE empty_vec
+    EXPAND VEC_FREE vec
+    return 0

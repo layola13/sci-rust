@@ -1,0 +1,94 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+
+@const RESULT_OK = utf8:"12\n"
+@const RESULT_ERR = utf8:"error\n"
+@const VT_ADD_ONE = vtable { score = @add_one_score }
+@const VT_ADD_TWO = vtable { score = @add_two_score }
+
+#def Dyn_SIZE = 16
+#def Dyn_data = +0
+#def Dyn_vtable = +8
+#def VT_score = +0
+
+#def Box_SIZE = 4
+#def Box_value = +0
+
+@add_one_score(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+Box_value as i32
+    result = add value, 1
+    !value
+    !self
+    return result
+
+@add_two_score(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+Box_value as i32
+    result = add value, 2
+    !value
+    !self
+    return result
+
+@sum_scores(&items: ptr) -> i32:
+L_ENTRY:
+    EXPAND SLICE_GET_PTR data, items
+    first = load data+Dyn_data as ptr
+    first_vt = load data+Dyn_vtable as ptr
+    first_fn = load first_vt+VT_score as ptr
+    first_score = call_indirect first_fn(&first)
+
+    second_slot = ptr_add data, Dyn_SIZE
+    second = load second_slot+Dyn_data as ptr
+    second_vt = load second_slot+Dyn_vtable as ptr
+    second_fn = load second_vt+VT_score as ptr
+    second_score = call_indirect second_fn(&second)
+
+    total = add first_score, second_score
+    !first_fn
+    !first_vt
+    !first
+    !first_score
+    !second_fn
+    !second_vt
+    !second
+    !second_score
+    !second_slot
+    !data
+    !items
+    return total
+
+@main() -> i32:
+L_ENTRY:
+    left = alloc Box_SIZE
+    right = alloc Box_SIZE
+    store left+Box_value, 4 as i32
+    store right+Box_value, 5 as i32
+
+    dyns = alloc 32
+    store dyns+Dyn_data, left as ptr
+    store dyns+Dyn_vtable, &VT_ADD_ONE as ptr
+    store dyns+16, right as ptr
+    store dyns+24, &VT_ADD_TWO as ptr
+
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, dyns, 2
+    total = call @sum_scores(&slice)
+    ok = eq total, 12
+    !total
+    !left
+    !right
+    !dyns
+    !slice
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 3)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

@@ -1,0 +1,146 @@
+@import "sa_std/vec.sars"
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std vec hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    data = stack_alloc 24
+    store data+0, 7 as u64
+    store data+8, 11 as u64
+    store data+16, 19 as u64
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 3
+
+    same_data = stack_alloc 24
+    store same_data+0, 7 as u64
+    store same_data+8, 11 as u64
+    store same_data+16, 19 as u64
+    same_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW same_slice, same_data, 3
+
+    short_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW short_slice, data, 2
+
+    order_data = stack_alloc 24
+    store order_data+0, 11 as u64
+    store order_data+8, 7 as u64
+    store order_data+16, 19 as u64
+    order_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW order_slice, order_data, 3
+
+    EXPAND VEC_FROM_SLICE_U64 vec, slice
+    EXPAND VEC_FROM_SLICE_U64 same_vec, same_slice
+    EXPAND VEC_FROM_SLICE_U64 short_vec, short_slice
+    EXPAND VEC_FROM_SLICE_U64 order_vec, order_slice
+    EXPAND VEC_AS_SLICE vec_slice, vec
+
+    write_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW write_hasher
+    EXPAND DEFAULT_HASHER_WRITE_VEC_U64 write_hasher, vec
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, write_hasher
+
+    EXPAND VEC_HASH_U64 direct_hash, vec
+    EXPAND SLICE_HASH_U64 slice_hash, vec_slice
+    EXPAND VEC_HASH_U64 same_hash, same_vec
+    EXPAND VEC_HASH_U64 short_hash, short_vec
+    EXPAND VEC_HASH_U64 order_hash, order_vec
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_VEC_U64 build_hash, builder, vec
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SLICE_U64 build_slice_hash, builder, vec_slice
+
+    state = stack_alloc RandomState_SIZE
+    state_manual_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+    EXPAND RANDOM_STATE_HASH_ONE_VEC_U64 state_hash, state, vec
+    EXPAND RANDOM_STATE_BUILD state_manual_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_SLICE_U64 state_manual_hasher, vec_slice
+    EXPAND DEFAULT_HASHER_FINISH state_manual_hash, state_manual_hasher
+
+    EXPAND VEC_PUSH_U64 vec, 23
+    EXPAND VEC_AS_SLICE changed_slice, vec
+    EXPAND VEC_HASH_U64 changed_hash, vec
+    EXPAND SLICE_HASH_U64 changed_slice_hash, changed_slice
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_VEC_U64 changed_build_hash, builder, vec
+
+    writer_matches_slice = eq writer_hash, slice_hash
+    direct_matches_slice = eq direct_hash, slice_hash
+    same_value_matches = eq same_hash, direct_hash
+    short_len_matters = ne short_hash, direct_hash
+    order_matters = ne order_hash, direct_hash
+    build_matches_vec = eq build_hash, direct_hash
+    build_matches_slice = eq build_hash, build_slice_hash
+    state_matches_manual = eq state_hash, state_manual_hash
+    seeded_differs_default = ne state_hash, direct_hash
+    changed_matches_slice = eq changed_hash, changed_slice_hash
+    changed_build_matches = eq changed_build_hash, changed_hash
+    changed_differs_old = ne changed_hash, direct_hash
+
+    c01 = and writer_matches_slice, direct_matches_slice
+    c02 = and c01, same_value_matches
+    c03 = and c02, short_len_matters
+    c04 = and c03, order_matters
+    c05 = and c04, build_matches_vec
+    c06 = and c05, build_matches_slice
+    c07 = and c06, state_matches_manual
+    c08 = and c07, seeded_differs_default
+    c09 = and c08, changed_matches_slice
+    c10 = and c09, changed_build_matches
+    ok = and c10, changed_differs_old
+
+    !writer_hash
+    !direct_hash
+    !slice_hash
+    !same_hash
+    !short_hash
+    !order_hash
+    !build_hash
+    !build_slice_hash
+    !state_hash
+    !state_manual_hash
+    !changed_hash
+    !changed_slice_hash
+    !changed_build_hash
+    !writer_matches_slice
+    !direct_matches_slice
+    !same_value_matches
+    !short_len_matters
+    !order_matters
+    !build_matches_vec
+    !build_matches_slice
+    !state_matches_manual
+    !seeded_differs_default
+    !changed_matches_slice
+    !changed_build_matches
+    !changed_differs_old
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !changed_slice
+    !vec_slice
+    EXPAND VEC_FREE vec
+    EXPAND VEC_FREE same_vec
+    EXPAND VEC_FREE short_vec
+    EXPAND VEC_FREE order_vec
+    !builder
+    !slice
+    !same_slice
+    !short_slice
+    !order_slice
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10583)
+
+L_PASS:
+    !ok
+    return 0

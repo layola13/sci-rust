@@ -1,0 +1,244 @@
+@import "sa_std/collections/btree_map.sars"
+@import "sa_std/collections/btree_set.sars"
+@import "sa_std/core/slice.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+@const KEY_DELTA = utf8:"delta"
+
+@test "sa_std btree hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    delta = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+    EXPAND SLICE_NEW delta, &KEY_DELTA, 5
+
+    EXPAND BTREE_MAP_NEW map_unsorted
+    EXPAND BTREE_MAP_INSERT map_unsorted, charlie, 30
+    EXPAND BTREE_MAP_INSERT map_unsorted, alpha, 10
+    EXPAND BTREE_MAP_INSERT map_unsorted, bravo, 20
+
+    EXPAND BTREE_MAP_NEW map_sorted
+    EXPAND BTREE_MAP_INSERT map_sorted, alpha, 10
+    EXPAND BTREE_MAP_INSERT map_sorted, bravo, 20
+    EXPAND BTREE_MAP_INSERT map_sorted, charlie, 30
+
+    EXPAND BTREE_MAP_NEW map_short
+    EXPAND BTREE_MAP_INSERT map_short, alpha, 10
+    EXPAND BTREE_MAP_INSERT map_short, bravo, 20
+
+    EXPAND BTREE_MAP_NEW map_value_diff
+    EXPAND BTREE_MAP_INSERT map_value_diff, alpha, 10
+    EXPAND BTREE_MAP_INSERT map_value_diff, bravo, 21
+    EXPAND BTREE_MAP_INSERT map_value_diff, charlie, 30
+
+    EXPAND BTREE_MAP_NEW map_key_diff
+    EXPAND BTREE_MAP_INSERT map_key_diff, alpha, 10
+    EXPAND BTREE_MAP_INSERT map_key_diff, bravo, 20
+    EXPAND BTREE_MAP_INSERT map_key_diff, delta, 30
+
+    map_writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW map_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_BTREE_MAP_STR_U64 map_writer_hasher, map_unsorted
+    EXPAND DEFAULT_HASHER_FINISH map_writer_hash, map_writer_hasher
+
+    EXPAND BTREE_MAP_HASH_STR_U64 map_hash, map_unsorted
+    EXPAND BTREE_MAP_HASH_STR_U64 map_sorted_hash, map_sorted
+    EXPAND BTREE_MAP_HASH_STR_U64 map_short_hash, map_short
+    EXPAND BTREE_MAP_HASH_STR_U64 map_value_diff_hash, map_value_diff
+    EXPAND BTREE_MAP_HASH_STR_U64 map_key_diff_hash, map_key_diff
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_MAP_STR_U64 map_build_hash, builder, map_unsorted
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_MAP_STR_U64 map_sorted_build_hash, builder, map_sorted
+
+    state = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 33, 44
+    EXPAND RANDOM_STATE_HASH_ONE_BTREE_MAP_STR_U64 map_state_hash, state, map_unsorted
+    EXPAND RANDOM_STATE_HASH_ONE_BTREE_MAP_STR_U64 map_sorted_state_hash, state, map_sorted
+
+    EXPAND BTREE_MAP_GET_MUT_PTR map_mut_ok, map_mut_ptr, map_unsorted, charlie
+    store map_mut_ptr+0, 31 as u64
+    EXPAND BTREE_MAP_HASH_STR_U64 map_changed_hash, map_unsorted
+
+    EXPAND BTREE_SET_NEW set_unsorted
+    EXPAND BTREE_SET_INSERT set_insert_c, set_unsorted, charlie
+    EXPAND BTREE_SET_INSERT set_insert_a, set_unsorted, alpha
+    EXPAND BTREE_SET_INSERT set_insert_b, set_unsorted, bravo
+
+    EXPAND BTREE_SET_NEW set_sorted
+    EXPAND BTREE_SET_INSERT set_sorted_insert_a, set_sorted, alpha
+    EXPAND BTREE_SET_INSERT set_sorted_insert_b, set_sorted, bravo
+    EXPAND BTREE_SET_INSERT set_sorted_insert_c, set_sorted, charlie
+
+    EXPAND BTREE_SET_NEW set_short
+    EXPAND BTREE_SET_INSERT set_short_insert_a, set_short, alpha
+    EXPAND BTREE_SET_INSERT set_short_insert_b, set_short, bravo
+
+    EXPAND BTREE_SET_NEW set_key_diff
+    EXPAND BTREE_SET_INSERT set_key_diff_insert_a, set_key_diff, alpha
+    EXPAND BTREE_SET_INSERT set_key_diff_insert_b, set_key_diff, bravo
+    EXPAND BTREE_SET_INSERT set_key_diff_insert_d, set_key_diff, delta
+
+    set_writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW set_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_BTREE_SET_STR set_writer_hasher, set_unsorted
+    EXPAND DEFAULT_HASHER_FINISH set_writer_hash, set_writer_hasher
+
+    EXPAND BTREE_SET_HASH_STR set_hash, set_unsorted
+    EXPAND BTREE_SET_HASH_STR set_sorted_hash, set_sorted
+    EXPAND BTREE_SET_HASH_STR set_short_hash, set_short
+    EXPAND BTREE_SET_HASH_STR set_key_diff_hash, set_key_diff
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_SET_STR set_build_hash, builder, set_unsorted
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_BTREE_SET_STR set_sorted_build_hash, builder, set_sorted
+    EXPAND RANDOM_STATE_HASH_ONE_BTREE_SET_STR set_state_hash, state, set_unsorted
+    EXPAND RANDOM_STATE_HASH_ONE_BTREE_SET_STR set_sorted_state_hash, state, set_sorted
+
+    map_writer_matches = eq map_writer_hash, map_hash
+    map_insertion_order_equal = eq map_hash, map_sorted_hash
+    map_length_matters = ne map_short_hash, map_hash
+    map_value_matters = ne map_value_diff_hash, map_hash
+    map_key_matters = ne map_key_diff_hash, map_hash
+    map_build_matches = eq map_build_hash, map_hash
+    map_build_order_equal = eq map_sorted_build_hash, map_build_hash
+    map_state_order_equal = eq map_sorted_state_hash, map_state_hash
+    map_seeded_differs_default = ne map_state_hash, map_hash
+    map_mut_found = eq map_mut_ok, 1
+    map_mutation_matters = ne map_changed_hash, map_hash
+
+    set_insertions_ok_1 = and set_insert_c, set_insert_a
+    set_insertions_ok_2 = and set_insertions_ok_1, set_insert_b
+    set_writer_matches = eq set_writer_hash, set_hash
+    set_insertion_order_equal = eq set_hash, set_sorted_hash
+    set_length_matters = ne set_short_hash, set_hash
+    set_key_matters = ne set_key_diff_hash, set_hash
+    set_build_matches = eq set_build_hash, set_hash
+    set_build_order_equal = eq set_sorted_build_hash, set_build_hash
+    set_state_order_equal = eq set_sorted_state_hash, set_state_hash
+    set_seeded_differs_default = ne set_state_hash, set_hash
+    map_set_distinct = ne map_sorted_hash, set_sorted_hash
+
+    c01 = and map_writer_matches, map_insertion_order_equal
+    c02 = and c01, map_length_matters
+    c03 = and c02, map_value_matters
+    c04 = and c03, map_key_matters
+    c05 = and c04, map_build_matches
+    c06 = and c05, map_build_order_equal
+    c07 = and c06, map_state_order_equal
+    c08 = and c07, map_seeded_differs_default
+    c09 = and c08, map_mut_found
+    c10 = and c09, map_mutation_matters
+    c11 = and c10, set_insertions_ok_2
+    c12 = and c11, set_writer_matches
+    c13 = and c12, set_insertion_order_equal
+    c14 = and c13, set_length_matters
+    c15 = and c14, set_key_matters
+    c16 = and c15, set_build_matches
+    c17 = and c16, set_build_order_equal
+    c18 = and c17, set_state_order_equal
+    c19 = and c18, set_seeded_differs_default
+    ok = and c19, map_set_distinct
+
+    !map_writer_hash
+    !map_hash
+    !map_sorted_hash
+    !map_short_hash
+    !map_value_diff_hash
+    !map_key_diff_hash
+    !map_build_hash
+    !map_sorted_build_hash
+    !map_state_hash
+    !map_sorted_state_hash
+    !map_mut_ok
+    !map_mut_ptr
+    !map_changed_hash
+    !set_insert_c
+    !set_insert_a
+    !set_insert_b
+    !set_sorted_insert_a
+    !set_sorted_insert_b
+    !set_sorted_insert_c
+    !set_short_insert_a
+    !set_short_insert_b
+    !set_key_diff_insert_a
+    !set_key_diff_insert_b
+    !set_key_diff_insert_d
+    !set_writer_hash
+    !set_hash
+    !set_sorted_hash
+    !set_short_hash
+    !set_key_diff_hash
+    !set_build_hash
+    !set_sorted_build_hash
+    !set_state_hash
+    !set_sorted_state_hash
+    !map_writer_matches
+    !map_insertion_order_equal
+    !map_length_matters
+    !map_value_matters
+    !map_key_matters
+    !map_build_matches
+    !map_build_order_equal
+    !map_state_order_equal
+    !map_seeded_differs_default
+    !map_mut_found
+    !map_mutation_matters
+    !set_insertions_ok_1
+    !set_insertions_ok_2
+    !set_writer_matches
+    !set_insertion_order_equal
+    !set_length_matters
+    !set_key_matters
+    !set_build_matches
+    !set_build_order_equal
+    !set_state_order_equal
+    !set_seeded_differs_default
+    !map_set_distinct
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !c18
+    !c19
+
+    EXPAND BTREE_MAP_FREE map_unsorted
+    EXPAND BTREE_MAP_FREE map_sorted
+    EXPAND BTREE_MAP_FREE map_short
+    EXPAND BTREE_MAP_FREE map_value_diff
+    EXPAND BTREE_MAP_FREE map_key_diff
+    EXPAND BTREE_SET_FREE set_unsorted
+    EXPAND BTREE_SET_FREE set_sorted
+    EXPAND BTREE_SET_FREE set_short
+    EXPAND BTREE_SET_FREE set_key_diff
+    !alpha
+    !bravo
+    !charlie
+    !delta
+    !builder
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10586)
+
+L_PASS:
+    !ok
+    return 0

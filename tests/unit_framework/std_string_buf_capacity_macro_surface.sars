@@ -1,0 +1,22 @@
+@import "sa_std/string.sars"
+
+@test "sa_std string_buf with_capacity"():
+L_ENTRY:
+    EXPAND STRING_BUF_WITH_CAPACITY buf, 16
+    EXPAND STRING_BUF_CAPACITY cap, buf
+    EXPAND STRING_BUF_LEN ln, buf
+    EXPAND STRING_BUF_FREE buf
+    a = uge cap, 16
+    b = eq ln, 0
+    ok = and a, b
+    !cap
+    !ln
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10950)

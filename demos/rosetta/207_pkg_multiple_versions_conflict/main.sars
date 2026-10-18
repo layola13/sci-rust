@@ -1,0 +1,26 @@
+@import "sa_std/io/print.sai"
+@import "resolver/index.sars"
+
+@const RESULT_OK = utf8:"207\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 207 - Package Multiple Versions Conflict
+// Two versioned packages are both imported into the same resolver graph.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @resolver_value()
+    ok = eq value, 207
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1
+

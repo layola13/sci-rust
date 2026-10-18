@@ -1,0 +1,4 @@
+// Stable time namespace aggregation.
+@import "duration.sars"
+@import "instant.sars"
+@import "../time.sars"

@@ -1,0 +1,46 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/option.sars"
+
+@const RESULT_OK = utf8:"9\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@choose(&opt: ptr, fallback: i32) -> i32:
+L_ENTRY:
+    value = load opt+Option_value as u64
+    tag = load opt+Option_tag as u64
+    is_some = eq tag, Option_SOME
+    br is_some -> L_SOME, L_NONE
+
+L_SOME:
+    !tag
+    !is_some
+    !opt
+    !fallback
+    return value
+
+L_NONE:
+    !tag
+    !is_some
+    return fallback
+
+@main() -> i32:
+L_ENTRY:
+    opt = alloc Option_SIZE
+    store opt+Option_tag, Option_SOME as u64
+    store opt+Option_value, 9 as u64
+    value = call @choose(&opt, 1)
+    ok = eq value, 9
+    !value
+    !opt
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

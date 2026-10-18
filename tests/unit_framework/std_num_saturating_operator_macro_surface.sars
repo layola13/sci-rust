@@ -1,0 +1,84 @@
+@import "sa_std/num.sars"
+
+@test "sa_std Saturating operator macro surface"():
+L_ENTRY:
+    sat_u64_lhs = stack_alloc SaturatingU64_SIZE
+    sat_u64_rhs = stack_alloc SaturatingU64_SIZE
+    sat_u64_out = stack_alloc SaturatingU64_SIZE
+    sat_i64_lhs = stack_alloc SaturatingI64_SIZE
+    sat_i64_rhs = stack_alloc SaturatingI64_SIZE
+    sat_i64_min = stack_alloc SaturatingI64_SIZE
+    sat_i64_neg_one = stack_alloc SaturatingI64_SIZE
+    sat_i64_out = stack_alloc SaturatingI64_SIZE
+    sat_i64_div_over_out = stack_alloc SaturatingI64_SIZE
+
+    EXPAND SATURATING_U64_NEW sat_u64_lhs, 10
+    EXPAND SATURATING_U64_NEW sat_u64_rhs, 3
+    EXPAND SATURATING_U64_DIV sat_u64_out, sat_u64_lhs, sat_u64_rhs
+    EXPAND SATURATING_U64_GET sat_u64_div_value, sat_u64_out
+    EXPAND SATURATING_U64_REM sat_u64_out, sat_u64_lhs, sat_u64_rhs
+    EXPAND SATURATING_U64_GET sat_u64_rem_value, sat_u64_out
+    EXPAND SATURATING_U64_NOT sat_u64_out, sat_u64_lhs
+    EXPAND SATURATING_U64_GET sat_u64_not_value, sat_u64_out
+    EXPAND SATURATING_U64_BITAND sat_u64_out, sat_u64_lhs, sat_u64_rhs
+    EXPAND SATURATING_U64_GET sat_u64_and_value, sat_u64_out
+    EXPAND SATURATING_U64_BITOR sat_u64_out, sat_u64_lhs, sat_u64_rhs
+    EXPAND SATURATING_U64_GET sat_u64_or_value, sat_u64_out
+    EXPAND SATURATING_U64_BITXOR sat_u64_out, sat_u64_lhs, sat_u64_rhs
+    EXPAND SATURATING_U64_GET sat_u64_xor_value, sat_u64_out
+
+    EXPAND SATURATING_I64_NEW sat_i64_lhs, -9
+    EXPAND SATURATING_I64_NEW sat_i64_rhs, 2
+    EXPAND SATURATING_I64_NEW sat_i64_min, NUM_I64_MIN
+    EXPAND SATURATING_I64_NEW sat_i64_neg_one, -1
+    EXPAND SATURATING_I64_DIV sat_i64_out, sat_i64_lhs, sat_i64_rhs
+    EXPAND SATURATING_I64_GET sat_i64_div_value, sat_i64_out
+    EXPAND SATURATING_I64_DIV sat_i64_div_over_out, sat_i64_min, sat_i64_neg_one
+    EXPAND SATURATING_I64_GET sat_i64_div_over_value, sat_i64_div_over_out
+    EXPAND SATURATING_I64_REM sat_i64_out, sat_i64_lhs, sat_i64_rhs
+    EXPAND SATURATING_I64_GET sat_i64_rem_value, sat_i64_out
+    EXPAND SATURATING_I64_NOT sat_i64_out, sat_i64_lhs
+    EXPAND SATURATING_I64_GET sat_i64_not_value, sat_i64_out
+    EXPAND SATURATING_I64_BITAND sat_i64_out, sat_i64_lhs, sat_i64_rhs
+    EXPAND SATURATING_I64_GET sat_i64_and_value, sat_i64_out
+    EXPAND SATURATING_I64_BITOR sat_i64_out, sat_i64_lhs, sat_i64_rhs
+    EXPAND SATURATING_I64_GET sat_i64_or_value, sat_i64_out
+    EXPAND SATURATING_I64_BITXOR sat_i64_out, sat_i64_lhs, sat_i64_rhs
+    EXPAND SATURATING_I64_GET sat_i64_xor_value, sat_i64_out
+
+    ok01 = eq sat_u64_div_value, 3
+    ok02 = eq sat_u64_rem_value, 1
+    ok03 = eq sat_u64_not_value, 18446744073709551605
+    ok04 = eq sat_u64_and_value, 2
+    ok05 = eq sat_u64_or_value, 11
+    ok06 = eq sat_u64_xor_value, 9
+    ok07 = eq sat_i64_div_value, -4
+    ok08 = eq sat_i64_div_over_value, NUM_I64_MAX
+    ok09 = eq sat_i64_rem_value, -1
+    ok10 = eq sat_i64_not_value, 8
+    ok11 = eq sat_i64_and_value, 2
+    ok12 = eq sat_i64_or_value, -9
+    ok13 = eq sat_i64_xor_value, -11
+
+    c01 = and ok01, ok02
+    c02 = and c01, ok03
+    c03 = and c02, ok04
+    c04 = and c03, ok05
+    c05 = and c04, ok06
+    c06 = and c05, ok07
+    c07 = and c06, ok08
+    c08 = and c07, ok09
+    c09 = and c08, ok10
+    c10 = and c09, ok11
+    c11 = and c10, ok12
+    ok = and c11, ok13
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10621)
+
+L_PASS:
+    !ok
+    return 0

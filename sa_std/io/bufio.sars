@@ -1,0 +1,4 @@
+// Stable aggregate entry for buffered I/O facades.
+@import "buf_reader.sars"
+@import "buf_writer.sars"
+@import "print.sars"

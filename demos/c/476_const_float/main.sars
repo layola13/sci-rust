@@ -1,0 +1,24 @@
+@import "sa_std/io/print.sai"
+@import "consumer/float_consumer.sars"
+
+@const OUT = utf8:"476\n"
+
+// 476 - Contract Const Export (float): the exported const lives in
+// impl/float_const_impl.sa (1.5); the consumer doubles it (3.0).
+@main() -> i32:
+L_ENTRY:
+    value = call @float_consumer_value()
+    three_i = 3 as i32
+    three = sitofp three_i as f64
+    ok = fcmp_eq value, three
+    !value
+    !three_i
+    !three
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

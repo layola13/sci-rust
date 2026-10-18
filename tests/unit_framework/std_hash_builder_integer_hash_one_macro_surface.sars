@@ -1,0 +1,208 @@
+@import "sa_std/hash.sars"
+
+@test "sa_std hash builder integer hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    state = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U8 build_u8, builder, 7
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U16 build_u16, builder, 300
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_U32 build_u32, builder, 70000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_USIZE build_usize, builder, 11
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I8 build_i8, builder, 7
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I16 build_i16, builder, 300
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I32 build_i32, builder, 70000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_I64 build_i64, builder, 9000000
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_ISIZE build_isize, builder, 11
+
+    EXPAND HASH_U8 hash_u8, 7
+    EXPAND HASH_U16 hash_u16, 300
+    EXPAND HASH_U32 hash_u32, 70000
+    EXPAND HASH_USIZE hash_usize, 11
+    EXPAND HASH_I8 hash_i8, 7
+    EXPAND HASH_I16 hash_i16, 300
+    EXPAND HASH_I32 hash_i32, 70000
+    EXPAND HASH_I64 hash_i64, 9000000
+    EXPAND HASH_ISIZE hash_isize, 11
+
+    EXPAND RANDOM_STATE_HASH_ONE_U8 state_u8, state, 7
+    EXPAND RANDOM_STATE_HASH_ONE_U16 state_u16, state, 300
+    EXPAND RANDOM_STATE_HASH_ONE_U32 state_u32, state, 70000
+    EXPAND RANDOM_STATE_HASH_ONE_USIZE state_usize, state, 11
+    EXPAND RANDOM_STATE_HASH_ONE_I8 state_i8, state, 7
+    EXPAND RANDOM_STATE_HASH_ONE_I16 state_i16, state, 300
+    EXPAND RANDOM_STATE_HASH_ONE_I32 state_i32, state, 70000
+    EXPAND RANDOM_STATE_HASH_ONE_I64 state_i64, state, 9000000
+    EXPAND RANDOM_STATE_HASH_ONE_ISIZE state_isize, state, 11
+
+    manual_u8_hasher = stack_alloc DefaultHasher_SIZE
+    manual_u16_hasher = stack_alloc DefaultHasher_SIZE
+    manual_u32_hasher = stack_alloc DefaultHasher_SIZE
+    manual_usize_hasher = stack_alloc DefaultHasher_SIZE
+    manual_i8_hasher = stack_alloc DefaultHasher_SIZE
+    manual_i16_hasher = stack_alloc DefaultHasher_SIZE
+    manual_i32_hasher = stack_alloc DefaultHasher_SIZE
+    manual_i64_hasher = stack_alloc DefaultHasher_SIZE
+    manual_isize_hasher = stack_alloc DefaultHasher_SIZE
+
+    EXPAND RANDOM_STATE_BUILD manual_u8_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_U8 manual_u8_hasher, 7
+    EXPAND DEFAULT_HASHER_FINISH manual_u8, manual_u8_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_u16_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_U16 manual_u16_hasher, 300
+    EXPAND DEFAULT_HASHER_FINISH manual_u16, manual_u16_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_u32_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_U32 manual_u32_hasher, 70000
+    EXPAND DEFAULT_HASHER_FINISH manual_u32, manual_u32_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_usize_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_USIZE manual_usize_hasher, 11
+    EXPAND DEFAULT_HASHER_FINISH manual_usize, manual_usize_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_i8_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_I8 manual_i8_hasher, 7
+    EXPAND DEFAULT_HASHER_FINISH manual_i8, manual_i8_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_i16_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_I16 manual_i16_hasher, 300
+    EXPAND DEFAULT_HASHER_FINISH manual_i16, manual_i16_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_i32_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_I32 manual_i32_hasher, 70000
+    EXPAND DEFAULT_HASHER_FINISH manual_i32, manual_i32_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_i64_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_I64 manual_i64_hasher, 9000000
+    EXPAND DEFAULT_HASHER_FINISH manual_i64, manual_i64_hasher
+
+    EXPAND RANDOM_STATE_BUILD manual_isize_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_ISIZE manual_isize_hasher, 11
+    EXPAND DEFAULT_HASHER_FINISH manual_isize, manual_isize_hasher
+
+    build_u8_ok = eq build_u8, hash_u8
+    build_u16_ok = eq build_u16, hash_u16
+    build_u32_ok = eq build_u32, hash_u32
+    build_usize_ok = eq build_usize, hash_usize
+    build_i8_ok = eq build_i8, hash_i8
+    build_i16_ok = eq build_i16, hash_i16
+    build_i32_ok = eq build_i32, hash_i32
+    build_i64_ok = eq build_i64, hash_i64
+    build_isize_ok = eq build_isize, hash_isize
+
+    state_u8_ok = eq state_u8, manual_u8
+    state_u16_ok = eq state_u16, manual_u16
+    state_u32_ok = eq state_u32, manual_u32
+    state_usize_ok = eq state_usize, manual_usize
+    state_i8_ok = eq state_i8, manual_i8
+    state_i16_ok = eq state_i16, manual_i16
+    state_i32_ok = eq state_i32, manual_i32
+    state_i64_ok = eq state_i64, manual_i64
+    state_isize_ok = eq state_isize, manual_isize
+
+    seeded_changes = ne state_u8, hash_u8
+
+    c01 = and build_u8_ok, build_u16_ok
+    c02 = and c01, build_u32_ok
+    c03 = and c02, build_usize_ok
+    c04 = and c03, build_i8_ok
+    c05 = and c04, build_i16_ok
+    c06 = and c05, build_i32_ok
+    c07 = and c06, build_i64_ok
+    c08 = and c07, build_isize_ok
+    c09 = and c08, state_u8_ok
+    c10 = and c09, state_u16_ok
+    c11 = and c10, state_u32_ok
+    c12 = and c11, state_usize_ok
+    c13 = and c12, state_i8_ok
+    c14 = and c13, state_i16_ok
+    c15 = and c14, state_i32_ok
+    c16 = and c15, state_i64_ok
+    c17 = and c16, state_isize_ok
+    ok = and c17, seeded_changes
+
+    !builder
+    !build_u8
+    !build_u16
+    !build_u32
+    !build_usize
+    !build_i8
+    !build_i16
+    !build_i32
+    !build_i64
+    !build_isize
+    !hash_u8
+    !hash_u16
+    !hash_u32
+    !hash_usize
+    !hash_i8
+    !hash_i16
+    !hash_i32
+    !hash_i64
+    !hash_isize
+    !state_u8
+    !state_u16
+    !state_u32
+    !state_usize
+    !state_i8
+    !state_i16
+    !state_i32
+    !state_i64
+    !state_isize
+    !manual_u8
+    !manual_u16
+    !manual_u32
+    !manual_usize
+    !manual_i8
+    !manual_i16
+    !manual_i32
+    !manual_i64
+    !manual_isize
+    !build_u8_ok
+    !build_u16_ok
+    !build_u32_ok
+    !build_usize_ok
+    !build_i8_ok
+    !build_i16_ok
+    !build_i32_ok
+    !build_i64_ok
+    !build_isize_ok
+    !state_u8_ok
+    !state_u16_ok
+    !state_u32_ok
+    !state_usize_ok
+    !state_i8_ok
+    !state_i16_ok
+    !state_i32_ok
+    !state_i64_ok
+    !state_isize_ok
+    !seeded_changes
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10561)
+
+L_PASS:
+    !ok
+    return 0

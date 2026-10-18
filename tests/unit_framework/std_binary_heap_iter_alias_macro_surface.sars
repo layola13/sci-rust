@@ -1,0 +1,78 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap iter aliases"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 6
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 2
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 8
+
+    EXPAND BINARY_HEAP_REF_INTO_ITER_U64 ref_iter, heap
+    EXPAND ITER_NEXT_U64 first_ok, first, ref_iter
+    EXPAND ITER_NEXT_BACK_U64 back_ok, back, ref_iter
+    EXPAND ITER_LEN ref_iter_len, ref_iter
+    EXPAND BINARY_HEAP_LEN heap_len_after, heap
+    EXPAND BINARY_HEAP_PEEK_U64 heap_peek_after, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    EXPAND BINARY_HEAP_ITER_DEFAULT_U64 default_iter
+    EXPAND ITER_LEN default_len, default_iter
+    EXPAND ITER_NEXT_U64 default_next_ok, default_next, default_iter
+    EXPAND ITER_IS_EMPTY default_empty, default_iter
+
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 8
+    ok_back_flag = eq back_ok, 1
+    ok_back = eq back, 6
+    ok_ref_len = eq ref_iter_len, 1
+    ok_heap_len = eq heap_len_after, 3
+    ok_heap_peek = eq heap_peek_after, 8
+    ok_default_len = eq default_len, 0
+    ok_default_next_flag = eq default_next_ok, 0
+    ok_default_next = eq default_next, 0
+    ok_default_empty = eq default_empty, 1
+
+    ok = and ok_first_flag, ok_first
+    ok = and ok, ok_back_flag
+    ok = and ok, ok_back
+    ok = and ok, ok_ref_len
+    ok = and ok, ok_heap_len
+    ok = and ok, ok_heap_peek
+    ok = and ok, ok_default_len
+    ok = and ok, ok_default_next_flag
+    ok = and ok, ok_default_next
+    ok = and ok, ok_default_empty
+
+    !first_ok
+    !first
+    !back_ok
+    !back
+    !ref_iter_len
+    !heap_len_after
+    !heap_peek_after
+    !default_len
+    !default_next_ok
+    !default_next
+    !default_empty
+    !ok_first_flag
+    !ok_first
+    !ok_back_flag
+    !ok_back
+    !ok_ref_len
+    !ok_heap_len
+    !ok_heap_peek
+    !ok_default_len
+    !ok_default_next_flag
+    !ok_default_next
+    !ok_default_empty
+    !ref_iter
+    !default_iter
+    br ok -> L_BINARY_HEAP_ITER_ALIAS_OK, L_BINARY_HEAP_ITER_ALIAS_FAIL
+
+L_BINARY_HEAP_ITER_ALIAS_FAIL:
+    !ok
+    panic(10703)
+
+L_BINARY_HEAP_ITER_ALIAS_OK:
+    !ok
+    return

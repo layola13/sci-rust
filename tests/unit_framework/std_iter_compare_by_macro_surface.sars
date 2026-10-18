@@ -1,0 +1,292 @@
+@import "sa_std/core/slice.sars"
+@import "sa_std/iter.sars"
+
+@iter_compare_square(left: u64, right: u64) -> i64:
+L_ENTRY:
+    left_sq = mul left, left
+    is_less = ult left_sq, right
+    br is_less -> L_LESS, L_CHECK_GREATER
+L_LESS:
+    out_less = sub 0, 1
+    !is_less
+    !left_sq
+    !right
+    !left
+    return out_less
+L_CHECK_GREATER:
+    is_greater = ugt left_sq, right
+    br is_greater -> L_GREATER, L_EQUAL
+L_GREATER:
+    out_greater = add 0, 1
+    !is_greater
+    !is_less
+    !left_sq
+    !right
+    !left
+    return out_greater
+L_EQUAL:
+    out_equal = add 0, 0
+    !is_greater
+    !is_less
+    !left_sq
+    !right
+    !left
+    return out_equal
+
+@iter_compare_double(left: u64, right: u64) -> i64:
+L_ENTRY:
+    doubled = mul left, 2
+    is_less = ult doubled, right
+    br is_less -> L_LESS, L_CHECK_GREATER
+L_LESS:
+    out_less = sub 0, 1
+    !is_less
+    !doubled
+    !right
+    !left
+    return out_less
+L_CHECK_GREATER:
+    is_greater = ugt doubled, right
+    br is_greater -> L_GREATER, L_EQUAL
+L_GREATER:
+    out_greater = add 0, 1
+    !is_greater
+    !is_less
+    !doubled
+    !right
+    !left
+    return out_greater
+L_EQUAL:
+    out_equal = add 0, 0
+    !is_greater
+    !is_less
+    !doubled
+    !right
+    !left
+    return out_equal
+
+@iter_eq_square(left: u64, right: u64) -> u64:
+L_ENTRY:
+    left_sq = mul left, left
+    same = eq left_sq, right
+    !left_sq
+    !right
+    !left
+    return same
+
+@iter_partial_compare_square_except_three(left: u64, right: u64, &out_order: ptr) -> u64:
+L_ENTRY:
+    is_three = eq left, 3
+    br is_three -> L_NONE, L_COMPARE
+L_COMPARE:
+    order = call @iter_compare_square(left, right)
+    store out_order+0, order as i64
+    !order
+    !is_three
+    !out_order
+    !right
+    !left
+    return 1
+L_NONE:
+    !is_three
+    !out_order
+    !right
+    !left
+    return 0
+
+@test "sa_std iter compare_by macro surface"():
+L_ENTRY:
+    values = stack_alloc 32
+    first_two_values = stack_alloc 16
+    squares = stack_alloc 32
+    short_squares = stack_alloc 24
+    low_squares = stack_alloc 16
+
+    store values+0, 1 as u64
+    store values+8, 2 as u64
+    store values+16, 3 as u64
+    store values+24, 4 as u64
+    store first_two_values+0, 1 as u64
+    store first_two_values+8, 2 as u64
+    store squares+0, 1 as u64
+    store squares+8, 4 as u64
+    store squares+16, 9 as u64
+    store squares+24, 16 as u64
+    store short_squares+0, 1 as u64
+    store short_squares+8, 4 as u64
+    store short_squares+16, 9 as u64
+    store low_squares+0, 1 as u64
+    store low_squares+8, 5 as u64
+
+    values_slice = alloc Slice_SIZE
+    first_two_values_slice = alloc Slice_SIZE
+    squares_slice = alloc Slice_SIZE
+    short_squares_slice = alloc Slice_SIZE
+    low_squares_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW values_slice, values, 4
+    EXPAND SLICE_NEW first_two_values_slice, first_two_values, 2
+    EXPAND SLICE_NEW squares_slice, squares, 4
+    EXPAND SLICE_NEW short_squares_slice, short_squares, 3
+    EXPAND SLICE_NEW low_squares_slice, low_squares, 2
+
+    EXPAND ITER_FROM_SLICE cmp_equal_left, values_slice
+    EXPAND ITER_FROM_SLICE cmp_equal_right, squares_slice
+    EXPAND ITER_CMP_BY_U64 cmp_equal, cmp_equal_left, cmp_equal_right, @iter_compare_square
+    EXPAND ITER_IS_EMPTY cmp_equal_left_empty, cmp_equal_left
+    EXPAND ITER_IS_EMPTY cmp_equal_right_empty, cmp_equal_right
+
+    EXPAND ITER_FROM_SLICE cmp_greater_left, values_slice
+    EXPAND ITER_FROM_SLICE cmp_greater_right, squares_slice
+    EXPAND ITER_CMP_BY_U64 cmp_greater, cmp_greater_left, cmp_greater_right, @iter_compare_double
+    EXPAND ITER_LEN cmp_greater_left_remaining, cmp_greater_left
+    EXPAND ITER_LEN cmp_greater_right_remaining, cmp_greater_right
+
+    EXPAND ITER_FROM_SLICE eq_left, values_slice
+    EXPAND ITER_FROM_SLICE eq_right, squares_slice
+    EXPAND ITER_EQ_BY_U64 eq_value, eq_left, eq_right, @iter_eq_square
+    EXPAND ITER_IS_EMPTY eq_left_empty, eq_left
+    EXPAND ITER_IS_EMPTY eq_right_empty, eq_right
+
+    EXPAND ITER_FROM_SLICE eq_short_left, values_slice
+    EXPAND ITER_FROM_SLICE eq_short_right, short_squares_slice
+    EXPAND ITER_EQ_BY_U64 eq_short_value, eq_short_left, eq_short_right, @iter_eq_square
+    EXPAND ITER_LEN eq_short_left_remaining, eq_short_left
+    EXPAND ITER_LEN eq_short_right_remaining, eq_short_right
+
+    EXPAND ITER_FROM_SLICE partial_less_left, first_two_values_slice
+    EXPAND ITER_FROM_SLICE partial_less_right, low_squares_slice
+    EXPAND ITER_PARTIAL_CMP_BY_U64 partial_less_ok, partial_less_order, partial_less_left, partial_less_right, @iter_partial_compare_square_except_three
+    EXPAND ITER_LEN partial_less_left_remaining, partial_less_left
+    EXPAND ITER_LEN partial_less_right_remaining, partial_less_right
+
+    EXPAND ITER_FROM_SLICE partial_none_left, values_slice
+    EXPAND ITER_FROM_SLICE partial_none_right, squares_slice
+    EXPAND ITER_PARTIAL_CMP_BY_U64 partial_none_ok, partial_none_order, partial_none_left, partial_none_right, @iter_partial_compare_square_except_three
+    EXPAND ITER_LEN partial_none_left_remaining, partial_none_left
+    EXPAND ITER_LEN partial_none_right_remaining, partial_none_right
+
+    ok_cmp_equal = eq cmp_equal, 0
+    ok_cmp_equal_left_empty = eq cmp_equal_left_empty, 1
+    ok_cmp_equal_right_empty = eq cmp_equal_right_empty, 1
+    ok_cmp_greater = eq cmp_greater, 1
+    ok_cmp_greater_left_remaining = eq cmp_greater_left_remaining, 3
+    ok_cmp_greater_right_remaining = eq cmp_greater_right_remaining, 3
+    ok_eq = eq eq_value, 1
+    ok_eq_left_empty = eq eq_left_empty, 1
+    ok_eq_right_empty = eq eq_right_empty, 1
+    ok_eq_short = eq eq_short_value, 0
+    ok_eq_short_left_remaining = eq eq_short_left_remaining, 0
+    ok_eq_short_right_remaining = eq eq_short_right_remaining, 0
+    ok_partial_less_flag = eq partial_less_ok, 1
+    ok_partial_less_order = eq partial_less_order, -1
+    ok_partial_less_left_remaining = eq partial_less_left_remaining, 0
+    ok_partial_less_right_remaining = eq partial_less_right_remaining, 0
+    ok_partial_none_flag = eq partial_none_ok, 0
+    ok_partial_none_order = eq partial_none_order, 0
+    ok_partial_none_left_remaining = eq partial_none_left_remaining, 1
+    ok_partial_none_right_remaining = eq partial_none_right_remaining, 1
+
+    c01 = and ok_cmp_equal, ok_cmp_equal_left_empty
+    c02 = and c01, ok_cmp_equal_right_empty
+    c03 = and c02, ok_cmp_greater
+    c04 = and c03, ok_cmp_greater_left_remaining
+    c05 = and c04, ok_cmp_greater_right_remaining
+    c06 = and c05, ok_eq
+    c07 = and c06, ok_eq_left_empty
+    c08 = and c07, ok_eq_right_empty
+    c09 = and c08, ok_eq_short
+    c10 = and c09, ok_eq_short_left_remaining
+    c11 = and c10, ok_eq_short_right_remaining
+    c12 = and c11, ok_partial_less_flag
+    c13 = and c12, ok_partial_less_order
+    c14 = and c13, ok_partial_less_left_remaining
+    c15 = and c14, ok_partial_less_right_remaining
+    c16 = and c15, ok_partial_none_flag
+    c17 = and c16, ok_partial_none_order
+    c18 = and c17, ok_partial_none_left_remaining
+    ok = and c18, ok_partial_none_right_remaining
+
+    !cmp_equal
+    !cmp_equal_left_empty
+    !cmp_equal_right_empty
+    !cmp_greater
+    !cmp_greater_left_remaining
+    !cmp_greater_right_remaining
+    !eq_value
+    !eq_left_empty
+    !eq_right_empty
+    !eq_short_value
+    !eq_short_left_remaining
+    !eq_short_right_remaining
+    !partial_less_ok
+    !partial_less_order
+    !partial_less_left_remaining
+    !partial_less_right_remaining
+    !partial_none_ok
+    !partial_none_order
+    !partial_none_left_remaining
+    !partial_none_right_remaining
+    !ok_cmp_equal
+    !ok_cmp_equal_left_empty
+    !ok_cmp_equal_right_empty
+    !ok_cmp_greater
+    !ok_cmp_greater_left_remaining
+    !ok_cmp_greater_right_remaining
+    !ok_eq
+    !ok_eq_left_empty
+    !ok_eq_right_empty
+    !ok_eq_short
+    !ok_eq_short_left_remaining
+    !ok_eq_short_right_remaining
+    !ok_partial_less_flag
+    !ok_partial_less_order
+    !ok_partial_less_left_remaining
+    !ok_partial_less_right_remaining
+    !ok_partial_none_flag
+    !ok_partial_none_order
+    !ok_partial_none_left_remaining
+    !ok_partial_none_right_remaining
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !c18
+    !partial_none_right
+    !partial_none_left
+    !partial_less_right
+    !partial_less_left
+    !eq_short_right
+    !eq_short_left
+    !eq_right
+    !eq_left
+    !cmp_greater_right
+    !cmp_greater_left
+    !cmp_equal_right
+    !cmp_equal_left
+    !low_squares_slice
+    !short_squares_slice
+    !squares_slice
+    !first_two_values_slice
+    !values_slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10545)
+
+L_PASS:
+    !ok
+    return 0

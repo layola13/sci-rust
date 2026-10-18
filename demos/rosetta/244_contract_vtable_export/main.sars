@@ -1,0 +1,26 @@
+@import "sa_std/io/print.sai"
+@import "consumer/vtable_consumer.sars"
+
+@const RESULT_OK = utf8:"244\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 244 - Contract Vtable Export
+// The vtable export lives in bridge/button_vtable.sa and the indirect call
+// lives in consumer/vtable_consumer.sa.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @vtable_consumer_value()
+    ok = eq value, 244
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

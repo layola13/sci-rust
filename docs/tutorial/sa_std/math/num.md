@@ -8,7 +8,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/num.sa"
+@import "sa_std/num.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -16,7 +16,7 @@
 下面的完整 SA 程序展示了如何执行一系列无符号整数加减乘运算，并通过分支机制去安全应对发生上溢（Overflow）或下溢（Underflow）的错误控制块流程：
 
 ```sa
-@import "sa_std/num.sa"
+@import "sa_std/num.sars"
 
 @main() -> i32:
 L_ENTRY:

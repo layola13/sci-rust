@@ -1,0 +1,40 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/collections/btree_set.sars"
+
+@const K = utf8:"k"
+
+@test "sa_std btree_set remove"():
+L_ENTRY:
+    key = alloc Slice_SIZE
+    EXPAND SLICE_NEW key, &K, 1
+    EXPAND BTREE_SET_NEW set
+    EXPAND BTREE_SET_INSERT ins, set, key
+    EXPAND BTREE_SET_CONTAINS c0, set, key
+    EXPAND BTREE_SET_REMOVE rem, set, key
+    EXPAND BTREE_SET_CONTAINS c1, set, key
+    EXPAND BTREE_SET_FREE set
+    a = eq ins, 1
+    b = eq c0, 1
+    c = eq rem, 1
+    d = eq c1, 0
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok = and ok02, d
+    !ins
+    !c0
+    !rem
+    !c1
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10991)

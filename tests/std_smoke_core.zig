@@ -23,7 +23,7 @@ test "sa_std core primitives are concrete and verifiable" {
         slice_layout,
     );
 
-    const slice_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/slice.sa");
+    const slice_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/slice.sars");
     defer std.testing.allocator.free(slice_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, slice_src, 1, "[MACRO] SLICE_NEW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, slice_src, 1, "[MACRO] SLICE_GET_PTR"));
@@ -65,7 +65,7 @@ test "sa_std core primitives are concrete and verifiable" {
 
     const slice_fixture =
         \\@import "sa_std/core/slice.sal"
-        \\@import "sa_std/core/slice.sa"
+        \\@import "sa_std/core/slice.sars"
         \\
         \\@main() -> i32:
         \\L_ENTRY:
@@ -255,7 +255,7 @@ test "sa_std core primitives are concrete and verifiable" {
         \\    !ok
         \\    return 1
     ;
-    var slice_fixture_flat = try flattenFixture(std.testing.allocator, "tests/slice_fixture.sa", slice_fixture);
+    var slice_fixture_flat = try flattenFixture(std.testing.allocator, "tests/slice_fixture.sars", slice_fixture);
     defer slice_fixture_flat.deinit(std.testing.allocator);
     const slice_fixture_verified = try saasm.referee.verify(std.testing.allocator, slice_fixture_flat.instructions, slice_fixture_flat.const_decls);
     switch (slice_fixture_verified) {
@@ -270,7 +270,7 @@ test "sa_std core primitives are concrete and verifiable" {
         },
     }
 
-    const mem_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/mem.sa");
+    const mem_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/mem.sars");
     defer std.testing.allocator.free(mem_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, mem_src, 1, "@export sa_mem_copy"));
     try std.testing.expect(std.mem.containsAtLeast(u8, mem_src, 1, "@export sa_mem_set"));
@@ -335,7 +335,7 @@ test "sa_std package manifest metadata grammar round trips" {
 }
 
 test "sa_std http2 buffer accessors borrow handles before free" {
-    const http2_src = try common.readFileAlloc(std.testing.allocator, "sa_std/http2.sa");
+    const http2_src = try common.readFileAlloc(std.testing.allocator, "sa_std/http2.sars");
     defer std.testing.allocator.free(http2_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, http2_src, 1, "sa_std_http2_buffer_data(%buffer)"));
     try std.testing.expect(std.mem.containsAtLeast(u8, http2_src, 1, "sa_std_http2_buffer_len(%buffer)"));
@@ -368,7 +368,7 @@ test "sa_std io and process interfaces match native resource ABI" {
     try std.testing.expect(!std.mem.containsAtLeast(u8, process_iface, 1, "sa_std_process_wait(handle: ptr"));
     try std.testing.expect(!std.mem.containsAtLeast(u8, process_iface, 1, "sa_std_process_close(^handle: ptr"));
 
-    const process_src = try common.readFileAlloc(std.testing.allocator, "sa_std/process.sa");
+    const process_src = try common.readFileAlloc(std.testing.allocator, "sa_std/process.sars");
     defer std.testing.allocator.free(process_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, process_src, 1, "[MACRO] PROCESS_ABORT"));
     try std.testing.expect(std.mem.containsAtLeast(u8, process_src, 1, "[MACRO] PROCESS_CHILD_ID %out_status, %out_pid, %process"));
@@ -376,27 +376,27 @@ test "sa_std io and process interfaces match native resource ABI" {
     try std.testing.expect(std.mem.containsAtLeast(u8, process_src, 1, "[MACRO] PROCESS_TRY_WAIT_EXIT_STATUS"));
     try std.testing.expect(std.mem.containsAtLeast(u8, process_src, 1, "[MACRO] PROCESS_KILL"));
 
-    const io_src = try common.readFileAlloc(std.testing.allocator, "sa_std/io.sa");
+    const io_src = try common.readFileAlloc(std.testing.allocator, "sa_std/io.sars");
     defer std.testing.allocator.free(io_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, io_src, 1, "[MACRO] READ "));
     try std.testing.expect(std.mem.containsAtLeast(u8, io_src, 1, "[MACRO] WRITE_SOME"));
-    var io_flat = try flattenFixture(std.testing.allocator, "sa_std/io.sa", io_src);
+    var io_flat = try flattenFixture(std.testing.allocator, "sa_std/io.sars", io_src);
     defer io_flat.deinit(std.testing.allocator);
     try std.testing.expect(io_flat.function_sigs.len > 0);
 
-    const buf_reader_src = try common.readFileAlloc(std.testing.allocator, "sa_std/io/buf_reader.sa");
+    const buf_reader_src = try common.readFileAlloc(std.testing.allocator, "sa_std/io/buf_reader.sars");
     defer std.testing.allocator.free(buf_reader_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, buf_reader_src, 1, "call @sa_io_read(%handle, &%buf, %cap, &__buf_reader_read_slot)"));
     try std.testing.expect(std.mem.containsAtLeast(u8, buf_reader_src, 1, "call @sa_io_close(%handle)"));
-    var buf_reader_flat = try flattenFixture(std.testing.allocator, "sa_std/io/buf_reader.sa", buf_reader_src);
+    var buf_reader_flat = try flattenFixture(std.testing.allocator, "sa_std/io/buf_reader.sars", buf_reader_src);
     defer buf_reader_flat.deinit(std.testing.allocator);
     try std.testing.expect(buf_reader_flat.function_sigs.len > 0);
 
-    const buf_writer_src = try common.readFileAlloc(std.testing.allocator, "sa_std/io/buf_writer.sa");
+    const buf_writer_src = try common.readFileAlloc(std.testing.allocator, "sa_std/io/buf_writer.sars");
     defer std.testing.allocator.free(buf_writer_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, buf_writer_src, 1, "call @sa_io_write(%handle, &%buf, %len, &__buf_writer_write_slot)"));
     try std.testing.expect(std.mem.containsAtLeast(u8, buf_writer_src, 1, "call @sa_io_close(%handle)"));
-    var buf_writer_flat = try flattenFixture(std.testing.allocator, "sa_std/io/buf_writer.sa", buf_writer_src);
+    var buf_writer_flat = try flattenFixture(std.testing.allocator, "sa_std/io/buf_writer.sars", buf_writer_src);
     defer buf_writer_flat.deinit(std.testing.allocator);
     try std.testing.expect(buf_writer_flat.function_sigs.len > 0);
 }
@@ -1294,7 +1294,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
         iter_layout,
     );
 
-    const option_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/option.sa");
+    const option_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/option.sars");
     defer std.testing.allocator.free(option_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, option_src, 1, "[MACRO] OPTION_NEW_NONE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, option_src, 1, "[MACRO] OPTION_NEW_SOME"));
@@ -1315,7 +1315,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, option_src, 1, "[MACRO] MATCH_OPTION"));
     try std.testing.expect(std.mem.containsAtLeast(u8, option_src, 1, "[MACRO] OPTION_MATCH_SOME_NONE"));
 
-    const result_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/result.sa");
+    const result_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/result.sars");
     defer std.testing.allocator.free(result_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, result_src, 1, "[MACRO] RESULT_NEW_OK"));
     try std.testing.expect(std.mem.containsAtLeast(u8, result_src, 1, "[MACRO] RESULT_NEW_ERR"));
@@ -1343,11 +1343,11 @@ test "sa_std rust core helpers are concrete and verifiable" {
     defer std.testing.allocator.free(stringify_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, stringify_src, 1, "STRINGIFY!"));
 
-    const sa_core_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/sa_core.sa");
+    const sa_core_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/sa_core.sars");
     defer std.testing.allocator.free(sa_core_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, sa_core_src, 1, "[MACRO] CFG"));
 
-    const panic_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/panic.sa");
+    const panic_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/panic.sars");
     defer std.testing.allocator.free(panic_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, panic_src, 1, "[MACRO] PANIC "));
     try std.testing.expect(std.mem.containsAtLeast(u8, panic_src, 1, "[MACRO] PANIC_MSG"));
@@ -1355,7 +1355,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, panic_src, 1, "[MACRO] UNIMPLEMENTED"));
     try std.testing.expect(std.mem.containsAtLeast(u8, panic_src, 1, "[MACRO] UNREACHABLE"));
 
-    const iter_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/iter.sa");
+    const iter_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/iter.sars");
     defer std.testing.allocator.free(iter_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, iter_src, 1, "[MACRO] ITER_NEW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, iter_src, 1, "[MACRO] ITER_FROM_SLICE"));
@@ -1367,7 +1367,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, iter_src, 1, "[MACRO] ITER_NEXT"));
     try std.testing.expect(std.mem.containsAtLeast(u8, iter_src, 1, "[MACRO] ITER_NEXT_U64"));
 
-    const loop_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/loop.sa");
+    const loop_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/loop.sars");
     defer std.testing.allocator.free(loop_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, loop_src, 1, "[MACRO] WHILE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, loop_src, 1, "[MACRO] WHILE_COND"));
@@ -1376,7 +1376,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, loop_src, 1, "[MACRO] ARRAY_SCAN_MIN"));
     try std.testing.expect(std.mem.containsAtLeast(u8, loop_src, 1, "[MACRO] ARRAY_SCAN_MAX"));
 
-    const control_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/control.sa");
+    const control_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/control.sars");
     defer std.testing.allocator.free(control_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, control_src, 1, "[MACRO] MATCH_BOOL"));
     try std.testing.expect(std.mem.containsAtLeast(u8, control_src, 1, "[MACRO] ELIF"));
@@ -1384,7 +1384,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, control_src, 1, "[MACRO] BREAK_IF"));
     try std.testing.expect(std.mem.containsAtLeast(u8, control_src, 1, "[MACRO] CONTINUE_IF"));
 
-    const bit_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/bit.sa");
+    const bit_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/bit.sars");
     defer std.testing.allocator.free(bit_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, bit_src, 1, "[MACRO] BIT_MASK"));
     try std.testing.expect(std.mem.containsAtLeast(u8, bit_src, 1, "[MACRO] BIT_SET"));
@@ -1394,7 +1394,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, bit_src, 1, "[MACRO] BIT_INDEX_BYTE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, bit_src, 1, "[MACRO] BIT_INDEX_BIT"));
 
-    const hash_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/hash.sa");
+    const hash_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/hash.sars");
     defer std.testing.allocator.free(hash_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, hash_src, 1, "[MACRO] HASH_PTR"));
     try std.testing.expect(std.mem.containsAtLeast(u8, hash_src, 1, "[MACRO] HASH_MIX"));
@@ -1404,7 +1404,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, hash_src, 1, "[MACRO] MAP_LOOKUP"));
     try std.testing.expect(std.mem.containsAtLeast(u8, hash_src, 1, "[MACRO] MAP_INSERT_OR_UPDATE"));
 
-    const cleanup_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/cleanup.sa");
+    const cleanup_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/cleanup.sars");
     defer std.testing.allocator.free(cleanup_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, cleanup_src, 1, "[MACRO] DEFER"));
     try std.testing.expect(std.mem.containsAtLeast(u8, cleanup_src, 1, "[MACRO] CLEANUP_ON_ERROR"));
@@ -1412,7 +1412,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, cleanup_src, 1, "[MACRO] RETURN_CLEAN"));
     try std.testing.expect(std.mem.containsAtLeast(u8, cleanup_src, 1, "[MACRO] FREE_AND_RETURN"));
 
-    const rust_core_src = try common.readFileAlloc(std.testing.allocator, "sa_std/rust_core.sa");
+    const rust_core_src = try common.readFileAlloc(std.testing.allocator, "sa_std/rust_core.sars");
     defer std.testing.allocator.free(rust_core_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, rust_core_src, 1, "@import \"core/option.sa\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, rust_core_src, 1, "@import \"core/result.sa\""));
@@ -1436,7 +1436,7 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, ascii_layout, 1, "#def ASCII_CASE_MASK = 32"));
     try std.testing.expect(std.mem.containsAtLeast(u8, ascii_layout, 1, "#def ASCII_MAX = 127"));
 
-    const ascii_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/ascii.sa");
+    const ascii_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/ascii.sars");
     defer std.testing.allocator.free(ascii_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, ascii_src, 1, "[MACRO] ASCII_IS_ASCII"));
     try std.testing.expect(std.mem.containsAtLeast(u8, ascii_src, 1, "[MACRO] ASCII_IS_ALPHABETIC"));
@@ -1491,26 +1491,26 @@ test "sa_std rust core helpers are concrete and verifiable" {
     defer std.testing.allocator.free(weak_layout);
     try std.testing.expectEqualStrings("#def WeakBox_SIZE = 24\n#def WeakBox_strong = +0\n#def WeakBox_weak = +8\n#def WeakBox_data = +16\n", weak_layout);
 
-    const cell_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/cell.sa");
+    const cell_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/cell.sars");
     defer std.testing.allocator.free(cell_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, cell_src, 1, "[MACRO] CELL_NEW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, cell_src, 1, "[MACRO] CELL_SET"));
     try std.testing.expect(std.mem.containsAtLeast(u8, cell_src, 1, "[MACRO] CELL_REPLACE"));
 
-    const refcell_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/refcell.sa");
+    const refcell_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/refcell.sars");
     defer std.testing.allocator.free(refcell_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, refcell_src, 1, "[MACRO] REFCELL_NEW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, refcell_src, 1, "[MACRO] REFCELL_BORROW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, refcell_src, 1, "[MACRO] REFCELL_BORROW_MUT"));
     try std.testing.expect(std.mem.containsAtLeast(u8, refcell_src, 1, "[MACRO] REFCELL_RELEASE"));
 
-    const derive_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/derive.sa");
+    const derive_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/derive.sars");
     defer std.testing.allocator.free(derive_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, derive_src, 1, "[MACRO] STRUCT_COPY"));
     try std.testing.expect(std.mem.containsAtLeast(u8, derive_src, 1, "[MACRO] STRUCT_EQ_FIELD"));
     try std.testing.expect(std.mem.containsAtLeast(u8, derive_src, 1, "[MACRO] STRUCT_EQ4"));
 
-    const rc_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/rc.sa");
+    const rc_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/rc.sars");
     defer std.testing.allocator.free(rc_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, rc_src, 1, "[MACRO] RC_NEW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, rc_src, 1, "[MACRO] RC_CLONE"));
@@ -1520,37 +1520,37 @@ test "sa_std rust core helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, rc_src, 1, "[MACRO] WEAK_DROP"));
     try std.testing.expect(std.mem.containsAtLeast(u8, rc_src, 1, "[MACRO] WEAK_UPGRADE"));
 
-    const weak_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/weak.sa");
+    const weak_src = try common.readFileAlloc(std.testing.allocator, "sa_std/core/weak.sars");
     defer std.testing.allocator.free(weak_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, weak_src, 1, "@import \"weak.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, weak_src, 1, "@import \"rc.sa\""));
 
-    var option_flat = try flattenFixture(std.testing.allocator, "sa_std/core/option.sa", option_src);
+    var option_flat = try flattenFixture(std.testing.allocator, "sa_std/core/option.sars", option_src);
     defer option_flat.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), option_flat.instructions.len);
     try std.testing.expectEqual(@as(usize, 0), option_flat.function_sigs.len);
 
-    var result_flat = try flattenFixture(std.testing.allocator, "sa_std/core/result.sa", result_src);
+    var result_flat = try flattenFixture(std.testing.allocator, "sa_std/core/result.sars", result_src);
     defer result_flat.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), result_flat.instructions.len);
     try std.testing.expectEqual(@as(usize, 0), result_flat.function_sigs.len);
 
-    var panic_flat = try flattenFixture(std.testing.allocator, "sa_std/core/panic.sa", panic_src);
+    var panic_flat = try flattenFixture(std.testing.allocator, "sa_std/core/panic.sars", panic_src);
     defer panic_flat.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), panic_flat.instructions.len);
     try std.testing.expectEqual(@as(usize, 0), panic_flat.function_sigs.len);
 
-    var iter_flat = try flattenFixture(std.testing.allocator, "sa_std/core/iter.sa", iter_src);
+    var iter_flat = try flattenFixture(std.testing.allocator, "sa_std/core/iter.sars", iter_src);
     defer iter_flat.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), iter_flat.instructions.len);
     try std.testing.expectEqual(@as(usize, 0), iter_flat.function_sigs.len);
 
-    var ascii_flat = try flattenFixture(std.testing.allocator, "sa_std/core/ascii.sa", ascii_src);
+    var ascii_flat = try flattenFixture(std.testing.allocator, "sa_std/core/ascii.sars", ascii_src);
     defer ascii_flat.deinit(std.testing.allocator);
     try std.testing.expectEqual(@as(usize, 0), ascii_flat.instructions.len);
     try std.testing.expectEqual(@as(usize, 0), ascii_flat.function_sigs.len);
 
-    var rust_core_flat = try flattenFixture(std.testing.allocator, "sa_std/rust_core.sa", rust_core_src);
+    var rust_core_flat = try flattenFixture(std.testing.allocator, "sa_std/rust_core.sars", rust_core_src);
     defer rust_core_flat.deinit(std.testing.allocator);
     try std.testing.expect(rust_core_flat.instructions.len > 0);
     try std.testing.expect(rust_core_flat.function_sigs.len > 0);

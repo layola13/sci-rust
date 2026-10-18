@@ -10,7 +10,7 @@ test "audit scans synthesized package within fifty milliseconds" {
     try tmp.dir.createDirPath(std.testing.io, "pkg/src");
     const file_count: usize = 64;
     for (0..file_count) |idx| {
-        const path = try std.fmt.allocPrint(std.testing.allocator, "pkg/src/mod{d:0>2}.sa", .{idx});
+        const path = try std.fmt.allocPrint(std.testing.allocator, "pkg/src/mod{d:0>2}.sars", .{idx});
         defer std.testing.allocator.free(path);
         const source = try std.fmt.allocPrint(
             std.testing.allocator,

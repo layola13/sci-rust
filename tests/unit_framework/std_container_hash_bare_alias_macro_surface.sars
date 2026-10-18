@@ -1,0 +1,146 @@
+@import "sa_std/vec.sars"
+@import "sa_std/vec_deque.sars"
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std container hash bare alias macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    data = stack_alloc 24
+    store data+0, 7 as u64
+    store data+8, 11 as u64
+    store data+16, 19 as u64
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 3
+
+    EXPAND VEC_FROM_SLICE_U64 vec, slice
+
+    write_hasher_typed = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW write_hasher_typed
+    EXPAND DEFAULT_HASHER_WRITE_VEC_U64 write_hasher_typed, vec
+    EXPAND DEFAULT_HASHER_FINISH writer_typed_hash, write_hasher_typed
+
+    write_hasher_bare = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW write_hasher_bare
+    EXPAND DEFAULT_HASHER_WRITE_VEC write_hasher_bare, vec
+    EXPAND DEFAULT_HASHER_FINISH writer_bare_hash, write_hasher_bare
+
+    EXPAND VEC_HASH_U64 vec_typed_hash, vec
+    EXPAND VEC_HASH vec_bare_hash, vec
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_VEC_U64 vec_build_typed, builder, vec
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_VEC vec_build_bare, builder, vec
+
+    state = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+    EXPAND RANDOM_STATE_HASH_ONE_VEC_U64 vec_state_typed, state, vec
+    EXPAND RANDOM_STATE_HASH_ONE_VEC vec_state_bare, state, vec
+
+    EXPAND VEC_DEQUE_FROM_SLICE_U64 deque, slice
+
+    deque_write_typed = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW deque_write_typed
+    EXPAND DEFAULT_HASHER_WRITE_VEC_DEQUE_U64 deque_write_typed, deque
+    EXPAND DEFAULT_HASHER_FINISH deque_writer_typed, deque_write_typed
+
+    deque_write_bare = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW deque_write_bare
+    EXPAND DEFAULT_HASHER_WRITE_VEC_DEQUE deque_write_bare, deque
+    EXPAND DEFAULT_HASHER_FINISH deque_writer_bare, deque_write_bare
+
+    EXPAND VEC_DEQUE_HASH_U64 deque_typed_hash, deque
+    EXPAND VEC_DEQUE_HASH deque_bare_hash, deque
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_VEC_DEQUE_U64 deque_build_typed, builder, deque
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_VEC_DEQUE deque_build_bare, builder, deque
+    EXPAND RANDOM_STATE_HASH_ONE_VEC_DEQUE_U64 deque_state_typed, state, deque
+    EXPAND RANDOM_STATE_HASH_ONE_VEC_DEQUE deque_state_bare, state, deque
+
+    vec_writer_matches = eq writer_bare_hash, writer_typed_hash
+    vec_hash_matches = eq vec_bare_hash, vec_typed_hash
+    vec_build_matches = eq vec_build_bare, vec_build_typed
+    vec_state_matches = eq vec_state_bare, vec_state_typed
+    vec_build_eq_hash = eq vec_build_typed, vec_typed_hash
+    vec_state_differs = ne vec_state_typed, vec_typed_hash
+    vec_writer_eq_hash = eq writer_typed_hash, vec_typed_hash
+
+    deque_writer_matches = eq deque_writer_bare, deque_writer_typed
+    deque_hash_matches = eq deque_bare_hash, deque_typed_hash
+    deque_build_matches = eq deque_build_bare, deque_build_typed
+    deque_state_matches = eq deque_state_bare, deque_state_typed
+    deque_build_eq_hash = eq deque_build_typed, deque_typed_hash
+    deque_state_differs = ne deque_state_typed, deque_typed_hash
+    deque_writer_eq_hash = eq deque_writer_typed, deque_typed_hash
+    vec_deque_same_content = eq vec_typed_hash, deque_typed_hash
+
+    ok01 = and vec_writer_matches, vec_hash_matches
+    ok02 = and ok01, vec_build_matches
+    ok03 = and ok02, vec_state_matches
+    ok04 = and ok03, vec_build_eq_hash
+    ok05 = and ok04, vec_state_differs
+    ok06 = and ok05, vec_writer_eq_hash
+    ok07 = and ok06, deque_writer_matches
+    ok08 = and ok07, deque_hash_matches
+    ok09 = and ok08, deque_build_matches
+    ok10 = and ok09, deque_state_matches
+    ok11 = and ok10, deque_build_eq_hash
+    ok12 = and ok11, deque_state_differs
+    ok13 = and ok12, deque_writer_eq_hash
+    ok = and ok13, vec_deque_same_content
+
+    !writer_typed_hash
+    !writer_bare_hash
+    !vec_typed_hash
+    !vec_bare_hash
+    !vec_build_typed
+    !vec_build_bare
+    !vec_state_typed
+    !vec_state_bare
+    !deque_writer_typed
+    !deque_writer_bare
+    !deque_typed_hash
+    !deque_bare_hash
+    !deque_build_typed
+    !deque_build_bare
+    !deque_state_typed
+    !deque_state_bare
+    !vec_writer_matches
+    !vec_hash_matches
+    !vec_build_matches
+    !vec_state_matches
+    !vec_build_eq_hash
+    !vec_state_differs
+    !vec_writer_eq_hash
+    !deque_writer_matches
+    !deque_hash_matches
+    !deque_build_matches
+    !deque_state_matches
+    !deque_build_eq_hash
+    !deque_state_differs
+    !deque_writer_eq_hash
+    !vec_deque_same_content
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    EXPAND VEC_FREE vec
+    EXPAND VEC_DEQUE_FREE deque
+    !builder
+    !slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10855)
+
+L_PASS:
+    !ok
+    return 0

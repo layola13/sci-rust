@@ -1,3 +1,0 @@
-// PhantomData namespace facade.
-@import "../marker.sal"
-@import "../marker.sa"

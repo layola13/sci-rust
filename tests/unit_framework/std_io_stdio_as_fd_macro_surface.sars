@@ -1,0 +1,114 @@
+@import "sa_std/io.sars"
+@import "sa_std/os/fd.sars"
+
+@test "sa_std io stdio AsFd aliases"():
+L_ENTRY:
+    EXPAND IO_STDIN_AS_FD stdin_as_fd_status, stdin_fd
+    EXPAND IO_STDOUT_AS_FD stdout_as_fd_status, stdout_fd
+    EXPAND IO_STDERR_AS_FD stderr_as_fd_status, stderr_fd
+    EXPAND IO_STDIN_AS_RAW_FD stdin_raw_status, stdin_raw_fd
+    EXPAND IO_STDOUT_AS_RAW_FD stdout_raw_status, stdout_raw_fd
+    EXPAND IO_STDERR_AS_RAW_FD stderr_raw_status, stderr_raw_fd
+    EXPAND FD_BORROWED_AS_RAW_FD stdin_borrowed_raw_status, stdin_borrowed_raw_fd, stdin_fd
+    EXPAND FD_BORROWED_AS_RAW_FD stdout_borrowed_raw_status, stdout_borrowed_raw_fd, stdout_fd
+    EXPAND FD_BORROWED_AS_RAW_FD stderr_borrowed_raw_status, stderr_borrowed_raw_fd, stderr_fd
+
+    stdin_status_ok = eq stdin_as_fd_status, SA_IO_OK
+    stdout_status_ok = eq stdout_as_fd_status, SA_IO_OK
+    stderr_status_ok = eq stderr_as_fd_status, SA_IO_OK
+    stdin_fd_ok = eq stdin_fd, 0
+    stdout_fd_ok = eq stdout_fd, 1
+    stderr_fd_ok = eq stderr_fd, 2
+    stdin_raw_status_ok = eq stdin_raw_status, SA_IO_OK
+    stdout_raw_status_ok = eq stdout_raw_status, SA_IO_OK
+    stderr_raw_status_ok = eq stderr_raw_status, SA_IO_OK
+    stdin_raw_same_ok = eq stdin_raw_fd, stdin_fd
+    stdout_raw_same_ok = eq stdout_raw_fd, stdout_fd
+    stderr_raw_same_ok = eq stderr_raw_fd, stderr_fd
+    stdin_borrowed_ok = eq stdin_borrowed_raw_status, SA_FD_OK
+    stdout_borrowed_ok = eq stdout_borrowed_raw_status, SA_FD_OK
+    stderr_borrowed_ok = eq stderr_borrowed_raw_status, SA_FD_OK
+    stdin_borrowed_same_ok = eq stdin_borrowed_raw_fd, stdin_fd
+    stdout_borrowed_same_ok = eq stdout_borrowed_raw_fd, stdout_fd
+    stderr_borrowed_same_ok = eq stderr_borrowed_raw_fd, stderr_fd
+
+    ok01 = and stdin_status_ok, stdout_status_ok
+    ok02 = and ok01, stderr_status_ok
+    ok03 = and ok02, stdin_fd_ok
+    ok04 = and ok03, stdout_fd_ok
+    ok05 = and ok04, stderr_fd_ok
+    ok06 = and ok05, stdin_raw_status_ok
+    ok07 = and ok06, stdout_raw_status_ok
+    ok08 = and ok07, stderr_raw_status_ok
+    ok09 = and ok08, stdin_raw_same_ok
+    ok10 = and ok09, stdout_raw_same_ok
+    ok11 = and ok10, stderr_raw_same_ok
+    ok12 = and ok11, stdin_borrowed_ok
+    ok13 = and ok12, stdout_borrowed_ok
+    ok14 = and ok13, stderr_borrowed_ok
+    ok15 = and ok14, stdin_borrowed_same_ok
+    ok16 = and ok15, stdout_borrowed_same_ok
+    ok = and ok16, stderr_borrowed_same_ok
+
+    !stdin_as_fd_status
+    !stdin_fd
+    !stdout_as_fd_status
+    !stdout_fd
+    !stderr_as_fd_status
+    !stderr_fd
+    !stdin_raw_status
+    !stdin_raw_fd
+    !stdout_raw_status
+    !stdout_raw_fd
+    !stderr_raw_status
+    !stderr_raw_fd
+    !stdin_borrowed_raw_status
+    !stdin_borrowed_raw_fd
+    !stdout_borrowed_raw_status
+    !stdout_borrowed_raw_fd
+    !stderr_borrowed_raw_status
+    !stderr_borrowed_raw_fd
+    !stdin_status_ok
+    !stdout_status_ok
+    !stderr_status_ok
+    !stdin_fd_ok
+    !stdout_fd_ok
+    !stderr_fd_ok
+    !stdin_raw_status_ok
+    !stdout_raw_status_ok
+    !stderr_raw_status_ok
+    !stdin_raw_same_ok
+    !stdout_raw_same_ok
+    !stderr_raw_same_ok
+    !stdin_borrowed_ok
+    !stdout_borrowed_ok
+    !stderr_borrowed_ok
+    !stdin_borrowed_same_ok
+    !stdout_borrowed_same_ok
+    !stderr_borrowed_same_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10695)
+
+L_PASS:
+    !ok
+    return 0

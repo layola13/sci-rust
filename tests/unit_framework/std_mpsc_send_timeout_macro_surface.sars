@@ -1,0 +1,22 @@
+@import "sa_std/sync/mpsc.sars"
+
+@test "sa_std mpsc try_send_timeout on full channel"():
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 1
+    EXPAND MPSC_TRY_SEND s0, chan, 1
+    EXPAND MPSC_TRY_SEND_TIMEOUT_NS s1, chan, 2, 20000
+    EXPAND MPSC_FREE chan
+    a = eq s0, 1
+    b = eq s1, 0
+    ok = and a, b
+    !s0
+    !s1
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10891)

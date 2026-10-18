@@ -1,0 +1,202 @@
+@import "sa_std/net.sars"
+
+@const BUFFER_HOST = utf8:"127.0.0.1"
+#def BUFFER_HOST_LEN = 9
+#def BUFFER_SET_SIZE = 65536
+
+@test "sa_std tcp udp socket buffer size behavior"():
+L_ENTRY:
+    EXPAND NET_TCP_LISTENER_BIND_PORT listen_status, listener, bound_port, BUFFER_HOST, BUFFER_HOST_LEN, 0
+    listen_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    port_ok = ne bound_port, 0
+    listen_all = and listen_ok, listener_ok
+    listen_all2 = and listen_all, port_ok
+    br listen_all2 -> L_CONNECT, L_FAIL_LISTEN
+L_FAIL_LISTEN:
+    !listen_all2
+    !listen_all
+    !port_ok
+    !listener_ok
+    !listen_ok
+    !bound_port
+    !listener
+    !listen_status
+    panic(10620)
+L_CONNECT:
+    EXPAND NET_TCP_CONNECT connect_status, stream, BUFFER_HOST, BUFFER_HOST_LEN, bound_port
+    connect_ok = eq connect_status, SA_NET_OK
+    stream_ok = ne stream, 0
+    connect_all = and connect_ok, stream_ok
+    br connect_all -> L_UDP, L_FAIL_CONNECT
+L_FAIL_CONNECT:
+    !connect_all
+    !stream_ok
+    !connect_ok
+    !stream
+    !connect_status
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed, listener
+    !listener_close_failed
+    !listener
+    panic(10621)
+L_UDP:
+    EXPAND NET_UDP_BIND udp_status, udp, BUFFER_HOST, BUFFER_HOST_LEN, 0
+    udp_status_ok = eq udp_status, SA_NET_OK
+    udp_ok = ne udp, 0
+    udp_all = and udp_status_ok, udp_ok
+    br udp_all -> L_TCP_BUFFER, L_FAIL_UDP
+L_FAIL_UDP:
+    !udp_all
+    !udp_ok
+    !udp_status_ok
+    !udp
+    !udp_status
+    EXPAND NET_TCP_STREAM_CLOSE stream_close_failed, stream
+    !stream_close_failed
+    !stream
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed2, listener
+    !listener_close_failed2
+    !listener
+    panic(10622)
+L_TCP_BUFFER:
+    EXPAND NET_TCP_STREAM_SET_RECV_BUFFER_SIZE tcp_set_recv_status, stream, BUFFER_SET_SIZE
+    EXPAND NET_TCP_STREAM_RECV_BUFFER_SIZE tcp_get_recv_status, tcp_recv_size, stream
+    EXPAND NET_TCP_STREAM_SET_SEND_BUFFER_SIZE tcp_set_send_status, stream, BUFFER_SET_SIZE
+    EXPAND NET_TCP_STREAM_SEND_BUFFER_SIZE tcp_get_send_status, tcp_send_size, stream
+    tcp_set_recv_ok = eq tcp_set_recv_status, SA_NET_OK
+    tcp_get_recv_ok = eq tcp_get_recv_status, SA_NET_OK
+    tcp_set_send_ok = eq tcp_set_send_status, SA_NET_OK
+    tcp_get_send_ok = eq tcp_get_send_status, SA_NET_OK
+    tcp_recv_nonzero = ne tcp_recv_size, 0
+    tcp_send_nonzero = ne tcp_send_size, 0
+    tcp_buffer_ok = and tcp_set_recv_ok, tcp_get_recv_ok
+    tcp_buffer_ok2 = and tcp_buffer_ok, tcp_set_send_ok
+    tcp_buffer_ok3 = and tcp_buffer_ok2, tcp_get_send_ok
+    tcp_buffer_ok4 = and tcp_buffer_ok3, tcp_recv_nonzero
+    tcp_buffer_all = and tcp_buffer_ok4, tcp_send_nonzero
+    br tcp_buffer_all -> L_UDP_BUFFER, L_FAIL_TCP_BUFFER
+L_FAIL_TCP_BUFFER:
+    !tcp_buffer_all
+    !tcp_recv_nonzero
+    !tcp_send_nonzero
+    !tcp_set_recv_ok
+    !tcp_get_recv_ok
+    !tcp_set_send_ok
+    !tcp_get_send_ok
+    EXPAND NET_UDP_CLOSE udp_close_failed, udp
+    !udp_close_failed
+    !udp
+    EXPAND NET_TCP_STREAM_CLOSE stream_close_failed2, stream
+    !stream_close_failed2
+    !stream
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed3, listener
+    !listener_close_failed3
+    !listener
+    panic(10623)
+L_UDP_BUFFER:
+    !tcp_buffer_all
+    !tcp_buffer_ok4
+    !tcp_buffer_ok3
+    !tcp_buffer_ok2
+    !tcp_buffer_ok
+    !tcp_send_nonzero
+    !tcp_recv_nonzero
+    !tcp_get_send_ok
+    !tcp_set_send_ok
+    !tcp_get_recv_ok
+    !tcp_set_recv_ok
+    !tcp_send_size
+    !tcp_recv_size
+    !tcp_get_send_status
+    !tcp_set_send_status
+    !tcp_get_recv_status
+    !tcp_set_recv_status
+    EXPAND NET_UDP_SET_RECV_BUFFER_SIZE udp_set_recv_status, udp, BUFFER_SET_SIZE
+    EXPAND NET_UDP_RECV_BUFFER_SIZE udp_get_recv_status, udp_recv_size, udp
+    EXPAND NET_UDP_SET_SEND_BUFFER_SIZE udp_set_send_status, udp, BUFFER_SET_SIZE
+    EXPAND NET_UDP_SEND_BUFFER_SIZE udp_get_send_status, udp_send_size, udp
+    udp_set_recv_ok = eq udp_set_recv_status, SA_NET_OK
+    udp_get_recv_ok = eq udp_get_recv_status, SA_NET_OK
+    udp_set_send_ok = eq udp_set_send_status, SA_NET_OK
+    udp_get_send_ok = eq udp_get_send_status, SA_NET_OK
+    udp_recv_nonzero = ne udp_recv_size, 0
+    udp_send_nonzero = ne udp_send_size, 0
+    udp_buffer_ok = and udp_set_recv_ok, udp_get_recv_ok
+    udp_buffer_ok2 = and udp_buffer_ok, udp_set_send_ok
+    udp_buffer_ok3 = and udp_buffer_ok2, udp_get_send_ok
+    udp_buffer_ok4 = and udp_buffer_ok3, udp_recv_nonzero
+    udp_buffer_all = and udp_buffer_ok4, udp_send_nonzero
+    br udp_buffer_all -> L_CLOSE, L_FAIL_UDP_BUFFER
+L_FAIL_UDP_BUFFER:
+    !udp_buffer_all
+    !udp_recv_nonzero
+    !udp_send_nonzero
+    !udp_set_recv_ok
+    !udp_get_recv_ok
+    !udp_set_send_ok
+    !udp_get_send_ok
+    EXPAND NET_UDP_CLOSE udp_close_failed2, udp
+    !udp_close_failed2
+    !udp
+    EXPAND NET_TCP_STREAM_CLOSE stream_close_failed3, stream
+    !stream_close_failed3
+    !stream
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed4, listener
+    !listener_close_failed4
+    !listener
+    panic(10624)
+L_CLOSE:
+    !udp_buffer_all
+    !udp_buffer_ok4
+    !udp_buffer_ok3
+    !udp_buffer_ok2
+    !udp_buffer_ok
+    !udp_send_nonzero
+    !udp_recv_nonzero
+    !udp_get_send_ok
+    !udp_set_send_ok
+    !udp_get_recv_ok
+    !udp_set_recv_ok
+    !udp_send_size
+    !udp_recv_size
+    !udp_get_send_status
+    !udp_set_send_status
+    !udp_get_recv_status
+    !udp_set_recv_status
+    EXPAND NET_UDP_CLOSE udp_close_status, udp
+    EXPAND NET_TCP_STREAM_CLOSE stream_close_status, stream
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status, listener
+    udp_close_ok = eq udp_close_status, SA_NET_OK
+    stream_close_ok = eq stream_close_status, SA_NET_OK
+    listener_close_ok = eq listener_close_status, SA_NET_OK
+    ok1 = and udp_close_ok, stream_close_ok
+    ok = and ok1, listener_close_ok
+    br ok -> L_PASS, L_FAIL_CLOSE
+L_FAIL_CLOSE:
+    !ok
+    !ok1
+    !udp_close_ok
+    !stream_close_ok
+    !listener_close_ok
+    !udp_close_status
+    !stream_close_status
+    !listener_close_status
+    !udp
+    !stream
+    !listener
+    !bound_port
+    return
+L_PASS:
+    !ok
+    !ok1
+    !udp_close_ok
+    !stream_close_ok
+    !listener_close_ok
+    !udp_close_status
+    !stream_close_status
+    !listener_close_status
+    !udp
+    !stream
+    !listener
+    !bound_port
+    return

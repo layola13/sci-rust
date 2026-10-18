@@ -162,9 +162,9 @@ verify_checksum() {
 verify_std_payload() {
     STD_ROOT="$1"
     [ -f "$STD_ROOT/io/print.sai" ] || error "Installed std payload is incomplete: missing std/io/print.sai"
-    [ -f "$STD_ROOT/core/sa_core.sa" ] || error "Installed std payload is incomplete: missing std/core/sa_core.sa"
-    [ -f "$STD_ROOT/core/result.sa" ] || error "Installed std payload is incomplete: missing std/core/result.sa"
-    [ -f "$STD_ROOT/core/option.sa" ] || error "Installed std payload is incomplete: missing std/core/option.sa"
+    [ -f "$STD_ROOT/core/sa_core.sars" ] || error "Installed std payload is incomplete: missing std/core/sa_core.sars"
+    [ -f "$STD_ROOT/core/result.sars" ] || error "Installed std payload is incomplete: missing std/core/result.sars"
+    [ -f "$STD_ROOT/core/option.sars" ] || error "Installed std payload is incomplete: missing std/core/option.sars"
     [ -f "$STD_ROOT/sa_std.h" ] || error "Installed std payload is incomplete: missing std/sa_std.h"
     [ -f "$STD_ROOT/libsa_std.a" ] || error "Installed std payload is incomplete: missing std/libsa_std.a"
 }

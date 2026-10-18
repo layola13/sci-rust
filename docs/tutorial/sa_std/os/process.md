@@ -4,8 +4,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/env.sa"
-@import "sa_std/process.sa"
+@import "sa_std/env.sars"
+@import "sa_std/process.sars"
 ```
 
 ## Env 核心宏与完整用法示例
@@ -13,9 +13,9 @@
 下面的完整程序演示了如何设置一个局部的环境变量，然后又将其读取出来进行验证的步骤：
 
 ```sa
-@import "sa_std/env.sa"
-@import "sa_std/core/slice.sa"
-@import "sa_std/string.sa"
+@import "sa_std/env.sars"
+@import "sa_std/core/slice.sars"
+@import "sa_std/string.sars"
 
 @main() -> i32:
 L_ENTRY:
@@ -55,9 +55,9 @@ L_FAIL:
 下面的程序演示了如何安全调用外部的命令，并且等待子进程完成以捕获最终退出码：
 
 ```sa
-@import "sa_std/process.sa"
-@import "sa_std/vec.sa"
-@import "sa_std/core/slice.sa"
+@import "sa_std/process.sars"
+@import "sa_std/vec.sars"
+@import "sa_std/core/slice.sars"
 
 @main() -> i32:
 L_ENTRY:

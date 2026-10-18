@@ -1,0 +1,123 @@
+@import "sa_std/net.sars"
+
+@const SHB_HOST = utf8:"127.0.0.1"
+#def SHB_HOST_LEN = 9
+
+@test "sa_std tcp shutdown both behavior"():
+L_ENTRY:
+    EXPAND NET_TCP_LISTENER_BIND_PORT listen_status, listener, bound_port, SHB_HOST, SHB_HOST_LEN, 0
+    listen_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    port_ok = ne bound_port, 0
+    listen_all = and listen_ok, listener_ok
+    listen_all2 = and listen_all, port_ok
+    br listen_all2 -> L_CONNECT, L_FAIL_LISTEN
+L_FAIL_LISTEN:
+    !listen_all2
+    !listen_all
+    !port_ok
+    !listener_ok
+    !listen_ok
+    !bound_port
+    !listener
+    !listen_status
+    panic(10910)
+L_CONNECT:
+    EXPAND NET_TCP_CONNECT connect_status, client, SHB_HOST, SHB_HOST_LEN, bound_port
+    connect_ok = eq connect_status, SA_NET_OK
+    client_ok = ne client, 0
+    connect_all = and connect_ok, client_ok
+    br connect_all -> L_ACCEPT, L_FAIL_CONNECT
+L_FAIL_CONNECT:
+    !connect_all
+    !client_ok
+    !connect_ok
+    !client
+    !connect_status
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status, listener
+    !listener_close_status
+    !listener
+    panic(10911)
+L_ACCEPT:
+    EXPAND NET_TCP_LISTENER_ACCEPT accept_status, server, listener
+    accept_ok = eq accept_status, SA_NET_OK
+    server_ok = ne server, 0
+    accept_all = and accept_ok, server_ok
+    br accept_all -> L_SHUTDOWN, L_FAIL_ACCEPT
+L_FAIL_ACCEPT:
+    !accept_all
+    !server_ok
+    !accept_ok
+    !server
+    !accept_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status, client
+    !client_close_status
+    !client
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status2, listener
+    !listener_close_status2
+    !listener
+    panic(10912)
+L_SHUTDOWN:
+    EXPAND NET_TCP_STREAM_SHUTDOWN shutdown_status, client, SA_NET_SHUTDOWN_BOTH
+    shutdown_ok = eq shutdown_status, SA_NET_OK
+    br shutdown_ok -> L_READ_EOF, L_FAIL_SHUTDOWN
+L_FAIL_SHUTDOWN:
+    !shutdown_ok
+    !shutdown_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status2, client
+    !client_close_status2
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_status, server
+    !server_close_status
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status3, listener
+    !listener_close_status3
+    !listener
+    panic(10913)
+L_READ_EOF:
+    eof_buf = stack_alloc 8
+    EXPAND NET_TCP_STREAM_READ read_status, read_len, server, eof_buf, 1
+    read_ok = eq read_status, SA_NET_OK
+    read_zero = eq read_len, 0
+    eof_ok = and read_ok, read_zero
+    br eof_ok -> L_CLEANUP, L_FAIL_READ
+L_FAIL_READ:
+    !eof_ok
+    !read_zero
+    !read_ok
+    !read_len
+    !read_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status3, client
+    !client_close_status3
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_status2, server
+    !server_close_status2
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status4, listener
+    !listener_close_status4
+    !listener
+    panic(10914)
+L_CLEANUP:
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status4, client
+    client_close_ok = eq client_close_status4, SA_NET_OK
+    !client_close_ok
+    !client_close_status4
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_status3, server
+    server_close_ok = eq server_close_status3, SA_NET_OK
+    br server_close_ok -> L_LISTENER_CLEANUP, L_FAIL_SERVER_CLOSE
+L_FAIL_SERVER_CLOSE:
+    !server_close_ok
+    !server_close_status3
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status5, listener
+    !listener_close_status5
+    !listener
+    panic(10915)
+L_LISTENER_CLEANUP:
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status6, listener
+    listener_close_ok = eq listener_close_status6, SA_NET_OK
+    !listener_close_ok
+    !listener_close_status6
+    !listener
+    return

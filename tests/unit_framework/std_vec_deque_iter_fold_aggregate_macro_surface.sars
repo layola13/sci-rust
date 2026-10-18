@@ -1,0 +1,219 @@
+@import "sa_std/vec_deque.sars"
+
+@vec_deque_iter_fold_decimal(acc: u64, value: u64) -> u64:
+L_ENTRY:
+    scaled = mul acc, 10
+    out = add scaled, value
+    !scaled
+    !value
+    return out
+
+@vec_deque_iter_try_fold_until_40(acc: u64, value: u64, &out_next: ptr) -> u64:
+L_ENTRY:
+    stop = eq value, 40
+    br stop -> L_TRY_FOLD_STOP, L_TRY_FOLD_KEEP
+L_TRY_FOLD_KEEP:
+    next = add acc, value
+    store out_next+0, next as u64
+    !next
+    !stop
+    !out_next
+    !value
+    return 1
+L_TRY_FOLD_STOP:
+    !stop
+    !out_next
+    !value
+    !acc
+    return 0
+
+@vec_deque_iter_reduce_sum(acc: u64, value: u64) -> u64:
+L_ENTRY:
+    out = add acc, value
+    !value
+    return out
+
+@vec_deque_iter_try_reduce_until_50(acc: u64, value: u64, &out_next: ptr) -> u64:
+L_ENTRY:
+    stop = eq value, 50
+    br stop -> L_TRY_REDUCE_STOP, L_TRY_REDUCE_KEEP
+L_TRY_REDUCE_KEEP:
+    next = add acc, value
+    store out_next+0, next as u64
+    !next
+    !stop
+    !out_next
+    !value
+    return 1
+L_TRY_REDUCE_STOP:
+    !stop
+    !out_next
+    !value
+    !acc
+    return 0
+
+@test "sa_std vec_deque iterator fold aggregate macro surface"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 40
+    EXPAND VEC_DEQUE_TRY_POP_FRONT pop_ok, pop_value, deque
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 50
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 60
+
+    EXPAND VEC_DEQUE_ITER_U64 fold_iter, fold_backing, deque
+    EXPAND VEC_DEQUE_ITER_FOLD_U64 fold_value, fold_iter, 0, @vec_deque_iter_fold_decimal
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_IS_EMPTY_U64 fold_empty, fold_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 rfold_iter, rfold_backing, deque
+    EXPAND VEC_DEQUE_ITER_RFOLD_U64 rfold_value, rfold_iter, 0, @vec_deque_iter_fold_decimal
+
+    EXPAND VEC_DEQUE_ITER_U64 try_fold_iter, try_fold_backing, deque
+    EXPAND VEC_DEQUE_ITER_TRY_FOLD_U64 try_fold_ok, try_fold_value, try_fold_iter, 0, @vec_deque_iter_try_fold_until_40
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 try_fold_tail_has, try_fold_tail, try_fold_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 try_rfold_iter, try_rfold_backing, deque
+    EXPAND VEC_DEQUE_ITER_TRY_RFOLD_U64 try_rfold_ok, try_rfold_value, try_rfold_iter, 0, @vec_deque_iter_try_fold_until_40
+    EXPAND VEC_DEQUE_ITER_NEXT_BACK_U64 try_rfold_tail_has, try_rfold_tail, try_rfold_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 sum_iter, sum_backing, deque
+    EXPAND VEC_DEQUE_ITER_SUM_U64 sum_value, sum_iter
+    EXPAND VEC_DEQUE_ITER_U64 product_iter, product_backing, deque
+    EXPAND VEC_DEQUE_ITER_PRODUCT_U64 product_value, product_iter
+    EXPAND VEC_DEQUE_ITER_U64 min_iter, min_backing, deque
+    EXPAND VEC_DEQUE_ITER_MIN_U64 min_has, min_value, min_iter
+    EXPAND VEC_DEQUE_ITER_U64 max_iter, max_backing, deque
+    EXPAND VEC_DEQUE_ITER_MAX_U64 max_has, max_value, max_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 reduce_iter, reduce_backing, deque
+    EXPAND VEC_DEQUE_ITER_REDUCE_U64 reduce_has, reduce_value, reduce_iter, @vec_deque_iter_reduce_sum
+    EXPAND VEC_DEQUE_ITER_U64 try_reduce_iter, try_reduce_backing, deque
+    EXPAND VEC_DEQUE_ITER_TRY_REDUCE_U64 try_reduce_ok, try_reduce_has, try_reduce_value, try_reduce_iter, @vec_deque_iter_try_reduce_until_50
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 try_reduce_tail_has, try_reduce_tail, try_reduce_iter
+
+    EXPAND VEC_DEQUE_INTO_ITER_U64 into_iter, into_backing, deque
+    EXPAND VEC_DEQUE_INTO_ITER_FOLD_U64 into_fold_value, into_iter, 0, @vec_deque_iter_reduce_sum
+    EXPAND VEC_DEQUE_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 into_empty, into_iter
+    EXPAND VEC_DEQUE_IS_EMPTY deque_empty, deque
+
+    EXPAND VEC_FREE fold_backing
+    EXPAND VEC_FREE rfold_backing
+    EXPAND VEC_FREE try_fold_backing
+    EXPAND VEC_FREE try_rfold_backing
+    EXPAND VEC_FREE sum_backing
+    EXPAND VEC_FREE product_backing
+    EXPAND VEC_FREE min_backing
+    EXPAND VEC_FREE max_backing
+    EXPAND VEC_FREE reduce_backing
+    EXPAND VEC_FREE try_reduce_backing
+    EXPAND VEC_FREE into_backing
+    EXPAND VEC_DEQUE_FREE deque
+
+    ok = eq pop_ok, 1
+    check = eq pop_value, 10
+    ok = and ok, check
+    check = eq fold_value, 234560
+    ok = and ok, check
+    check = eq fold_empty, 1
+    ok = and ok, check
+    check = eq rfold_value, 654320
+    ok = and ok, check
+    check = eq try_fold_ok, 0
+    ok = and ok, check
+    check = eq try_fold_value, 50
+    ok = and ok, check
+    check = eq try_fold_tail_has, 1
+    ok = and ok, check
+    check = eq try_fold_tail, 50
+    ok = and ok, check
+    check = eq try_rfold_ok, 0
+    ok = and ok, check
+    check = eq try_rfold_value, 110
+    ok = and ok, check
+    check = eq try_rfold_tail_has, 1
+    ok = and ok, check
+    check = eq try_rfold_tail, 30
+    ok = and ok, check
+    check = eq sum_value, 200
+    ok = and ok, check
+    check = eq product_value, 72000000
+    ok = and ok, check
+    check = eq min_has, 1
+    ok = and ok, check
+    check = eq min_value, 20
+    ok = and ok, check
+    check = eq max_has, 1
+    ok = and ok, check
+    check = eq max_value, 60
+    ok = and ok, check
+    check = eq reduce_has, 1
+    ok = and ok, check
+    check = eq reduce_value, 200
+    ok = and ok, check
+    check = eq try_reduce_ok, 0
+    ok = and ok, check
+    check = eq try_reduce_has, 0
+    ok = and ok, check
+    check = eq try_reduce_value, 90
+    ok = and ok, check
+    check = eq try_reduce_tail_has, 1
+    ok = and ok, check
+    check = eq try_reduce_tail, 60
+    ok = and ok, check
+    check = eq into_fold_value, 200
+    ok = and ok, check
+    check = eq into_empty, 1
+    ok = and ok, check
+    check = eq deque_empty, 1
+    ok = and ok, check
+
+    !pop_ok
+    !pop_value
+    !fold_value
+    !fold_empty
+    !rfold_value
+    !try_fold_ok
+    !try_fold_value
+    !try_fold_tail_has
+    !try_fold_tail
+    !try_rfold_ok
+    !try_rfold_value
+    !try_rfold_tail_has
+    !try_rfold_tail
+    !sum_value
+    !product_value
+    !min_has
+    !min_value
+    !max_has
+    !max_value
+    !reduce_has
+    !reduce_value
+    !try_reduce_ok
+    !try_reduce_has
+    !try_reduce_value
+    !try_reduce_tail_has
+    !try_reduce_tail
+    !into_fold_value
+    !into_empty
+    !deque_empty
+    !check
+    !fold_iter
+    !rfold_iter
+    !try_fold_iter
+    !try_rfold_iter
+    !sum_iter
+    !product_iter
+    !min_iter
+    !max_iter
+    !reduce_iter
+    !try_reduce_iter
+    !into_iter
+    br ok -> L_VEC_DEQUE_ITER_FOLD_OK, L_VEC_DEQUE_ITER_FOLD_FAIL
+L_VEC_DEQUE_ITER_FOLD_FAIL:
+    !ok
+    panic(10790)
+L_VEC_DEQUE_ITER_FOLD_OK:
+    !ok
+    return

@@ -1,0 +1,253 @@
+@import "sa_std/core/slice.sars"
+@import "sa_std/iter.sars"
+
+@iter_partition_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    out = eq rem, 0
+    !rem
+    !value
+    return out
+
+@iter_partition_positive(value: u64) -> u64:
+L_ENTRY:
+    out = ugt value, 0
+    !value
+    return out
+
+@test "sa_std iter partition_in_place macro surface"():
+L_ENTRY:
+    values = stack_alloc 56
+    partial_values = stack_alloc 40
+    all_values = stack_alloc 24
+    false_values = stack_alloc 24
+    empty_values = stack_alloc 8
+
+    store values+0, 1 as u64
+    store values+8, 2 as u64
+    store values+16, 3 as u64
+    store values+24, 4 as u64
+    store values+32, 5 as u64
+    store values+40, 6 as u64
+    store values+48, 7 as u64
+
+    store partial_values+0, 99 as u64
+    store partial_values+8, 1 as u64
+    store partial_values+16, 2 as u64
+    store partial_values+24, 4 as u64
+    store partial_values+32, 3 as u64
+
+    store all_values+0, 2 as u64
+    store all_values+8, 4 as u64
+    store all_values+16, 6 as u64
+
+    store false_values+0, 1 as u64
+    store false_values+8, 3 as u64
+    store false_values+16, 5 as u64
+
+    slice = alloc Slice_SIZE
+    partial_slice = alloc Slice_SIZE
+    all_slice = alloc Slice_SIZE
+    false_slice = alloc Slice_SIZE
+    empty_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 7
+    EXPAND SLICE_NEW partial_slice, partial_values, 5
+    EXPAND SLICE_NEW all_slice, all_values, 3
+    EXPAND SLICE_NEW false_slice, false_values, 3
+    EXPAND SLICE_NEW empty_slice, empty_values, 0
+
+    EXPAND ITER_FROM_SLICE iter, slice
+    EXPAND ITER_PARTITION_IN_PLACE_U64 count, iter, @iter_partition_even
+    EXPAND ITER_IS_EMPTY iter_empty, iter
+    EXPAND SLICE_GET_U64 values_0, slice, 0
+    EXPAND SLICE_GET_U64 values_1, slice, 1
+    EXPAND SLICE_GET_U64 values_2, slice, 2
+    EXPAND SLICE_GET_U64 values_3, slice, 3
+    EXPAND SLICE_GET_U64 values_4, slice, 4
+    EXPAND SLICE_GET_U64 values_5, slice, 5
+    EXPAND SLICE_GET_U64 values_6, slice, 6
+
+    EXPAND ITER_FROM_SLICE partial_iter, partial_slice
+    EXPAND ITER_NEXT_U64 partial_first_ok, partial_first, partial_iter
+    EXPAND ITER_PARTITION_IN_PLACE_U64 partial_count, partial_iter, @iter_partition_even
+    EXPAND ITER_IS_EMPTY partial_iter_empty, partial_iter
+    EXPAND SLICE_GET_U64 partial_0, partial_slice, 0
+    EXPAND SLICE_GET_U64 partial_1, partial_slice, 1
+    EXPAND SLICE_GET_U64 partial_2, partial_slice, 2
+    EXPAND SLICE_GET_U64 partial_3, partial_slice, 3
+    EXPAND SLICE_GET_U64 partial_4, partial_slice, 4
+
+    EXPAND ITER_FROM_SLICE all_iter, all_slice
+    EXPAND ITER_PARTITION_IN_PLACE_U64 all_count, all_iter, @iter_partition_even
+    EXPAND ITER_IS_EMPTY all_iter_empty, all_iter
+    EXPAND SLICE_GET_U64 all_0, all_slice, 0
+    EXPAND SLICE_GET_U64 all_2, all_slice, 2
+
+    EXPAND ITER_FROM_SLICE false_iter, false_slice
+    EXPAND ITER_PARTITION_IN_PLACE_U64 false_count, false_iter, @iter_partition_even
+    EXPAND ITER_IS_EMPTY false_iter_empty, false_iter
+    EXPAND SLICE_GET_U64 false_0, false_slice, 0
+    EXPAND SLICE_GET_U64 false_2, false_slice, 2
+
+    EXPAND ITER_FROM_SLICE empty_iter, empty_slice
+    EXPAND ITER_PARTITION_IN_PLACE_U64 empty_count, empty_iter, @iter_partition_positive
+    EXPAND ITER_IS_EMPTY empty_iter_empty, empty_iter
+
+    ok_count = eq count, 3
+    ok_iter_empty = eq iter_empty, 1
+    ok_values_0 = eq values_0, 6
+    ok_values_1 = eq values_1, 2
+    ok_values_2 = eq values_2, 4
+    ok_values_3 = eq values_3, 3
+    ok_values_4 = eq values_4, 5
+    ok_values_5 = eq values_5, 1
+    ok_values_6 = eq values_6, 7
+    ok_partial_first_ok = eq partial_first_ok, 1
+    ok_partial_first = eq partial_first, 99
+    ok_partial_count = eq partial_count, 2
+    ok_partial_empty = eq partial_iter_empty, 1
+    ok_partial_0 = eq partial_0, 99
+    ok_partial_1 = eq partial_1, 4
+    ok_partial_2 = eq partial_2, 2
+    ok_partial_3 = eq partial_3, 1
+    ok_partial_4 = eq partial_4, 3
+    ok_all_count = eq all_count, 3
+    ok_all_empty = eq all_iter_empty, 1
+    ok_all_0 = eq all_0, 2
+    ok_all_2 = eq all_2, 6
+    ok_false_count = eq false_count, 0
+    ok_false_empty = eq false_iter_empty, 1
+    ok_false_0 = eq false_0, 1
+    ok_false_2 = eq false_2, 5
+    ok_empty_count = eq empty_count, 0
+    ok_empty_empty = eq empty_iter_empty, 1
+
+    c01 = and ok_count, ok_iter_empty
+    c02 = and c01, ok_values_0
+    c03 = and c02, ok_values_1
+    c04 = and c03, ok_values_2
+    c05 = and c04, ok_values_3
+    c06 = and c05, ok_values_4
+    c07 = and c06, ok_values_5
+    c08 = and c07, ok_values_6
+    c09 = and c08, ok_partial_first_ok
+    c10 = and c09, ok_partial_first
+    c11 = and c10, ok_partial_count
+    c12 = and c11, ok_partial_empty
+    c13 = and c12, ok_partial_0
+    c14 = and c13, ok_partial_1
+    c15 = and c14, ok_partial_2
+    c16 = and c15, ok_partial_3
+    c17 = and c16, ok_partial_4
+    c18 = and c17, ok_all_count
+    c19 = and c18, ok_all_empty
+    c20 = and c19, ok_all_0
+    c21 = and c20, ok_all_2
+    c22 = and c21, ok_false_count
+    c23 = and c22, ok_false_empty
+    c24 = and c23, ok_false_0
+    c25 = and c24, ok_false_2
+    c26 = and c25, ok_empty_count
+    ok = and c26, ok_empty_empty
+
+    !count
+    !iter_empty
+    !values_0
+    !values_1
+    !values_2
+    !values_3
+    !values_4
+    !values_5
+    !values_6
+    !partial_first_ok
+    !partial_first
+    !partial_count
+    !partial_iter_empty
+    !partial_0
+    !partial_1
+    !partial_2
+    !partial_3
+    !partial_4
+    !all_count
+    !all_iter_empty
+    !all_0
+    !all_2
+    !false_count
+    !false_iter_empty
+    !false_0
+    !false_2
+    !empty_count
+    !empty_iter_empty
+    !ok_count
+    !ok_iter_empty
+    !ok_values_0
+    !ok_values_1
+    !ok_values_2
+    !ok_values_3
+    !ok_values_4
+    !ok_values_5
+    !ok_values_6
+    !ok_partial_first_ok
+    !ok_partial_first
+    !ok_partial_count
+    !ok_partial_empty
+    !ok_partial_0
+    !ok_partial_1
+    !ok_partial_2
+    !ok_partial_3
+    !ok_partial_4
+    !ok_all_count
+    !ok_all_empty
+    !ok_all_0
+    !ok_all_2
+    !ok_false_count
+    !ok_false_empty
+    !ok_false_0
+    !ok_false_2
+    !ok_empty_count
+    !ok_empty_empty
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !c18
+    !c19
+    !c20
+    !c21
+    !c22
+    !c23
+    !c24
+    !c25
+    !c26
+    !empty_iter
+    !false_iter
+    !all_iter
+    !partial_iter
+    !iter
+    !empty_slice
+    !false_slice
+    !all_slice
+    !partial_slice
+    !slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10552)
+
+L_PASS:
+    !ok
+    return 0

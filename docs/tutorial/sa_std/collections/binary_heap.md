@@ -6,7 +6,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/binary_heap.sa"
+@import "sa_std/binary_heap.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@
 下面的完整 SA 程序展示了通过优先队列对杂乱顺序的数字进行入堆，然后验证它是否依照“大根堆”规则进行弹出的正确性：
 
 ```sa
-@import "sa_std/binary_heap.sa"
+@import "sa_std/binary_heap.sars"
 
 @main() -> i32:
 L_ENTRY:

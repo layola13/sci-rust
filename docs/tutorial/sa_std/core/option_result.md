@@ -4,8 +4,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/core/option.sa"
-@import "sa_std/core/result.sa"
+@import "sa_std/core/option.sars"
+@import "sa_std/core/result.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -13,7 +13,7 @@
 ### Option 分支判断示例
 
 ```sa
-@import "sa_std/core/option.sa"
+@import "sa_std/core/option.sars"
 
 @main() -> i32:
 L_ENTRY:
@@ -38,7 +38,7 @@ L_NONE:
 ### Result 异常分支跳转示例
 
 ```sa
-@import "sa_std/core/result.sa"
+@import "sa_std/core/result.sars"
 
 @main() -> i32:
 L_ENTRY:

@@ -1,3 +1,0 @@
-// Public ManuallyDrop facade over mem.sa.
-@import "mem.sal"
-@import "mem.sa"

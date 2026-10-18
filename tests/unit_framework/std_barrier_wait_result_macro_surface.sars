@@ -1,0 +1,16 @@
+@import "sa_std/sync/barrier.sars"
+
+@test "sa_std barrier wait_result"():
+L_ENTRY:
+    EXPAND BARRIER_NEW barrier, 1
+    EXPAND BARRIER_WAIT_RESULT res, barrier
+    EXPAND BARRIER_WAIT_RESULT_IS_LEADER leader, res
+    ok = eq leader, 1
+    !leader
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10896)

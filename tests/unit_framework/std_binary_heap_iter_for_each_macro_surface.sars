@@ -1,0 +1,111 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@binary_heap_iter_for_each_noop(value: u64) -> u64:
+L_ENTRY:
+    !value
+    return 0
+
+@binary_heap_iter_try_each_lt_five(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 5
+    !value
+    return out
+
+@binary_heap_iter_try_each_lt_ten(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 10
+    !value
+    return out
+
+@test "sa_std binary_heap iter for_each macro surface"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW each_heap
+    EXPAND BINARY_HEAP_PUSH_U64 each_heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 each_heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 each_heap, 1
+    EXPAND BINARY_HEAP_ITER_U64 each_iter, each_heap
+    EXPAND BINARY_HEAP_ITER_FOR_EACH_U64 each_iter, @binary_heap_iter_for_each_noop
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_IS_EMPTY_U64 each_empty, each_iter
+    EXPAND BINARY_HEAP_LEN each_heap_len_after, each_heap
+
+    EXPAND BINARY_HEAP_NEW try_all_heap
+    EXPAND BINARY_HEAP_PUSH_U64 try_all_heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 try_all_heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 try_all_heap, 1
+    EXPAND BINARY_HEAP_ITER_U64 try_all_iter, try_all_heap
+    EXPAND BINARY_HEAP_ITER_TRY_FOR_EACH_U64 try_all_ok, try_all_iter, @binary_heap_iter_try_each_lt_ten
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_IS_EMPTY_U64 try_all_empty, try_all_iter
+
+    EXPAND BINARY_HEAP_NEW try_stop_heap
+    EXPAND BINARY_HEAP_PUSH_U64 try_stop_heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 try_stop_heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 try_stop_heap, 1
+    EXPAND BINARY_HEAP_ITER_U64 try_stop_iter, try_stop_heap
+    EXPAND BINARY_HEAP_ITER_TRY_FOR_EACH_U64 try_stop_ok, try_stop_iter, @binary_heap_iter_try_each_lt_five
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_LEN_U64 try_stop_remaining, try_stop_iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 try_stop_next_has, try_stop_next, try_stop_iter
+
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_ITER_U64 empty_iter, empty_heap
+    EXPAND BINARY_HEAP_ITER_TRY_FOR_EACH_U64 empty_try_ok, empty_iter, @binary_heap_iter_try_each_lt_five
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_after_try, empty_iter
+
+    EXPAND BINARY_HEAP_FREE each_heap
+    EXPAND BINARY_HEAP_FREE try_all_heap
+    EXPAND BINARY_HEAP_FREE try_stop_heap
+    EXPAND BINARY_HEAP_FREE empty_heap
+
+    ok_each_empty = eq each_empty, 1
+    ok_each_heap_len_after = eq each_heap_len_after, 3
+    ok_try_all = eq try_all_ok, 1
+    ok_try_all_empty = eq try_all_empty, 1
+    ok_try_stop = eq try_stop_ok, 0
+    ok_try_stop_remaining = eq try_stop_remaining, 2
+    ok_try_stop_next_has = eq try_stop_next_has, 1
+    ok_try_stop_next = eq try_stop_next, 4
+    ok_empty_try = eq empty_try_ok, 1
+    ok_empty_after_try = eq empty_after_try, 1
+
+    ok = and ok_each_empty, ok_each_heap_len_after
+    ok = and ok, ok_try_all
+    ok = and ok, ok_try_all_empty
+    ok = and ok, ok_try_stop
+    ok = and ok, ok_try_stop_remaining
+    ok = and ok, ok_try_stop_next_has
+    ok = and ok, ok_try_stop_next
+    ok = and ok, ok_empty_try
+    ok = and ok, ok_empty_after_try
+
+    !each_empty
+    !each_heap_len_after
+    !try_all_ok
+    !try_all_empty
+    !try_stop_ok
+    !try_stop_remaining
+    !try_stop_next_has
+    !try_stop_next
+    !empty_try_ok
+    !empty_after_try
+    !ok_each_empty
+    !ok_each_heap_len_after
+    !ok_try_all
+    !ok_try_all_empty
+    !ok_try_stop
+    !ok_try_stop_remaining
+    !ok_try_stop_next_has
+    !ok_try_stop_next
+    !ok_empty_try
+    !ok_empty_after_try
+    !each_iter
+    !try_all_iter
+    !try_stop_iter
+    !empty_iter
+    br ok -> L_BINARY_HEAP_ITER_FOR_EACH_OK, L_BINARY_HEAP_ITER_FOR_EACH_FAIL
+
+L_BINARY_HEAP_ITER_FOR_EACH_FAIL:
+    !ok
+    panic(10761)
+
+L_BINARY_HEAP_ITER_FOR_EACH_OK:
+    !ok
+    return

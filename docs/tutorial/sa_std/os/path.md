@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/path.sa"
+@import "sa_std/path.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,9 +12,9 @@
 下面的完整 SA 程序展示了如何将目录前缀与文件名进行安全合并，并检验最终生成的路径是否为绝对路径：
 
 ```sa
-@import "sa_std/path.sa"
-@import "sa_std/core/slice.sa"
-@import "sa_std/string.sa"
+@import "sa_std/path.sars"
+@import "sa_std/core/slice.sars"
+@import "sa_std/string.sars"
 
 @main() -> i32:
 L_ENTRY:

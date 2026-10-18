@@ -1,3 +1,0 @@
-// Duration namespace facade.
-@import "../time.sal"
-@import "../time.sa"

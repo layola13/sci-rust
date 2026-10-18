@@ -1,0 +1,57 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive strict sign cast macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_CAST_SIGNED u8_strict, NUM_I8_MAX
+    EXPAND NUM_U16_STRICT_CAST_SIGNED u16_strict, NUM_I16_MAX
+    EXPAND NUM_U32_STRICT_CAST_SIGNED u32_strict, NUM_I32_MAX
+    EXPAND NUM_U64_STRICT_CAST_SIGNED u64_strict, NUM_I64_MAX
+    EXPAND NUM_USIZE_STRICT_CAST_SIGNED usize_strict, NUM_I64_MAX
+
+    EXPAND NUM_I8_STRICT_CAST_UNSIGNED i8_strict, 8
+    EXPAND NUM_I16_STRICT_CAST_UNSIGNED i16_strict, 16
+    EXPAND NUM_I32_STRICT_CAST_UNSIGNED i32_strict, 32
+    EXPAND NUM_I64_STRICT_CAST_UNSIGNED i64_strict, 64
+    EXPAND NUM_ISIZE_STRICT_CAST_UNSIGNED isize_strict, 65
+
+    ok_01 = eq u8_strict, NUM_I8_MAX
+    ok_02 = eq u16_strict, NUM_I16_MAX
+    ok_03 = eq u32_strict, NUM_I32_MAX
+    ok_04 = eq u64_strict, NUM_I64_MAX
+    ok_05 = eq usize_strict, NUM_I64_MAX
+    ok_06 = eq i8_strict, 8
+    ok_07 = eq i16_strict, 16
+    ok_08 = eq i32_strict, 32
+    ok_09 = eq i64_strict, 64
+    ok_10 = eq isize_strict, 65
+
+    ok_11 = and ok_01, ok_02
+    ok_12 = and ok_11, ok_03
+    ok_13 = and ok_12, ok_04
+    ok_14 = and ok_13, ok_05
+    ok_15 = and ok_14, ok_06
+    ok_16 = and ok_15, ok_07
+    ok_17 = and ok_16, ok_08
+    ok_18 = and ok_17, ok_09
+    ok = and ok_18, ok_10
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10630)
+
+L_PASS:
+    !ok
+    return 0
+
+@test should_panic "sa_std strict unsigned to signed cast panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_CAST_SIGNED u8_strict, NUM_U8_MAX
+    !u8_strict
+    return 0
+
+@test should_panic "sa_std strict signed to unsigned cast panics on negative input"():
+L_ENTRY:
+    EXPAND NUM_I8_STRICT_CAST_UNSIGNED i8_strict, -1
+    !i8_strict
+    return 0

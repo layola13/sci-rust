@@ -1,0 +1,306 @@
+@import "sa_std/thread.sars"
+
+@const THREAD_EXT_WORKER_VT = vtable { call = @thread_ext_worker }
+
+#def ThreadExtSlot_SIZE = 8
+#def ThreadExtSlot_value = +0
+
+@thread_ext_worker(&slot: ptr) -> i32:
+L_ENTRY:
+    value = load slot+ThreadExtSlot_value as i32
+    result = add value, 11
+    store slot+ThreadExtSlot_value, result as i32
+    !value
+    !slot
+    return result
+
+@ffi_wrapper thread_ext_spawn_worker(*slot: ptr) -> i32:
+L_ENTRY:
+    worker_vt = &THREAD_EXT_WORKER_VT
+    worker_fn = load worker_vt+0 as ptr
+    worker_safe = assume_safe worker_fn
+    EXPAND THREAD_SPAWN handle, *worker_safe, *slot
+    !worker_vt
+    !worker_fn
+    !worker_safe
+    !slot
+    return handle
+
+@test "sa_std thread current_id and yield_now macros"():
+L_ENTRY:
+    EXPAND THREAD_CURRENT_ID tid
+    EXPAND THREAD_YIELD_NOW yield_status
+    tid_ok = ne tid, 0
+    yield_ok = eq yield_status, 0
+    ok = and tid_ok, yield_ok
+
+    !tid
+    !yield_status
+    !tid_ok
+    !yield_ok
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1510)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std thread pthread raw handle macros"():
+L_ENTRY:
+    slot_as = alloc ThreadExtSlot_SIZE
+    store slot_as+ThreadExtSlot_value, 20 as i32
+    handle_as = call @thread_ext_spawn_worker(*slot_as)
+    EXPAND THREAD_AS_PTHREAD_T as_status, raw_as, handle_as
+    join_as_out = stack_alloc 4
+    EXPAND THREAD_JOIN_STATUS join_as_status, handle_as, join_as_out
+    join_as_result = load join_as_out+0 as i32
+    slot_as_value = load slot_as+ThreadExtSlot_value as i32
+
+    slot_into = alloc ThreadExtSlot_SIZE
+    store slot_into+ThreadExtSlot_value, 30 as i32
+    handle_into = call @thread_ext_spawn_worker(*slot_into)
+    EXPAND THREAD_INTO_PTHREAD_T into_status, raw_into, handle_into
+    raw_join_out = stack_alloc 4
+    EXPAND THREAD_RAW_PTHREAD_JOIN_STATUS raw_join_status, raw_into, raw_join_out
+    raw_join_result = load raw_join_out+0 as i32
+    slot_into_value = load slot_into+ThreadExtSlot_value as i32
+
+    handle_as_ok = ne handle_as, 0
+    as_status_ok = eq as_status, 0
+    raw_as_ok = ne raw_as, 0
+    join_as_ok = eq join_as_status, 0
+    join_as_result_ok = eq join_as_result, 31
+    slot_as_ok = eq slot_as_value, 31
+    handle_into_ok = ne handle_into, 0
+    into_status_ok = eq into_status, 0
+    raw_into_ok = ne raw_into, 0
+    raw_join_ok = eq raw_join_status, 0
+    raw_join_result_ok = eq raw_join_result, 41
+    slot_into_ok = eq slot_into_value, 41
+
+    ok01 = and handle_as_ok, as_status_ok
+    ok02 = and ok01, raw_as_ok
+    ok03 = and ok02, join_as_ok
+    ok04 = and ok03, join_as_result_ok
+    ok05 = and ok04, slot_as_ok
+    ok06 = and ok05, handle_into_ok
+    ok07 = and ok06, into_status_ok
+    ok08 = and ok07, raw_into_ok
+    ok09 = and ok08, raw_join_ok
+    ok10 = and ok09, raw_join_result_ok
+    ok = and ok10, slot_into_ok
+
+    !handle_as
+    !as_status
+    !raw_as
+    !join_as_status
+    !join_as_result
+    !slot_as_value
+    !handle_into
+    !into_status
+    !raw_into
+    !raw_join_status
+    !raw_join_result
+    !slot_into_value
+    !handle_as_ok
+    !as_status_ok
+    !raw_as_ok
+    !join_as_ok
+    !join_as_result_ok
+    !slot_as_ok
+    !handle_into_ok
+    !into_status_ok
+    !raw_into_ok
+    !raw_join_ok
+    !raw_join_result_ok
+    !slot_into_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !slot_into
+    !slot_as
+    br ok -> L_RAW_PASS, L_RAW_FAIL
+
+L_RAW_FAIL:
+    !ok
+    panic(1511)
+
+L_RAW_PASS:
+    !ok
+    return 0
+
+@ffi_wrapper thread_builder_spawn_worker(*slot: ptr, detached: i32) -> i32:
+L_ENTRY:
+    worker_vt = &THREAD_EXT_WORKER_VT
+    worker_fn = load worker_vt+0 as ptr
+    worker_safe = assume_safe worker_fn
+    EXPAND THREAD_BUILDER_SPAWN handle, detached, *worker_safe, *slot
+    !worker_vt
+    !worker_fn
+    !worker_safe
+    !slot
+    !detached
+    return handle
+
+@test "sa_std thread builder macros"():
+L_ENTRY:
+    slot = alloc ThreadExtSlot_SIZE
+    store slot+ThreadExtSlot_value, 7 as i32
+    EXPAND THREAD_BUILDER_NEW detached0
+    zero_detached = eq detached0, 0
+    EXPAND THREAD_BUILDER_WITH_DETACHED detached1, detached0, 0
+    still_zero = eq detached1, 0
+    handle = call @thread_builder_spawn_worker(*slot, detached1)
+    handle_ok = ne handle, 0
+    join_out = stack_alloc 4
+    EXPAND THREAD_JOIN_STATUS join_status, handle, join_out
+    join_ok = eq join_status, 0
+    join_result = load join_out+0 as i32
+    result_ok = eq join_result, 18
+    slot_value = load slot+ThreadExtSlot_value as i32
+    slot_ok = eq slot_value, 18
+
+    ok = and zero_detached, still_zero
+    ok = and ok, handle_ok
+    ok = and ok, join_ok
+    ok = and ok, result_ok
+    ok = and ok, slot_ok
+
+    !detached1
+    !handle
+    !join_status
+    !join_result
+    !slot_value
+    !zero_detached
+    !still_zero
+    !handle_ok
+    !join_ok
+    !result_ok
+    !slot_ok
+    !slot
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    panic(1512)
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std thread sleep macros"():
+L_ENTRY:
+    EXPAND THREAD_SLEEP_NS 0
+    EXPAND THREAD_SLEEP_MS 0
+    EXPAND THREAD_CURRENT_ID tid
+    ok = ne tid, 0
+    !tid
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    panic(1513)
+L_PASS:
+    !ok
+    return 0
+
+
+
+@test "sa_std thread current/yield aliases"():
+L_ENTRY:
+    EXPAND THREAD_CURRENT_ID id0
+    EXPAND THREAD_CURRENT id1
+    EXPAND THREAD_YIELD_NOW yield0
+    EXPAND THREAD_YIELD yield1
+
+    ok_id = ne id0, 0
+    ok_eq = eq id0, id1
+    ok_y0 = eq yield0, 0
+    ok_y1 = eq yield1, 0
+    ok01 = and ok_id, ok_eq
+    ok02 = and ok01, ok_y0
+    ok = and ok02, ok_y1
+
+    !id0
+    !id1
+    !yield0
+    !yield1
+    !ok_id
+    !ok_eq
+    !ok_y0
+    !ok_y1
+    !ok01
+    !ok02
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    panic(10426)
+L_PASS:
+    !ok
+    return 0
+
+
+@test "sa_std thread sleep duration_ns alias"():
+L_ENTRY:
+    EXPAND THREAD_SLEEP_DURATION_NS 0
+    ok = eq 1, 1
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10446)
+L_OK:
+    !ok
+    return
+
+@test "sa_std thread invalid raw conversions are deterministic"():
+L_ENTRY:
+    EXPAND THREAD_AS_PTHREAD_T as_status, as_raw, 0
+    EXPAND THREAD_INTO_PTHREAD_T into_status, into_raw, 0
+    raw_out = stack_alloc 4
+    store raw_out+0, 77 as i32
+    EXPAND THREAD_RAW_PTHREAD_JOIN_STATUS raw_join_status, 0, raw_out
+    raw_join_result = load raw_out+0 as i32
+
+    as_error = ne as_status, 0
+    into_error = ne into_status, 0
+    raw_join_error = ne raw_join_status, 0
+    as_zero = eq as_raw, 0
+    into_zero = eq into_raw, 0
+    raw_zero = eq raw_join_result, 0
+    ok01 = and as_error, into_error
+    ok02 = and ok01, raw_join_error
+    ok03 = and ok02, as_zero
+    ok04 = and ok03, into_zero
+    ok = and ok04, raw_zero
+
+    !as_status
+    !as_raw
+    !into_status
+    !into_raw
+    !raw_join_status
+    !raw_join_result
+    !as_error
+    !into_error
+    !raw_join_error
+    !as_zero
+    !into_zero
+    !raw_zero
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    br ok -> L_INVALID_PASS, L_INVALID_FAIL
+L_INVALID_FAIL:
+    !ok
+    panic(1514)
+L_INVALID_PASS:
+    !ok
+    return 0

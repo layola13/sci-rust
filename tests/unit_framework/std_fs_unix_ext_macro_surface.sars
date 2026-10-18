@@ -1,0 +1,794 @@
+@import "sa_std/fs.sars"
+@import "sa_std/net.sars"
+@import "sa_std/string.sars"
+
+@const FS_UNIX_RW_PATH = utf8:"_tmp_fs_unix_rw.txt"
+@const FS_UNIX_TARGET_PATH = utf8:"_tmp_fs_unix_target.txt"
+@const FS_UNIX_LINK_PATH = utf8:"_tmp_fs_unix_link.txt"
+@const FS_UNIX_APPEND_PATH = utf8:"_tmp_fs_unix_append.txt"
+@const FS_UNIX_CHAR_PATH = utf8:"/dev/null"
+@const FS_UNIX_BLOCK_PATH = utf8:"/dev/loop0"
+@const FS_UNIX_FIFO_PATH = utf8:"_tmp_fs_unix_fifo"
+@const FS_UNIX_SOCKET_PATH = utf8:"_tmp_fs_unix_socket"
+@const FS_UNIX_MODE_DIR = utf8:"_tmp_fs_unix_mode_dir"
+@const FS_UNIX_MODE_TREE = utf8:"_tmp_fs_unix_mode_tree"
+@const FS_UNIX_MODE_LEAF = utf8:"_tmp_fs_unix_mode_tree/leaf"
+@const FS_UNIX_CHOWN_PATH = utf8:"_tmp_fs_unix_chown.txt"
+@const FS_UNIX_CHOWN_LINK = utf8:"_tmp_fs_unix_chown_link"
+@const FS_UNIX_ROOT_PATH = utf8:"/"
+@const FS_UNIX_HELLO = utf8:"hello"
+@const FS_UNIX_ZZ = utf8:"zz"
+@const FS_UNIX_HEZZO = utf8:"hezzo"
+@const FS_UNIX_EZZO = utf8:"ezzo"
+@const FS_UNIX_GO = utf8:"go"
+@const FS_UNIX_BANG = utf8:"!"
+@const FS_UNIX_GO_BANG = utf8:"go!"
+
+#def FS_UNIX_RW_PATH_LEN = 19
+#def FS_UNIX_TARGET_PATH_LEN = 23
+#def FS_UNIX_LINK_PATH_LEN = 21
+#def FS_UNIX_APPEND_PATH_LEN = 23
+#def FS_UNIX_CHAR_PATH_LEN = 9
+#def FS_UNIX_BLOCK_PATH_LEN = 10
+#def FS_UNIX_FIFO_PATH_LEN = 17
+#def FS_UNIX_SOCKET_PATH_LEN = 19
+#def FS_UNIX_MODE_DIR_LEN = 21
+#def FS_UNIX_MODE_TREE_LEN = 22
+#def FS_UNIX_MODE_LEAF_LEN = 27
+#def FS_UNIX_CHOWN_PATH_LEN = 22
+#def FS_UNIX_CHOWN_LINK_LEN = 23
+#def FS_UNIX_ROOT_PATH_LEN = 1
+#def FS_UNIX_ERR_ACCESS = 4
+#def FS_UNIX_HELLO_LEN = 5
+#def FS_UNIX_ZZ_LEN = 2
+#def FS_UNIX_HEZZO_LEN = 5
+#def FS_UNIX_EZZO_LEN = 4
+#def FS_UNIX_GO_LEN = 2
+#def FS_UNIX_BANG_LEN = 1
+#def FS_UNIX_GO_BANG_LEN = 3
+
+@test "sa_std fs unix file ext macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_status, FS_UNIX_RW_PATH, FS_UNIX_RW_PATH_LEN
+    open_flags = add SA_FS_OPEN_READ, SA_FS_OPEN_WRITE
+    open_flags = add open_flags, SA_FS_OPEN_CREATE
+    open_flags = add open_flags, SA_FS_OPEN_TRUNCATE
+    EXPAND FS_OPEN_OPTIONS open_status, file, FS_UNIX_RW_PATH, FS_UNIX_RW_PATH_LEN, open_flags, SA_FS_OPEN_MODE_DEFAULT, 0
+    write_exact_buf = stack_alloc 8
+    read_at_buf = stack_alloc 8
+    EXPAND FS_WRITE_ALL_AT write_all_status, file, FS_UNIX_HELLO, FS_UNIX_HELLO_LEN, 0
+    EXPAND FS_WRITE_AT write_at_status, write_at_len, file, FS_UNIX_ZZ, FS_UNIX_ZZ_LEN, 2
+    EXPAND FS_SEEK seek_status, seek_pos, file, SA_FS_SEEK_CURRENT, 0
+    EXPAND FS_READ_AT read_at_status, read_at_len, file, read_at_buf, 4, 1
+    EXPAND FS_READ_EXACT_AT read_exact_status, file, write_exact_buf, FS_UNIX_HEZZO_LEN, 0
+    EXPAND FS_CLOSE close_status, file
+
+    EXPAND STR_FROM_PARTS read_at_view, read_at_buf, read_at_len
+    EXPAND STR_FROM_PARTS ezzo_view, &FS_UNIX_EZZO, FS_UNIX_EZZO_LEN
+    EXPAND STR_EQ read_at_eq, read_at_view, ezzo_view
+    EXPAND STR_FROM_PARTS write_exact_view, write_exact_buf, FS_UNIX_HEZZO_LEN
+    EXPAND STR_FROM_PARTS hezzo_view, &FS_UNIX_HEZZO, FS_UNIX_HEZZO_LEN
+    EXPAND STR_EQ write_exact_eq, write_exact_view, hezzo_view
+    EXPAND FS_REMOVE_PATH remove_status, FS_UNIX_RW_PATH, FS_UNIX_RW_PATH_LEN
+
+    open_ok = eq open_status, SA_FS_OK
+    write_all_ok = eq write_all_status, SA_FS_OK
+    write_at_ok = eq write_at_status, SA_FS_OK
+    write_at_len_ok = eq write_at_len, FS_UNIX_ZZ_LEN
+    seek_ok = eq seek_status, SA_FS_OK
+    seek_pos_ok = eq seek_pos, 0
+    read_at_ok = eq read_at_status, SA_FS_OK
+    read_at_len_ok = eq read_at_len, FS_UNIX_EZZO_LEN
+    read_at_eq_ok = eq read_at_eq, 1
+    read_exact_ok = eq read_exact_status, SA_FS_OK
+    write_exact_eq_ok = eq write_exact_eq, 1
+    close_ok = eq close_status, SA_FS_OK
+    remove_ok = eq remove_status, SA_FS_OK
+
+    ok01 = and open_ok, write_all_ok
+    ok02 = and ok01, write_at_ok
+    ok03 = and ok02, write_at_len_ok
+    ok04 = and ok03, seek_ok
+    ok05 = and ok04, seek_pos_ok
+    ok06 = and ok05, read_at_ok
+    ok07 = and ok06, read_at_len_ok
+    ok08 = and ok07, read_at_eq_ok
+    ok09 = and ok08, read_exact_ok
+    ok10 = and ok09, write_exact_eq_ok
+    ok11 = and ok10, close_ok
+    ok = and ok11, remove_ok
+
+    !cleanup_status
+    !open_flags
+    !open_status
+    !file
+    !write_all_status
+    !write_at_status
+    !write_at_len
+    !seek_status
+    !seek_pos
+    !read_at_status
+    !read_at_len
+    !read_exact_status
+    !close_status
+    !read_at_view
+    !ezzo_view
+    !read_at_eq
+    !write_exact_view
+    !hezzo_view
+    !write_exact_eq
+    !remove_status
+    !open_ok
+    !write_all_ok
+    !write_at_ok
+    !write_at_len_ok
+    !seek_ok
+    !seek_pos_ok
+    !read_at_ok
+    !read_at_len_ok
+    !read_at_eq_ok
+    !read_exact_ok
+    !write_exact_eq_ok
+    !close_ok
+    !remove_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1600)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std fs unix chown macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_link_status, FS_UNIX_CHOWN_LINK, FS_UNIX_CHOWN_LINK_LEN
+    EXPAND FS_REMOVE_PATH cleanup_path_status, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN
+    EXPAND FS_WRITE_FILE write_status, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN, FS_UNIX_GO, FS_UNIX_GO_LEN
+    EXPAND FS_UNIX_SYMLINK symlink_status, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN, FS_UNIX_CHOWN_LINK, FS_UNIX_CHOWN_LINK_LEN
+    EXPAND FS_METADATA initial_status, initial_metadata, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN
+    EXPAND FS_METADATA_UID owner_uid, initial_metadata
+    EXPAND FS_METADATA_GID owner_gid, initial_metadata
+    EXPAND FS_METADATA_FREE initial_free_status, initial_metadata
+
+    EXPAND FS_UNIX_CHOWN chown_status, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN, owner_uid, owner_gid, 1, 1
+    EXPAND FS_UNIX_LCHOWN lchown_status, FS_UNIX_CHOWN_LINK, FS_UNIX_CHOWN_LINK_LEN, owner_uid, owner_gid, 1, 1
+    open_flags = add SA_FS_OPEN_READ, SA_FS_OPEN_WRITE
+    EXPAND FS_OPEN_OPTIONS open_status, file, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN, open_flags, SA_FS_OPEN_MODE_DEFAULT, 0
+    EXPAND FS_UNIX_FCHOWN_RAW fchown_status, file, SA_FS_CHOWN_ID_UNCHANGED, owner_gid
+    EXPAND FS_CLOSE close_status, file
+
+    EXPAND FS_METADATA final_status, final_metadata, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN
+    EXPAND FS_METADATA_UID final_uid, final_metadata
+    EXPAND FS_METADATA_GID final_gid, final_metadata
+    EXPAND FS_METADATA_FREE final_free_status, final_metadata
+    EXPAND FS_METADATA link_status, link_metadata, FS_UNIX_CHOWN_LINK, FS_UNIX_CHOWN_LINK_LEN
+    EXPAND FS_METADATA_UID link_uid, link_metadata
+    EXPAND FS_METADATA_GID link_gid, link_metadata
+    EXPAND FS_METADATA_FREE link_free_status, link_metadata
+    EXPAND FS_REMOVE_PATH remove_link_status, FS_UNIX_CHOWN_LINK, FS_UNIX_CHOWN_LINK_LEN
+    EXPAND FS_REMOVE_PATH remove_path_status, FS_UNIX_CHOWN_PATH, FS_UNIX_CHOWN_PATH_LEN
+
+    write_ok = eq write_status, SA_FS_OK
+    symlink_ok = eq symlink_status, SA_FS_OK
+    initial_ok = eq initial_status, SA_FS_OK
+    initial_free_ok = eq initial_free_status, SA_FS_OK
+    owner_uid_ok = ne owner_uid, SA_FS_CHOWN_ID_UNCHANGED
+    owner_gid_ok = ne owner_gid, SA_FS_CHOWN_ID_UNCHANGED
+    chown_ok = eq chown_status, SA_FS_OK
+    lchown_ok = eq lchown_status, SA_FS_OK
+    open_ok = eq open_status, SA_FS_OK
+    fchown_ok = eq fchown_status, SA_FS_OK
+    close_ok = eq close_status, SA_FS_OK
+    final_ok = eq final_status, SA_FS_OK
+    final_uid_ok = eq final_uid, owner_uid
+    final_gid_ok = eq final_gid, owner_gid
+    final_free_ok = eq final_free_status, SA_FS_OK
+    link_ok = eq link_status, SA_FS_OK
+    link_uid_ok = eq link_uid, owner_uid
+    link_gid_ok = eq link_gid, owner_gid
+    link_free_ok = eq link_free_status, SA_FS_OK
+    remove_link_ok = eq remove_link_status, SA_FS_OK
+    remove_path_ok = eq remove_path_status, SA_FS_OK
+
+    ok01 = and write_ok, symlink_ok
+    ok02 = and ok01, initial_ok
+    ok03 = and ok02, initial_free_ok
+    ok04 = and ok03, owner_uid_ok
+    ok05 = and ok04, owner_gid_ok
+    ok06 = and ok05, chown_ok
+    ok07 = and ok06, lchown_ok
+    ok08 = and ok07, open_ok
+    ok09 = and ok08, fchown_ok
+    ok10 = and ok09, close_ok
+    ok11 = and ok10, final_ok
+    ok12 = and ok11, final_uid_ok
+    ok13 = and ok12, final_gid_ok
+    ok14 = and ok13, final_free_ok
+    ok15 = and ok14, link_ok
+    ok16 = and ok15, link_uid_ok
+    ok17 = and ok16, link_gid_ok
+    ok18 = and ok17, link_free_ok
+    ok19 = and ok18, remove_link_ok
+    ok = and ok19, remove_path_ok
+
+    !cleanup_link_status
+    !cleanup_path_status
+    !write_status
+    !symlink_status
+    !initial_status
+    !initial_metadata
+    !owner_uid
+    !owner_gid
+    !initial_free_status
+    !chown_status
+    !lchown_status
+    !open_flags
+    !open_status
+    !file
+    !fchown_status
+    !close_status
+    !final_status
+    !final_metadata
+    !final_uid
+    !final_gid
+    !final_free_status
+    !link_status
+    !link_metadata
+    !link_uid
+    !link_gid
+    !link_free_status
+    !remove_link_status
+    !remove_path_status
+    !write_ok
+    !symlink_ok
+    !initial_ok
+    !initial_free_ok
+    !owner_uid_ok
+    !owner_gid_ok
+    !chown_ok
+    !lchown_ok
+    !open_ok
+    !fchown_ok
+    !close_ok
+    !final_ok
+    !final_uid_ok
+    !final_gid_ok
+    !final_free_ok
+    !link_ok
+    !link_uid_ok
+    !link_gid_ok
+    !link_free_ok
+    !remove_link_ok
+    !remove_path_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1745)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std fs unix chroot macro"():
+L_ENTRY:
+    EXPAND FS_UNIX_CHROOT chroot_status, FS_UNIX_ROOT_PATH, FS_UNIX_ROOT_PATH_LEN
+
+    chroot_ok = eq chroot_status, SA_FS_OK
+    chroot_access = eq chroot_status, FS_UNIX_ERR_ACCESS
+    ok = or chroot_ok, chroot_access
+
+    !chroot_status
+    !chroot_ok
+    !chroot_access
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1755)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std fs unix file type ext macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_fifo_status, FS_UNIX_FIFO_PATH, FS_UNIX_FIFO_PATH_LEN
+    EXPAND FS_REMOVE_PATH cleanup_socket_status, FS_UNIX_SOCKET_PATH, FS_UNIX_SOCKET_PATH_LEN
+    EXPAND FS_METADATA char_status, char_metadata, FS_UNIX_CHAR_PATH, FS_UNIX_CHAR_PATH_LEN
+    EXPAND FS_METADATA_IS_CHAR_DEVICE char_is_char, char_metadata
+    EXPAND FS_METADATA_IS_BLOCK_DEVICE char_is_block, char_metadata
+    EXPAND FS_METADATA_FREE char_free_status, char_metadata
+    EXPAND FS_METADATA block_status, block_metadata, FS_UNIX_BLOCK_PATH, FS_UNIX_BLOCK_PATH_LEN
+    EXPAND FS_METADATA_IS_BLOCK_DEVICE block_is_block, block_metadata
+    EXPAND FS_METADATA_IS_CHAR_DEVICE block_is_char, block_metadata
+    EXPAND FS_METADATA_FREE block_free_status, block_metadata
+    EXPAND FS_UNIX_MKFIFO fifo_create_status, FS_UNIX_FIFO_PATH, FS_UNIX_FIFO_PATH_LEN, 420
+    EXPAND FS_METADATA fifo_status, fifo_metadata, FS_UNIX_FIFO_PATH, FS_UNIX_FIFO_PATH_LEN
+    EXPAND FS_METADATA_IS_FIFO fifo_is_fifo, fifo_metadata
+    EXPAND FS_METADATA_IS_SOCKET fifo_is_socket, fifo_metadata
+    EXPAND FS_METADATA_FREE fifo_free_status, fifo_metadata
+    EXPAND NET_UNIX_LISTEN socket_listen_status, socket_listener, FS_UNIX_SOCKET_PATH, FS_UNIX_SOCKET_PATH_LEN
+    EXPAND FS_METADATA socket_status, socket_metadata, FS_UNIX_SOCKET_PATH, FS_UNIX_SOCKET_PATH_LEN
+    EXPAND FS_METADATA_IS_SOCKET socket_is_socket, socket_metadata
+    EXPAND FS_METADATA_IS_FIFO socket_is_fifo, socket_metadata
+    EXPAND FS_METADATA_FREE socket_free_status, socket_metadata
+    EXPAND NET_TCP_LISTENER_CLOSE socket_close_status, socket_listener
+    EXPAND FS_REMOVE_PATH remove_fifo_status, FS_UNIX_FIFO_PATH, FS_UNIX_FIFO_PATH_LEN
+    EXPAND FS_REMOVE_PATH remove_socket_status, FS_UNIX_SOCKET_PATH, FS_UNIX_SOCKET_PATH_LEN
+
+    char_status_ok = eq char_status, SA_FS_OK
+    char_is_char_ok = eq char_is_char, 1
+    char_not_block_ok = eq char_is_block, 0
+    char_free_ok = eq char_free_status, SA_FS_OK
+    block_present = eq block_status, SA_FS_OK
+    block_absent = eq block_present, 0
+    // If /dev/loop0 doesn't exist (e.g. container), skip block device checks.
+    // block_status_ok is always true; the specific checks are vacuous when absent.
+    block_status_ok = or block_present, block_absent
+    block_is_block_raw = eq block_is_block, 1
+    block_is_block_ok = or block_is_block_raw, block_absent
+    block_not_char_raw = eq block_is_char, 0
+    block_not_char_ok = or block_not_char_raw, block_absent
+    block_free_raw = eq block_free_status, SA_FS_OK
+    block_free_ok = or block_free_raw, block_absent
+    fifo_create_ok = eq fifo_create_status, SA_FS_OK
+    fifo_status_ok = eq fifo_status, SA_FS_OK
+    fifo_is_fifo_ok = eq fifo_is_fifo, 1
+    fifo_not_socket_ok = eq fifo_is_socket, 0
+    fifo_free_ok = eq fifo_free_status, SA_FS_OK
+    socket_listen_ok = eq socket_listen_status, SA_NET_OK
+    socket_status_ok = eq socket_status, SA_FS_OK
+    socket_is_socket_ok = eq socket_is_socket, 1
+    socket_not_fifo_ok = eq socket_is_fifo, 0
+    socket_free_ok = eq socket_free_status, SA_FS_OK
+    socket_close_ok = eq socket_close_status, SA_NET_OK
+    remove_fifo_ok = eq remove_fifo_status, SA_FS_OK
+    remove_socket_ok = eq remove_socket_status, SA_FS_OK
+
+    ok01 = and char_status_ok, char_is_char_ok
+    ok02 = and ok01, char_not_block_ok
+    ok03 = and ok02, char_free_ok
+    ok04 = and ok03, block_status_ok
+    ok05 = and ok04, block_is_block_ok
+    ok06 = and ok05, block_not_char_ok
+    ok07 = and ok06, block_free_ok
+    ok08 = and ok07, fifo_create_ok
+    ok09 = and ok08, fifo_status_ok
+    ok10 = and ok09, fifo_is_fifo_ok
+    ok11 = and ok10, fifo_not_socket_ok
+    ok12 = and ok11, fifo_free_ok
+    ok13 = and ok12, socket_listen_ok
+    ok14 = and ok13, socket_status_ok
+    ok15 = and ok14, socket_is_socket_ok
+    ok16 = and ok15, socket_not_fifo_ok
+    ok17 = and ok16, socket_free_ok
+    ok18 = and ok17, socket_close_ok
+    ok19 = and ok18, remove_fifo_ok
+    ok = and ok19, remove_socket_ok
+
+    !cleanup_fifo_status
+    !cleanup_socket_status
+    !char_status
+    !char_metadata
+    !char_is_char
+    !char_is_block
+    !char_free_status
+    !block_status
+    !block_metadata
+    !block_is_block
+    !block_is_char
+    !block_free_status
+    !fifo_create_status
+    !fifo_status
+    !fifo_metadata
+    !fifo_is_fifo
+    !fifo_is_socket
+    !fifo_free_status
+    !socket_listen_status
+    !socket_listener
+    !socket_status
+    !socket_metadata
+    !socket_is_socket
+    !socket_is_fifo
+    !socket_free_status
+    !socket_close_status
+    !remove_fifo_status
+    !remove_socket_status
+    !char_status_ok
+    !char_is_char_ok
+    !char_not_block_ok
+    !char_free_ok
+    !block_status_ok
+    !block_is_block_ok
+    !block_not_char_ok
+    !block_free_ok
+    !block_present
+    !block_absent
+    !block_is_block_raw
+    !block_not_char_raw
+    !block_free_raw
+    !fifo_create_ok
+    !fifo_status_ok
+    !fifo_is_fifo_ok
+    !fifo_not_socket_ok
+    !fifo_free_ok
+    !socket_listen_ok
+    !socket_status_ok
+    !socket_is_socket_ok
+    !socket_not_fifo_ok
+    !socket_free_ok
+    !socket_close_ok
+    !remove_fifo_ok
+    !remove_socket_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1635)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std fs unix dir builder ext macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_dir_status, FS_UNIX_MODE_DIR, FS_UNIX_MODE_DIR_LEN
+    EXPAND FS_REMOVE_PATH cleanup_tree_status, FS_UNIX_MODE_TREE, FS_UNIX_MODE_TREE_LEN
+    EXPAND FS_CREATE_DIR_MODE create_dir_status, FS_UNIX_MODE_DIR, FS_UNIX_MODE_DIR_LEN, 457
+    EXPAND FS_METADATA dir_status, dir_metadata, FS_UNIX_MODE_DIR, FS_UNIX_MODE_DIR_LEN
+    EXPAND FS_METADATA_MODE dir_mode, dir_metadata
+    dir_mode_bits = urem dir_mode, 512
+    // umask may strip group/other bits; only check user (owner) rwx bits.
+    dir_user_tmp = udiv dir_mode_bits, 64
+    dir_user_bits = urem dir_user_tmp, 8
+    EXPAND FS_METADATA_FREE dir_free_status, dir_metadata
+    EXPAND FS_CREATE_DIR_ALL_MODE create_tree_status, FS_UNIX_MODE_LEAF, FS_UNIX_MODE_LEAF_LEN, 448
+    EXPAND FS_METADATA tree_status, tree_metadata, FS_UNIX_MODE_LEAF, FS_UNIX_MODE_LEAF_LEN
+    EXPAND FS_METADATA_MODE tree_mode, tree_metadata
+    tree_mode_bits = urem tree_mode, 512
+    tree_user_tmp = udiv tree_mode_bits, 64
+    tree_user_bits = urem tree_user_tmp, 8
+    EXPAND FS_METADATA_FREE tree_free_status, tree_metadata
+    EXPAND FS_REMOVE_PATH remove_dir_status, FS_UNIX_MODE_DIR, FS_UNIX_MODE_DIR_LEN
+    EXPAND FS_REMOVE_PATH remove_tree_status, FS_UNIX_MODE_TREE, FS_UNIX_MODE_TREE_LEN
+
+    create_dir_ok = eq create_dir_status, SA_FS_OK
+    dir_status_ok = eq dir_status, SA_FS_OK
+    dir_mode_ok = eq dir_user_bits, 7
+    dir_free_ok = eq dir_free_status, SA_FS_OK
+    create_tree_ok = eq create_tree_status, SA_FS_OK
+    tree_status_ok = eq tree_status, SA_FS_OK
+    tree_mode_ok = eq tree_user_bits, 7
+    tree_free_ok = eq tree_free_status, SA_FS_OK
+    remove_dir_ok = eq remove_dir_status, SA_FS_OK
+    remove_tree_ok = eq remove_tree_status, SA_FS_OK
+
+    ok01 = and create_dir_ok, dir_status_ok
+    ok02 = and ok01, dir_mode_ok
+    ok03 = and ok02, dir_free_ok
+    ok04 = and ok03, create_tree_ok
+    ok05 = and ok04, tree_status_ok
+    ok06 = and ok05, tree_mode_ok
+    ok07 = and ok06, tree_free_ok
+    ok08 = and ok07, remove_dir_ok
+    ok = and ok08, remove_tree_ok
+
+    !cleanup_dir_status
+    !cleanup_tree_status
+    !create_dir_status
+    !dir_status
+    !dir_metadata
+    !dir_mode
+    !dir_mode_bits
+    !dir_user_tmp
+    !dir_user_bits
+    !dir_free_status
+    !create_tree_status
+    !tree_status
+    !tree_metadata
+    !tree_mode
+    !tree_mode_bits
+    !tree_user_tmp
+    !tree_user_bits
+    !tree_free_status
+    !remove_dir_status
+    !remove_tree_status
+    !create_dir_ok
+    !dir_status_ok
+    !dir_mode_ok
+    !dir_free_ok
+    !create_tree_ok
+    !tree_status_ok
+    !tree_mode_ok
+    !tree_free_ok
+    !remove_dir_ok
+    !remove_tree_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1695)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std fs unix open options macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_target_status, FS_UNIX_TARGET_PATH, FS_UNIX_TARGET_PATH_LEN
+    EXPAND FS_REMOVE_PATH cleanup_link_status, FS_UNIX_LINK_PATH, FS_UNIX_LINK_PATH_LEN
+    create_flags = add SA_FS_OPEN_WRITE, SA_FS_OPEN_CREATE
+    create_flags = add create_flags, SA_FS_OPEN_TRUNCATE
+    EXPAND FS_OPEN_OPTIONS create_status, create_file, FS_UNIX_TARGET_PATH, FS_UNIX_TARGET_PATH_LEN, create_flags, 384, 0
+    EXPAND FS_CLOSE create_close_status, create_file
+    EXPAND FS_METADATA metadata_status, metadata, FS_UNIX_TARGET_PATH, FS_UNIX_TARGET_PATH_LEN
+    EXPAND FS_METADATA_MODE meta_mode, metadata
+    mode_bits = urem meta_mode, 512
+    EXPAND FS_METADATA_FREE metadata_free_status, metadata
+    EXPAND FS_UNIX_SYMLINK symlink_status, FS_UNIX_TARGET_PATH, FS_UNIX_TARGET_PATH_LEN, FS_UNIX_LINK_PATH, FS_UNIX_LINK_PATH_LEN
+    EXPAND FS_OPEN_OPTIONS nofollow_status, nofollow_file, FS_UNIX_LINK_PATH, FS_UNIX_LINK_PATH_LEN, SA_FS_OPEN_READ, SA_FS_OPEN_MODE_DEFAULT, SA_FS_CUSTOM_NOFOLLOW
+    EXPAND FS_REMOVE_PATH remove_link_status, FS_UNIX_LINK_PATH, FS_UNIX_LINK_PATH_LEN
+    EXPAND FS_REMOVE_PATH remove_target_status, FS_UNIX_TARGET_PATH, FS_UNIX_TARGET_PATH_LEN
+
+    create_ok = eq create_status, SA_FS_OK
+    create_close_ok = eq create_close_status, SA_FS_OK
+    metadata_ok = eq metadata_status, SA_FS_OK
+    mode_ok = eq mode_bits, 384
+    metadata_free_ok = eq metadata_free_status, SA_FS_OK
+    symlink_ok = eq symlink_status, SA_FS_OK
+    nofollow_ok = ne nofollow_status, SA_FS_OK
+    remove_link_ok = eq remove_link_status, SA_FS_OK
+    remove_target_ok = eq remove_target_status, SA_FS_OK
+
+    ok01 = and create_ok, create_close_ok
+    ok02 = and ok01, metadata_ok
+    ok03 = and ok02, mode_ok
+    ok04 = and ok03, metadata_free_ok
+    ok05 = and ok04, symlink_ok
+    ok06 = and ok05, nofollow_ok
+    ok07 = and ok06, remove_link_ok
+    ok = and ok07, remove_target_ok
+
+    !cleanup_target_status
+    !cleanup_link_status
+    !create_flags
+    !create_status
+    !create_file
+    !create_close_status
+    !metadata_status
+    !metadata
+    !meta_mode
+    !mode_bits
+    !metadata_free_status
+    !symlink_status
+    !nofollow_status
+    !nofollow_file
+    !remove_link_status
+    !remove_target_status
+    !create_ok
+    !create_close_ok
+    !metadata_ok
+    !mode_ok
+    !metadata_free_ok
+    !symlink_ok
+    !nofollow_ok
+    !remove_link_ok
+    !remove_target_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1660)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std fs unix permissions ext macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_status, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN
+    permissions = stack_alloc SaFsPermissions_SIZE
+    EXPAND FS_PERMISSIONS_FROM_MODE permissions, 384
+    EXPAND FS_PERMISSIONS_MODE initial_mode, permissions
+    create_flags = add SA_FS_OPEN_WRITE, SA_FS_OPEN_CREATE
+    create_flags = add create_flags, SA_FS_OPEN_TRUNCATE
+    EXPAND FS_OPEN_OPTIONS create_status, file, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN, create_flags, initial_mode, 0
+    EXPAND FS_WRITE_ALL write_status, file, FS_UNIX_GO, FS_UNIX_GO_LEN
+    EXPAND FS_CLOSE close_status, file
+    append_flags = add SA_FS_OPEN_WRITE, SA_FS_OPEN_APPEND
+    EXPAND FS_OPEN_OPTIONS append_status, append_file, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN, append_flags, SA_FS_OPEN_MODE_DEFAULT, 0
+    EXPAND FS_WRITE_ALL append_write_status, append_file, FS_UNIX_BANG, FS_UNIX_BANG_LEN
+    EXPAND FS_CLOSE append_close_status, append_file
+    EXPAND FS_READ_FILE read_file_status, read_buffer, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN, 16
+    EXPAND FS_READ_BUFFER_DATA read_ptr, read_buffer
+    EXPAND FS_READ_BUFFER_LEN read_len, read_buffer
+    EXPAND STR_FROM_PARTS read_view, read_ptr, read_len
+    EXPAND STR_FROM_PARTS go_bang_view, &FS_UNIX_GO_BANG, FS_UNIX_GO_BANG_LEN
+    EXPAND STR_EQ read_eq, read_view, go_bang_view
+    EXPAND FS_READ_BUFFER_FREE read_free_status, read_buffer
+    EXPAND FS_PERMISSIONS_SET_MODE permissions, 416
+    EXPAND FS_PERMISSIONS_MODE final_mode, permissions
+    EXPAND FS_SET_PERMISSIONS set_permissions_status, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN, final_mode
+    EXPAND FS_METADATA metadata_status, metadata, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN
+    EXPAND FS_METADATA_MODE meta_mode, metadata
+    mode_bits = urem meta_mode, 512
+    EXPAND FS_METADATA_FREE metadata_free_status, metadata
+    EXPAND FS_REMOVE_PATH remove_status, FS_UNIX_APPEND_PATH, FS_UNIX_APPEND_PATH_LEN
+
+    initial_mode_ok = eq initial_mode, 384
+    create_ok = eq create_status, SA_FS_OK
+    write_ok = eq write_status, SA_FS_OK
+    close_ok = eq close_status, SA_FS_OK
+    append_ok = eq append_status, SA_FS_OK
+    append_write_ok = eq append_write_status, SA_FS_OK
+    append_close_ok = eq append_close_status, SA_FS_OK
+    read_file_ok = eq read_file_status, SA_FS_OK
+    read_len_ok = eq read_len, FS_UNIX_GO_BANG_LEN
+    read_eq_ok = eq read_eq, 1
+    read_free_ok = eq read_free_status, SA_FS_OK
+    final_mode_ok = eq final_mode, 416
+    set_permissions_ok = eq set_permissions_status, SA_FS_OK
+    metadata_ok = eq metadata_status, SA_FS_OK
+    mode_ok = eq mode_bits, 416
+    metadata_free_ok = eq metadata_free_status, SA_FS_OK
+    remove_ok = eq remove_status, SA_FS_OK
+
+    ok01 = and initial_mode_ok, create_ok
+    ok02 = and ok01, write_ok
+    ok03 = and ok02, close_ok
+    ok04 = and ok03, append_ok
+    ok05 = and ok04, append_write_ok
+    ok06 = and ok05, append_close_ok
+    ok07 = and ok06, read_file_ok
+    ok08 = and ok07, read_len_ok
+    ok09 = and ok08, read_eq_ok
+    ok10 = and ok09, read_free_ok
+    ok11 = and ok10, final_mode_ok
+    ok12 = and ok11, set_permissions_ok
+    ok13 = and ok12, metadata_ok
+    ok14 = and ok13, mode_ok
+    ok15 = and ok14, metadata_free_ok
+    ok = and ok15, remove_ok
+
+    !cleanup_status
+    !initial_mode
+    !create_flags
+    !create_status
+    !file
+    !write_status
+    !close_status
+    !append_flags
+    !append_status
+    !append_file
+    !append_write_status
+    !append_close_status
+    !read_file_status
+    !read_ptr
+    !read_len
+    !read_view
+    !go_bang_view
+    !read_eq
+    !read_free_status
+    !final_mode
+    !set_permissions_status
+    !metadata_status
+    !metadata
+    !meta_mode
+    !mode_bits
+    !metadata_free_status
+    !remove_status
+    !initial_mode_ok
+    !create_ok
+    !write_ok
+    !close_ok
+    !append_ok
+    !append_write_ok
+    !append_close_ok
+    !read_file_ok
+    !read_len_ok
+    !read_eq_ok
+    !read_free_ok
+    !final_mode_ok
+    !set_permissions_ok
+    !metadata_ok
+    !mode_ok
+    !metadata_free_ok
+    !remove_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1730)
+
+L_PASS:
+    !ok
+    return 0

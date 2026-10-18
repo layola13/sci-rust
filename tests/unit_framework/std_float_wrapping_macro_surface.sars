@@ -1,0 +1,175 @@
+@import "sa_std/num.sal"
+@import "sa_std/default.sars"
+
+#def T_F32_INFINITY = 0x7F800000
+#def T_F32_NEG_INFINITY = 0xFF800000
+#def T_F32_NAN = 0x7FC00000
+#def T_F32_ZERO = 0x00000000
+#def T_F32_MINUS_ZERO = 0x80000000
+#def T_F32_MIN_POSITIVE = 0x00800000
+#def T_F32_MAX = 0x7F7FFFFF
+#def T_F32_MIN = 0xFF7FFFFF
+#def T_F32_EPSILON = 0x34000000
+#def T_F32_MAX_SUBNORMAL = 0x007FFFFF
+#def T_F32_MIN_SUBNORMAL = 0x00000001
+
+#def T_F64_INFINITY = 0x7FF0000000000000
+#def T_F64_NEG_INFINITY = 0xFFF0000000000000
+#def T_F64_NAN = 0x7FF8000000000000
+#def T_F64_ZERO = 0x0000000000000000
+#def T_F64_MINUS_ZERO = 0x8000000000000000
+#def T_F64_MIN_POSITIVE = 0x0010000000000000
+#def T_F64_MAX = 0x7FEFFFFFFFFFFFFF
+#def T_F64_MIN = 0xFFEFFFFFFFFFFFFF
+#def T_F64_EPSILON = 0x3CB0000000000000
+#def T_F64_MAX_SUBNORMAL = 0x000FFFFFFFFFFFFF
+#def T_F64_MIN_SUBNORMAL = 0x0000000000000001
+
+@test "sa_std f32/f64 IEEE754 constants and integer MIN/BYTES"():
+L_ENTRY:
+    ok_u8_min = eq NUM_U8_MIN, 0
+    ok_u16_min = eq NUM_U16_MIN, 0
+    ok_u32_min = eq NUM_U32_MIN, 0
+    ok_u64_min = eq NUM_U64_MIN, 0
+    ok_usize_min = eq NUM_USIZE_MIN, 0
+
+    ok_u8_bytes = eq NUM_U8_BYTES, 1
+    ok_u16_bytes = eq NUM_U16_BYTES, 2
+    ok_u32_bytes = eq NUM_U32_BYTES, 4
+    ok_u64_bytes = eq NUM_U64_BYTES, 8
+    ok_usize_bytes = eq NUM_USIZE_BYTES, 8
+    ok_i8_bytes = eq NUM_I8_BYTES, 1
+    ok_i16_bytes = eq NUM_I16_BYTES, 2
+    ok_i32_bytes = eq NUM_I32_BYTES, 4
+    ok_i64_bytes = eq NUM_I64_BYTES, 8
+    ok_isize_bytes = eq NUM_ISIZE_BYTES, 8
+
+    ok_f32_bits = eq NUM_F32_BITS, 32
+    ok_f32_bytes = eq NUM_F32_BYTES, 4
+    ok_f32_inf = eq NUM_F32_INFINITY, T_F32_INFINITY
+    ok_f32_neg_inf = eq NUM_F32_NEG_INFINITY, T_F32_NEG_INFINITY
+    ok_f32_nan = eq NUM_F32_NAN, T_F32_NAN
+    ok_f32_zero = eq NUM_F32_ZERO, T_F32_ZERO
+    ok_f32_minus_zero = eq NUM_F32_MINUS_ZERO, T_F32_MINUS_ZERO
+    ok_f32_min_pos = eq NUM_F32_MIN_POSITIVE, T_F32_MIN_POSITIVE
+    ok_f32_max = eq NUM_F32_MAX, T_F32_MAX
+    ok_f32_min = eq NUM_F32_MIN, T_F32_MIN
+    ok_f32_eps = eq NUM_F32_EPSILON, T_F32_EPSILON
+    ok_f32_max_sub = eq NUM_F32_MAX_SUBNORMAL, T_F32_MAX_SUBNORMAL
+    ok_f32_min_sub = eq NUM_F32_MIN_SUBNORMAL, T_F32_MIN_SUBNORMAL
+
+    ok_f64_bits = eq NUM_F64_BITS, 64
+    ok_f64_bytes = eq NUM_F64_BYTES, 8
+    ok_f64_inf = eq NUM_F64_INFINITY, T_F64_INFINITY
+    ok_f64_neg_inf = eq NUM_F64_NEG_INFINITY, T_F64_NEG_INFINITY
+    ok_f64_nan = eq NUM_F64_NAN, T_F64_NAN
+    ok_f64_zero = eq NUM_F64_ZERO, T_F64_ZERO
+    ok_f64_minus_zero = eq NUM_F64_MINUS_ZERO, T_F64_MINUS_ZERO
+    ok_f64_min_pos = eq NUM_F64_MIN_POSITIVE, T_F64_MIN_POSITIVE
+    ok_f64_max = eq NUM_F64_MAX, T_F64_MAX
+    ok_f64_eps = eq NUM_F64_EPSILON, T_F64_EPSILON
+    ok_f64_max_sub = eq NUM_F64_MAX_SUBNORMAL, T_F64_MAX_SUBNORMAL
+    ok_f64_min_sub = eq NUM_F64_MIN_SUBNORMAL, T_F64_MIN_SUBNORMAL
+
+    ok_wr_u64_sz = eq WrappingU64_SIZE, 8
+    ok_wr_u64_val = eq WrappingU64_value, +0
+    ok_wr_u32_sz = eq WrappingU32_SIZE, 8
+    ok_wr_i64_sz = eq WrappingI64_SIZE, 8
+    ok_sat_u64_sz = eq SaturatingU64_SIZE, 8
+    ok_sat_u64_val = eq SaturatingU64_value, +0
+    ok_sat_i64_sz = eq SaturatingI64_SIZE, 8
+
+    c01 = and ok_u8_min, ok_u16_min
+    c02 = and c01, ok_u32_min
+    c03 = and c02, ok_u64_min
+    c04 = and c03, ok_usize_min
+    c05 = and c04, ok_u8_bytes
+    c06 = and c05, ok_u16_bytes
+    c07 = and c06, ok_u32_bytes
+    c08 = and c07, ok_u64_bytes
+    c09 = and c08, ok_usize_bytes
+    c10 = and c09, ok_i8_bytes
+    c11 = and c10, ok_i16_bytes
+    c12 = and c11, ok_i32_bytes
+    c13 = and c12, ok_i64_bytes
+    c14 = and c13, ok_isize_bytes
+    c15 = and c14, ok_f32_bits
+    c16 = and c15, ok_f32_bytes
+    c17 = and c16, ok_f32_inf
+    c18 = and c17, ok_f32_neg_inf
+    c19 = and c18, ok_f32_nan
+    c20 = and c19, ok_f32_zero
+    c21 = and c20, ok_f32_minus_zero
+    c22 = and c21, ok_f32_min_pos
+    c23 = and c22, ok_f32_max
+    c24 = and c23, ok_f32_min
+    c25 = and c24, ok_f32_eps
+    c26 = and c25, ok_f32_max_sub
+    c27 = and c26, ok_f32_min_sub
+    c28 = and c27, ok_f64_bits
+    c29 = and c28, ok_f64_bytes
+    c30 = and c29, ok_f64_inf
+    c31 = and c30, ok_f64_neg_inf
+    c32 = and c31, ok_f64_nan
+    c33 = and c32, ok_f64_zero
+    c34 = and c33, ok_f64_minus_zero
+    c35 = and c34, ok_f64_min_pos
+    c36 = and c35, ok_f64_max
+    c37 = and c36, ok_f64_eps
+    c38 = and c37, ok_f64_max_sub
+    c39 = and c38, ok_f64_min_sub
+    c40 = and c39, ok_wr_u64_sz
+    c41 = and c40, ok_wr_u64_val
+    c42 = and c41, ok_wr_u32_sz
+    c43 = and c42, ok_wr_i64_sz
+    c44 = and c43, ok_sat_u64_sz
+    c45 = and c44, ok_sat_u64_val
+    c46 = and c45, ok_sat_i64_sz
+
+    !ok_u8_min
+    !ok_u16_min
+
+    br c46 -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10473)
+
+L_PASS:
+    return 0
+
+@test "sa_std Wrapping/Saturating DEFAULT macros and store/load"():
+L_ENTRY:
+    EXPAND DEFAULT_WRAPPING_U64 wr_val
+    ok_wr = eq wr_val, 0
+
+    EXPAND DEFAULT_SATURATING_U64 sat_val
+    ok_sat = eq sat_val, 0
+
+    buf_wr = alloc WrappingU64_SIZE
+    store buf_wr+WrappingU64_value, 42 as u64
+    loaded_wr = load buf_wr+WrappingU64_value as u64
+    ok_wr_loaded = eq loaded_wr, 42
+
+    buf_sat = alloc SaturatingU64_SIZE
+    store buf_sat+SaturatingU64_value, 99 as u64
+    loaded_sat = load buf_sat+SaturatingU64_value as u64
+    ok_sat_loaded = eq loaded_sat, 99
+
+    c01 = and ok_wr, ok_sat
+    c02 = and c01, ok_wr_loaded
+    c03 = and c02, ok_sat_loaded
+
+    !wr_val
+    !sat_val
+    !buf_wr
+    !loaded_wr
+    !buf_sat
+    !loaded_sat
+
+    br c03 -> L_PASS2, L_FAIL2
+
+L_FAIL2:
+    panic(10474)
+
+L_PASS2:
+    return 0

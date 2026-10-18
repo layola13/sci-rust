@@ -1,0 +1,35 @@
+@import "sa_std/ops.sars"
+@import "sa_std/ops.sal"
+
+@test "sa_std ops range contains"():
+L_ENTRY:
+    range = stack_alloc RangeU64_SIZE
+    EXPAND RANGE_U64_NEW range, 1, 5
+    EXPAND RANGE_U64_CONTAINS c1, range, 3
+    EXPAND RANGE_U64_CONTAINS c2, range, 5
+    EXPAND RANGE_U64_CONTAINS c3, range, 0
+    EXPAND RANGE_U64_LEN ln, range
+    a = eq c1, 1
+    b = eq c2, 0
+    c = eq c3, 0
+    d = eq ln, 4
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok = and ok02, d
+    !c1
+    !c2
+    !c3
+    !ln
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10940)

@@ -1,0 +1,46 @@
+@import "sa_std/core/cell.sars"
+
+@add1(v: u64) -> u64:
+L_ENTRY:
+    out = add v, 1
+    !v
+    return out
+
+@test "sa_std cell_u64 update swap"():
+L_ENTRY:
+    EXPAND CELL_U64_NEW a, 10
+    EXPAND CELL_U64_NEW b, 20
+    EXPAND CELL_U64_UPDATE old, newv, a, @add1
+    EXPAND CELL_U64_GET a1, a
+    EXPAND CELL_U64_SWAP a, b
+    EXPAND CELL_U64_GET a2, a
+    EXPAND CELL_U64_GET b2, b
+    a_ok = eq old, 10
+    b_ok = eq newv, 11
+    c_ok = eq a1, 11
+    d_ok = eq a2, 20
+    e_ok = eq b2, 11
+    ok01 = and a_ok, b_ok
+    ok02 = and ok01, c_ok
+    ok03 = and ok02, d_ok
+    ok = and ok03, e_ok
+    !old
+    !newv
+    !a1
+    !a2
+    !b2
+    !a_ok
+    !b_ok
+    !c_ok
+    !d_ok
+    !e_ok
+    !ok01
+    !ok02
+    !ok03
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10895)

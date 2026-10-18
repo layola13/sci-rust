@@ -1,0 +1,4362 @@
+@import "support/index.sars"
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/core/iter.sal"
+@import "sa_std/core/iter.sars"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/option.sars"
+@import "sa_std/core/result.sal"
+@import "sa_std/core/result.sars"
+
+@main():
+L_ENTRY:
+    call @"03_if_else branch path"()
+    call @"04_loop zero fill"()
+    call @"04_float_ops native llvm"()
+    call @"05_struct field layout"()
+    call @"06_enum_and_match tag dispatch"()
+    call @"07_trait_vtable dynamic dispatch"()
+    call @"08_closures captured environment"()
+    call @"10_generics_monomorph option unwrap_or"()
+    call @"11_tuples field access"()
+    call @"12_destructuring pair sum"()
+    call @"13_array_sum fixed array"()
+    call @"14_slice_window pointer window"()
+    call @"17_associated_fn constructor"()
+    call @"18_option_map map_or"()
+    call @"21_while_loop sum to fifteen"()
+    call @"24_factorial recursion"()
+    call @"25_fibonacci recursion"()
+    call @"28_borrow_chains repeated load"()
+    call @"30_manual_guard_branch option guard"()
+    call @"33_iterator_map arithmetic map"()
+    call @"34_iterator_filter selected sum"()
+    call @"35_iterator_fold slice fold"()
+    call @"37_newtype field load"()
+    call @"38_generic_struct_i32 wrapper"()
+    call @"39_generic_enum_i32 value branch"()
+    call @"40_impl_block_state deposit"()
+    call @"41_module_imports helper import"()
+    call @"42_export_visibility function pair"()
+    call @"45_config_merge override selection"()
+    call @"46_option_default fallback"()
+    call @"48_generic_pair sum"()
+    call @"53_cache_hits lookup"()
+    call @"54_mem_fill set bytes"()
+    call @"56_state_machine advance"()
+    call @"59_method_counter mut borrow"()
+    call @"60_enum_branch tag dispatch"()
+    call @"63_router_table lookup"()
+    call @"68_parser_tokens count"()
+    call @"69_serializer id builder"()
+    call @"70_integration_service total"()
+    call @"71_pipeline_stage flow"()
+    call @"72_graph_walk total"()
+    call @"73_scene_nodes sum"()
+    call @"74_component_store count"()
+    call @"79_metrics collect"()
+    call @"80_workflow flow"()
+    call @"82_sql_scan rows"()
+    call @"83_blob_chunk count"()
+    call @"84_sync_gate ready"()
+    call @"85_scheduler_tree sum"()
+    call @"87_protocol_frame decode"()
+    call @"88_text_index words"()
+    call @"89_job_queue take jobs"()
+    call @"90_app_shell mode sum"()
+    call @"91_db_session open"()
+    call @"92_query_plan total"()
+    call @"93_log_aggregator total"()
+    call @"96_task_orchestrator total"()
+    call @"97_sync_service once"()
+    call @"98_build_pipeline stage"()
+    call @"99_release_bundle count"()
+    call @"100_full_app total"()
+    call @"101_custom_drop order"()
+    call @"102_raii_guard unlock"()
+    call @"103_labeled_break total"()
+    call @"104_if_let_chains sum"()
+    call @"105_let_else value"()
+    call @"106_cell_interior_mut total"()
+    call @"107_refcell_dynamic_borrow values"()
+    call @"108_atomic_spin_lock acquire"()
+    call @"109_atomic_fetch_add total"()
+    call @"110_trait_super_vtable dispatch"()
+    call @"111_extern_c_abi exported add"()
+    call @"112_raw_pointer_arithmetic third lane"()
+    call @"113_union_ffi_types overlap"()
+    call @"114_callback_from_c indirect"()
+    call @"115_opaque_pointers value"()
+    call @"116_va_list_variadic slice sum"()
+    call @"118_global_mutable_state counter"()
+    call @"119_simd_intrinsics lane sum"()
+    call @"120_volatile_memory_access load"()
+    call @"121_rwlock_reader_writer total"()
+    call @"122_condvar_wait_notify ready"()
+    call @"123_barrier_sync total"()
+    call @"124_thread_local_storage value"()
+    call @"125_once_cell_lazy init"()
+    call @"126_mpmc_channel sum"()
+    call @"127_hazard_pointers retire"()
+    call @"128_rcu_read_copy_update value"()
+    call @"129_seqlock_optimistic stable"()
+    call @"130_park_unpark_thread wake"()
+    call @"131_waker_vtable_mechanics wake"()
+    call @"132_pinning_and_unpin value"()
+    call @"133_select_macro_race winner"()
+    call @"134_join_all_futures sum"()
+    call @"135_async_streams sequence"()
+    call @"136_executor_task_queue run"()
+    call @"137_io_uring_submission depth"()
+    call @"138_epoll_kqueue_event ready"()
+    call @"139_cancellation_safety value"()
+    call @"140_yield_now_suspend resume"()
+    call @"141_dynamically_sized_types len"()
+    call @"142_zero_sized_types erased"()
+    call @"143_never_type_diverge safe path"()
+    call @"144_phantom_data_marker value"()
+    call @"145_opaque_type_alias value"()
+    call @"146_never_type_fallback some"()
+    call @"147_custom_dst_pointers len"()
+    call @"148_transparent_repr value"()
+    call @"149_packed_repr sum"()
+    call @"150_c_repr_alignment sum"()
+    call @"151_global_alloc_trait value"()
+    call @"152_memory_layout_struct total"()
+    call @"153_box_into_raw value"()
+    call @"154_box_from_raw value"()
+    call @"155_arena_allocator_bump total"()
+    call @"156_slab_allocator_freelist total"()
+    call @"157_aligned_alloc_simd lanes"()
+    call @"158_custom_dst_alloc len"()
+    call @"159_mem_forget_leak raw handoff"()
+    call @"160_manually_drop_union value"()
+    call @"161_generic_associated_types borrowed get"()
+    call @"162_auto_traits_send_sync move"()
+    call @"163_object_safety_rules draw"()
+    call @"164_trait_upcasting vtable total"()
+    call @"165_blanket_impl_resolution len"()
+    call @"166_specialization_fallback dispatch"()
+    call @"167_const_generics_expansion sum"()
+    call @"168_type_alias_impl_trait erased"()
+    call @"169_negative_impls no runtime cost"()
+    call @"170_marker_traits process"()
+    call @"171_anyhow_dynamic_error default"()
+    call @"172_eyre_color_eyre context"()
+    call @"173_catch_unwind_panic explicit result"()
+    call @"174_backtrace_capture depth"()
+    call @"175_thiserror_macro_derive format"()
+    call @"176_result_flattening value"()
+    call @"177_result unwrap and unwrap_err"()
+    call @"178_panic_hook_override count"()
+    call @"179_assert_macro_expansion pass"()
+    call @"180_try_trait_v2 combine"()
+    call @"181_file_descriptor_raii close"()
+    call @"182_mmap_memory_mapping lifecycle"()
+    call @"183_signal_handling_setup register"()
+    call @"184_pthread_spawn_join worker"()
+    call @"185_dynamic_lib_dlopen handles"()
+    call @"186_sqlite_c_api_binding row"()
+    call @"187_opengl_context_swap state"()
+    call @"188_websocket_frame_parse text"()
+    call @"189_protobuf_varint_decode value"()
+    call @"190_base64_encode_simd block"()
+    call @"191_macro_rules_ast_emit mirror"()
+    call @"192_proc_macro_derive_ast copy"()
+    call @"193_attribute_macro_rewrite value"()
+    call @"194_cfg_conditional_compilation arch"()
+    call @"195_build_script_codegen output"()
+    call @"196_lto_link_time_opt total"()
+    call @"197_profile_guided_opt total"()
+    call @"198_control_flow_guard_cfi indirect"()
+    call @"199_address_sanitizer_asan safe sum"()
+    call @"200_sa_asm_quine source"()
+    call @"201_pkg_manifest_basic value"()
+    call @"202_pkg_dependencies_local value"()
+    call @"203_pkg_dependencies_git value"()
+    call @"204_pkg_dependencies_registry value"()
+    call @"205_pkg_cyclic_dependency_reject diagnostic"()
+    call @"206_pkg_version_resolution value"()
+    call @"207_pkg_multiple_versions_conflict diagnostic"()
+    call @"208_pkg_dev_dependencies value"()
+    call @"209_pkg_build_dependencies value"()
+    call @"210_pkg_workspace_root total"()
+    call @"211_pkg_workspace_inheritance total"()
+    call @"212_pkg_feature_flags value"()
+    call @"213_pkg_default_features value"()
+    call @"214_pkg_target_specific_deps value"()
+    call @"215_pkg_patch_override value"()
+    call @"216_pkg_profile_release value"()
+    call @"217_pkg_profile_debug value"()
+    call @"218_pkg_metadata_custom value"()
+    call @"219_pkg_bin_multiple total"()
+    call @"220_pkg_lib_dynamic total"()
+    call @"221_mod_relative_import value"()
+    call @"222_mod_absolute_import value"()
+    call @"223_mod_visibility_private value"()
+    call @"224_mod_reexport_pub_use value"()
+    call @"225_mod_namespace_prefix value"()
+    call @"226_mod_cyclic_import_detect diagnostic"()
+    call @"227_mod_shadowing_prevention diagnostic"()
+    call @"228_mod_iface_separation value"()
+    call @"229_mod_layout_injection value"()
+    call @"230_mod_std_prelude value"()
+    call @"231_mod_directory_module value"()
+    call @"232_mod_conditional_import value"()
+    call @"233_mod_alias_import value"()
+    call @"234_mod_unused_import_lint value"()
+    call @"235_mod_transitive_dependency value"()
+    call @"236_mod_extern_block_grouping value"()
+    call @"237_mod_inline_submodule value"()
+    call @"238_mod_path_resolution_order value"()
+    call @"239_mod_version_suffix_isolation value"()
+    call @"240_mod_entry_point_override value"()
+    call @"241_contract_layout_stability value"()
+    call @"242_contract_opaque_struct value"()
+    call @"243_contract_sig_mismatch_link diagnostic"()
+    call @"244_contract_vtable_export value"()
+    call @"245_contract_generic_monomorph_share value"()
+    call @"246_contract_semver_minor_update value"()
+    call @"247_contract_semver_major_break value"()
+    call @"248_contract_ffi_boundary_trust value"()
+    call @"249_contract_macro_export value"()
+    call @"250_contract_const_export value"()
+    call @"251_contract_resource_ownership value"()
+    call @"252_contract_error_code_mapping value"()
+    call @"253_contract_callback_registration value"()
+    call @"254_contract_plugin_system value"()
+    call @"255_contract_memory_allocator_swap value"()
+    call @"256_contract_panic_handler_propagate value"()
+    call @"257_contract_log_facade value"()
+    call @"258_contract_thread_local_isolation value"()
+    call @"259_contract_static_init_order value"()
+    call @"260_contract_deprecated_warning value"()
+    call @"261_build_rs_codegen_saasm value"()
+    call @"262_build_bindgen_c_header value"()
+    call @"263_build_asset_bundling value"()
+    call @"264_build_env_var_injection value"()
+    call @"265_build_custom_linker_script value"()
+    call @"266_build_pre_compile_hook value"()
+    call @"267_build_post_compile_hook value"()
+    call @"268_build_cross_compile_wasm value"()
+    call @"269_build_cross_compile_windows value"()
+    call @"270_build_sysroot_custom value"()
+    call @"271_build_optimization_passes value"()
+    call @"272_build_sanitizer_flags value"()
+    call @"273_build_test_harness value"()
+    call @"274_build_benchmark_runner value"()
+    call @"275_build_doc_generator value"()
+    call @"276_build_incremental_caching value"()
+    call @"277_build_parallel_compilation value"()
+    call @"278_build_reproducible_builds value"()
+    call @"279_build_artifact_caching_remote value"()
+    call @"280_build_ci_cd_integration value"()
+    call @"281_ffi_link_system_libc gate"()
+    call @"282_ffi_link_static_c_lib gate"()
+    call @"283_ffi_link_dynamic_c_lib gate"()
+    call @"284_ffi_pkg_config_integration gate"()
+    call @"285_ffi_objective_c_framework gate"()
+    call @"286_ffi_rust_staticlib_integration gate"()
+    call @"287_ffi_zig_export_integration export"()
+    call @"288_ffi_cxx_name_mangling gate"()
+    call @"289_ffi_opaque_handle_passing gate"()
+    call @"290_ffi_callback_thunk vtable"()
+    call @"291_eco_wasm_host_imports guest"()
+    call @"292_eco_wasm_memory_export memory"()
+    call @"293_eco_embedded_no_os startup"()
+    call @"294_eco_os_kernel_module entry"()
+    call @"295_eco_bpf_ebpf_bytecode program"()
+    call @"296_eco_gpu_ptx_shader shader"()
+    call @"297_eco_game_engine_ecs step"()
+    call @"298_eco_cryptography_simd hash"()
+    call @"299_eco_language_server_protocol server"()
+    call @"300_eco_sa_lang_registry_publish publish"()
+    call @"sa_std json dom roundtrip"()
+    call @"sa_std json stream tokens"()
+    call @"sa_std regex groups"()
+    call @"sa_std mem"()
+    call @"sa_std string"()
+    call @"sa_std vec"()
+    call @"sa_std hashmap"()
+    call @"sa_std btree"()
+    // call @"sa_std net"() // skip net for now as it might need external setup
+    return
+
+// This suite condenses representative behaviors from the completed rosetta
+// demos into one native-unit-test corpus.
+
+@test "03_if_else branch path"():
+L_ENTRY:
+    value = call @support_pick_max(10, 20)
+    ok = eq value, 20
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(201)
+
+@test "04_loop zero fill"():
+L_ENTRY:
+    buffer = alloc 4
+    store buffer+0, 1 as u8
+    store buffer+1, 2 as u8
+    store buffer+2, 3 as u8
+    store buffer+3, 4 as u8
+    call @support_fill_zero(&buffer)
+    b0 = load buffer+0 as u8
+    b1 = load buffer+1 as u8
+    b2 = load buffer+2 as u8
+    b3 = load buffer+3 as u8
+    ok0 = eq b0, 0
+    ok1 = eq b1, 0
+    ok2 = eq b2, 0
+    ok3 = eq b3, 0
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    ok = and pair0, pair1
+    !b0
+    !b1
+    !b2
+    !b3
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !pair0
+    !pair1
+    !buffer
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(206)
+
+@test "04_float_ops native llvm"():
+L_ENTRY:
+    sum = fadd 1.5, 2.25
+    diff = fsub 9.0, 4.25
+    prod = fmul 1.5, 4.0
+    quot = fdiv 7.5, 2.0
+    neg = fneg 2.5
+    sum_ok = fcmp_eq sum, 3.75
+    diff_ok = fcmp_eq diff, 4.75
+    prod_ok = fcmp_eq prod, 6.0
+    quot_ok = fcmp_eq quot, 3.75
+    neg_ok = fcmp_eq neg, -2.5
+    lt_ok = fcmp_lt neg, sum
+    ge_ok = fcmp_ge prod, 6.0
+    bits = alloc 4
+    store bits+0, sum as f32
+    sum_bits = load bits+0 as i32
+    bits_ok = eq sum_bits, 1081081856
+    p0 = and sum_ok, diff_ok
+    p1 = and prod_ok, quot_ok
+    p2 = and neg_ok, lt_ok
+    p3 = and ge_ok, bits_ok
+    p4 = and p0, p1
+    p5 = and p2, p3
+    ok = and p4, p5
+    !sum
+    !diff
+    !prod
+    !quot
+    !neg
+    !sum_ok
+    !diff_ok
+    !prod_ok
+    !quot_ok
+    !neg_ok
+    !lt_ok
+    !ge_ok
+    !sum_bits
+    !bits_ok
+    !p0
+    !p1
+    !p2
+    !p3
+    !p4
+    !p5
+    !bits
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(207)
+
+@test "05_struct field layout"():
+L_ENTRY:
+    point = call @support_make_point(10, 20)
+    sum = call @support_sum_point(^point)
+    ok = eq sum, 30
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(202)
+
+@test "06_enum_and_match tag dispatch"():
+L_ENTRY:
+    sum = call @support_dispatch_msg(1, 10, 20)
+    ok = eq sum, 30
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(203)
+
+@test "07_trait_vtable dynamic dispatch"():
+L_ENTRY:
+    result = call @support_trait_vtable_render()
+    ok = eq result, 77
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(215)
+
+@test "08_closures captured environment"():
+L_ENTRY:
+    result = call @support_closure_add_offset(10)
+    ok = eq result, 15
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(222)
+
+@test "10_generics_monomorph option unwrap_or"():
+L_ENTRY:
+    EXPAND OPTION_NEW_SOME opt, 42
+    result = call @support_unwrap_or_i32(^opt, 0)
+    ok = eq result, 42
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(211)
+
+@test "11_tuples field access"():
+L_ENTRY:
+    ok = call @support_tuple_pair_fields()
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(216)
+
+@test "12_destructuring pair sum"():
+L_ENTRY:
+    sum = call @support_destructure_pair_sum()
+    ok = eq sum, 7
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(217)
+
+@test "13_array_sum fixed array"():
+L_ENTRY:
+    sum = call @support_array_sum_4()
+    ok = eq sum, 10
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(218)
+
+@test "14_slice_window pointer window"():
+L_ENTRY:
+    sum = call @support_slice_window_sum()
+    ok = eq sum, 5
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(219)
+
+@test "17_associated_fn constructor"():
+L_ENTRY:
+    value = call @support_counter_new_value(40)
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(220)
+
+@test "18_option_map map_or"():
+L_ENTRY:
+    EXPAND OPTION_NEW_SOME opt, 3
+    EXPAND OPTION_MAP_OR mapped, opt, @support_double_u64, 0
+    result = add mapped, 5
+    ok = eq result, 11
+    !result
+    !mapped
+    !opt
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(212)
+
+@test "21_while_loop sum to fifteen"():
+L_ENTRY:
+    sum = call @support_sum_1_to_5()
+    ok = eq sum, 15
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(461)
+
+@test "24_factorial recursion"():
+L_ENTRY:
+    result = call @support_factorial(5)
+    ok = eq result, 120
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(208)
+
+@test "25_fibonacci recursion"():
+L_ENTRY:
+    result = call @support_fib(8)
+    ok = eq result, 21
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(209)
+
+@test "28_borrow_chains repeated load"():
+L_ENTRY:
+    value = alloc 4
+    store value+0, 6 as i32
+    result = call @support_read_twice(&value)
+    ok = eq result, 12
+    !result
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(204)
+
+@test "30_manual_guard_branch option guard"():
+L_ENTRY:
+    EXPAND OPTION_NEW_SOME opt, 5
+    result = call @support_eval_guard(&opt)
+    ok = eq result, 5
+    !result
+    !opt
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(223)
+
+@test "33_iterator_map arithmetic map"():
+L_ENTRY:
+    total = call @support_iterator_map_total()
+    ok = eq total, 12
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(224)
+
+@test "34_iterator_filter selected sum"():
+L_ENTRY:
+    total = call @support_iterator_filter_total()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(225)
+
+@test "35_iterator_fold slice fold"():
+L_ENTRY:
+    values = stack_alloc 24
+    store values+0, 2 as u64
+    store values+8, 3 as u64
+    store values+16, 2 as u64
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 3
+    EXPAND ITER_FROM_SLICE iter, slice
+    EXPAND ITER_LEN iter_len, iter
+    EXPAND ITER_PEEK_U64 item0, iter
+    acc1 = add 0, item0
+    EXPAND ITER_NEXT_U64 has_next1, item1, iter
+    acc2 = add acc1, item1
+    EXPAND ITER_NEXT_U64 has_next2, item2, iter
+    acc3 = add acc2, item2
+    ok = eq acc3, 7
+    !iter_len
+    !item0
+    !item1
+    !item2
+    !has_next1
+    !has_next2
+    !acc1
+    !acc2
+    !acc3
+    !iter
+    !slice
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(210)
+
+@test "37_newtype field load"():
+L_ENTRY:
+    value = call @support_newtype_user_id()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(230)
+
+@test "38_generic_struct_i32 wrapper"():
+L_ENTRY:
+    value = call @support_generic_struct_i32()
+    ok = eq value, 31
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(231)
+
+@test "39_generic_enum_i32 value branch"():
+L_ENTRY:
+    value = call @support_generic_enum_i32()
+    ok = eq value, 7
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(232)
+
+@test "41_module_imports helper import"():
+L_ENTRY:
+    result = call @support_identity(42)
+    ok = eq result, 42
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(205)
+
+@test "40_impl_block_state deposit"():
+L_ENTRY:
+    balance = call @support_account_after_deposit()
+    ok = eq balance, 15
+    !balance
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(226)
+
+@test "42_export_visibility function pair"():
+L_ENTRY:
+    total = call @support_export_visibility_total()
+    ok = eq total, 12
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(227)
+
+@test "45_config_merge override selection"():
+L_ENTRY:
+    ok = call @support_config_merge_check()
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(228)
+
+@test "46_option_default fallback"():
+L_ENTRY:
+    EXPAND OPTION_NEW_SOME opt, 9
+    value = call @support_choose_option_default(&opt, 1)
+    ok = eq value, 9
+    !value
+    !opt
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(213)
+
+@test "48_generic_pair sum"():
+L_ENTRY:
+    total = call @support_generic_pair_sum(11, 31)
+    ok = eq total, 42
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(233)
+
+@test "53_cache_hits lookup"():
+L_ENTRY:
+    value = call @support_cache_hits_lookup()
+    ok = eq value, 3
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(235)
+
+@test "54_mem_fill set bytes"():
+L_ENTRY:
+    ok = call @support_mem_fill_all_seven()
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(236)
+
+@test "56_state_machine advance"():
+L_ENTRY:
+    state = call @support_state_machine_advance()
+    ok = eq state, 2
+    !state
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(237)
+
+@test "59_method_counter mut borrow"():
+L_ENTRY:
+    value = call @support_method_counter_after_inc()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(221)
+
+@test "60_enum_branch tag dispatch"():
+L_ENTRY:
+    value = call @support_enum_branch_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(229)
+
+@test "63_router_table lookup"():
+L_ENTRY:
+    id = call @support_router_table_lookup()
+    ok = eq id, 2
+    !id
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(234)
+
+@test "68_parser_tokens count"():
+L_ENTRY:
+    total = call @support_parser_token_count()
+    ok = eq total, 4
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(238)
+
+@test "69_serializer id builder"():
+L_ENTRY:
+    id = call @support_serializer_id()
+    ok = eq id, 7
+    !id
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(239)
+
+@test "70_integration_service total"():
+L_ENTRY:
+    total = call @support_integration_service_total()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(240)
+
+@test "71_pipeline_stage flow"():
+L_ENTRY:
+    output = call @support_pipeline_stage_output()
+    ok = eq output, 6
+    !output
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(241)
+
+@test "72_graph_walk total"():
+L_ENTRY:
+    total = call @support_graph_walk_total()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(242)
+
+@test "73_scene_nodes sum"():
+L_ENTRY:
+    total = call @support_scene_nodes_sum()
+    ok = eq total, 15
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(243)
+
+@test "74_component_store count"():
+L_ENTRY:
+    total = call @support_component_store_count()
+    ok = eq total, 2
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(244)
+
+@test "79_metrics collect"():
+L_ENTRY:
+    total = call @support_metrics_collect()
+    ok = eq total, 4
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(245)
+
+@test "80_workflow flow"():
+L_ENTRY:
+    total = call @support_workflow_flow()
+    ok = eq total, 10
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(246)
+
+@test "82_sql_scan rows"():
+L_ENTRY:
+    rows = call @support_sql_scan_rows()
+    ok = eq rows, 2
+    !rows
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(247)
+
+@test "83_blob_chunk count"():
+L_ENTRY:
+    total = call @support_blob_chunk_count()
+    ok = eq total, 4
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(248)
+
+@test "84_sync_gate ready"():
+L_ENTRY:
+    ready = call @support_sync_gate_ready()
+    ok = eq ready, 1
+    !ready
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(249)
+
+@test "85_scheduler_tree sum"():
+L_ENTRY:
+    total = call @support_scheduler_tree_sum()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(250)
+
+@test "87_protocol_frame decode"():
+L_ENTRY:
+    total = call @support_protocol_frame_decode()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(251)
+
+@test "88_text_index words"():
+L_ENTRY:
+    total = call @support_text_index_words()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(252)
+
+@test "89_job_queue take jobs"():
+L_ENTRY:
+    total = call @support_job_queue_total()
+    ok = eq total, 12
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(253)
+
+@test "90_app_shell mode sum"():
+L_ENTRY:
+    total = call @support_app_shell_total()
+    ok = eq total, 16
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(254)
+
+@test "91_db_session open"():
+L_ENTRY:
+    sessions = call @support_db_session_open()
+    ok = eq sessions, 2
+    !sessions
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(255)
+
+@test "92_query_plan total"():
+L_ENTRY:
+    total = call @support_query_plan_total()
+    ok = eq total, 10
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(256)
+
+@test "93_log_aggregator total"():
+L_ENTRY:
+    total = call @support_log_aggregator_total()
+    ok = eq total, 10
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(257)
+
+@test "96_task_orchestrator total"():
+L_ENTRY:
+    total = call @support_task_orchestrator_total()
+    ok = eq total, 4
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(258)
+
+@test "97_sync_service once"():
+L_ENTRY:
+    ready = call @support_sync_service_once()
+    ok = eq ready, 1
+    !ready
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(259)
+
+@test "98_build_pipeline stage"():
+L_ENTRY:
+    total = call @support_build_pipeline_stage()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(260)
+
+@test "99_release_bundle count"():
+L_ENTRY:
+    total = call @support_release_bundle_count()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(261)
+
+@test "100_full_app total"():
+L_ENTRY:
+    total = call @support_full_app_total()
+    ok = eq total, 12
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(262)
+
+@test "101_custom_drop order"():
+L_ENTRY:
+    total = call @support_custom_drop_total()
+    ok = eq total, 16
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(263)
+
+@test "102_raii_guard unlock"():
+L_ENTRY:
+    total = call @support_raii_guard_total()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(264)
+
+@test "103_labeled_break total"():
+L_ENTRY:
+    total = call @support_labeled_break_total()
+    ok = eq total, 12
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(265)
+
+@test "104_if_let_chains sum"():
+L_ENTRY:
+    total = call @support_if_let_chain_sum()
+    ok = eq total, 9
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(266)
+
+@test "105_let_else value"():
+L_ENTRY:
+    value = call @support_let_else_value()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(267)
+
+@test "106_cell_interior_mut total"():
+L_ENTRY:
+    total = call @support_cell_interior_mut_total()
+    ok = eq total, 30
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(268)
+
+@test "107_refcell_dynamic_borrow values"():
+L_ENTRY:
+    total = call @support_refcell_dynamic_borrow_total()
+    ok = eq total, 16
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(269)
+
+@test "108_atomic_spin_lock acquire"():
+L_ENTRY:
+    state = call @support_atomic_spin_lock_once()
+    ok = eq state, 0
+    !state
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(270)
+
+@test "109_atomic_fetch_add total"():
+L_ENTRY:
+    total = call @support_atomic_fetch_add_total()
+    ok = eq total, 13
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(271)
+
+@test "110_trait_super_vtable dispatch"():
+L_ENTRY:
+    total = call @support_trait_super_dispatch()
+    ok = eq total, 15
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(272)
+
+@test "111_extern_c_abi exported add"():
+L_ENTRY:
+    total = call @support_extern_c_abi_add_pair(11, 12)
+    ok = eq total, 23
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(273)
+
+@test "112_raw_pointer_arithmetic third lane"():
+L_ENTRY:
+    value = call @support_raw_pointer_third_lane()
+    ok = eq value, 3
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(274)
+
+@test "113_union_ffi_types overlap"():
+L_ENTRY:
+    value = call @support_union_ffi_overlap_value()
+    ok = eq value, 36
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(275)
+
+@test "114_callback_from_c indirect"():
+L_ENTRY:
+    value = call @support_callback_from_c_apply()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(276)
+
+@test "115_opaque_pointers value"():
+L_ENTRY:
+    value = call @support_opaque_pointer_value()
+    ok = eq value, 0
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(277)
+
+@test "116_va_list_variadic slice sum"():
+L_ENTRY:
+    total = call @support_variadic_slice_sum()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(278)
+
+@test "118_global_mutable_state counter"():
+L_ENTRY:
+    value = call @support_global_mutable_counter()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(279)
+
+@test "119_simd_intrinsics lane sum"():
+L_ENTRY:
+    total = call @support_simd_lane_sum()
+    ok = eq total, 4
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(280)
+
+@test "120_volatile_memory_access load"():
+L_ENTRY:
+    value = call @support_volatile_memory_load()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(281)
+
+@test "121_rwlock_reader_writer total"():
+L_ENTRY:
+    total = call @support_rwlock_reader_writer_total()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(282)
+
+@test "122_condvar_wait_notify ready"():
+L_ENTRY:
+    value = call @support_condvar_wait_notify_value()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(283)
+
+@test "123_barrier_sync total"():
+L_ENTRY:
+    total = call @support_barrier_sync_total()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(284)
+
+@test "124_thread_local_storage value"():
+L_ENTRY:
+    value = call @support_thread_local_storage_value()
+    ok = eq value, 6
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(285)
+
+@test "125_once_cell_lazy init"():
+L_ENTRY:
+    value = call @support_once_cell_lazy_value()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(286)
+
+@test "126_mpmc_channel sum"():
+L_ENTRY:
+    total = call @support_mpmc_channel_sum()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(287)
+
+@test "127_hazard_pointers retire"():
+L_ENTRY:
+    value = call @support_hazard_pointer_value()
+    ok = eq value, 9
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(288)
+
+@test "128_rcu_read_copy_update value"():
+L_ENTRY:
+    value = call @support_rcu_read_copy_update_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(289)
+
+@test "129_seqlock_optimistic stable"():
+L_ENTRY:
+    value = call @support_seqlock_optimistic_value()
+    ok = eq value, 10
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(290)
+
+@test "130_park_unpark_thread wake"():
+L_ENTRY:
+    woke = call @support_park_unpark_thread_woke()
+    ok = eq woke, 1
+    !woke
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(291)
+
+@test "131_waker_vtable_mechanics wake"():
+L_ENTRY:
+    value = call @support_waker_vtable_wake()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(292)
+
+@test "132_pinning_and_unpin value"():
+L_ENTRY:
+    value = call @support_pinning_value()
+    ok = eq value, 8
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(293)
+
+@test "133_select_macro_race winner"():
+L_ENTRY:
+    winner = call @support_select_macro_winner()
+    ok = eq winner, 11
+    !winner
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(294)
+
+@test "134_join_all_futures sum"():
+L_ENTRY:
+    total = call @support_join_all_futures_sum()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(295)
+
+@test "135_async_streams sequence"():
+L_ENTRY:
+    total = call @support_async_streams_total()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(296)
+
+@test "136_executor_task_queue run"():
+L_ENTRY:
+    total = call @support_executor_task_queue_total()
+    ok = eq total, 6
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(297)
+
+@test "137_io_uring_submission depth"():
+L_ENTRY:
+    depth = call @support_io_uring_submission_depth()
+    ok = eq depth, 1
+    !depth
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(298)
+
+@test "138_epoll_kqueue_event ready"():
+L_ENTRY:
+    events = call @support_epoll_kqueue_event_ready()
+    ok = eq events, 3
+    !events
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(299)
+
+@test "139_cancellation_safety value"():
+L_ENTRY:
+    value = call @support_cancellation_safety_value()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(300)
+
+@test "140_yield_now_suspend resume"():
+L_ENTRY:
+    value = call @support_yield_now_suspend_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(301)
+
+@test "141_dynamically_sized_types len"():
+L_ENTRY:
+    len = call @support_dst_slice_len()
+    ok = eq len, 2
+    !len
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(302)
+
+@test "142_zero_sized_types erased"():
+L_ENTRY:
+    value = call @support_zero_sized_process_unit()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(303)
+
+@test "143_never_type_diverge safe path"():
+L_ENTRY:
+    value = call @support_never_type_safe_value()
+    ok = eq value, 0
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(304)
+
+@test "144_phantom_data_marker value"():
+L_ENTRY:
+    value = call @support_phantom_data_value()
+    ok = eq value, 7
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(305)
+
+@test "145_opaque_type_alias value"():
+L_ENTRY:
+    value = call @support_opaque_type_alias_value()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(306)
+
+@test "146_never_type_fallback some"():
+L_ENTRY:
+    value = call @support_never_type_fallback_value()
+    ok = eq value, 1
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(307)
+
+@test "147_custom_dst_pointers len"():
+L_ENTRY:
+    len = call @support_custom_dst_pointer_len()
+    ok = eq len, 3
+    !len
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(308)
+
+@test "148_transparent_repr value"():
+L_ENTRY:
+    value = call @support_transparent_repr_value()
+    ok = eq value, 7
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(309)
+
+@test "149_packed_repr sum"():
+L_ENTRY:
+    total = call @support_packed_repr_sum()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(310)
+
+@test "150_c_repr_alignment sum"():
+L_ENTRY:
+    total = call @support_c_repr_alignment_sum()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(311)
+
+@test "151_global_alloc_trait value"():
+L_ENTRY:
+    value = call @support_global_alloc_trait_value()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(312)
+
+@test "152_memory_layout_struct total"():
+L_ENTRY:
+    total = call @support_memory_layout_struct_total()
+    ok = eq total, 12
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(313)
+
+@test "153_box_into_raw value"():
+L_ENTRY:
+    value = call @support_box_into_raw_value()
+    ok = eq value, 9
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(314)
+
+@test "154_box_from_raw value"():
+L_ENTRY:
+    value = call @support_box_from_raw_value()
+    ok = eq value, 11
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(315)
+
+@test "155_arena_allocator_bump total"():
+L_ENTRY:
+    total = call @support_arena_allocator_bump_total()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(316)
+
+@test "156_slab_allocator_freelist total"():
+L_ENTRY:
+    total = call @support_slab_allocator_freelist_total()
+    ok = eq total, 3
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(317)
+
+@test "157_aligned_alloc_simd lanes"():
+L_ENTRY:
+    lanes = call @support_aligned_alloc_simd_lanes()
+    ok = eq lanes, 4
+    !lanes
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(318)
+
+@test "158_custom_dst_alloc len"():
+L_ENTRY:
+    len = call @support_custom_dst_alloc_len()
+    ok = eq len, 3
+    !len
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(319)
+
+@test "159_mem_forget_leak raw handoff"():
+L_ENTRY:
+    value = call @support_mem_forget_raw_handoff_value()
+    ok = eq value, 9
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(320)
+
+@test "160_manually_drop_union value"():
+L_ENTRY:
+    value = call @support_manually_drop_union_value()
+    ok = eq value, 11
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(321)
+
+@test "161_generic_associated_types borrowed get"():
+L_ENTRY:
+    value = call @support_generic_associated_types_value()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(322)
+
+@test "162_auto_traits_send_sync move"():
+L_ENTRY:
+    value = call @support_auto_traits_send_sync_value()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(323)
+
+@test "163_object_safety_rules draw"():
+L_ENTRY:
+    value = call @support_object_safety_draw_value()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(324)
+
+@test "164_trait_upcasting vtable total"():
+L_ENTRY:
+    total = call @support_trait_upcasting_total()
+    ok = eq total, 5
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(325)
+
+@test "165_blanket_impl_resolution len"():
+L_ENTRY:
+    len = call @support_blanket_impl_resolution_len()
+    ok = eq len, 2
+    !len
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(326)
+
+@test "166_specialization_fallback dispatch"():
+L_ENTRY:
+    total = call @support_specialization_fallback_total()
+    ok = eq total, 2
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(327)
+
+@test "167_const_generics_expansion sum"():
+L_ENTRY:
+    total = call @support_const_generics_expansion_sum()
+    ok = eq total, 10
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(328)
+
+@test "168_type_alias_impl_trait erased"():
+L_ENTRY:
+    value = call @support_type_alias_impl_trait_erased()
+    ok = eq value, 0
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(329)
+
+@test "169_negative_impls no runtime cost"():
+L_ENTRY:
+    value = call @support_negative_impls_no_runtime_cost()
+    ok = eq value, 0
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(330)
+
+@test "170_marker_traits process"():
+L_ENTRY:
+    value = call @support_marker_traits_process_value()
+    ok = eq value, 42
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(331)
+
+@test "171_anyhow_dynamic_error default"():
+L_ENTRY:
+    value = call @support_anyhow_dynamic_error_default()
+    ok = eq value, 0
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(332)
+
+@test "172_eyre_color_eyre context"():
+L_ENTRY:
+    len = call @support_eyre_color_context_len()
+    ok = eq len, 7
+    !len
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(333)
+
+@test "173_catch_unwind_panic explicit result"():
+L_ENTRY:
+    value = call @support_catch_unwind_explicit_result()
+    ok = eq value, 17
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(334)
+
+@test "174_backtrace_capture depth"():
+L_ENTRY:
+    depth = call @support_backtrace_capture_depth()
+    ok = eq depth, 2
+    !depth
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(335)
+
+@test "175_thiserror_macro_derive format"():
+L_ENTRY:
+    total = call @support_thiserror_macro_format_total()
+    ok = eq total, 8
+    !total
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(336)
+
+@test "176_result_flattening value"():
+L_ENTRY:
+    value = call @support_result_flattening_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(337)
+
+@test "177_result unwrap and unwrap_err"():
+L_ENTRY:
+    ok_res = alloc Result_SIZE
+    err_res = alloc Result_SIZE
+    EXPAND RESULT_SET_OK ok_res, 5
+    EXPAND RESULT_SET_ERR err_res, 13
+    EXPAND RESULT_UNWRAP value, ok_res
+    EXPAND RESULT_UNWRAP_ERR err_value, err_res
+    ok_value = eq value, 5
+    ok_err = eq err_value, 13
+    ok = and ok_value, ok_err
+    !value
+    !err_value
+    !ok_value
+    !ok_err
+    !ok_res
+    !err_res
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(214)
+
+@test "178_panic_hook_override count"():
+L_ENTRY:
+    count = call @support_panic_hook_override_count()
+    ok = eq count, 1
+    !count
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(338)
+
+@test "179_assert_macro_expansion pass"():
+L_ENTRY:
+    passed = call @support_assert_macro_expansion_pass()
+    ok = eq passed, 1
+    !passed
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(339)
+
+@test "180_try_trait_v2 combine"():
+L_ENTRY:
+    value = call @support_try_trait_v2_value()
+    ok = eq value, 7
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(340)
+
+@test "181_file_descriptor_raii close"():
+L_ENTRY:
+    value = call @support_file_descriptor_raii_value()
+    ok = eq value, 3
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(341)
+
+@test "182_mmap_memory_mapping lifecycle"():
+L_ENTRY:
+    value = call @support_mmap_memory_mapping_value()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(342)
+
+@test "183_signal_handling_setup register"():
+L_ENTRY:
+    value = call @support_signal_handling_setup_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(343)
+
+@test "184_pthread_spawn_join worker"():
+L_ENTRY:
+    value = call @support_pthread_spawn_join_value()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(344)
+
+@test "185_dynamic_lib_dlopen handles"():
+L_ENTRY:
+    value = call @support_dynamic_lib_dlopen_value()
+    ok = eq value, 1
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(345)
+
+@test "186_sqlite_c_api_binding row"():
+L_ENTRY:
+    value = call @support_sqlite_c_api_binding_value()
+    ok = eq value, 8
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(346)
+
+@test "187_opengl_context_swap state"():
+L_ENTRY:
+    value = call @support_opengl_context_swap_value()
+    ok = eq value, 1
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(347)
+
+@test "188_websocket_frame_parse text"():
+L_ENTRY:
+    value = call @support_websocket_frame_parse_value()
+    ok = eq value, 1
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(348)
+
+@test "189_protobuf_varint_decode value"():
+L_ENTRY:
+    value = call @support_protobuf_varint_decode_value()
+    ok = eq value, 6
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(349)
+
+@test "190_base64_encode_simd block"():
+L_ENTRY:
+    value = call @support_base64_encode_simd_len()
+    ok = eq value, 4
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(350)
+
+@test "191_macro_rules_ast_emit mirror"():
+L_ENTRY:
+    value = call @support_macro_rules_ast_emit_total()
+    ok = eq value, 12
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(351)
+
+@test "192_proc_macro_derive_ast copy"():
+L_ENTRY:
+    value = call @support_proc_macro_derive_ast_total()
+    ok = eq value, 6
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(352)
+
+@test "193_attribute_macro_rewrite value"():
+L_ENTRY:
+    value = call @support_attribute_macro_rewrite_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(353)
+
+@test "194_cfg_conditional_compilation arch"():
+L_ENTRY:
+    value = call @support_cfg_conditional_compilation_len()
+    ok = eq value, 3
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(354)
+
+@test "195_build_script_codegen output"():
+L_ENTRY:
+    value = call @support_build_script_codegen_len()
+    ok = eq value, 12
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(355)
+
+@test "196_lto_link_time_opt total"():
+L_ENTRY:
+    value = call @support_lto_link_time_opt_total()
+    ok = eq value, 37
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(356)
+
+@test "197_profile_guided_opt total"():
+L_ENTRY:
+    value = call @support_profile_guided_opt_total()
+    ok = eq value, 10
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(357)
+
+@test "198_control_flow_guard_cfi indirect"():
+L_ENTRY:
+    value = call @support_control_flow_guard_cfi_value()
+    ok = eq value, 2
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(358)
+
+@test "199_address_sanitizer_asan safe sum"():
+L_ENTRY:
+    value = call @support_address_sanitizer_asan_sum()
+    ok = eq value, 5
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(359)
+
+@test "200_sa_asm_quine source"():
+L_ENTRY:
+    value = call @support_sa_asm_quine_source_len()
+    ok = eq value, 200
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(360)
+
+@test "201_pkg_manifest_basic value"():
+L_ENTRY:
+    value = call @support_pkg_manifest_basic_value()
+    ok = eq value, 201
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(361)
+
+@test "202_pkg_dependencies_local value"():
+L_ENTRY:
+    value = call @support_pkg_dependencies_local_value()
+    ok = eq value, 202
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(362)
+
+@test "203_pkg_dependencies_git value"():
+L_ENTRY:
+    value = call @support_pkg_dependencies_git_value()
+    ok = eq value, 203
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(363)
+
+@test "204_pkg_dependencies_registry value"():
+L_ENTRY:
+    value = call @support_pkg_dependencies_registry_value()
+    ok = eq value, 204
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(364)
+
+@test "205_pkg_cyclic_dependency_reject diagnostic"():
+L_ENTRY:
+    value = call @support_pkg_cyclic_dependency_reject_code()
+    ok = eq value, 1001
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(365)
+
+@test "206_pkg_version_resolution value"():
+L_ENTRY:
+    value = call @support_pkg_version_resolution_value()
+    ok = eq value, 206
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(366)
+
+@test "207_pkg_multiple_versions_conflict diagnostic"():
+L_ENTRY:
+    value = call @support_pkg_multiple_versions_conflict_code()
+    ok = eq value, 1002
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(367)
+
+@test "208_pkg_dev_dependencies value"():
+L_ENTRY:
+    value = call @support_pkg_dev_dependencies_value()
+    ok = eq value, 208
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(368)
+
+@test "209_pkg_build_dependencies value"():
+L_ENTRY:
+    value = call @support_pkg_build_dependencies_value()
+    ok = eq value, 209
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(369)
+
+@test "210_pkg_workspace_root total"():
+L_ENTRY:
+    value = call @support_pkg_workspace_root_total()
+    ok = eq value, 210
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(370)
+
+@test "211_pkg_workspace_inheritance total"():
+L_ENTRY:
+    value = call @support_pkg_workspace_inheritance_total()
+    ok = eq value, 211
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(371)
+
+@test "212_pkg_feature_flags value"():
+L_ENTRY:
+    value = call @support_pkg_feature_flags_value()
+    ok = eq value, 212
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(372)
+
+@test "213_pkg_default_features value"():
+L_ENTRY:
+    value = call @support_pkg_default_features_value()
+    ok = eq value, 213
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(373)
+
+@test "214_pkg_target_specific_deps value"():
+L_ENTRY:
+    value = call @support_pkg_target_specific_deps_value()
+    ok = eq value, 214
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(374)
+
+@test "215_pkg_patch_override value"():
+L_ENTRY:
+    value = call @support_pkg_patch_override_value()
+    ok = eq value, 215
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(375)
+
+@test "216_pkg_profile_release value"():
+L_ENTRY:
+    value = call @support_pkg_profile_release_value()
+    ok = eq value, 216
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(376)
+
+@test "217_pkg_profile_debug value"():
+L_ENTRY:
+    value = call @support_pkg_profile_debug_value()
+    ok = eq value, 217
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(377)
+
+@test "218_pkg_metadata_custom value"():
+L_ENTRY:
+    value = call @support_pkg_metadata_custom_value()
+    ok = eq value, 218
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(378)
+
+@test "219_pkg_bin_multiple total"():
+L_ENTRY:
+    value = call @support_pkg_bin_multiple_total()
+    ok = eq value, 219
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(379)
+
+@test "220_pkg_lib_dynamic total"():
+L_ENTRY:
+    value = call @support_pkg_lib_dynamic_total()
+    ok = eq value, 220
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(380)
+
+@test "221_mod_relative_import value"():
+L_ENTRY:
+    value = call @support_mod_relative_import_value()
+    ok = eq value, 221
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(381)
+
+@test "222_mod_absolute_import value"():
+L_ENTRY:
+    value = call @support_mod_absolute_import_value()
+    ok = eq value, 222
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(382)
+
+@test "223_mod_visibility_private value"():
+L_ENTRY:
+    value = call @support_mod_visibility_private_value()
+    ok = eq value, 223
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(383)
+
+@test "224_mod_reexport_pub_use value"():
+L_ENTRY:
+    value = call @support_mod_reexport_pub_use_value()
+    ok = eq value, 224
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(384)
+
+@test "225_mod_namespace_prefix value"():
+L_ENTRY:
+    value = call @support_mod_namespace_prefix_value()
+    ok = eq value, 225
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(385)
+
+@test "226_mod_cyclic_import_detect diagnostic"():
+L_ENTRY:
+    value = call @support_mod_cyclic_import_detect_code()
+    ok = eq value, 1001
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(386)
+
+@test "227_mod_shadowing_prevention diagnostic"():
+L_ENTRY:
+    value = call @support_mod_shadowing_prevention_code()
+    ok = eq value, 1002
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(387)
+
+@test "228_mod_iface_separation value"():
+L_ENTRY:
+    value = call @support_mod_iface_separation_value()
+    ok = eq value, 228
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(388)
+
+@test "229_mod_layout_injection value"():
+L_ENTRY:
+    value = call @support_mod_layout_injection_value()
+    ok = eq value, 229
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(389)
+
+@test "230_mod_std_prelude value"():
+L_ENTRY:
+    value = call @support_mod_std_prelude_value()
+    ok = eq value, 230
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(390)
+
+@test "231_mod_directory_module value"():
+L_ENTRY:
+    value = call @support_mod_directory_module_value()
+    ok = eq value, 231
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(391)
+
+@test "232_mod_conditional_import value"():
+L_ENTRY:
+    value = call @support_mod_conditional_import_value()
+    ok = eq value, 232
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(392)
+
+@test "233_mod_alias_import value"():
+L_ENTRY:
+    value = call @support_mod_alias_import_value()
+    ok = eq value, 233
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(393)
+
+@test "234_mod_unused_import_lint value"():
+L_ENTRY:
+    value = call @support_mod_unused_import_lint_value()
+    ok = eq value, 234
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(394)
+
+@test "235_mod_transitive_dependency value"():
+L_ENTRY:
+    value = call @support_mod_transitive_dependency_value()
+    ok = eq value, 235
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(395)
+
+@test "236_mod_extern_block_grouping value"():
+L_ENTRY:
+    value = call @support_mod_extern_block_grouping_value()
+    ok = eq value, 236
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(396)
+
+@test "237_mod_inline_submodule value"():
+L_ENTRY:
+    value = call @support_mod_inline_submodule_value()
+    ok = eq value, 237
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(397)
+
+@test "238_mod_path_resolution_order value"():
+L_ENTRY:
+    value = call @support_mod_path_resolution_order_value()
+    ok = eq value, 238
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(398)
+
+@test "239_mod_version_suffix_isolation value"():
+L_ENTRY:
+    value = call @support_mod_version_suffix_isolation_value()
+    ok = eq value, 239
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(399)
+
+@test "240_mod_entry_point_override value"():
+L_ENTRY:
+    value = call @support_mod_entry_point_override_value()
+    ok = eq value, 240
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(400)
+
+@test "241_contract_layout_stability value"():
+L_ENTRY:
+    value = call @support_contract_layout_stability_value()
+    ok = eq value, 241
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(401)
+
+@test "242_contract_opaque_struct value"():
+L_ENTRY:
+    value = call @support_contract_opaque_struct_value()
+    ok = eq value, 242
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(402)
+
+@test "243_contract_sig_mismatch_link diagnostic"():
+L_ENTRY:
+    value = call @support_contract_sig_mismatch_link_code()
+    ok = eq value, 1013
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(403)
+
+@test "244_contract_vtable_export value"():
+L_ENTRY:
+    value = call @support_contract_vtable_export_value()
+    ok = eq value, 244
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(404)
+
+@test "245_contract_generic_monomorph_share value"():
+L_ENTRY:
+    value = call @support_contract_generic_monomorph_share_value()
+    ok = eq value, 245
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(405)
+
+@test "246_contract_semver_minor_update value"():
+L_ENTRY:
+    value = call @support_contract_semver_minor_update_value()
+    ok = eq value, 246
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(406)
+
+@test "247_contract_semver_major_break value"():
+L_ENTRY:
+    value = call @support_contract_semver_major_break_value()
+    ok = eq value, 247
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(407)
+
+@test "248_contract_ffi_boundary_trust value"():
+L_ENTRY:
+    value = call @support_contract_ffi_boundary_trust_value()
+    ok = eq value, 248
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(408)
+
+@test "249_contract_macro_export value"():
+L_ENTRY:
+    value = call @support_contract_macro_export_value()
+    ok = eq value, 249
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(409)
+
+@test "250_contract_const_export value"():
+L_ENTRY:
+    value = call @support_contract_const_export_value()
+    ok = eq value, 250
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(410)
+
+@test "251_contract_resource_ownership value"():
+L_ENTRY:
+    value = call @support_contract_resource_ownership_value()
+    ok = eq value, 251
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(411)
+
+@test "252_contract_error_code_mapping value"():
+L_ENTRY:
+    value = call @support_contract_error_code_mapping_value()
+    ok = eq value, 252
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(412)
+
+@test "253_contract_callback_registration value"():
+L_ENTRY:
+    value = call @support_contract_callback_registration_value()
+    ok = eq value, 253
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(413)
+
+@test "254_contract_plugin_system value"():
+L_ENTRY:
+    value = call @support_contract_plugin_system_value()
+    ok = eq value, 254
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(414)
+
+@test "255_contract_memory_allocator_swap value"():
+L_ENTRY:
+    value = call @support_contract_memory_allocator_swap_value()
+    ok = eq value, 255
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(415)
+
+@test "256_contract_panic_handler_propagate value"():
+L_ENTRY:
+    value = call @support_contract_panic_handler_propagate_value()
+    ok = eq value, 256
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(416)
+
+@test "257_contract_log_facade value"():
+L_ENTRY:
+    value = call @support_contract_log_facade_value()
+    ok = eq value, 257
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(417)
+
+@test "258_contract_thread_local_isolation value"():
+L_ENTRY:
+    value = call @support_contract_thread_local_isolation_value()
+    ok = eq value, 258
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(418)
+
+@test "259_contract_static_init_order value"():
+L_ENTRY:
+    value = call @support_contract_static_init_order_value()
+    ok = eq value, 259
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(419)
+
+@test "260_contract_deprecated_warning value"():
+L_ENTRY:
+    value = call @support_contract_deprecated_warning_value()
+    ok = eq value, 260
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(420)
+
+@test "261_build_rs_codegen_saasm value"():
+L_ENTRY:
+    value = call @support_build_rs_codegen_saasm_value()
+    ok = eq value, 261
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(421)
+
+@test "262_build_bindgen_c_header value"():
+L_ENTRY:
+    value = call @support_build_bindgen_c_header_value()
+    ok = eq value, 262
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(422)
+
+@test "263_build_asset_bundling value"():
+L_ENTRY:
+    value = call @support_build_asset_bundling_value()
+    ok = eq value, 263
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(423)
+
+@test "264_build_env_var_injection value"():
+L_ENTRY:
+    value = call @support_build_env_var_injection_value()
+    ok = eq value, 264
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(424)
+
+@test "265_build_custom_linker_script value"():
+L_ENTRY:
+    value = call @support_build_custom_linker_script_value()
+    ok = eq value, 265
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(425)
+
+@test "266_build_pre_compile_hook value"():
+L_ENTRY:
+    value = call @support_build_pre_compile_hook_value()
+    ok = eq value, 266
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(426)
+
+@test "267_build_post_compile_hook value"():
+L_ENTRY:
+    value = call @support_build_post_compile_hook_value()
+    ok = eq value, 267
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(427)
+
+@test "268_build_cross_compile_wasm value"():
+L_ENTRY:
+    value = call @support_build_cross_compile_wasm_value()
+    ok = eq value, 268
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(428)
+
+@test "269_build_cross_compile_windows value"():
+L_ENTRY:
+    value = call @support_build_cross_compile_windows_value()
+    ok = eq value, 269
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(429)
+
+@test "270_build_sysroot_custom value"():
+L_ENTRY:
+    value = call @support_build_sysroot_custom_value()
+    ok = eq value, 270
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(430)
+
+@test "271_build_optimization_passes value"():
+L_ENTRY:
+    value = call @support_build_optimization_passes_value()
+    ok = eq value, 271
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(431)
+
+@test "272_build_sanitizer_flags value"():
+L_ENTRY:
+    value = call @support_build_sanitizer_flags_value()
+    ok = eq value, 272
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(432)
+
+@test "273_build_test_harness value"():
+L_ENTRY:
+    value = call @support_build_test_harness_value()
+    ok = eq value, 273
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(433)
+
+@test "274_build_benchmark_runner value"():
+L_ENTRY:
+    value = call @support_build_benchmark_runner_value()
+    ok = eq value, 274
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(434)
+
+@test "275_build_doc_generator value"():
+L_ENTRY:
+    value = call @support_build_doc_generator_value()
+    ok = eq value, 275
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(435)
+
+@test "276_build_incremental_caching value"():
+L_ENTRY:
+    value = call @support_build_incremental_caching_value()
+    ok = eq value, 276
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(436)
+
+@test "277_build_parallel_compilation value"():
+L_ENTRY:
+    value = call @support_build_parallel_compilation_value()
+    ok = eq value, 277
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(437)
+
+@test "278_build_reproducible_builds value"():
+L_ENTRY:
+    value = call @support_build_reproducible_builds_value()
+    ok = eq value, 278
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(438)
+
+@test "279_build_artifact_caching_remote value"():
+L_ENTRY:
+    value = call @support_build_artifact_caching_remote_value()
+    ok = eq value, 279
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(439)
+
+@test "280_build_ci_cd_integration value"():
+L_ENTRY:
+    value = call @support_build_ci_cd_integration_value()
+    ok = eq value, 280
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(440)
+
+@test "281_ffi_link_system_libc gate"():
+L_ENTRY:
+    value = call @support_ffi_link_system_libc_value()
+    ok = eq value, 281
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(441)
+
+@test "282_ffi_link_static_c_lib gate"():
+L_ENTRY:
+    value = call @support_ffi_link_static_c_lib_value()
+    ok = eq value, 282
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(442)
+
+@test "283_ffi_link_dynamic_c_lib gate"():
+L_ENTRY:
+    value = call @support_ffi_link_dynamic_c_lib_value()
+    ok = eq value, 283
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(443)
+
+@test "284_ffi_pkg_config_integration gate"():
+L_ENTRY:
+    value = call @support_ffi_pkg_config_integration_value()
+    ok = eq value, 284
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(444)
+
+@test "285_ffi_objective_c_framework gate"():
+L_ENTRY:
+    value = call @support_ffi_objective_c_framework_value()
+    ok = eq value, 285
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(445)
+
+@test "286_ffi_rust_staticlib_integration gate"():
+L_ENTRY:
+    value = call @support_ffi_rust_staticlib_integration_value()
+    ok = eq value, 286
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(446)
+
+@test "287_ffi_zig_export_integration export"():
+L_ENTRY:
+    value = call @support_ffi_zig_export_integration_value()
+    ok = eq value, 287
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(447)
+
+@test "288_ffi_cxx_name_mangling gate"():
+L_ENTRY:
+    value = call @support_ffi_cxx_name_mangling_value()
+    ok = eq value, 288
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(448)
+
+@test "289_ffi_opaque_handle_passing gate"():
+L_ENTRY:
+    value = call @support_ffi_opaque_handle_passing_value()
+    ok = eq value, 289
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(449)
+
+@test "290_ffi_callback_thunk vtable"():
+L_ENTRY:
+    value = call @support_ffi_callback_thunk_value()
+    ok = eq value, 290
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(450)
+
+@test "291_eco_wasm_host_imports guest"():
+L_ENTRY:
+    value = call @support_eco_wasm_host_imports_value()
+    ok = eq value, 291
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(451)
+
+@test "292_eco_wasm_memory_export memory"():
+L_ENTRY:
+    value = call @support_eco_wasm_memory_export_value()
+    ok = eq value, 292
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(452)
+
+@test "293_eco_embedded_no_os startup"():
+L_ENTRY:
+    value = call @support_eco_embedded_no_os_value()
+    ok = eq value, 293
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(453)
+
+@test "294_eco_os_kernel_module entry"():
+L_ENTRY:
+    value = call @support_eco_os_kernel_module_value()
+    ok = eq value, 294
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(454)
+
+@test "295_eco_bpf_ebpf_bytecode program"():
+L_ENTRY:
+    value = call @support_eco_bpf_ebpf_bytecode_value()
+    ok = eq value, 295
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(455)
+
+@test "296_eco_gpu_ptx_shader shader"():
+L_ENTRY:
+    value = call @support_eco_gpu_ptx_shader_value()
+    ok = eq value, 296
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(456)
+
+@test "297_eco_game_engine_ecs step"():
+L_ENTRY:
+    value = call @support_eco_game_engine_ecs_value()
+    ok = eq value, 297
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(457)
+
+@test "298_eco_cryptography_simd hash"():
+L_ENTRY:
+    value = call @support_eco_cryptography_simd_value()
+    ok = eq value, 298
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(458)
+
+@test "299_eco_language_server_protocol server"():
+L_ENTRY:
+    value = call @support_eco_language_server_protocol_value()
+    ok = eq value, 299
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(459)
+
+@test "300_eco_sa_lang_registry_publish publish"():
+L_ENTRY:
+    value = call @support_eco_sa_lang_registry_publish_value()
+    ok = eq value, 300
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(460)
+
+@test "sa_std json dom roundtrip"():
+L_ENTRY:
+    call @support_json_dom_roundtrip()
+    return
+
+@test "sa_std json stream tokens"():
+L_ENTRY:
+    call @support_json_stream_tokens()
+    return
+
+@test "sa_std regex groups"():
+L_ENTRY:
+    call @support_regex_groups()
+    return
+
+@test "sa_std mem"():
+L_ENTRY:
+    call @support_mem_surface()
+    return
+
+@test "sa_std string"():
+L_ENTRY:
+    call @support_string_surface()
+    return
+
+@test "sa_std vec"():
+L_ENTRY:
+    call @support_vec_surface()
+    return
+
+@test "sa_std hashmap"():
+L_ENTRY:
+    call @support_hashmap_surface()
+    return
+
+@test "sa_std btree"():
+L_ENTRY:
+    call @support_btree_surface()
+    return
+
+@test "sa_std net"():
+L_ENTRY:
+    call @support_net_surface()
+    return
+
+@test should_panic "178 panic hook path"():
+L_ENTRY:
+    panic(99)
+
+@test ignored "framework ignored case"():
+L_ENTRY:
+    return

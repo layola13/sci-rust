@@ -127,7 +127,7 @@ L_ENTRY:
 @import "sa_std/testing/assert.sai"
 
 @const RAW_STATUS_NAME = utf8:"raw_status"
-@const THIS_FILE = utf8:"status_test.sa"
+@const THIS_FILE = utf8:"status_test.sars"
 
 @test "status matches strict parser"():
 L_ENTRY:

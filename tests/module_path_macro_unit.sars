@@ -1,0 +1,24 @@
+@import "../sa_std/core/slice.sal"
+@import "../sa_std/core/slice.sars"
+
+@test "module_path macro reports the current source path"():
+L_ENTRY:
+    module_path_slice = alloc Slice_SIZE
+    file_slice = alloc Slice_SIZE
+    EXPAND MODULE_PATH! module_path_slice
+    EXPAND FILE! file_slice
+    module_path_ptr = load module_path_slice+Slice_ptr as ptr
+    module_path_len = load module_path_slice+Slice_len as u64
+    path_ok = ne module_path_ptr, 0
+    file_ptr = load file_slice+Slice_ptr as ptr
+    file_len = load file_slice+Slice_len as u64
+    same_ptr = eq module_path_ptr, file_ptr
+    same_len = eq module_path_len, file_len
+    same = and same_ptr, same_len
+    br same -> L_OK, L_ERR
+
+L_OK:
+    return
+
+L_ERR:
+    panic(1)

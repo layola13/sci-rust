@@ -1,0 +1,64 @@
+@import "sa_std/mem.sars"
+
+@test "sa_std ManuallyDrop clone and default macro surface"():
+L_ENTRY:
+    default_slot = stack_alloc ManuallyDropU64_SIZE
+    source = stack_alloc ManuallyDropU64_SIZE
+    copy_slot = stack_alloc ManuallyDropU64_SIZE
+    clone_slot = stack_alloc ManuallyDropU64_SIZE
+    clone_from_slot = stack_alloc ManuallyDropU64_SIZE
+
+    EXPAND MANUALLY_DROP_U64_NEW default_slot, 99
+    EXPAND MANUALLY_DROP_U64_DEFAULT default_slot
+    EXPAND MANUALLY_DROP_U64_NEW source, 41
+    EXPAND MANUALLY_DROP_U64_NEW copy_slot, 1
+    EXPAND MANUALLY_DROP_U64_NEW clone_slot, 2
+    EXPAND MANUALLY_DROP_U64_NEW clone_from_slot, 3
+
+    EXPAND MANUALLY_DROP_U64_COPY copy_slot, source
+    EXPAND MANUALLY_DROP_U64_CLONE clone_slot, source
+    EXPAND MANUALLY_DROP_U64_CLONE_FROM clone_from_slot, source
+
+    EXPAND MANUALLY_DROP_U64_AS_MUT_PTR source_mut_ptr, source
+    store source_mut_ptr+0, 77 as u64
+
+    EXPAND MANUALLY_DROP_U64_INTO_INNER default_value, default_slot
+    EXPAND MANUALLY_DROP_U64_INTO_INNER source_value, source
+    EXPAND MANUALLY_DROP_U64_INTO_INNER copy_value, copy_slot
+    EXPAND MANUALLY_DROP_U64_INTO_INNER clone_value, clone_slot
+    EXPAND MANUALLY_DROP_U64_INTO_INNER clone_from_value, clone_from_slot
+
+    ok_default = eq default_value, 0
+    ok_source = eq source_value, 77
+    ok_copy = eq copy_value, 41
+    ok_clone = eq clone_value, 41
+    ok_clone_from = eq clone_from_value, 41
+
+    c01 = and ok_default, ok_source
+    c02 = and c01, ok_copy
+    c03 = and c02, ok_clone
+    ok = and c03, ok_clone_from
+
+    !source_mut_ptr
+    !default_value
+    !source_value
+    !copy_value
+    !clone_value
+    !clone_from_value
+    !ok_default
+    !ok_source
+    !ok_copy
+    !ok_clone
+    !ok_clone_from
+    !c01
+    !c02
+    !c03
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10600)
+
+L_PASS:
+    !ok
+    return 0

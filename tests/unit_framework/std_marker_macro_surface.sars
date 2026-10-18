@@ -1,0 +1,183 @@
+@import "sa_std/marker.sars"
+
+@test "sa_std marker phantom and primitive macros"():
+L_ENTRY:
+    EXPAND MARKER_ZST_SIZE zst_size
+    EXPAND MARKER_ZST_ALIGN zst_align
+    EXPAND MARKER_IS_ZST is_zst_zero, zst_size
+    EXPAND MARKER_IS_ZST is_zst_nonzero, 8
+
+    EXPAND PHANTOM_DATA_DEFAULT phantom_default
+    EXPAND PHANTOM_DATA_CLONE phantom_clone, phantom_default
+    EXPAND PHANTOM_DATA_EQ phantom_eq, phantom_default, phantom_clone
+    EXPAND PHANTOM_DATA_CMP phantom_cmp, phantom_default, phantom_clone
+    EXPAND PHANTOM_DATA_IS_COPY phantom_copy
+    EXPAND PHANTOM_DATA_IS_SEND phantom_send
+    EXPAND PHANTOM_DATA_IS_SYNC phantom_sync
+    EXPAND PHANTOM_DATA_IS_UNPIN phantom_unpin
+
+    EXPAND PHANTOM_PINNED_DEFAULT pinned_default
+    EXPAND PHANTOM_PINNED_CLONE pinned_clone, pinned_default
+    EXPAND PHANTOM_PINNED_EQ pinned_eq, pinned_default, pinned_clone
+    EXPAND PHANTOM_PINNED_CMP pinned_cmp, pinned_default, pinned_clone
+    EXPAND PHANTOM_PINNED_IS_COPY pinned_copy
+    EXPAND PHANTOM_PINNED_IS_SEND pinned_send
+    EXPAND PHANTOM_PINNED_IS_SYNC pinned_sync
+    EXPAND PHANTOM_PINNED_IS_UNPIN pinned_unpin
+
+    EXPAND MARKER_PRIMITIVE_IS_SIZED prim_sized
+    EXPAND MARKER_PRIMITIVE_IS_COPY prim_copy
+    EXPAND MARKER_PRIMITIVE_IS_SEND prim_send
+    EXPAND MARKER_PRIMITIVE_IS_SYNC prim_sync
+    EXPAND MARKER_PRIMITIVE_IS_UNPIN prim_unpin
+    EXPAND MARKER_PRIMITIVE_IS_FREEZE prim_freeze
+    EXPAND MARKER_CAPABILITY cap_true, MARKER_CAP_TRUE
+    EXPAND MARKER_CAPABILITY cap_false, MARKER_CAP_FALSE
+
+    ok_zst_size = eq zst_size, PhantomData_SIZE
+    ok_zst_align = eq zst_align, PhantomData_ALIGN
+    ok_zst_zero = eq is_zst_zero, 1
+    ok_zst_nonzero = eq is_zst_nonzero, 0
+    ok_phantom_default = eq phantom_default, 0
+    ok_phantom_clone = eq phantom_clone, 0
+    ok_phantom_eq = eq phantom_eq, 1
+    ok_phantom_cmp = eq phantom_cmp, 0
+    ok_phantom_copy = eq phantom_copy, 1
+    ok_phantom_send = eq phantom_send, 1
+    ok_phantom_sync = eq phantom_sync, 1
+    ok_phantom_unpin = eq phantom_unpin, 1
+    ok_pinned_default = eq pinned_default, 0
+    ok_pinned_clone = eq pinned_clone, 0
+    ok_pinned_eq = eq pinned_eq, 1
+    ok_pinned_cmp = eq pinned_cmp, 0
+    ok_pinned_copy = eq pinned_copy, 1
+    ok_pinned_send = eq pinned_send, 1
+    ok_pinned_sync = eq pinned_sync, 1
+    ok_pinned_unpin = eq pinned_unpin, 0
+    ok_prim_sized = eq prim_sized, 1
+    ok_prim_copy = eq prim_copy, 1
+    ok_prim_send = eq prim_send, 1
+    ok_prim_sync = eq prim_sync, 1
+    ok_prim_unpin = eq prim_unpin, 1
+    ok_prim_freeze = eq prim_freeze, 1
+    ok_cap_true = eq cap_true, 1
+    ok_cap_false = eq cap_false, 0
+
+    ok01 = and ok_zst_size, ok_zst_align
+    ok02 = and ok01, ok_zst_zero
+    ok03 = and ok02, ok_zst_nonzero
+    ok04 = and ok03, ok_phantom_default
+    ok05 = and ok04, ok_phantom_clone
+    ok06 = and ok05, ok_phantom_eq
+    ok07 = and ok06, ok_phantom_cmp
+    ok08 = and ok07, ok_phantom_copy
+    ok09 = and ok08, ok_phantom_send
+    ok10 = and ok09, ok_phantom_sync
+    ok11 = and ok10, ok_phantom_unpin
+    ok12 = and ok11, ok_pinned_default
+    ok13 = and ok12, ok_pinned_clone
+    ok14 = and ok13, ok_pinned_eq
+    ok15 = and ok14, ok_pinned_cmp
+    ok16 = and ok15, ok_pinned_copy
+    ok17 = and ok16, ok_pinned_send
+    ok18 = and ok17, ok_pinned_sync
+    ok19 = and ok18, ok_pinned_unpin
+    ok20 = and ok19, ok_prim_sized
+    ok21 = and ok20, ok_prim_copy
+    ok22 = and ok21, ok_prim_send
+    ok23 = and ok22, ok_prim_sync
+    ok24 = and ok23, ok_prim_unpin
+    ok25 = and ok24, ok_prim_freeze
+    ok26 = and ok25, ok_cap_true
+    ok = and ok26, ok_cap_false
+
+    !zst_size
+    !zst_align
+    !is_zst_zero
+    !is_zst_nonzero
+    !phantom_default
+    !phantom_clone
+    !phantom_eq
+    !phantom_cmp
+    !phantom_copy
+    !phantom_send
+    !phantom_sync
+    !phantom_unpin
+    !pinned_default
+    !pinned_clone
+    !pinned_eq
+    !pinned_cmp
+    !pinned_copy
+    !pinned_send
+    !pinned_sync
+    !pinned_unpin
+    !prim_sized
+    !prim_copy
+    !prim_send
+    !prim_sync
+    !prim_unpin
+    !prim_freeze
+    !cap_true
+    !cap_false
+    !ok_zst_size
+    !ok_zst_align
+    !ok_zst_zero
+    !ok_zst_nonzero
+    !ok_phantom_default
+    !ok_phantom_clone
+    !ok_phantom_eq
+    !ok_phantom_cmp
+    !ok_phantom_copy
+    !ok_phantom_send
+    !ok_phantom_sync
+    !ok_phantom_unpin
+    !ok_pinned_default
+    !ok_pinned_clone
+    !ok_pinned_eq
+    !ok_pinned_cmp
+    !ok_pinned_copy
+    !ok_pinned_send
+    !ok_pinned_sync
+    !ok_pinned_unpin
+    !ok_prim_sized
+    !ok_prim_copy
+    !ok_prim_send
+    !ok_prim_sync
+    !ok_prim_unpin
+    !ok_prim_freeze
+    !ok_cap_true
+    !ok_cap_false
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10066)
+
+L_PASS:
+    return 0

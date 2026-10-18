@@ -1,0 +1,29 @@
+@import "sa_std/io/print.sai"
+@import "bridge/cxx_gate.sars"
+
+@const RESULT_OK = utf8:"288\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 288 - Ffi Cxx Name Mangling
+// The mangling story is documented in host-side headers and nm output.
+
+@main() -> i32:
+L_ENTRY:
+    probe = alloc 8
+    store probe+0, 288 as i32
+    store probe+4, 0 as i32
+    value = call @cxx_name_gate(*probe)
+    ok = eq value, 288
+    !value
+    !probe
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

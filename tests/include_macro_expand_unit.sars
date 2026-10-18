@@ -1,0 +1,18 @@
+@import "../sa_std/core/slice.sal"
+@import "../sa_std/core/slice.sars"
+@import "../sa_std/core/option.sal"
+@import "../sa_std/core/option.sars"
+
+@test "include macro expands source into current file"():
+L_ENTRY:
+    text_slice = alloc Slice_SIZE
+    option_slice = alloc Option_SIZE
+    EXPAND INCLUDE! "tests/include_macro_impl.sars"
+    text_ptr = load text_slice+Slice_ptr as ptr
+    text_len = load text_slice+Slice_len as u64
+    option_tag = load option_slice+Option_tag as u64
+    option_value = load option_slice+Option_value as ptr
+    text_ok = ne text_ptr, 0
+    text_len_ok = eq text_len, 11
+    option_none_ok = eq option_tag, Option_NONE
+    return

@@ -1,0 +1,387 @@
+@import "sa_std/vec_deque.sars"
+
+@vec_deque_iter_cmp_compare_u64(left: u64, right: u64) -> i64:
+L_ENTRY:
+    is_less = ult left, right
+    br is_less -> L_VEC_DEQUE_CMP_LESS, L_VEC_DEQUE_CMP_CHECK_GREATER
+L_VEC_DEQUE_CMP_LESS:
+    out_less = sub 0, 1
+    !is_less
+    !right
+    !left
+    return out_less
+L_VEC_DEQUE_CMP_CHECK_GREATER:
+    is_greater = ugt left, right
+    br is_greater -> L_VEC_DEQUE_CMP_GREATER, L_VEC_DEQUE_CMP_EQUAL
+L_VEC_DEQUE_CMP_GREATER:
+    out_greater = add 0, 1
+    !is_greater
+    !is_less
+    !right
+    !left
+    return out_greater
+L_VEC_DEQUE_CMP_EQUAL:
+    out_equal = add 0, 0
+    !is_greater
+    !is_less
+    !right
+    !left
+    return out_equal
+
+@vec_deque_iter_cmp_key_ones(value: u64) -> u64:
+L_ENTRY:
+    out = urem value, 10
+    !value
+    return out
+
+@vec_deque_iter_cmp_partial_none_on_99(left: u64, right: u64, &out_order: ptr) -> u64:
+L_ENTRY:
+    left_bad = eq left, 99
+    right_bad = eq right, 99
+    bad = or left_bad, right_bad
+    br bad -> L_VEC_DEQUE_PARTIAL_CMP_NONE, L_VEC_DEQUE_PARTIAL_CMP_SOME
+L_VEC_DEQUE_PARTIAL_CMP_SOME:
+    order = call @vec_deque_iter_cmp_compare_u64(left, right)
+    store out_order+0, order as i64
+    !order
+    !bad
+    !right_bad
+    !left_bad
+    !out_order
+    !right
+    !left
+    return 1
+L_VEC_DEQUE_PARTIAL_CMP_NONE:
+    !bad
+    !right_bad
+    !left_bad
+    !out_order
+    !right
+    !left
+    return 0
+
+@vec_deque_iter_cmp_eq_mod10(left: u64, right: u64) -> u64:
+L_ENTRY:
+    left_key = urem left, 10
+    right_key = urem right, 10
+    out = eq left_key, right_key
+    !right_key
+    !left_key
+    !right
+    !left
+    return out
+
+@test "sa_std vec_deque iterator comparison macro surface"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY min_by_deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK min_by_deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK min_by_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK min_by_deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK min_by_deque, 40
+    EXPAND VEC_DEQUE_TRY_POP_FRONT min_pop_ok, min_pop_value, min_by_deque
+    EXPAND VEC_DEQUE_PUSH_BACK min_by_deque, 50
+    EXPAND VEC_DEQUE_PUSH_BACK min_by_deque, 60
+    EXPAND VEC_DEQUE_ITER_U64 min_by_iter, min_by_backing, min_by_deque
+    EXPAND VEC_DEQUE_ITER_MIN_BY_U64 min_by_ok, min_by_value, min_by_iter, @vec_deque_iter_cmp_compare_u64
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_IS_EMPTY_U64 min_by_empty, min_by_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 max_by_iter, max_by_backing, min_by_deque
+    EXPAND VEC_DEQUE_ITER_MAX_BY_U64 max_by_ok, max_by_value, max_by_iter, @vec_deque_iter_cmp_compare_u64
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY key_deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK key_deque, 0
+    EXPAND VEC_DEQUE_PUSH_BACK key_deque, 29
+    EXPAND VEC_DEQUE_PUSH_BACK key_deque, 34
+    EXPAND VEC_DEQUE_PUSH_BACK key_deque, 42
+    EXPAND VEC_DEQUE_TRY_POP_FRONT key_pop_ok, key_pop_value, key_deque
+    EXPAND VEC_DEQUE_PUSH_BACK key_deque, 51
+    EXPAND VEC_DEQUE_ITER_U64 min_key_iter, min_key_backing, key_deque
+    EXPAND VEC_DEQUE_ITER_MIN_BY_KEY_U64 min_key_ok, min_key_value, min_key_iter, @vec_deque_iter_cmp_key_ones
+    EXPAND VEC_DEQUE_ITER_U64 max_key_iter, max_key_backing, key_deque
+    EXPAND VEC_DEQUE_ITER_MAX_BY_KEY_U64 max_key_ok, max_key_value, max_key_iter, @vec_deque_iter_cmp_key_ones
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY cmp_left_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_left_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_left_deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_left_deque, 40
+    EXPAND VEC_DEQUE_WITH_CAPACITY cmp_right_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_right_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_right_deque, 35
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_right_deque, 40
+    EXPAND VEC_DEQUE_ITER_U64 cmp_left_iter, cmp_left_backing, cmp_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 cmp_right_iter, cmp_right_backing, cmp_right_deque
+    EXPAND VEC_DEQUE_ITER_CMP_U64 cmp_order, cmp_left_iter, cmp_right_iter
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY cmp_short_left_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_short_left_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_short_left_deque, 30
+    EXPAND VEC_DEQUE_WITH_CAPACITY cmp_short_right_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_short_right_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_short_right_deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK cmp_short_right_deque, 40
+    EXPAND VEC_DEQUE_ITER_U64 cmp_short_left_iter, cmp_short_left_backing, cmp_short_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 cmp_short_right_iter, cmp_short_right_backing, cmp_short_right_deque
+    EXPAND VEC_DEQUE_ITER_CMP_BY_U64 cmp_by_order, cmp_short_left_iter, cmp_short_right_iter, @vec_deque_iter_cmp_compare_u64
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY partial_left_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK partial_left_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK partial_left_deque, 50
+    EXPAND VEC_DEQUE_WITH_CAPACITY partial_right_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK partial_right_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK partial_right_deque, 40
+    EXPAND VEC_DEQUE_ITER_U64 partial_left_iter, partial_left_backing, partial_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 partial_right_iter, partial_right_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_PARTIAL_CMP_U64 partial_order, partial_left_iter, partial_right_iter
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY partial_by_left_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK partial_by_left_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK partial_by_left_deque, 99
+    EXPAND VEC_DEQUE_PUSH_BACK partial_by_left_deque, 50
+    EXPAND VEC_DEQUE_WITH_CAPACITY partial_by_right_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK partial_by_right_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK partial_by_right_deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK partial_by_right_deque, 50
+    EXPAND VEC_DEQUE_ITER_U64 partial_by_left_iter, partial_by_left_backing, partial_by_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 partial_by_right_iter, partial_by_right_backing, partial_by_right_deque
+    EXPAND VEC_DEQUE_ITER_PARTIAL_CMP_BY_U64 partial_by_ok, partial_by_order, partial_by_left_iter, partial_by_right_iter, @vec_deque_iter_cmp_partial_none_on_99
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_LEN_U64 partial_by_left_remaining, partial_by_left_iter
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_LEN_U64 partial_by_right_remaining, partial_by_right_iter
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY eq_by_left_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK eq_by_left_deque, 21
+    EXPAND VEC_DEQUE_PUSH_BACK eq_by_left_deque, 32
+    EXPAND VEC_DEQUE_WITH_CAPACITY eq_by_right_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK eq_by_right_deque, 1
+    EXPAND VEC_DEQUE_PUSH_BACK eq_by_right_deque, 2
+    EXPAND VEC_DEQUE_ITER_U64 eq_by_left_iter, eq_by_left_backing, eq_by_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 eq_by_right_iter, eq_by_right_backing, eq_by_right_deque
+    EXPAND VEC_DEQUE_ITER_EQ_BY_U64 eq_by_value, eq_by_left_iter, eq_by_right_iter, @vec_deque_iter_cmp_eq_mod10
+
+    EXPAND VEC_DEQUE_ITER_U64 eq_left_iter, eq_left_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_U64 eq_right_iter, eq_right_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_EQ_U64 eq_value, eq_left_iter, eq_right_iter
+    EXPAND VEC_DEQUE_ITER_U64 partial_eq_left_iter, partial_eq_left_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_U64 partial_eq_right_iter, partial_eq_right_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_PARTIAL_EQ_U64 partial_eq_value, partial_eq_left_iter, partial_eq_right_iter
+
+    EXPAND VEC_DEQUE_ITER_U64 ne_left_iter, ne_left_backing, cmp_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 ne_right_iter, ne_right_backing, cmp_right_deque
+    EXPAND VEC_DEQUE_ITER_NE_U64 ne_value, ne_left_iter, ne_right_iter
+    EXPAND VEC_DEQUE_ITER_U64 lt_left_iter, lt_left_backing, cmp_left_deque
+    EXPAND VEC_DEQUE_ITER_U64 lt_right_iter, lt_right_backing, cmp_right_deque
+    EXPAND VEC_DEQUE_ITER_LT_U64 lt_value, lt_left_iter, lt_right_iter
+    EXPAND VEC_DEQUE_ITER_U64 le_left_iter, le_left_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_U64 le_right_iter, le_right_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_LE_U64 le_value, le_left_iter, le_right_iter
+    EXPAND VEC_DEQUE_ITER_U64 gt_left_iter, gt_left_backing, cmp_right_deque
+    EXPAND VEC_DEQUE_ITER_U64 gt_right_iter, gt_right_backing, cmp_left_deque
+    EXPAND VEC_DEQUE_ITER_GT_U64 gt_value, gt_left_iter, gt_right_iter
+    EXPAND VEC_DEQUE_ITER_U64 ge_left_iter, ge_left_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_U64 ge_right_iter, ge_right_backing, partial_right_deque
+    EXPAND VEC_DEQUE_ITER_GE_U64 ge_value, ge_left_iter, ge_right_iter
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY into_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK into_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK into_deque, 39
+    EXPAND VEC_DEQUE_PUSH_BACK into_deque, 41
+    EXPAND VEC_DEQUE_INTO_ITER_U64 into_iter, into_backing, into_deque
+    EXPAND VEC_DEQUE_INTO_ITER_MAX_BY_KEY_U64 into_max_key_ok, into_max_key_value, into_iter, @vec_deque_iter_cmp_key_ones
+    EXPAND VEC_DEQUE_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 into_empty, into_iter
+    EXPAND VEC_DEQUE_IS_EMPTY into_deque_empty, into_deque
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY into_cmp_left_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK into_cmp_left_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK into_cmp_left_deque, 40
+    EXPAND VEC_DEQUE_WITH_CAPACITY into_cmp_right_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK into_cmp_right_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK into_cmp_right_deque, 30
+    EXPAND VEC_DEQUE_INTO_ITER_U64 into_cmp_left_iter, into_cmp_left_backing, into_cmp_left_deque
+    EXPAND VEC_DEQUE_INTO_ITER_U64 into_cmp_right_iter, into_cmp_right_backing, into_cmp_right_deque
+    EXPAND VEC_DEQUE_INTO_ITER_GT_U64 into_gt_value, into_cmp_left_iter, into_cmp_right_iter
+
+    EXPAND VEC_FREE min_by_backing
+    EXPAND VEC_FREE max_by_backing
+    EXPAND VEC_FREE min_key_backing
+    EXPAND VEC_FREE max_key_backing
+    EXPAND VEC_FREE cmp_left_backing
+    EXPAND VEC_FREE cmp_right_backing
+    EXPAND VEC_FREE cmp_short_left_backing
+    EXPAND VEC_FREE cmp_short_right_backing
+    EXPAND VEC_FREE partial_left_backing
+    EXPAND VEC_FREE partial_right_backing
+    EXPAND VEC_FREE partial_by_left_backing
+    EXPAND VEC_FREE partial_by_right_backing
+    EXPAND VEC_FREE eq_by_left_backing
+    EXPAND VEC_FREE eq_by_right_backing
+    EXPAND VEC_FREE eq_left_backing
+    EXPAND VEC_FREE eq_right_backing
+    EXPAND VEC_FREE partial_eq_left_backing
+    EXPAND VEC_FREE partial_eq_right_backing
+    EXPAND VEC_FREE ne_left_backing
+    EXPAND VEC_FREE ne_right_backing
+    EXPAND VEC_FREE lt_left_backing
+    EXPAND VEC_FREE lt_right_backing
+    EXPAND VEC_FREE le_left_backing
+    EXPAND VEC_FREE le_right_backing
+    EXPAND VEC_FREE gt_left_backing
+    EXPAND VEC_FREE gt_right_backing
+    EXPAND VEC_FREE ge_left_backing
+    EXPAND VEC_FREE ge_right_backing
+    EXPAND VEC_FREE into_backing
+    EXPAND VEC_FREE into_cmp_left_backing
+    EXPAND VEC_FREE into_cmp_right_backing
+
+    EXPAND VEC_DEQUE_FREE min_by_deque
+    EXPAND VEC_DEQUE_FREE key_deque
+    EXPAND VEC_DEQUE_FREE cmp_left_deque
+    EXPAND VEC_DEQUE_FREE cmp_right_deque
+    EXPAND VEC_DEQUE_FREE cmp_short_left_deque
+    EXPAND VEC_DEQUE_FREE cmp_short_right_deque
+    EXPAND VEC_DEQUE_FREE partial_left_deque
+    EXPAND VEC_DEQUE_FREE partial_right_deque
+    EXPAND VEC_DEQUE_FREE partial_by_left_deque
+    EXPAND VEC_DEQUE_FREE partial_by_right_deque
+    EXPAND VEC_DEQUE_FREE eq_by_left_deque
+    EXPAND VEC_DEQUE_FREE eq_by_right_deque
+    EXPAND VEC_DEQUE_FREE into_deque
+    EXPAND VEC_DEQUE_FREE into_cmp_left_deque
+    EXPAND VEC_DEQUE_FREE into_cmp_right_deque
+
+    ok = eq min_pop_ok, 1
+    check = eq min_pop_value, 10
+    ok = and ok, check
+    check = eq min_by_ok, 1
+    ok = and ok, check
+    check = eq min_by_value, 20
+    ok = and ok, check
+    check = eq min_by_empty, 1
+    ok = and ok, check
+    check = eq max_by_ok, 1
+    ok = and ok, check
+    check = eq max_by_value, 60
+    ok = and ok, check
+    check = eq key_pop_ok, 1
+    ok = and ok, check
+    check = eq key_pop_value, 0
+    ok = and ok, check
+    check = eq min_key_ok, 1
+    ok = and ok, check
+    check = eq min_key_value, 51
+    ok = and ok, check
+    check = eq max_key_ok, 1
+    ok = and ok, check
+    check = eq max_key_value, 29
+    ok = and ok, check
+    check = eq cmp_order, -1
+    ok = and ok, check
+    check = eq cmp_by_order, -1
+    ok = and ok, check
+    check = eq partial_order, 1
+    ok = and ok, check
+    check = eq partial_by_ok, 0
+    ok = and ok, check
+    check = eq partial_by_order, 0
+    ok = and ok, check
+    check = eq partial_by_left_remaining, 1
+    ok = and ok, check
+    check = eq partial_by_right_remaining, 1
+    ok = and ok, check
+    check = eq eq_by_value, 1
+    ok = and ok, check
+    check = eq eq_value, 1
+    ok = and ok, check
+    check = eq partial_eq_value, 1
+    ok = and ok, check
+    check = eq ne_value, 1
+    ok = and ok, check
+    check = eq lt_value, 1
+    ok = and ok, check
+    check = eq le_value, 1
+    ok = and ok, check
+    check = eq gt_value, 1
+    ok = and ok, check
+    check = eq ge_value, 1
+    ok = and ok, check
+    check = eq into_max_key_ok, 1
+    ok = and ok, check
+    check = eq into_max_key_value, 39
+    ok = and ok, check
+    check = eq into_empty, 1
+    ok = and ok, check
+    check = eq into_deque_empty, 1
+    ok = and ok, check
+    check = eq into_gt_value, 1
+    ok = and ok, check
+
+    !min_pop_ok
+    !min_pop_value
+    !key_pop_ok
+    !key_pop_value
+    !min_by_ok
+    !min_by_value
+    !min_by_empty
+    !max_by_ok
+    !max_by_value
+    !min_key_ok
+    !min_key_value
+    !max_key_ok
+    !max_key_value
+    !cmp_order
+    !cmp_by_order
+    !partial_order
+    !partial_by_ok
+    !partial_by_order
+    !partial_by_left_remaining
+    !partial_by_right_remaining
+    !eq_by_value
+    !eq_value
+    !partial_eq_value
+    !ne_value
+    !lt_value
+    !le_value
+    !gt_value
+    !ge_value
+    !into_max_key_ok
+    !into_max_key_value
+    !into_empty
+    !into_deque_empty
+    !into_gt_value
+    !check
+    !min_by_iter
+    !max_by_iter
+    !min_key_iter
+    !max_key_iter
+    !cmp_left_iter
+    !cmp_right_iter
+    !cmp_short_left_iter
+    !cmp_short_right_iter
+    !partial_left_iter
+    !partial_right_iter
+    !partial_by_left_iter
+    !partial_by_right_iter
+    !eq_by_left_iter
+    !eq_by_right_iter
+    !eq_left_iter
+    !eq_right_iter
+    !partial_eq_left_iter
+    !partial_eq_right_iter
+    !ne_left_iter
+    !ne_right_iter
+    !lt_left_iter
+    !lt_right_iter
+    !le_left_iter
+    !le_right_iter
+    !gt_left_iter
+    !gt_right_iter
+    !ge_left_iter
+    !ge_right_iter
+    !into_iter
+    !into_cmp_left_iter
+    !into_cmp_right_iter
+    br ok -> L_VEC_DEQUE_ITER_CMP_OK, L_VEC_DEQUE_ITER_CMP_FAIL
+L_VEC_DEQUE_ITER_CMP_FAIL:
+    !ok
+    panic(10791)
+L_VEC_DEQUE_ITER_CMP_OK:
+    !ok
+    return

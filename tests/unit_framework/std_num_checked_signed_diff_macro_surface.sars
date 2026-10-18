@@ -1,0 +1,168 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive checked_signed_diff macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_CHECKED_SIGNED_DIFF u8_pos_ok, u8_pos, 10, 2
+    EXPAND NUM_U8_CHECKED_SIGNED_DIFF u8_neg_ok, u8_neg, 2, 10
+    EXPAND NUM_U8_CHECKED_SIGNED_DIFF u8_zero_ok, u8_zero, 255, 255
+    EXPAND NUM_U8_CHECKED_SIGNED_DIFF u8_pos_over_ok, u8_pos_over, 255, 0
+    EXPAND NUM_U8_CHECKED_SIGNED_DIFF u8_neg_over_ok, u8_neg_over, 0, 129
+    EXPAND NUM_U8_CHECKED_SIGNED_DIFF u8_min_ok, u8_min, 0, 128
+
+    EXPAND NUM_U16_CHECKED_SIGNED_DIFF u16_pos_ok, u16_pos, 40000, 10000
+    EXPAND NUM_U16_CHECKED_SIGNED_DIFF u16_neg_ok, u16_neg, 10000, 40000
+    EXPAND NUM_U16_CHECKED_SIGNED_DIFF u16_zero_ok, u16_zero, 65535, 65535
+    EXPAND NUM_U16_CHECKED_SIGNED_DIFF u16_pos_over_ok, u16_pos_over, 65535, 0
+    EXPAND NUM_U16_CHECKED_SIGNED_DIFF u16_neg_over_ok, u16_neg_over, 0, 32769
+    EXPAND NUM_U16_CHECKED_SIGNED_DIFF u16_min_ok, u16_min, 0, 32768
+
+    EXPAND NUM_U32_CHECKED_SIGNED_DIFF u32_pos_ok, u32_pos, 3000000000, 1000000000
+    EXPAND NUM_U32_CHECKED_SIGNED_DIFF u32_neg_ok, u32_neg, 1000000000, 3000000000
+    EXPAND NUM_U32_CHECKED_SIGNED_DIFF u32_zero_ok, u32_zero, NUM_U32_MAX, NUM_U32_MAX
+    EXPAND NUM_U32_CHECKED_SIGNED_DIFF u32_pos_over_ok, u32_pos_over, NUM_U32_MAX, 0
+    EXPAND NUM_U32_CHECKED_SIGNED_DIFF u32_neg_over_ok, u32_neg_over, 0, 2147483649
+    EXPAND NUM_U32_CHECKED_SIGNED_DIFF u32_min_ok, u32_min, 0, 2147483648
+
+    EXPAND NUM_U64_CHECKED_SIGNED_DIFF u64_pos_ok, u64_pos, NUM_I64_MAX, 0
+    EXPAND NUM_U64_CHECKED_SIGNED_DIFF u64_neg_ok, u64_neg, 0, NUM_I64_MAX
+    EXPAND NUM_U64_CHECKED_SIGNED_DIFF u64_zero_ok, u64_zero, NUM_U64_MAX, NUM_U64_MAX
+    EXPAND NUM_U64_CHECKED_SIGNED_DIFF u64_pos_over_ok, u64_pos_over, NUM_U64_MAX, 0
+    EXPAND NUM_U64_CHECKED_SIGNED_DIFF u64_min_ok, u64_min, NUM_I64_MAX, NUM_U64_MAX
+    EXPAND NUM_U64_CHECKED_SIGNED_DIFF u64_neg_over_ok, u64_neg_over, 0, NUM_U64_MAX
+
+    EXPAND NUM_USIZE_CHECKED_SIGNED_DIFF usize_pos_ok, usize_pos, NUM_I64_MAX, 0
+    EXPAND NUM_USIZE_CHECKED_SIGNED_DIFF usize_neg_ok, usize_neg, 0, NUM_I64_MAX
+    EXPAND NUM_USIZE_CHECKED_SIGNED_DIFF usize_zero_ok, usize_zero, NUM_USIZE_MAX, NUM_USIZE_MAX
+    EXPAND NUM_USIZE_CHECKED_SIGNED_DIFF usize_pos_over_ok, usize_pos_over, NUM_USIZE_MAX, 0
+    EXPAND NUM_USIZE_CHECKED_SIGNED_DIFF usize_min_ok, usize_min, NUM_ISIZE_MAX, NUM_USIZE_MAX
+    EXPAND NUM_USIZE_CHECKED_SIGNED_DIFF usize_neg_over_ok, usize_neg_over, 0, NUM_USIZE_MAX
+
+    ok_01 = eq u8_pos_ok, 1
+    ok_02 = eq u8_pos, 8
+    ok_03 = eq u8_neg_ok, 1
+    ok_04 = eq u8_neg, -8
+    ok_05 = eq u8_zero_ok, 1
+    ok_06 = eq u8_zero, 0
+    ok_07 = eq u8_pos_over_ok, 0
+    ok_08 = eq u8_pos_over, 0
+    ok_09 = eq u8_neg_over_ok, 0
+    ok_10 = eq u8_neg_over, 0
+    ok_11 = eq u8_min_ok, 1
+    ok_12 = eq u8_min, NUM_I8_MIN
+    ok_13 = eq u16_pos_ok, 1
+    ok_14 = eq u16_pos, 30000
+    ok_15 = eq u16_neg_ok, 1
+    ok_16 = eq u16_neg, -30000
+    ok_17 = eq u16_zero_ok, 1
+    ok_18 = eq u16_zero, 0
+    ok_19 = eq u16_pos_over_ok, 0
+    ok_20 = eq u16_pos_over, 0
+    ok_21 = eq u16_neg_over_ok, 0
+    ok_22 = eq u16_neg_over, 0
+    ok_23 = eq u16_min_ok, 1
+    ok_24 = eq u16_min, NUM_I16_MIN
+    ok_25 = eq u32_pos_ok, 1
+    ok_26 = eq u32_pos, 2000000000
+    ok_27 = eq u32_neg_ok, 1
+    ok_28 = eq u32_neg, -2000000000
+    ok_29 = eq u32_zero_ok, 1
+    ok_30 = eq u32_zero, 0
+    ok_31 = eq u32_pos_over_ok, 0
+    ok_32 = eq u32_pos_over, 0
+    ok_33 = eq u32_neg_over_ok, 0
+    ok_34 = eq u32_neg_over, 0
+    ok_35 = eq u32_min_ok, 1
+    ok_36 = eq u32_min, NUM_I32_MIN
+    ok_37 = eq u64_pos_ok, 1
+    ok_38 = eq u64_pos, NUM_I64_MAX
+    ok_39 = eq u64_neg_ok, 1
+    ok_40 = eq u64_neg, -9223372036854775807
+    ok_41 = eq u64_zero_ok, 1
+    ok_42 = eq u64_zero, 0
+    ok_43 = eq u64_pos_over_ok, 0
+    ok_44 = eq u64_pos_over, 0
+    ok_45 = eq u64_min_ok, 1
+    ok_46 = eq u64_min, NUM_I64_MIN
+    ok_47 = eq u64_neg_over_ok, 0
+    ok_48 = eq u64_neg_over, 0
+    ok_49 = eq usize_pos_ok, 1
+    ok_50 = eq usize_pos, NUM_ISIZE_MAX
+    ok_51 = eq usize_neg_ok, 1
+    ok_52 = eq usize_neg, -9223372036854775807
+    ok_53 = eq usize_zero_ok, 1
+    ok_54 = eq usize_zero, 0
+    ok_55 = eq usize_pos_over_ok, 0
+    ok_56 = eq usize_pos_over, 0
+    ok_57 = eq usize_min_ok, 1
+    ok_58 = eq usize_min, NUM_ISIZE_MIN
+    ok_59 = eq usize_neg_over_ok, 0
+    ok_60 = eq usize_neg_over, 0
+
+    acc_01 = and ok_01, ok_02
+    acc_02 = and acc_01, ok_03
+    acc_03 = and acc_02, ok_04
+    acc_04 = and acc_03, ok_05
+    acc_05 = and acc_04, ok_06
+    acc_06 = and acc_05, ok_07
+    acc_07 = and acc_06, ok_08
+    acc_08 = and acc_07, ok_09
+    acc_09 = and acc_08, ok_10
+    acc_10 = and acc_09, ok_11
+    acc_11 = and acc_10, ok_12
+    acc_12 = and acc_11, ok_13
+    acc_13 = and acc_12, ok_14
+    acc_14 = and acc_13, ok_15
+    acc_15 = and acc_14, ok_16
+    acc_16 = and acc_15, ok_17
+    acc_17 = and acc_16, ok_18
+    acc_18 = and acc_17, ok_19
+    acc_19 = and acc_18, ok_20
+    acc_20 = and acc_19, ok_21
+    acc_21 = and acc_20, ok_22
+    acc_22 = and acc_21, ok_23
+    acc_23 = and acc_22, ok_24
+    acc_24 = and acc_23, ok_25
+    acc_25 = and acc_24, ok_26
+    acc_26 = and acc_25, ok_27
+    acc_27 = and acc_26, ok_28
+    acc_28 = and acc_27, ok_29
+    acc_29 = and acc_28, ok_30
+    acc_30 = and acc_29, ok_31
+    acc_31 = and acc_30, ok_32
+    acc_32 = and acc_31, ok_33
+    acc_33 = and acc_32, ok_34
+    acc_34 = and acc_33, ok_35
+    acc_35 = and acc_34, ok_36
+    acc_36 = and acc_35, ok_37
+    acc_37 = and acc_36, ok_38
+    acc_38 = and acc_37, ok_39
+    acc_39 = and acc_38, ok_40
+    acc_40 = and acc_39, ok_41
+    acc_41 = and acc_40, ok_42
+    acc_42 = and acc_41, ok_43
+    acc_43 = and acc_42, ok_44
+    acc_44 = and acc_43, ok_45
+    acc_45 = and acc_44, ok_46
+    acc_46 = and acc_45, ok_47
+    acc_47 = and acc_46, ok_48
+    acc_48 = and acc_47, ok_49
+    acc_49 = and acc_48, ok_50
+    acc_50 = and acc_49, ok_51
+    acc_51 = and acc_50, ok_52
+    acc_52 = and acc_51, ok_53
+    acc_53 = and acc_52, ok_54
+    acc_54 = and acc_53, ok_55
+    acc_55 = and acc_54, ok_56
+    acc_56 = and acc_55, ok_57
+    acc_57 = and acc_56, ok_58
+    acc_58 = and acc_57, ok_59
+    ok = and acc_58, ok_60
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10639)
+
+L_PASS:
+    !ok
+    return 0

@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "bin/index.sars"
+
+@const RESULT_OK = utf8:"219\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 219 - Pkg Bin Multiple
+// The package tree exposes two sibling bin modules and a shared aggregate entry.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @bins_total()
+    ok = eq value, 219
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

@@ -977,7 +977,7 @@ static SaType float_binop_operand_type(SaType lhs, SaType rhs, SaType fallback) 
 
 static void debug_init(EmitCtx *e, const SaModule *m) {
     if (m == NULL || !m->debug) return;
-    const char *source_file = m->source_file != NULL ? m->source_file : "unknown.sa";
+    const char *source_file = m->source_file != NULL ? m->source_file : "unknown.sars";
     const char *source_dir = m->source_dir != NULL ? m->source_dir : ".";
     e->debug = 1;
     e->dib = LLVMCreateDIBuilder(e->module);
@@ -1043,7 +1043,7 @@ static LLVMMetadataRef debug_subprogram(EmitCtx *e, LLVMValueRef fn, const SaFun
     const char *source_dir = f->source_dir != NULL ? f->source_dir : NULL;
     LLVMMetadataRef file = e->di_file;
     if (source_file != NULL || source_dir != NULL) {
-        const char *file_name = source_file != NULL ? source_file : "unknown.sa";
+        const char *file_name = source_file != NULL ? source_file : "unknown.sars";
         const char *dir_name = source_dir != NULL ? source_dir : ".";
         file = LLVMDIBuilderCreateFile(e->dib, file_name, strlen(file_name), dir_name, strlen(dir_name));
     }

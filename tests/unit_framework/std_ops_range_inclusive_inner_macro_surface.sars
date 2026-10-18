@@ -1,0 +1,41 @@
+@import "sa_std/ops.sars"
+
+@test "sa_std ops RangeInclusive into_inner macros"():
+L_ENTRY:
+    range_u64 = stack_alloc RangeInclusiveU64_SIZE
+    range_usize = stack_alloc RangeInclusiveUsize_SIZE
+
+    EXPAND RANGE_INCLUSIVE_U64_NEW range_u64, 4, 9
+    EXPAND RANGE_INCLUSIVE_USIZE_NEW range_usize, 12, 18
+
+    EXPAND RANGE_INCLUSIVE_U64_INTO_INNER u64_start, u64_end, range_u64
+    EXPAND RANGE_INCLUSIVE_USIZE_INTO_INNER usize_start, usize_end, range_usize
+    EXPAND RANGE_INCLUSIVE_U64_START u64_start_ref, range_u64
+    EXPAND RANGE_INCLUSIVE_U64_END u64_end_ref, range_u64
+    EXPAND RANGE_INCLUSIVE_USIZE_START usize_start_ref, range_usize
+    EXPAND RANGE_INCLUSIVE_USIZE_END usize_end_ref, range_usize
+
+    ok_u64_start = eq u64_start, 4
+    ok_u64_end = eq u64_end, 9
+    ok_usize_start = eq usize_start, 12
+    ok_usize_end = eq usize_end, 18
+    ok_u64_start_ref = eq u64_start_ref, u64_start
+    ok_u64_end_ref = eq u64_end_ref, u64_end
+    ok_usize_start_ref = eq usize_start_ref, usize_start
+    ok_usize_end_ref = eq usize_end_ref, usize_end
+
+    c01 = and ok_u64_start, ok_u64_end
+    c02 = and c01, ok_usize_start
+    c03 = and c02, ok_usize_end
+    c04 = and c03, ok_u64_start_ref
+    c05 = and c04, ok_u64_end_ref
+    c06 = and c05, ok_usize_start_ref
+    ok = and c06, ok_usize_end_ref
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10510)
+
+L_PASS:
+    return 0

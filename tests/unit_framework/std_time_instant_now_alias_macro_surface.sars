@@ -1,0 +1,36 @@
+@import "sa_std/time.sars"
+
+@test "sa_std time instant/system now aliases"():
+L_ENTRY:
+    EXPAND TIME_INSTANT_NOW a
+    EXPAND TIME_SYSTEM_TIME_NOW c
+    EXPAND TIME_DURATION_FROM_NS one, 1
+    EXPAND TIME_INSTANT_CHECKED_ADD ok_add, later, a, one
+    EXPAND TIME_SYSTEM_TIME_CHECKED_ADD ok_sadd, slater, c, one
+    ok_add_flag = eq ok_add, 1
+    ok_sadd_flag = eq ok_sadd, 1
+    ok_later = ugt later, a
+    ok_slater = ugt slater, c
+    ok01 = and ok_add_flag, ok_sadd_flag
+    ok02 = and ok01, ok_later
+    ok = and ok02, ok_slater
+    !a
+    !c
+    !one
+    !ok_add
+    !later
+    !ok_sadd
+    !slater
+    !ok_add_flag
+    !ok_sadd_flag
+    !ok_later
+    !ok_slater
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10917)

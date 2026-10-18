@@ -1,0 +1,3 @@
+// ManuallyDrop namespace facade.
+@import "../mem.sal"
+@import "../mem.sars"

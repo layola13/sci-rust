@@ -1,9 +1,0 @@
-@import "versions/v1/float_v1.sa"
-@import "versions/v2/float_v2.sa"
-
-@export versioned_float_value() -> f64:
-L_ENTRY:
-    v1 = call @v1_float_value()
-    v2 = call @v2_float_value()
-    !v1
-    return v2

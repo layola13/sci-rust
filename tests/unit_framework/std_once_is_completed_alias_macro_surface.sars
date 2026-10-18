@@ -1,0 +1,31 @@
+@import "sa_std/sync/once.sars"
+
+@init_1() -> u64:
+L_ENTRY:
+    return 1
+
+@test "sa_std once is_completed alias"():
+L_ENTRY:
+    EXPAND ONCE_NEW once
+    EXPAND ONCE_IS_COMPLETED c0, once
+    EXPAND ONCE_CALL_ONCE v, once, @init_1
+    EXPAND ONCE_IS_COMPLETED c1, once
+    a = eq c0, 0
+    b = eq c1, 1
+    c = eq v, 1
+    ok01 = and a, b
+    ok = and ok01, c
+    !c0
+    !c1
+    !v
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10898)

@@ -1,0 +1,18 @@
+@import "f1/f2/mid.sars"
+
+@export top_value() -> f64:
+L_ENTRY:
+    mid = call @mid_value()
+    five = 5 as i32
+    two_i = 2 as i32
+    five_f = sitofp five as f64
+    two_f = sitofp two_i as f64
+    two_half = fdiv five_f, two_f
+    s = fadd mid, two_half
+    !mid
+    !five
+    !two_i
+    !five_f
+    !two_f
+    !two_half
+    return s

@@ -1,0 +1,58 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_SIGNED_WIDE_OVERFLOWING_EQ %out_acc, %prev_acc, %value, %expected
+    __test_signed_wide_overflowing_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_signed_wide_overflowing_eq_%out_acc
+    !__test_signed_wide_overflowing_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std signed wide primitive overflowing add sub mul macro surface"():
+L_ENTRY:
+    EXPAND NUM_I64_OVERFLOWING_ADD i64_add_value, i64_add_over, 5, 2
+    EXPAND NUM_I64_OVERFLOWING_ADD i64_add_wrap_value, i64_add_wrap_over, NUM_I64_MAX, 1
+    EXPAND NUM_I64_OVERFLOWING_SUB i64_sub_value, i64_sub_over, 5, 2
+    EXPAND NUM_I64_OVERFLOWING_SUB i64_sub_wrap_value, i64_sub_wrap_over, NUM_I64_MIN, 1
+    EXPAND NUM_I64_OVERFLOWING_MUL i64_mul_value, i64_mul_over, -7, 3
+    EXPAND NUM_I64_OVERFLOWING_MUL i64_mul_wrap_value, i64_mul_wrap_over, NUM_I64_MAX, 2
+
+    EXPAND NUM_ISIZE_OVERFLOWING_ADD isize_add_value, isize_add_over, 5, 2
+    EXPAND NUM_ISIZE_OVERFLOWING_ADD isize_add_wrap_value, isize_add_wrap_over, NUM_ISIZE_MAX, 1
+    EXPAND NUM_ISIZE_OVERFLOWING_SUB isize_sub_value, isize_sub_over, 5, 2
+    EXPAND NUM_ISIZE_OVERFLOWING_SUB isize_sub_wrap_value, isize_sub_wrap_over, NUM_ISIZE_MIN, 1
+    EXPAND NUM_ISIZE_OVERFLOWING_MUL isize_mul_value, isize_mul_over, -7, 3
+    EXPAND NUM_ISIZE_OVERFLOWING_MUL isize_mul_wrap_value, isize_mul_wrap_over, NUM_ISIZE_MAX, 2
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_01, acc_00, i64_add_value, 7
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_02, acc_01, i64_add_over, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_03, acc_02, i64_add_wrap_value, NUM_I64_MIN
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_04, acc_03, i64_add_wrap_over, 1
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_05, acc_04, i64_sub_value, 3
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_06, acc_05, i64_sub_over, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_07, acc_06, i64_sub_wrap_value, NUM_I64_MAX
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_08, acc_07, i64_sub_wrap_over, 1
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_09, acc_08, i64_mul_value, -21
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_10, acc_09, i64_mul_over, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_11, acc_10, i64_mul_wrap_value, -2
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_12, acc_11, i64_mul_wrap_over, 1
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_13, acc_12, isize_add_value, 7
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_14, acc_13, isize_add_over, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_15, acc_14, isize_add_wrap_value, NUM_ISIZE_MIN
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_16, acc_15, isize_add_wrap_over, 1
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_17, acc_16, isize_sub_value, 3
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_18, acc_17, isize_sub_over, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_19, acc_18, isize_sub_wrap_value, NUM_ISIZE_MAX
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_20, acc_19, isize_sub_wrap_over, 1
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_21, acc_20, isize_mul_value, -21
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_22, acc_21, isize_mul_over, 0
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_23, acc_22, isize_mul_wrap_value, -2
+    EXPAND TEST_SIGNED_WIDE_OVERFLOWING_EQ acc_24, acc_23, isize_mul_wrap_over, 1
+    br acc_24 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_24
+    panic(10655)
+
+L_PASS:
+    !acc_24
+    return 0

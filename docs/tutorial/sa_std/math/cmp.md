@@ -4,8 +4,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/cmp.sa"
-@import "sa_std/sort.sa"
+@import "sa_std/cmp.sars"
+@import "sa_std/sort.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -13,9 +13,9 @@
 下面的完整 SA 程序展示了如何对无符号长整型进行三路判定，并展示了对一块内存切片数据执行就地快速排序的过程：
 
 ```sa
-@import "sa_std/cmp.sa"
-@import "sa_std/sort.sa"
-@import "sa_std/core/slice.sa"
+@import "sa_std/cmp.sars"
+@import "sa_std/sort.sars"
+@import "sa_std/core/slice.sars"
 
 @main() -> i32:
 L_ENTRY:

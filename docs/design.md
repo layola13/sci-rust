@@ -878,7 +878,7 @@ Referee 层面不需要新增真值表：`Try` 指令被 Flattener 直接展平�
 
 | SA 元素 | DWARF |
 |---|---|
-| `.sa` 源文件 | `!DIFile("file.sa")` |
+| `.sa` 源文件 | `!DIFile("file.sars")` |
 | 上游文件（来自 `#loc`） | `!DIFile("main.rs")` |
 | 函数 | `!DISubprogram` |
 | 指令行 | `!DILocation(line, col, scope)` |

@@ -1,0 +1,136 @@
+@import "sa_std/core/slice.sars"
+@import "sa_std/iter.sars"
+@import "sa_std/vec.sars"
+
+@test "sa_std iter copied and cloned collect macro surface"():
+L_ENTRY:
+    values = stack_alloc 32
+    empty_values = stack_alloc 8
+
+    store values+0, 7 as u64
+    store values+8, 11 as u64
+    store values+16, 13 as u64
+    store values+24, 17 as u64
+
+    slice = alloc Slice_SIZE
+    empty_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 4
+    EXPAND SLICE_NEW empty_slice, empty_values, 0
+
+    EXPAND ITER_FROM_SLICE copied_iter, slice
+    EXPAND ITER_COPIED_COLLECT_U64 copied_vec, copied_iter
+    EXPAND ITER_IS_EMPTY copied_iter_empty, copied_iter
+    EXPAND VEC_LEN copied_len, copied_vec
+    EXPAND VEC_GET_U64 copied_0, copied_vec, 0
+    EXPAND VEC_GET_U64 copied_1, copied_vec, 1
+    EXPAND VEC_GET_U64 copied_2, copied_vec, 2
+    EXPAND VEC_GET_U64 copied_3, copied_vec, 3
+
+    EXPAND ITER_FROM_SLICE cloned_iter, slice
+    EXPAND ITER_NEXT_U64 cloned_first_ok, cloned_first, cloned_iter
+    EXPAND ITER_CLONED_COLLECT_U64 cloned_vec, cloned_iter
+    EXPAND ITER_IS_EMPTY cloned_iter_empty, cloned_iter
+    EXPAND VEC_LEN cloned_len, cloned_vec
+    EXPAND VEC_GET_U64 cloned_0, cloned_vec, 0
+    EXPAND VEC_GET_U64 cloned_1, cloned_vec, 1
+    EXPAND VEC_GET_U64 cloned_2, cloned_vec, 2
+
+    EXPAND ITER_FROM_SLICE empty_iter, empty_slice
+    EXPAND ITER_COPIED_COLLECT_U64 empty_copied_vec, empty_iter
+    EXPAND ITER_IS_EMPTY empty_iter_empty, empty_iter
+    EXPAND VEC_LEN empty_copied_len, empty_copied_vec
+
+    ok_copied_empty = eq copied_iter_empty, 1
+    ok_copied_len = eq copied_len, 4
+    ok_copied_0 = eq copied_0, 7
+    ok_copied_1 = eq copied_1, 11
+    ok_copied_2 = eq copied_2, 13
+    ok_copied_3 = eq copied_3, 17
+    ok_cloned_first_ok = eq cloned_first_ok, 1
+    ok_cloned_first = eq cloned_first, 7
+    ok_cloned_empty = eq cloned_iter_empty, 1
+    ok_cloned_len = eq cloned_len, 3
+    ok_cloned_0 = eq cloned_0, 11
+    ok_cloned_1 = eq cloned_1, 13
+    ok_cloned_2 = eq cloned_2, 17
+    ok_empty_iter = eq empty_iter_empty, 1
+    ok_empty_len = eq empty_copied_len, 0
+
+    c01 = and ok_copied_empty, ok_copied_len
+    c02 = and c01, ok_copied_0
+    c03 = and c02, ok_copied_1
+    c04 = and c03, ok_copied_2
+    c05 = and c04, ok_copied_3
+    c06 = and c05, ok_cloned_first_ok
+    c07 = and c06, ok_cloned_first
+    c08 = and c07, ok_cloned_empty
+    c09 = and c08, ok_cloned_len
+    c10 = and c09, ok_cloned_0
+    c11 = and c10, ok_cloned_1
+    c12 = and c11, ok_cloned_2
+    c13 = and c12, ok_empty_iter
+    ok = and c13, ok_empty_len
+
+    !copied_iter_empty
+    !copied_len
+    !copied_0
+    !copied_1
+    !copied_2
+    !copied_3
+    !cloned_first_ok
+    !cloned_first
+    !cloned_iter_empty
+    !cloned_len
+    !cloned_0
+    !cloned_1
+    !cloned_2
+    !empty_iter_empty
+    !empty_copied_len
+    !ok_copied_empty
+    !ok_copied_len
+    !ok_copied_0
+    !ok_copied_1
+    !ok_copied_2
+    !ok_copied_3
+    !ok_cloned_first_ok
+    !ok_cloned_first
+    !ok_cloned_empty
+    !ok_cloned_len
+    !ok_cloned_0
+    !ok_cloned_1
+    !ok_cloned_2
+    !ok_empty_iter
+    !ok_empty_len
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !empty_iter
+    !cloned_iter
+    !copied_iter
+    !empty_slice
+    !slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    EXPAND VEC_FREE empty_copied_vec
+    EXPAND VEC_FREE cloned_vec
+    EXPAND VEC_FREE copied_vec
+    panic(10541)
+
+L_PASS:
+    !ok
+    EXPAND VEC_FREE empty_copied_vec
+    EXPAND VEC_FREE cloned_vec
+    EXPAND VEC_FREE copied_vec
+    return 0

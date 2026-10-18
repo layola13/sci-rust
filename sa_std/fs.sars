@@ -1,0 +1,1023 @@
+@import "fs.sal"
+@import "fs.sai"
+@import "os/fd.sars"
+
+[MACRO] FS_OPEN_READ %out_status, %out_file, %path, %path_len
+    __fs_open_read_handle_%out_status = alloc 8
+    %out_status = call @sa_std_fs_open_read(&%path, %path_len, &__fs_open_read_handle_%out_status)
+    %out_file = load __fs_open_read_handle_%out_status+0 as u64
+    !__fs_open_read_handle_%out_status
+[END_MACRO]
+
+[MACRO] FS_OPEN_WRITE %out_status, %out_file, %path, %path_len, %truncate
+    __fs_open_write_handle_%out_status = alloc 8
+    %out_status = call @sa_std_fs_open_write(&%path, %path_len, %truncate, &__fs_open_write_handle_%out_status)
+    %out_file = load __fs_open_write_handle_%out_status+0 as u64
+    !__fs_open_write_handle_%out_status
+[END_MACRO]
+
+[MACRO] FS_CREATE %out_status, %out_file, %path, %path_len
+    EXPAND FS_OPEN_WRITE %out_status, %out_file, %path, %path_len, 1
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS %out_status, %out_file, %path, %path_len, %flags, %create_mode, %custom_flags
+    __fs_open_options_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_open_options(&%path, %path_len, %flags, %create_mode, %custom_flags, &__fs_open_options_handle_%out_status)
+    %out_file = load __fs_open_options_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_OPEN_FLAGS %out_status, %out_file, %path, %path_len, %flags
+    EXPAND FS_OPEN_OPTIONS %out_status, %out_file, %path, %path_len, %flags, SA_FS_OPEN_MODE_DEFAULT, 0
+[END_MACRO]
+
+[MACRO] FS_CLOSE %out_status, %file
+    %out_status = call @sa_std_close(%file)
+[END_MACRO]
+
+[MACRO] FS_FILE_AS_RAW_FD %out_status, %out_fd, %file
+    EXPAND FD_AS_RAW %out_status, %out_fd, %file
+[END_MACRO]
+
+[MACRO] FS_FILE_AS_FD %out_status, %out_fd, %file
+    EXPAND FD_AS_RAW %out_status, %out_fd, %file
+[END_MACRO]
+
+[MACRO] FS_FILE_INTO_RAW_FD %out_status, %out_fd, %file
+    EXPAND FD_INTO_RAW %out_status, %out_fd, %file
+[END_MACRO]
+
+[MACRO] FS_FILE_FROM_RAW_FD %out_status, %out_file, %fd
+    __fs_file_from_raw_slot_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_from_raw_fd(%fd, &__fs_file_from_raw_slot_%out_status)
+    %out_file = load __fs_file_from_raw_slot_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_FILE_INTO_OWNED_FD %out_status, %out_fd_handle, %file
+    EXPAND FS_FILE_INTO_RAW_FD __fs_file_into_owned_status_%out_status, __fs_file_owned_raw_%out_status, %file
+    EXPAND FD_FROM_RAW %out_status, %out_fd_handle, __fs_file_owned_raw_%out_status
+    !__fs_file_into_owned_status_%out_status
+    !__fs_file_owned_raw_%out_status
+[END_MACRO]
+
+[MACRO] FS_FILE_FROM_OWNED_FD %out_status, %out_file, %fd_handle
+    EXPAND FD_INTO_RAW __fs_file_from_owned_status_%out_status, __fs_file_from_owned_raw_%out_status, %fd_handle
+    EXPAND FS_FILE_FROM_RAW_FD %out_status, %out_file, __fs_file_from_owned_raw_%out_status
+    !__fs_file_from_owned_status_%out_status
+    !__fs_file_from_owned_raw_%out_status
+[END_MACRO]
+
+[MACRO] FS_READ %out_status, %out_len, %file, %buf, %cap
+    __fs_read_len_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_read(%file, &%buf, %cap, &__fs_read_len_%out_status)
+    %out_len = load __fs_read_len_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_READ_BYTES %out_status, %out_len, %file, %buf, %cap
+    EXPAND FS_READ %out_status, %out_len, %file, %buf, %cap
+[END_MACRO]
+
+[MACRO] FS_READ_EXACT %out_status, %file, %buf, %len
+    %out_status = call @sa_fs_file_read_exact(%file, &%buf, %len)
+[END_MACRO]
+
+[MACRO] FS_READ_EXACT_BYTES %out_status, %file, %buf, %len
+    EXPAND FS_READ_EXACT %out_status, %file, %buf, %len
+[END_MACRO]
+
+[MACRO] FS_READ_AT %out_status, %out_len, %file, %buf, %cap, %offset
+    __fs_read_at_len_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_read_at(%file, &%buf, %cap, %offset, &__fs_read_at_len_%out_status)
+    %out_len = load __fs_read_at_len_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_READ_AT_BYTES %out_status, %out_len, %file, %buf, %cap, %offset
+    EXPAND FS_READ_AT %out_status, %out_len, %file, %buf, %cap, %offset
+[END_MACRO]
+
+[MACRO] FS_READ_EXACT_AT %out_status, %file, %buf, %len, %offset
+    %out_status = call @sa_std_fs_file_read_exact_at(%file, &%buf, %len, %offset)
+[END_MACRO]
+
+[MACRO] FS_READ_EXACT_AT_BYTES %out_status, %file, %buf, %len, %offset
+    EXPAND FS_READ_EXACT_AT %out_status, %file, %buf, %len, %offset
+[END_MACRO]
+
+[MACRO] FS_WRITE %out_status, %out_len, %file, %buf, %len
+    __fs_write_len_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_write(%file, &%buf, %len, &__fs_write_len_%out_status)
+    %out_len = load __fs_write_len_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_WRITE_BYTES %out_status, %out_len, %file, %buf, %len
+    EXPAND FS_WRITE %out_status, %out_len, %file, %buf, %len
+[END_MACRO]
+
+[MACRO] FS_WRITE_ALL %out_status, %file, %buf, %len
+    %out_status = call @sa_fs_file_write_all(%file, &%buf, %len)
+[END_MACRO]
+
+[MACRO] FS_WRITE_ALL_BYTES %out_status, %file, %buf, %len
+    EXPAND FS_WRITE_ALL %out_status, %file, %buf, %len
+[END_MACRO]
+
+[MACRO] FS_WRITE_AT %out_status, %out_len, %file, %buf, %len, %offset
+    __fs_write_at_len_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_write_at(%file, &%buf, %len, %offset, &__fs_write_at_len_%out_status)
+    %out_len = load __fs_write_at_len_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_WRITE_AT_BYTES %out_status, %out_len, %file, %buf, %len, %offset
+    EXPAND FS_WRITE_AT %out_status, %out_len, %file, %buf, %len, %offset
+[END_MACRO]
+
+[MACRO] FS_WRITE_ALL_AT %out_status, %file, %buf, %len, %offset
+    %out_status = call @sa_std_fs_file_write_all_at(%file, &%buf, %len, %offset)
+[END_MACRO]
+
+[MACRO] FS_WRITE_ALL_AT_BYTES %out_status, %file, %buf, %len, %offset
+    EXPAND FS_WRITE_ALL_AT %out_status, %file, %buf, %len, %offset
+[END_MACRO]
+
+[MACRO] FS_FLUSH %out_status, %file
+    %out_status = call @sa_fs_file_flush(%file)
+[END_MACRO]
+
+[MACRO] FS_SYNC_DATA %out_status, %file
+    %out_status = call @sa_fs_file_sync_data(%file)
+[END_MACRO]
+
+[MACRO] FS_SYNC_ALL %out_status, %file
+    %out_status = call @sa_fs_file_sync(%file)
+[END_MACRO]
+
+[MACRO] FS_SET_LEN %out_status, %file, %len
+    %out_status = call @sa_fs_file_truncate(%file, %len)
+[END_MACRO]
+
+[MACRO] FS_SEEK %out_status, %out_pos, %file, %whence, %offset
+    __fs_seek_pos_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_seek(%file, %whence, %offset, &__fs_seek_pos_%out_status)
+    %out_pos = load __fs_seek_pos_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_REWIND %out_status, %file
+    __fs_rewind_pos_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_file_seek(%file, SA_FS_SEEK_START, 0, &__fs_rewind_pos_%out_status)
+[END_MACRO]
+
+[MACRO] FS_READ_FILE %out_status, %out_buffer, %path, %path_len, %max_bytes
+    __fs_read_file_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_read_file(&%path, %path_len, %max_bytes, &__fs_read_file_handle_%out_status)
+    %out_buffer = load __fs_read_file_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_READ_FILE_BYTES %out_status, %out_buffer, %path, %path_len, %max_bytes
+    EXPAND FS_READ_FILE %out_status, %out_buffer, %path, %path_len, %max_bytes
+[END_MACRO]
+
+[MACRO] FS_READ_TO_STRING %out_status, %out_buffer, %path, %path_len, %max_bytes
+    __fs_read_to_string_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_read_to_string(&%path, %path_len, %max_bytes, &__fs_read_to_string_handle_%out_status)
+    %out_buffer = load __fs_read_to_string_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_WRITE_FILE %out_status, %path, %path_len, %buf, %len
+    %out_status = call @sa_fs_write_file(&%path, %path_len, &%buf, %len)
+[END_MACRO]
+
+[MACRO] FS_WRITE_FILE_BYTES %out_status, %path, %path_len, %buf, %len
+    EXPAND FS_WRITE_FILE %out_status, %path, %path_len, %buf, %len
+[END_MACRO]
+
+[MACRO] FS_READ_BUFFER_DATA %out_ptr, %buffer
+    %out_ptr = call @sa_fs_read_buffer_data(%buffer)
+[END_MACRO]
+
+[MACRO] FS_READ_BUFFER_LEN %out_len, %buffer
+    %out_len = call @sa_fs_read_buffer_len(%buffer)
+[END_MACRO]
+
+[MACRO] FS_READ_BUFFER_FREE %out_status, %buffer
+    %out_status = call @sa_fs_read_buffer_free(^%buffer)
+[END_MACRO]
+
+[MACRO] FS_READ_FILE_BASE64 %out_status, %out_buffer, %path, %path_len, %max_bytes
+    __fs_read_b64_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_read_file_base64(&%path, %path_len, %max_bytes, &__fs_read_b64_handle_%out_status)
+    %out_buffer = load __fs_read_b64_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_WRITE_FILE_BASE64 %out_status, %path, %path_len, %buf, %len
+    %out_status = call @sa_fs_write_file_base64(&%path, %path_len, &%buf, %len)
+[END_MACRO]
+
+[MACRO] FS_READ_DIR_JSON %out_status, %out_buffer, %path, %path_len, %max_entries
+    __fs_read_dir_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_read_dir_json(&%path, %path_len, %max_entries, &__fs_read_dir_handle_%out_status)
+    %out_buffer = load __fs_read_dir_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_DIR_BUFFER_DATA %out_ptr, %buffer
+    %out_ptr = call @sa_fs_dir_buffer_data(%buffer)
+[END_MACRO]
+
+[MACRO] FS_DIR_BUFFER_LEN %out_len, %buffer
+    %out_len = call @sa_fs_dir_buffer_len(%buffer)
+[END_MACRO]
+
+[MACRO] FS_DIR_BUFFER_FREE %out_status, %buffer
+    %out_status = call @sa_fs_dir_buffer_free(^%buffer)
+[END_MACRO]
+
+[MACRO] FS_READ_DIR_ENTRIES %out_status, %out_entries, %path, %path_len, %max_entries
+    __fs_read_dir_entries_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_read_dir_entries(&%path, %path_len, %max_entries, &__fs_read_dir_entries_handle_%out_status)
+    %out_entries = load __fs_read_dir_entries_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRIES_LEN %out_len, %entries
+    %out_len = call @sa_fs_dir_entries_len(%entries)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRIES_GET %out_status, %out_entry, %entries, %index
+    __fs_dir_entry_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_dir_entries_get(%entries, %index, &__fs_dir_entry_handle_%out_status)
+    %out_entry = load __fs_dir_entry_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRIES_FREE %out_status, %entries
+    %out_status = call @sa_fs_dir_entries_free(^%entries)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_NAME_PTR %out_ptr, %entry
+    %out_ptr = call @sa_fs_dir_entry_name_ptr(%entry)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_NAME_LEN %out_len, %entry
+    %out_len = call @sa_fs_dir_entry_name_len(%entry)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_FILE_NAME_REF_PTR %out_ptr, %entry
+    %out_ptr = call @sa_fs_dir_entry_file_name_ptr(%entry)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_FILE_NAME_REF_LEN %out_len, %entry
+    %out_len = call @sa_fs_dir_entry_file_name_len(%entry)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_KIND %out_kind, %entry
+    %out_kind = call @sa_fs_dir_entry_kind(%entry)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_INO %out_ino, %entry
+    %out_ino = call @sa_fs_dir_entry_ino(%entry)
+[END_MACRO]
+
+[MACRO] FS_DIR_ENTRY_FREE %out_status, %entry
+    %out_status = call @sa_fs_dir_entry_free(^%entry)
+[END_MACRO]
+
+[MACRO] FS_METADATA %out_status, %out_metadata, %path, %path_len
+    __fs_metadata_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_metadata(&%path, %path_len, &__fs_metadata_handle_%out_status)
+    %out_metadata = load __fs_metadata_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_METADATA_JSON %out_status, %out_buffer, %path, %path_len
+    __fs_metadata_json_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_metadata_json(&%path, %path_len, &__fs_metadata_json_handle_%out_status)
+    %out_buffer = load __fs_metadata_json_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_FILE %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_file(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_DIR %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_directory(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_SYMLINK %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_symlink(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_BLOCK_DEVICE %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_block_device(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_CHAR_DEVICE %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_char_device(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_FIFO %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_fifo(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_IS_SOCKET %out_flag, %metadata
+    %out_flag = call @sa_fs_metadata_is_socket(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_MODIFIED_MS %out_ms, %metadata
+    %out_ms = call @sa_fs_metadata_modified_ms(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_CREATED_MS %out_ms, %metadata
+    %out_ms = call @sa_fs_metadata_created_ms(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ACCESSED_MS %out_ms, %metadata
+    %out_ms = call @sa_fs_metadata_accessed_ms(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_CHANGED_MS %out_ms, %metadata
+    %out_ms = call @sa_fs_metadata_changed_ms(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_LEN %out_len, %metadata
+    %out_len = call @sa_fs_metadata_len(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_MODE %out_mode, %metadata
+    %out_mode = call @sa_fs_metadata_mode(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_UID %out_uid, %metadata
+    %out_uid = call @sa_fs_metadata_uid(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_GID %out_gid, %metadata
+    %out_gid = call @sa_fs_metadata_gid(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_INO %out_ino, %metadata
+    %out_ino = call @sa_fs_metadata_ino(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_DEV %out_dev, %metadata
+    %out_dev = call @sa_fs_metadata_dev(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_NLINK %out_nlink, %metadata
+    %out_nlink = call @sa_fs_metadata_nlink(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_RDEV %out_rdev, %metadata
+    %out_rdev = call @sa_fs_metadata_rdev(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_BLKSIZE %out_blksize, %metadata
+    %out_blksize = call @sa_fs_metadata_blksize(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_BLOCKS %out_blocks, %metadata
+    %out_blocks = call @sa_fs_metadata_blocks(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_DEV %out_dev, %metadata
+    %out_dev = call @sa_fs_metadata_st_dev(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_INO %out_ino, %metadata
+    %out_ino = call @sa_fs_metadata_st_ino(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_MODE %out_mode, %metadata
+    %out_mode = call @sa_fs_metadata_st_mode(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_NLINK %out_nlink, %metadata
+    %out_nlink = call @sa_fs_metadata_st_nlink(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_UID %out_uid, %metadata
+    %out_uid = call @sa_fs_metadata_st_uid(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_GID %out_gid, %metadata
+    %out_gid = call @sa_fs_metadata_st_gid(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_RDEV %out_rdev, %metadata
+    %out_rdev = call @sa_fs_metadata_st_rdev(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_SIZE %out_size, %metadata
+    %out_size = call @sa_fs_metadata_st_size(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_ATIME %out_sec, %metadata
+    %out_sec = call @sa_fs_metadata_st_atime(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_ATIME_NSEC %out_nsec, %metadata
+    %out_nsec = call @sa_fs_metadata_st_atime_nsec(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_MTIME %out_sec, %metadata
+    %out_sec = call @sa_fs_metadata_st_mtime(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_MTIME_NSEC %out_nsec, %metadata
+    %out_nsec = call @sa_fs_metadata_st_mtime_nsec(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_CTIME %out_sec, %metadata
+    %out_sec = call @sa_fs_metadata_st_ctime(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_CTIME_NSEC %out_nsec, %metadata
+    %out_nsec = call @sa_fs_metadata_st_ctime_nsec(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_BLKSIZE %out_blksize, %metadata
+    %out_blksize = call @sa_fs_metadata_st_blksize(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_ST_BLOCKS %out_blocks, %metadata
+    %out_blocks = call @sa_fs_metadata_st_blocks(%metadata)
+[END_MACRO]
+
+[MACRO] FS_METADATA_FREE %out_status, %metadata
+    %out_status = call @sa_std_fs_metadata_free(%metadata)
+[END_MACRO]
+
+[MACRO] FS_CANONICALIZE %out_status, %out_buffer, %path, %path_len
+    __fs_canonical_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_canonicalize(&%path, %path_len, &__fs_canonical_handle_%out_status)
+    %out_buffer = load __fs_canonical_handle_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_EXISTS %out_flag, %path, %path_len
+    __fs_exists_status_%out_flag = call @sa_std_fs_exists(&%path, %path_len)
+    %out_flag = eq __fs_exists_status_%out_flag, SA_FS_OK
+    !__fs_exists_status_%out_flag
+[END_MACRO]
+
+[MACRO] FS_TRY_EXISTS %out_status, %out_flag, %path, %path_len
+    __fs_try_exists_slot_%out_status = stack_alloc 1
+    %out_status = call @sa_std_fs_try_exists(&%path, %path_len, &__fs_try_exists_slot_%out_status)
+    %out_flag = load __fs_try_exists_slot_%out_status+0 as u8
+[END_MACRO]
+
+[MACRO] FS_LEN %out_status, %out_len, %path, %path_len
+    __fs_len_slot_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_len(&%path, %path_len, &__fs_len_slot_%out_status)
+    %out_len = load __fs_len_slot_%out_status+0 as u64
+[END_MACRO]
+
+[MACRO] FS_REMOVE_FILE %out_status, %path, %path_len
+    %out_status = call @sa_fs_remove_file(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_REMOVE %out_status, %path, %path_len
+    %out_status = call @sa_std_fs_remove(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_REMOVE_DIR %out_status, %path, %path_len
+    %out_status = call @sa_fs_remove_dir(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_REMOVE_DIR_ALL %out_status, %path, %path_len
+    %out_status = call @sa_fs_remove_dir_all(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_REMOVE_PATH %out_status, %path, %path_len
+    %out_status = call @sa_fs_remove_path(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_RENAME %out_status, %from_path, %from_len, %to_path, %to_len
+    %out_status = call @sa_fs_rename(&%from_path, %from_len, &%to_path, %to_len)
+[END_MACRO]
+
+[MACRO] FS_MAKE_DIR %out_status, %path, %path_len
+    %out_status = call @sa_fs_make_dir(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_MAKE_DIR_MODE %out_status, %path, %path_len, %mode
+    %out_status = call @sa_fs_make_dir_mode(&%path, %path_len, %mode)
+[END_MACRO]
+
+[MACRO] FS_CREATE_DIR %out_status, %path, %path_len
+    %out_status = call @sa_fs_create_dir(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_CREATE_DIR_MODE %out_status, %path, %path_len, %mode
+    %out_status = call @sa_fs_create_dir_mode(&%path, %path_len, %mode)
+[END_MACRO]
+
+[MACRO] FS_CREATE_DIR_ALL %out_status, %path, %path_len
+    EXPAND FS_MAKE_DIR %out_status, %path, %path_len
+[END_MACRO]
+
+[MACRO] FS_CREATE_DIR_ALL_MODE %out_status, %path, %path_len, %mode
+    EXPAND FS_MAKE_DIR_MODE %out_status, %path, %path_len, %mode
+[END_MACRO]
+
+[MACRO] FS_COPY %out_status, %from_path, %from_len, %to_path, %to_len
+    %out_status = call @sa_fs_copy_file(&%from_path, %from_len, &%to_path, %to_len)
+[END_MACRO]
+
+[MACRO] FS_SET_PERMISSIONS %out_status, %path, %path_len, %mode
+    %out_status = call @sa_fs_set_permissions(&%path, %path_len, %mode)
+[END_MACRO]
+
+[MACRO] FS_PERMISSIONS_FROM_MODE %out_permissions, %mode
+    store %out_permissions+SaFsPermissions_mode, %mode as u32
+[END_MACRO]
+
+[MACRO] FS_PERMISSIONS_MODE %out_mode, %permissions
+    %out_mode = load %permissions+SaFsPermissions_mode as u32
+[END_MACRO]
+
+[MACRO] FS_PERMISSIONS_SET_MODE %permissions, %mode
+    store %permissions+SaFsPermissions_mode, %mode as u32
+[END_MACRO]
+
+// Concrete Permissions object helpers over the SaFsPermissions mode slot.
+// readonly checks/clears the POSIX write bits (0222); set_readonly(false)
+// sets owner-write (0200), matching Rust's Unix Permissions::set_readonly.
+
+[MACRO] FS_PERMISSIONS_NEW %out_permissions
+    store %out_permissions+SaFsPermissions_mode, 0 as u32
+[END_MACRO]
+
+// Rust-style Default alias over FS_PERMISSIONS_NEW.
+[MACRO] FS_PERMISSIONS_DEFAULT %out_permissions
+    EXPAND FS_PERMISSIONS_NEW %out_permissions
+[END_MACRO]
+
+[MACRO] FS_METADATA_PERMISSIONS %out_permissions, %metadata
+    __fs_meta_perm_mode_%out_permissions = call @sa_fs_metadata_st_mode(%metadata)
+    store %out_permissions+SaFsPermissions_mode, __fs_meta_perm_mode_%out_permissions as u32
+    !__fs_meta_perm_mode_%out_permissions
+[END_MACRO]
+
+[MACRO] FS_PERMISSIONS_READONLY %out_flag, %permissions
+    __fs_perm_mode_%out_flag = load %permissions+SaFsPermissions_mode as u32
+    __fs_perm_write_%out_flag = and __fs_perm_mode_%out_flag, SA_FS_PERM_WRITE_BITS
+    __fs_perm_is_ro_%out_flag = eq __fs_perm_write_%out_flag, 0
+    %out_flag = add 0, __fs_perm_is_ro_%out_flag
+    !__fs_perm_is_ro_%out_flag
+    !__fs_perm_write_%out_flag
+    !__fs_perm_mode_%out_flag
+[END_MACRO]
+
+[MACRO] FS_PERMISSIONS_SET_READONLY %permissions, %flag
+    __fs_perm_mode_%permissions = load %permissions+SaFsPermissions_mode as u32
+    __fs_perm_is_ro_%permissions = ne %flag, 0
+    __fs_perm_is_rw_%permissions = eq %flag, 0
+    __fs_perm_clear_bits_%permissions = mul SA_FS_PERM_WRITE_BITS, __fs_perm_is_ro_%permissions
+    __fs_perm_mask_%permissions = xor __fs_perm_clear_bits_%permissions, 4294967295
+    __fs_perm_cleared_%permissions = and __fs_perm_mode_%permissions, __fs_perm_mask_%permissions
+    __fs_perm_owner_bits_%permissions = mul SA_FS_PERM_OWNER_WRITE, __fs_perm_is_rw_%permissions
+    __fs_perm_new_mode_%permissions = or __fs_perm_cleared_%permissions, __fs_perm_owner_bits_%permissions
+    store %permissions+SaFsPermissions_mode, __fs_perm_new_mode_%permissions as u32
+    !__fs_perm_new_mode_%permissions
+    !__fs_perm_owner_bits_%permissions
+    !__fs_perm_cleared_%permissions
+    !__fs_perm_mask_%permissions
+    !__fs_perm_clear_bits_%permissions
+    !__fs_perm_is_rw_%permissions
+    !__fs_perm_is_ro_%permissions
+    !__fs_perm_mode_%permissions
+[END_MACRO]
+
+[MACRO] FS_SET_PERMISSIONS_OBJ %out_status, %path, %path_len, %permissions
+    __fs_set_perm_mode_%out_status = load %permissions+SaFsPermissions_mode as u32
+    %out_status = call @sa_fs_set_permissions(&%path, %path_len, __fs_set_perm_mode_%out_status)
+    !__fs_set_perm_mode_%out_status
+[END_MACRO]
+
+[MACRO] FS_SET_TIMES_MS %out_status, %path, %path_len, %accessed_ms, %modified_ms
+    %out_status = call @sa_fs_set_times_ms(&%path, %path_len, %accessed_ms, %modified_ms)
+[END_MACRO]
+
+[MACRO] FS_HARD_LINK %out_status, %from_path, %from_len, %to_path, %to_len
+    %out_status = call @sa_fs_hard_link(&%from_path, %from_len, &%to_path, %to_len)
+[END_MACRO]
+
+[MACRO] FS_SYMLINK %out_status, %target_path, %target_len, %link_path, %link_len
+    %out_status = call @sa_fs_symlink(&%target_path, %target_len, &%link_path, %link_len)
+[END_MACRO]
+
+[MACRO] FS_UNIX_SYMLINK %out_status, %target_path, %target_len, %link_path, %link_len
+    EXPAND FS_SYMLINK %out_status, %target_path, %target_len, %link_path, %link_len
+[END_MACRO]
+
+[MACRO] FS_CHOWN %out_status, %path, %path_len, %uid, %gid, %has_uid, %has_gid
+    %out_status = call @sa_fs_chown(&%path, %path_len, %uid, %gid, %has_uid, %has_gid)
+[END_MACRO]
+
+[MACRO] FS_UNIX_CHOWN %out_status, %path, %path_len, %uid, %gid, %has_uid, %has_gid
+    EXPAND FS_CHOWN %out_status, %path, %path_len, %uid, %gid, %has_uid, %has_gid
+[END_MACRO]
+
+[MACRO] FS_LCHOWN %out_status, %path, %path_len, %uid, %gid, %has_uid, %has_gid
+    %out_status = call @sa_fs_lchown(&%path, %path_len, %uid, %gid, %has_uid, %has_gid)
+[END_MACRO]
+
+[MACRO] FS_UNIX_LCHOWN %out_status, %path, %path_len, %uid, %gid, %has_uid, %has_gid
+    EXPAND FS_LCHOWN %out_status, %path, %path_len, %uid, %gid, %has_uid, %has_gid
+[END_MACRO]
+
+[MACRO] FS_FCHOWN %out_status, %file, %uid, %gid, %has_uid, %has_gid
+    %out_status = call @sa_fs_fchown(%file, %uid, %gid, %has_uid, %has_gid)
+[END_MACRO]
+
+[MACRO] FS_UNIX_FCHOWN %out_status, %file, %uid, %gid, %has_uid, %has_gid
+    EXPAND FS_FCHOWN %out_status, %file, %uid, %gid, %has_uid, %has_gid
+[END_MACRO]
+
+[MACRO] FS_CHOWN_RAW %out_status, %path, %path_len, %uid, %gid
+    __fs_chown_has_uid_%out_status = ne %uid, SA_FS_CHOWN_ID_UNCHANGED
+    __fs_chown_has_gid_%out_status = ne %gid, SA_FS_CHOWN_ID_UNCHANGED
+    %out_status = call @sa_fs_chown(&%path, %path_len, %uid, %gid, __fs_chown_has_uid_%out_status, __fs_chown_has_gid_%out_status)
+    !__fs_chown_has_gid_%out_status
+    !__fs_chown_has_uid_%out_status
+[END_MACRO]
+
+[MACRO] FS_LCHOWN_RAW %out_status, %path, %path_len, %uid, %gid
+    __fs_lchown_has_uid_%out_status = ne %uid, SA_FS_CHOWN_ID_UNCHANGED
+    __fs_lchown_has_gid_%out_status = ne %gid, SA_FS_CHOWN_ID_UNCHANGED
+    %out_status = call @sa_fs_lchown(&%path, %path_len, %uid, %gid, __fs_lchown_has_uid_%out_status, __fs_lchown_has_gid_%out_status)
+    !__fs_lchown_has_gid_%out_status
+    !__fs_lchown_has_uid_%out_status
+[END_MACRO]
+
+[MACRO] FS_FCHOWN_RAW %out_status, %file, %uid, %gid
+    __fs_fchown_has_uid_%out_status = ne %uid, SA_FS_CHOWN_ID_UNCHANGED
+    __fs_fchown_has_gid_%out_status = ne %gid, SA_FS_CHOWN_ID_UNCHANGED
+    %out_status = call @sa_fs_fchown(%file, %uid, %gid, __fs_fchown_has_uid_%out_status, __fs_fchown_has_gid_%out_status)
+    !__fs_fchown_has_gid_%out_status
+    !__fs_fchown_has_uid_%out_status
+[END_MACRO]
+
+[MACRO] FS_UNIX_FCHOWN_RAW %out_status, %file, %uid, %gid
+    EXPAND FS_FCHOWN_RAW %out_status, %file, %uid, %gid
+[END_MACRO]
+
+[MACRO] FS_CHROOT %out_status, %path, %path_len
+    %out_status = call @sa_fs_chroot(&%path, %path_len)
+[END_MACRO]
+
+[MACRO] FS_UNIX_CHROOT %out_status, %path, %path_len
+    EXPAND FS_CHROOT %out_status, %path, %path_len
+[END_MACRO]
+
+[MACRO] FS_MKFIFO %out_status, %path, %path_len, %mode
+    %out_status = call @sa_fs_mkfifo(&%path, %path_len, %mode)
+[END_MACRO]
+
+[MACRO] FS_UNIX_MKFIFO %out_status, %path, %path_len, %mode
+    EXPAND FS_MKFIFO %out_status, %path, %path_len, %mode
+[END_MACRO]
+
+[MACRO] FS_READ_LINK %out_status, %out_buffer, %path, %path_len
+    __fs_read_link_handle_%out_status = stack_alloc 8
+    %out_status = call @sa_std_fs_read_link(&%path, %path_len, &__fs_read_link_handle_%out_status)
+    %out_buffer = load __fs_read_link_handle_%out_status+0 as u64
+[END_MACRO]
+
+
+[MACRO] FS_DIR_BUILDER_NEW %out_recursive, %out_mode
+    %out_recursive = add 0, 0
+    %out_mode = add 0, 493
+[END_MACRO]
+
+[MACRO] FS_DIR_BUILDER_WITH_RECURSIVE %out_recursive, %out_mode, %in_recursive, %in_mode, %flag
+    __fs_dir_builder_flag_is_zero_%out_recursive = eq %flag, 0
+    br __fs_dir_builder_flag_is_zero_%out_recursive -> L_FS_DIR_BUILDER_ZERO_%out_recursive, L_FS_DIR_BUILDER_NONZERO_%out_recursive
+L_FS_DIR_BUILDER_ZERO_%out_recursive:
+    %out_recursive = add 0, 0
+    %out_mode = add 0, %in_mode
+    !__fs_dir_builder_flag_is_zero_%out_recursive
+    jmp L_FS_DIR_BUILDER_WITH_RECURSIVE_END_%out_recursive
+L_FS_DIR_BUILDER_NONZERO_%out_recursive:
+    %out_recursive = add 0, 1
+    %out_mode = add 0, %in_mode
+    !__fs_dir_builder_flag_is_zero_%out_recursive
+    jmp L_FS_DIR_BUILDER_WITH_RECURSIVE_END_%out_recursive
+L_FS_DIR_BUILDER_WITH_RECURSIVE_END_%out_recursive:
+[END_MACRO]
+
+[MACRO] FS_DIR_BUILDER_WITH_MODE %out_recursive, %out_mode, %in_recursive, %in_mode, %new_mode
+    %out_recursive = add 0, %in_recursive
+    %out_mode = add 0, %new_mode
+[END_MACRO]
+
+[MACRO] FS_DIR_BUILDER_CREATE %out_status, %recursive, %mode, %path, %path_len
+    __fs_dir_builder_is_nonrecursive_%out_status = eq %recursive, 0
+    br __fs_dir_builder_is_nonrecursive_%out_status -> L_FS_DIR_BUILDER_NONRECURSIVE_%out_status, L_FS_DIR_BUILDER_RECURSIVE_%out_status
+L_FS_DIR_BUILDER_NONRECURSIVE_%out_status:
+    EXPAND FS_CREATE_DIR_MODE %out_status, %path, %path_len, %mode
+    !__fs_dir_builder_is_nonrecursive_%out_status
+    jmp L_FS_DIR_BUILDER_END_%out_status
+L_FS_DIR_BUILDER_RECURSIVE_%out_status:
+    EXPAND FS_CREATE_DIR_ALL_MODE %out_status, %path, %path_len, %mode
+    !__fs_dir_builder_is_nonrecursive_%out_status
+    jmp L_FS_DIR_BUILDER_END_%out_status
+L_FS_DIR_BUILDER_END_%out_status:
+[END_MACRO]
+
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_NEW %out_flags, %out_mode, %out_custom
+    %out_flags = add 0, 0
+    %out_mode = add 0, SA_FS_OPEN_MODE_DEFAULT
+    %out_custom = add 0, 0
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_READ %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_read_zero_%out_flags = eq %flag, 0
+    br __fs_oob_read_zero_%out_flags -> L_FS_OOB_READ_KEEP_%out_flags, L_FS_OOB_READ_OR_%out_flags
+L_FS_OOB_READ_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_read_zero_%out_flags
+    jmp L_FS_OOB_READ_END_%out_flags
+L_FS_OOB_READ_OR_%out_flags:
+    %out_flags = or %in_flags, SA_FS_OPEN_READ
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_read_zero_%out_flags
+    jmp L_FS_OOB_READ_END_%out_flags
+L_FS_OOB_READ_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_WRITE %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_write_zero_%out_flags = eq %flag, 0
+    br __fs_oob_write_zero_%out_flags -> L_FS_OOB_WRITE_KEEP_%out_flags, L_FS_OOB_WRITE_OR_%out_flags
+L_FS_OOB_WRITE_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_write_zero_%out_flags
+    jmp L_FS_OOB_WRITE_END_%out_flags
+L_FS_OOB_WRITE_OR_%out_flags:
+    %out_flags = or %in_flags, SA_FS_OPEN_WRITE
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_write_zero_%out_flags
+    jmp L_FS_OOB_WRITE_END_%out_flags
+L_FS_OOB_WRITE_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_APPEND %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_append_zero_%out_flags = eq %flag, 0
+    br __fs_oob_append_zero_%out_flags -> L_FS_OOB_APPEND_KEEP_%out_flags, L_FS_OOB_APPEND_OR_%out_flags
+L_FS_OOB_APPEND_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_append_zero_%out_flags
+    jmp L_FS_OOB_APPEND_END_%out_flags
+L_FS_OOB_APPEND_OR_%out_flags:
+    %out_flags = or %in_flags, SA_FS_OPEN_APPEND
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_append_zero_%out_flags
+    jmp L_FS_OOB_APPEND_END_%out_flags
+L_FS_OOB_APPEND_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_CREATE %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_create_zero_%out_flags = eq %flag, 0
+    br __fs_oob_create_zero_%out_flags -> L_FS_OOB_CREATE_KEEP_%out_flags, L_FS_OOB_CREATE_OR_%out_flags
+L_FS_OOB_CREATE_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_create_zero_%out_flags
+    jmp L_FS_OOB_CREATE_END_%out_flags
+L_FS_OOB_CREATE_OR_%out_flags:
+    %out_flags = or %in_flags, SA_FS_OPEN_CREATE
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_create_zero_%out_flags
+    jmp L_FS_OOB_CREATE_END_%out_flags
+L_FS_OOB_CREATE_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_TRUNCATE %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_truncate_zero_%out_flags = eq %flag, 0
+    br __fs_oob_truncate_zero_%out_flags -> L_FS_OOB_TRUNCATE_KEEP_%out_flags, L_FS_OOB_TRUNCATE_OR_%out_flags
+L_FS_OOB_TRUNCATE_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_truncate_zero_%out_flags
+    jmp L_FS_OOB_TRUNCATE_END_%out_flags
+L_FS_OOB_TRUNCATE_OR_%out_flags:
+    %out_flags = or %in_flags, SA_FS_OPEN_TRUNCATE
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_truncate_zero_%out_flags
+    jmp L_FS_OOB_TRUNCATE_END_%out_flags
+L_FS_OOB_TRUNCATE_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_MODE %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %new_mode
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %new_mode
+    %out_custom = add 0, %in_custom
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_CUSTOM_FLAGS %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %new_custom
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %new_custom
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_OPEN %out_status, %out_file, %flags, %mode, %custom, %path, %path_len
+    EXPAND FS_OPEN_OPTIONS %out_status, %out_file, %path, %path_len, %flags, %mode, %custom
+[END_MACRO]
+
+
+[MACRO] FS_FILE_TYPE_IS_FILE %out_flag, %metadata
+    EXPAND FS_METADATA_IS_FILE %out_flag, %metadata
+[END_MACRO]
+
+[MACRO] FS_FILE_TYPE_IS_DIR %out_flag, %metadata
+    EXPAND FS_METADATA_IS_DIR %out_flag, %metadata
+[END_MACRO]
+
+[MACRO] FS_FILE_TYPE_IS_SYMLINK %out_flag, %metadata
+    EXPAND FS_METADATA_IS_SYMLINK %out_flag, %metadata
+[END_MACRO]
+
+[MACRO] FS_FILE_TYPE_IS_BLOCK_DEVICE %out_flag, %metadata
+    EXPAND FS_METADATA_IS_BLOCK_DEVICE %out_flag, %metadata
+[END_MACRO]
+
+[MACRO] FS_FILE_TYPE_IS_CHAR_DEVICE %out_flag, %metadata
+    EXPAND FS_METADATA_IS_CHAR_DEVICE %out_flag, %metadata
+[END_MACRO]
+
+[MACRO] FS_FILE_TYPE_IS_FIFO %out_flag, %metadata
+    EXPAND FS_METADATA_IS_FIFO %out_flag, %metadata
+[END_MACRO]
+
+[MACRO] FS_FILE_TYPE_IS_SOCKET %out_flag, %metadata
+    EXPAND FS_METADATA_IS_SOCKET %out_flag, %metadata
+[END_MACRO]
+
+
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_SYNC %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_sync_zero_%out_flags = eq %flag, 0
+    br __fs_oob_sync_zero_%out_flags -> L_FS_OOB_SYNC_KEEP_%out_flags, L_FS_OOB_SYNC_OR_%out_flags
+L_FS_OOB_SYNC_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_sync_zero_%out_flags
+    jmp L_FS_OOB_SYNC_END_%out_flags
+L_FS_OOB_SYNC_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_SYNC
+    !__fs_oob_sync_zero_%out_flags
+    jmp L_FS_OOB_SYNC_END_%out_flags
+L_FS_OOB_SYNC_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_DSYNC %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_dsync_zero_%out_flags = eq %flag, 0
+    br __fs_oob_dsync_zero_%out_flags -> L_FS_OOB_DSYNC_KEEP_%out_flags, L_FS_OOB_DSYNC_OR_%out_flags
+L_FS_OOB_DSYNC_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_dsync_zero_%out_flags
+    jmp L_FS_OOB_DSYNC_END_%out_flags
+L_FS_OOB_DSYNC_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_DSYNC
+    !__fs_oob_dsync_zero_%out_flags
+    jmp L_FS_OOB_DSYNC_END_%out_flags
+L_FS_OOB_DSYNC_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_NONBLOCK %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_nonblock_zero_%out_flags = eq %flag, 0
+    br __fs_oob_nonblock_zero_%out_flags -> L_FS_OOB_NONBLOCK_KEEP_%out_flags, L_FS_OOB_NONBLOCK_OR_%out_flags
+L_FS_OOB_NONBLOCK_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_nonblock_zero_%out_flags
+    jmp L_FS_OOB_NONBLOCK_END_%out_flags
+L_FS_OOB_NONBLOCK_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_NONBLOCK
+    !__fs_oob_nonblock_zero_%out_flags
+    jmp L_FS_OOB_NONBLOCK_END_%out_flags
+L_FS_OOB_NONBLOCK_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_NOFOLLOW %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_nofollow_zero_%out_flags = eq %flag, 0
+    br __fs_oob_nofollow_zero_%out_flags -> L_FS_OOB_NOFOLLOW_KEEP_%out_flags, L_FS_OOB_NOFOLLOW_OR_%out_flags
+L_FS_OOB_NOFOLLOW_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_nofollow_zero_%out_flags
+    jmp L_FS_OOB_NOFOLLOW_END_%out_flags
+L_FS_OOB_NOFOLLOW_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_NOFOLLOW
+    !__fs_oob_nofollow_zero_%out_flags
+    jmp L_FS_OOB_NOFOLLOW_END_%out_flags
+L_FS_OOB_NOFOLLOW_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_DIRECT %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_direct_zero_%out_flags = eq %flag, 0
+    br __fs_oob_direct_zero_%out_flags -> L_FS_OOB_DIRECT_KEEP_%out_flags, L_FS_OOB_DIRECT_OR_%out_flags
+L_FS_OOB_DIRECT_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_direct_zero_%out_flags
+    jmp L_FS_OOB_DIRECT_END_%out_flags
+L_FS_OOB_DIRECT_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_DIRECT
+    !__fs_oob_direct_zero_%out_flags
+    jmp L_FS_OOB_DIRECT_END_%out_flags
+L_FS_OOB_DIRECT_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_DIRECTORY %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_directory_zero_%out_flags = eq %flag, 0
+    br __fs_oob_directory_zero_%out_flags -> L_FS_OOB_DIRECTORY_KEEP_%out_flags, L_FS_OOB_DIRECTORY_OR_%out_flags
+L_FS_OOB_DIRECTORY_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_directory_zero_%out_flags
+    jmp L_FS_OOB_DIRECTORY_END_%out_flags
+L_FS_OOB_DIRECTORY_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_DIRECTORY
+    !__fs_oob_directory_zero_%out_flags
+    jmp L_FS_OOB_DIRECTORY_END_%out_flags
+L_FS_OOB_DIRECTORY_END_%out_flags:
+[END_MACRO]
+
+[MACRO] FS_OPEN_OPTIONS_BUILDER_WITH_CLOEXEC %out_flags, %out_mode, %out_custom, %in_flags, %in_mode, %in_custom, %flag
+    __fs_oob_cloexec_zero_%out_flags = eq %flag, 0
+    br __fs_oob_cloexec_zero_%out_flags -> L_FS_OOB_CLOEXEC_KEEP_%out_flags, L_FS_OOB_CLOEXEC_OR_%out_flags
+L_FS_OOB_CLOEXEC_KEEP_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = add 0, %in_custom
+    !__fs_oob_cloexec_zero_%out_flags
+    jmp L_FS_OOB_CLOEXEC_END_%out_flags
+L_FS_OOB_CLOEXEC_OR_%out_flags:
+    %out_flags = add 0, %in_flags
+    %out_mode = add 0, %in_mode
+    %out_custom = or %in_custom, SA_FS_CUSTOM_CLOEXEC
+    !__fs_oob_cloexec_zero_%out_flags
+    jmp L_FS_OOB_CLOEXEC_END_%out_flags
+L_FS_OOB_CLOEXEC_END_%out_flags:
+[END_MACRO]
+
+
+// Concrete FileTimes builder over two propagating SSA millisecond timestamps.
+// Applies through the existing FS_SET_TIMES_MS / sa_fs_set_times_ms FFI.
+
+[MACRO] FS_FILE_TIMES_NEW %out_accessed_ms, %out_modified_ms
+    %out_accessed_ms = add 0, 0
+    %out_modified_ms = add 0, 0
+[END_MACRO]
+
+// Rust-style Default alias over FS_FILE_TIMES_NEW (0,0 timestamps).
+[MACRO] FS_FILE_TIMES_DEFAULT %out_accessed_ms, %out_modified_ms
+    EXPAND FS_FILE_TIMES_NEW %out_accessed_ms, %out_modified_ms
+[END_MACRO]
+
+[MACRO] FS_FILE_TIMES_WITH_ACCESSED %out_accessed_ms, %out_modified_ms, %in_accessed_ms, %in_modified_ms, %accessed_ms
+    %out_accessed_ms = add 0, %accessed_ms
+    %out_modified_ms = add 0, %in_modified_ms
+[END_MACRO]
+
+[MACRO] FS_FILE_TIMES_WITH_MODIFIED %out_accessed_ms, %out_modified_ms, %in_accessed_ms, %in_modified_ms, %modified_ms
+    %out_accessed_ms = add 0, %in_accessed_ms
+    %out_modified_ms = add 0, %modified_ms
+[END_MACRO]
+
+[MACRO] FS_FILE_TIMES_SET %out_status, %path, %path_len, %accessed_ms, %modified_ms
+    EXPAND FS_SET_TIMES_MS %out_status, %path, %path_len, %accessed_ms, %modified_ms
+[END_MACRO]
+
+[MACRO] FS_METADATA_FILE_TIMES %out_accessed_ms, %out_modified_ms, %metadata
+    %out_accessed_ms = call @sa_fs_metadata_accessed_ms(%metadata)
+    %out_modified_ms = call @sa_fs_metadata_modified_ms(%metadata)
+[END_MACRO]

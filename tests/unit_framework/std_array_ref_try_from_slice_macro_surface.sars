@@ -1,0 +1,72 @@
+@import "sa_std/array.sars"
+
+@test "sa_std array ref try_from slice macro surface"():
+L_ENTRY:
+    arr = stack_alloc 32
+    store arr+0, 5 as u64
+    store arr+8, 6 as u64
+    store arr+16, 7 as u64
+    store arr+24, 8 as u64
+
+    slice4 = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 slice4, arr, 4
+    ref_view = stack_alloc Slice_SIZE
+    EXPAND ARRAY_REF_TRY_FROM_SLICE_U64 ref_ok, ref_view, slice4, 4
+    ref_len = load ref_view+Slice_len as u64
+    ref_ptr = load ref_view+Slice_ptr as ptr
+    ref_third = load ref_ptr+16 as u64
+
+    short_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 short_slice, arr, 3
+    short_view = stack_alloc Slice_SIZE
+    EXPAND ARRAY_REF_TRY_FROM_SLICE_U64 short_ok, short_view, short_slice, 4
+    short_len = load short_view+Slice_len as u64
+
+    mut_slice4 = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_MUT_SLICE_U64 mut_slice4, arr, 4
+    mut_view = stack_alloc Slice_SIZE
+    EXPAND ARRAY_MUT_REF_TRY_FROM_MUT_SLICE_U64 mut_ok, mut_view, mut_slice4, 4
+    mut_len = load mut_view+Slice_len as u64
+    mut_ptr = load mut_view+Slice_ptr as ptr
+    store mut_ptr+8, 66 as u64
+    after_mut = load arr+8 as u64
+
+    long_miss_view = stack_alloc Slice_SIZE
+    EXPAND ARRAY_MUT_REF_TRY_FROM_MUT_SLICE_U64 long_ok, long_miss_view, mut_slice4, 5
+    long_len = load long_miss_view+Slice_len as u64
+
+    ok_ref = eq ref_ok, 1
+    ok_ref_len = eq ref_len, 4
+    ok_ref_ptr = eq ref_ptr, arr
+    ok_ref_third = eq ref_third, 7
+    ok_short = eq short_ok, 0
+    ok_short_len = eq short_len, 0
+    ok_mut = eq mut_ok, 1
+    ok_mut_len = eq mut_len, 4
+    ok_mut_ptr = eq mut_ptr, arr
+    ok_after_mut = eq after_mut, 66
+    ok_long = eq long_ok, 0
+    ok_long_len = eq long_len, 0
+
+    !mut_ptr
+    !ref_ptr
+
+    c01 = and ok_ref, ok_ref_len
+    c02 = and c01, ok_ref_ptr
+    c03 = and c02, ok_ref_third
+    c04 = and c03, ok_short
+    c05 = and c04, ok_short_len
+    c06 = and c05, ok_mut
+    c07 = and c06, ok_mut_len
+    c08 = and c07, ok_mut_ptr
+    c09 = and c08, ok_after_mut
+    c10 = and c09, ok_long
+    ok = and c10, ok_long_len
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10521)
+
+L_PASS:
+    return 0

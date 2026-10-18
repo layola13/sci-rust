@@ -1,0 +1,10 @@
+@import "consumer/../bridge/map.sars"
+
+@export mapped_value() -> i32!:
+L_ENTRY:
+    zero = 0 as i64
+    r = call @map_code(zero)
+    v = ?r
+    !zero
+    !r
+    return v

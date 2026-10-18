@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "guest/shader.sars"
+
+@const RESULT_OK = utf8:"296\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 296 - Eco Gpu Ptx Shader
+// The PTX story is split into guest code, host launch notes, and kernel constants.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @gpu_shader_entry()
+    ok = eq value, 296
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

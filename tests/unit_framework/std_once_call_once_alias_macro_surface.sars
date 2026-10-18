@@ -1,0 +1,40 @@
+@import "sa_std/sync/once.sars"
+
+@once_init_42() -> u64:
+L_ENTRY:
+    return 42
+
+@test "sa_std once call_once aliases"():
+L_ENTRY:
+    EXPAND ONCE_NEW once
+    EXPAND ONCE_CALL_ONCE v1, once, @once_init_42
+    EXPAND ONCE_CALL_ONCE v2, once, @once_init_42
+    EXPAND ONCE_IS_READY ready, once
+    EXPAND ONCE_LOCK_NEW lock
+    EXPAND ONCE_LOCK_CALL_ONCE lv, lock, @once_init_42
+
+    ok_v1 = eq v1, 42
+    ok_v2 = eq v2, 42
+    ok_ready = eq ready, 1
+    ok_lv = eq lv, 42
+    ok01 = and ok_v1, ok_v2
+    ok02 = and ok01, ok_ready
+    ok = and ok02, ok_lv
+
+    !v1
+    !v2
+    !ready
+    !lv
+    !ok_v1
+    !ok_v2
+    !ok_ready
+    !ok_lv
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10874)

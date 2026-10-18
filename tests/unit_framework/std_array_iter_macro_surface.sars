@@ -1,0 +1,113 @@
+@import "sa_std/array.sars"
+
+@test "sa_std array iterator macro surface"():
+L_ENTRY:
+    arr = stack_alloc 32
+    store arr+0, 11 as u64
+    store arr+8, 22 as u64
+    store arr+16, 33 as u64
+    store arr+24, 44 as u64
+
+    EXPAND ARRAY_ITER_U64 iter, arr, 4
+    EXPAND ITER_NEXT_U64 iter_next_ok, iter_next, iter
+    rem_slice = stack_alloc Slice_SIZE
+    EXPAND ITER_AS_SLICE_U64 rem_slice, iter
+    rem_len = load rem_slice+Slice_len as u64
+    rem_ptr = load rem_slice+Slice_ptr as ptr
+    rem_first = load rem_ptr+0 as u64
+
+    EXPAND ARRAY_ITER_MUT_U64 iter_mut, arr, 4
+    EXPAND ITER_NEXT_U64 iter_mut_next_ok, iter_mut_next, iter_mut
+
+    EXPAND ARRAY_REF_INTO_ITER_U64 ref_iter, arr, 4
+    EXPAND ITER_NEXT_BACK_U64 ref_back_ok, ref_back, ref_iter
+
+    EXPAND ARRAY_MUT_REF_INTO_ITER_U64 mut_ref_iter, arr, 4
+    EXPAND ITER_NEXT_U64 mut_ref_next_ok, mut_ref_next, mut_ref_iter
+    EXPAND ITER_NEXT_BACK_U64 mut_ref_back_ok, mut_ref_back, mut_ref_iter
+    EXPAND ITER_LEN mut_ref_len, mut_ref_iter
+
+    ok_iter_next_flag = eq iter_next_ok, 1
+    ok_iter_next = eq iter_next, 11
+    ok_rem_len = eq rem_len, 3
+    expected_rem_ptr = ptr_add arr, 8
+    ok_rem_ptr = eq rem_ptr, expected_rem_ptr
+    ok_rem_first = eq rem_first, 22
+    ok_iter_mut_flag = eq iter_mut_next_ok, 1
+    ok_iter_mut_next = eq iter_mut_next, 11
+    ok_ref_back_flag = eq ref_back_ok, 1
+    ok_ref_back = eq ref_back, 44
+    ok_mut_ref_next_flag = eq mut_ref_next_ok, 1
+    ok_mut_ref_next = eq mut_ref_next, 11
+    ok_mut_ref_back_flag = eq mut_ref_back_ok, 1
+    ok_mut_ref_back = eq mut_ref_back, 44
+    ok_mut_ref_len = eq mut_ref_len, 2
+
+    c01 = and ok_iter_next_flag, ok_iter_next
+    c02 = and c01, ok_rem_len
+    c03 = and c02, ok_rem_ptr
+    c04 = and c03, ok_rem_first
+    c05 = and c04, ok_iter_mut_flag
+    c06 = and c05, ok_iter_mut_next
+    c07 = and c06, ok_ref_back_flag
+    c08 = and c07, ok_ref_back
+    c09 = and c08, ok_mut_ref_next_flag
+    c10 = and c09, ok_mut_ref_next
+    c11 = and c10, ok_mut_ref_back_flag
+    c12 = and c11, ok_mut_ref_back
+    ok = and c12, ok_mut_ref_len
+
+    !iter_next_ok
+    !iter_next
+    !rem_len
+    !rem_ptr
+    !rem_first
+    !iter_mut_next_ok
+    !iter_mut_next
+    !ref_back_ok
+    !ref_back
+    !mut_ref_next_ok
+    !mut_ref_next
+    !mut_ref_back_ok
+    !mut_ref_back
+    !mut_ref_len
+    !ok_iter_next_flag
+    !ok_iter_next
+    !ok_rem_len
+    !expected_rem_ptr
+    !ok_rem_ptr
+    !ok_rem_first
+    !ok_iter_mut_flag
+    !ok_iter_mut_next
+    !ok_ref_back_flag
+    !ok_ref_back
+    !ok_mut_ref_next_flag
+    !ok_mut_ref_next
+    !ok_mut_ref_back_flag
+    !ok_mut_ref_back
+    !ok_mut_ref_len
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !iter
+    !iter_mut
+    !ref_iter
+    !mut_ref_iter
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10527)
+
+L_PASS:
+    !ok
+    return 0

@@ -1,0 +1,13 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/sync/mutex.sars"
+
+@const RESULT_OK = utf8:"mutex ok\n"
+
+@main() -> i32:
+L_ENTRY:
+    EXPAND MUTEX_NEW mutex
+    EXPAND MUTEX_LOCK mutex
+    EXPAND MUTEX_UNLOCK mutex
+    !mutex
+    call @sa_print_bytes(&RESULT_OK, 9)
+    return 0

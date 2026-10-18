@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "consumer/init_consumer.sars"
+
+@const RESULT_OK = utf8:"259\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 259 - Contract Static Init Order
+// The init-order layout lives in layout/init_order.sal and the bridge keeps the public entry points separate.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @init_consumer_value()
+    ok = eq value, 259
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

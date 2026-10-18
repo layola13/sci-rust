@@ -1,0 +1,1941 @@
+@import "sa_std/net.sars"
+@import "sa_std/process.sars"
+@import "sa_std/testing/assert.sai"
+
+// Unix domain socket 宏表面测试 + socket 选项 setter。
+// UDS 是本地流 socket：单线程 listen -> connect(入队即返回) -> accept -> write -> read 可行。
+@const UDS_TEST_PATH = utf8:"/tmp/sa_uds_test.sock"
+@const DBG_REUSE_STATUS = utf8:"uds_reuse_status"
+@const DBG_REUSEPORT_STATUS = utf8:"uds_reuseport_status"
+@const DBG_CONNECT_STATUS = utf8:"uds_connect_status"
+@const DBG_CLIENT = utf8:"uds_client"
+@const UDS_ABSTRACT_NAME = utf8:"sa-uds-abstract"
+@const UDS_DGRAM_MSG = utf8:"dg!"
+@const UDS_DGRAM_NEXT = utf8:"ok"
+@const UDS_DGRAM_PATH_A = utf8:"/tmp/sa_uds_dgram_a.sock"
+@const UDS_DGRAM_PATH_B = utf8:"/tmp/sa_uds_dgram_b.sock"
+@const UDS_DGRAM_ABSTRACT = utf8:"sa-uds-dgram-abstract"
+@const UDS_DGRAM_ADDR_MSG = utf8:"to"
+@const UDS_DGRAM_PATH_MSG = utf8:"rx"
+
+#def DBG_REUSE_STATUS_LEN = 16
+#def DBG_REUSEPORT_STATUS_LEN = 20
+#def DBG_CONNECT_STATUS_LEN = 18
+#def DBG_CLIENT_LEN = 10
+#def UDS_ABSTRACT_NAME_LEN = 15
+#def UDS_DGRAM_MSG_LEN = 3
+#def UDS_DGRAM_NEXT_LEN = 2
+#def UDS_DGRAM_PATH_LEN = 24
+#def UDS_DGRAM_ABSTRACT_LEN = 21
+#def UDS_DGRAM_ADDR_MSG_LEN = 2
+#def UDS_DGRAM_PATH_MSG_LEN = 2
+#def UDS_TEST_TIMEOUT_NS = 100000000
+
+@test "sa_std net unix domain socket roundtrip"():
+L_ENTRY:
+    path_len = add 0, 21
+    client = add 0, 0
+    connect_all = add 0, 0
+
+    EXPAND NET_UNIX_LISTEN listen_status, listener, UDS_TEST_PATH, path_len
+    listen_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    listen_all = and listen_ok, listener_ok
+    br listen_all -> L_ADDR, L_FAIL_LISTEN
+
+L_FAIL_LISTEN:
+    !listener
+    !listen_status
+    panic(10123)
+
+L_ADDR:
+    EXPAND NET_UNIX_LISTENER_LOCAL_ADDR addr_status, listener_addr, listener
+    addr_status_ok = eq addr_status, SA_NET_OK
+    addr_handle_ok = ne listener_addr, 0
+    EXPAND NET_UNIX_ADDR_KIND addr_kind, listener_addr
+    addr_kind_ok = eq addr_kind, SA_NET_UNIX_ADDR_PATHNAME
+    EXPAND NET_UNIX_ADDR_PATH_LEN addr_path_len, listener_addr
+    addr_len_ok = eq addr_path_len, 21
+    EXPAND NET_UNIX_ADDR_PATH_PTR addr_path_ptr, listener_addr
+    addr_ptr_ok = ne addr_path_ptr, 0
+    addr_b0 = load addr_path_ptr+0 as u8
+    addr_b20 = load addr_path_ptr+20 as u8
+    addr_b0_ok = eq addr_b0, 47
+    addr_b20_ok = eq addr_b20, 107
+    addr01 = and addr_status_ok, addr_handle_ok
+    addr02 = and addr01, addr_kind_ok
+    addr03 = and addr02, addr_len_ok
+    addr04 = and addr03, addr_ptr_ok
+    addr05 = and addr04, addr_b0_ok
+    addr_all = and addr05, addr_b20_ok
+    EXPAND NET_UNIX_ADDR_FREE addr_free_status, listener_addr
+    addr_free_ok = eq addr_free_status, SA_NET_OK
+    addr_all2 = and addr_all, addr_free_ok
+    !addr_free_status
+    !addr_all
+    !addr05
+    !addr04
+    !addr03
+    !addr02
+    !addr01
+    !addr_b20_ok
+    !addr_b0_ok
+    !addr_b20
+    !addr_b0
+    !addr_ptr_ok
+    !addr_path_ptr
+    !addr_len_ok
+    !addr_path_len
+    !addr_kind_ok
+    !addr_kind
+    !addr_handle_ok
+    !addr_status_ok
+    !addr_status
+    !listener_addr
+    br addr_all2 -> L_LISTENER_OPTIONS, L_FAIL_ADDR
+
+L_FAIL_ADDR:
+    !addr_all2
+    !listener
+    panic(10124)
+
+L_LISTENER_OPTIONS:
+    EXPAND NET_UNIX_LISTENER_SET_NONBLOCKING listener_nonblock_status, listener, SA_NET_SOCKET_OPTION_DISABLE
+    EXPAND NET_UNIX_LISTENER_TAKE_ERROR listener_error_status, listener_error, listener
+    listener_nonblock_ok = eq listener_nonblock_status, SA_NET_OK
+    listener_error_status_ok = eq listener_error_status, SA_NET_OK
+    listener_error_ok = eq listener_error, 0
+    listener_option01 = and listener_nonblock_ok, listener_error_status_ok
+    listener_options_ok = and listener_option01, listener_error_ok
+    !listener_option01
+    !listener_error_ok
+    !listener_error_status_ok
+    !listener_nonblock_ok
+    !listener_error
+    !listener_error_status
+    !listener_nonblock_status
+    br listener_options_ok -> L_LISTENER_CLONE, L_FAIL_LISTENER_OPTIONS
+
+L_FAIL_LISTENER_OPTIONS:
+    !listener_options_ok
+    !addr_all2
+    !listener
+    panic(10125)
+
+L_LISTENER_CLONE:
+    !listener_options_ok
+    EXPAND NET_UNIX_LISTENER_TRY_CLONE listener_clone_status, listener_clone, listener
+    listener_clone_status_ok = eq listener_clone_status, SA_NET_OK
+    listener_clone_handle_ok = ne listener_clone, 0
+    listener_clone_ready = and listener_clone_status_ok, listener_clone_handle_ok
+    br listener_clone_ready -> L_LISTENER_CLONE_OWNED, L_FAIL_LISTENER_CLONE
+
+L_FAIL_LISTENER_CLONE:
+    !listener_clone_ready
+    !listener_clone_handle_ok
+    !listener_clone_status_ok
+    !listener_clone
+    !listener_clone_status
+    !addr_all2
+    !listener
+    panic(10126)
+
+L_LISTENER_CLONE_OWNED:
+    EXPAND NET_UNIX_LISTENER_INTO_OWNED_FD listener_into_owned_status, listener_owned_fd, listener_clone
+    listener_into_owned_status_ok = eq listener_into_owned_status, SA_NET_OK
+    listener_owned_fd_ok = ne listener_owned_fd, 0
+    listener_into_owned_ok = and listener_into_owned_status_ok, listener_owned_fd_ok
+    br listener_into_owned_ok -> L_LISTENER_CLONE_FROM_OWNED, L_FAIL_LISTENER_INTO_OWNED
+
+L_FAIL_LISTENER_INTO_OWNED:
+    !listener_into_owned_ok
+    !listener_owned_fd_ok
+    !listener_into_owned_status_ok
+    !listener_owned_fd
+    !listener_into_owned_status
+    !listener_clone_ready
+    !addr_all2
+    !listener
+    panic(10127)
+
+L_LISTENER_CLONE_FROM_OWNED:
+    EXPAND NET_UNIX_LISTENER_FROM_OWNED_FD listener_from_owned_status, listener_clone, listener_owned_fd
+    listener_from_owned_status_ok = eq listener_from_owned_status, SA_NET_OK
+    listener_from_owned_handle_ok = ne listener_clone, 0
+    listener_from_owned_ok = and listener_from_owned_status_ok, listener_from_owned_handle_ok
+    br listener_from_owned_ok -> L_LISTENER_CLONE_CLOSE, L_FAIL_LISTENER_FROM_OWNED
+
+L_FAIL_LISTENER_FROM_OWNED:
+    !listener_from_owned_ok
+    !listener_from_owned_handle_ok
+    !listener_from_owned_status_ok
+    !listener_clone
+    !listener_from_owned_status
+    !listener_into_owned_ok
+    !listener_clone_ready
+    !addr_all2
+    !listener
+    panic(10128)
+
+L_LISTENER_CLONE_CLOSE:
+    EXPAND NET_UNIX_LISTENER_AS_RAW_FD listener_raw_status, listener_raw_fd, listener_clone
+    listener_raw_status_ok = eq listener_raw_status, SA_NET_OK
+    listener_raw_fd_ok = ne listener_raw_fd, -1
+    listener_raw_ok = and listener_raw_status_ok, listener_raw_fd_ok
+    br listener_raw_ok -> L_LISTENER_CLONE_INTO_RAW, L_FAIL_LISTENER_RAW
+
+L_FAIL_LISTENER_RAW:
+    !listener_raw_ok
+    !listener_raw_fd_ok
+    !listener_raw_status_ok
+    !listener_raw_fd
+    !listener_raw_status
+    !listener_from_owned_ok
+    !addr_all2
+    !listener
+    panic(10129)
+
+L_LISTENER_CLONE_INTO_RAW:
+    EXPAND NET_UNIX_LISTENER_INTO_RAW_FD listener_into_raw_status, listener_raw_taken, listener_clone
+    listener_into_raw_ok = eq listener_into_raw_status, SA_NET_OK
+    listener_raw_match = eq listener_raw_taken, listener_raw_fd
+    listener_take_ok = and listener_into_raw_ok, listener_raw_match
+    br listener_take_ok -> L_LISTENER_CLONE_FROM_RAW, L_FAIL_LISTENER_INTO_RAW
+
+L_FAIL_LISTENER_INTO_RAW:
+    !listener_take_ok
+    !listener_raw_match
+    !listener_into_raw_ok
+    !listener_raw_taken
+    !listener_into_raw_status
+    !listener_raw_ok
+    !addr_all2
+    !listener
+    panic(10130)
+
+L_LISTENER_CLONE_FROM_RAW:
+    EXPAND NET_UNIX_LISTENER_FROM_RAW_FD listener_from_raw_status, listener_clone, listener_raw_taken
+    listener_from_raw_status_ok = eq listener_from_raw_status, SA_NET_OK
+    listener_from_raw_handle_ok = ne listener_clone, 0
+    listener_from_raw_ok = and listener_from_raw_status_ok, listener_from_raw_handle_ok
+    br listener_from_raw_ok -> L_LISTENER_CLONE_CLOSE_DONE, L_FAIL_LISTENER_FROM_RAW
+
+L_FAIL_LISTENER_FROM_RAW:
+    !listener_from_raw_ok
+    !listener_from_raw_handle_ok
+    !listener_from_raw_status_ok
+    !listener_clone
+    !listener_from_raw_status
+    !listener_take_ok
+    !listener_raw_ok
+    !listener_from_owned_ok
+    !addr_all2
+    !listener
+    panic(10131)
+
+L_LISTENER_CLONE_CLOSE_DONE:
+    EXPAND NET_TCP_LISTENER_CLOSE listener_clone_close_status, listener_clone
+    listener_clone_close_ok = eq listener_clone_close_status, SA_NET_OK
+    !listener_from_raw_ok
+    !listener_take_ok
+    !listener_raw_ok
+    !listener_from_owned_ok
+    !listener_clone_ready
+    !listener_clone_handle_ok
+    !listener_clone_status_ok
+    !listener_clone_status
+    !listener_clone
+    !listener_clone_close_status
+    br listener_clone_close_ok -> L_REUSE, L_FAIL_LISTENER_CLONE_CLOSE
+
+L_FAIL_LISTENER_CLONE_CLOSE:
+    !listener_clone_close_ok
+    !addr_all2
+    !listener
+    panic(985)
+
+L_REUSE:
+    !listener_clone_close_ok
+    // 在 listener 上验证 reuseaddr/reuseport setter 返回 OK。
+    EXPAND NET_TCP_LISTENER_SET_REUSEADDR reuse_status, listener, SA_NET_SOCKET_OPTION_ENABLE
+    reuse_ok = eq reuse_status, SA_NET_OK
+    EXPAND NET_TCP_LISTENER_SET_REUSEPORT reuseport_status, listener, SA_NET_SOCKET_OPTION_ENABLE
+    reuseport_ok = eq reuseport_status, SA_NET_OK
+    reuse_both = and reuse_ok, reuseport_ok
+    call @sa_test_debug_i64(&DBG_REUSE_STATUS, DBG_REUSE_STATUS_LEN, reuse_status)
+    call @sa_test_debug_i64(&DBG_REUSEPORT_STATUS, DBG_REUSEPORT_STATUS_LEN, reuseport_status)
+    !reuseport_status
+    !reuse_status
+    br reuse_both -> L_CONNECT, L_FAIL_REUSE
+
+L_FAIL_REUSE:
+    !addr_all2
+    !listener
+    panic(10132)
+
+L_CONNECT:
+    EXPAND NET_UNIX_CONNECT connect_status, client, UDS_TEST_PATH, path_len
+    connect_ok = eq connect_status, SA_NET_OK
+    client_ok = ne client, 0
+    connect_all = and connect_ok, client_ok
+    call @sa_test_debug_i64(&DBG_CONNECT_STATUS, DBG_CONNECT_STATUS_LEN, connect_status)
+    call @sa_test_debug_i64(&DBG_CLIENT, DBG_CLIENT_LEN, client)
+    !connect_status
+    br connect_all -> L_ACCEPT, L_FAIL_CONNECT
+
+L_FAIL_CONNECT:
+    !client
+    !connect_all
+    !listener
+    panic(10133)
+
+L_ACCEPT:
+    EXPAND NET_UNIX_ACCEPT_ADDR accept_status, server, accept_addr, listener
+    accept_ok = eq accept_status, SA_NET_OK
+    server_ok = ne server, 0
+    accept_addr_ok = ne accept_addr, 0
+    EXPAND NET_UNIX_ADDR_KIND accept_addr_kind, accept_addr
+    accept_addr_kind_ok = eq accept_addr_kind, SA_NET_UNIX_ADDR_UNNAMED
+    accept01 = and accept_ok, server_ok
+    accept02 = and accept01, accept_addr_ok
+    accept_all = and accept02, accept_addr_kind_ok
+    EXPAND NET_UNIX_ADDR_FREE accept_addr_free_status, accept_addr
+    accept_addr_free_ok = eq accept_addr_free_status, SA_NET_OK
+    accept_done = and accept_all, accept_addr_free_ok
+    !accept_addr_free_ok
+    !accept_addr_free_status
+    !accept_all
+    !accept02
+    !accept01
+    !accept_addr_kind_ok
+    !accept_addr_kind
+    !accept_addr_ok
+    !accept_addr
+    !accept_status
+    br accept_done -> L_KEEPALIVE, L_FAIL_ACCEPT
+
+L_FAIL_ACCEPT:
+    !accept_done
+    !server
+    !client
+    !listener
+    panic(10134)
+
+L_KEEPALIVE:
+    !accept_done
+    // 在 accept 出来的 stream 上验证 keepalive setter 返回 OK。
+    EXPAND NET_TCP_STREAM_SET_KEEPALIVE ka_status, server, SA_NET_SOCKET_OPTION_ENABLE
+    ka_ok = eq ka_status, SA_NET_OK
+    // keepalive 参数 setter：idle=60s intvl=10s cnt=5。
+    EXPAND NET_TCP_STREAM_SET_KEEPALIVE_PARAMS kap_status, server, 60, 10, 5
+    kap_ok = eq kap_status, SA_NET_OK
+    ka_both = and ka_ok, kap_ok
+    !kap_status
+    !ka_status
+    br ka_both -> L_WRITE, L_FAIL_IO
+
+L_WRITE:
+    // client -> server 写入。
+    send_buf = stack_alloc 8
+    store send_buf+0, 85 as u8
+    store send_buf+1, 68 as u8
+    store send_buf+2, 83 as u8
+    store send_buf+3, 33 as u8
+    EXPAND NET_TCP_STREAM_WRITE write_status, write_len, client, send_buf, 4
+    write_ok = eq write_status, SA_NET_OK
+    wrote_4 = eq write_len, 4
+    write_all = and write_ok, wrote_4
+    !write_status
+    !write_len
+    br write_all -> L_READ, L_FAIL_IO
+
+L_READ:
+    recv_buf = stack_alloc 16
+    EXPAND NET_TCP_STREAM_READ read_status, read_len, server, recv_buf, 16
+    read_ok = eq read_status, SA_NET_OK
+    read_4 = eq read_len, 4
+    b0 = load recv_buf+0 as u8
+    b3 = load recv_buf+3 as u8
+    b0_ok = eq b0, 85
+    b3_ok = eq b3, 33
+    io01 = and read_ok, read_4
+    io02 = and io01, b0_ok
+    io_all = and io02, b3_ok
+    !read_status
+    !read_len
+    !b0
+    !b3
+    br io_all -> L_CLOSE, L_FAIL_IO
+
+L_FAIL_IO:
+    !server
+    !client
+    !listener
+    panic(10135)
+
+L_CLOSE:
+    EXPAND NET_TCP_STREAM_CLOSE close_client, client
+    EXPAND NET_TCP_STREAM_CLOSE close_server, server
+    EXPAND NET_TCP_LISTENER_CLOSE close_listener, listener
+    !close_listener
+    !close_server
+    !close_client
+    return 0
+
+@test "sa_std net unix pair and unnamed addresses"():
+L_PAIR_ENTRY:
+    EXPAND NET_UNIX_PAIR pair_status, left, right
+    pair_status_ok = eq pair_status, SA_NET_OK
+    left_ok = ne left, 0
+    right_ok = ne right, 0
+    pair01 = and pair_status_ok, left_ok
+    pair_all = and pair01, right_ok
+    !pair01
+    !right_ok
+    !left_ok
+    !pair_status_ok
+    !pair_status
+    br pair_all -> L_PAIR_STREAM_OPTIONS, L_PAIR_FAIL_PAIR
+
+L_PAIR_FAIL_PAIR:
+    !pair_all
+    !right
+    !left
+    panic(10136)
+
+L_PAIR_STREAM_OPTIONS:
+    EXPAND NET_UNIX_STREAM_SET_READ_TIMEOUT pair_set_read_timeout_status, left, UDS_TEST_TIMEOUT_NS
+    EXPAND NET_UNIX_STREAM_SET_WRITE_TIMEOUT pair_set_write_timeout_status, right, UDS_TEST_TIMEOUT_NS
+    EXPAND NET_UNIX_STREAM_SET_NONBLOCKING pair_nonblock_status, left, SA_NET_SOCKET_OPTION_DISABLE
+    EXPAND NET_UNIX_STREAM_READ_TIMEOUT pair_read_timeout_status, pair_read_timeout_ns, left
+    EXPAND NET_UNIX_STREAM_WRITE_TIMEOUT pair_write_timeout_status, pair_write_timeout_ns, right
+    EXPAND NET_UNIX_STREAM_TAKE_ERROR pair_error_status, pair_error, left
+    pair_set_read_timeout_ok = eq pair_set_read_timeout_status, SA_NET_OK
+    pair_set_write_timeout_ok = eq pair_set_write_timeout_status, SA_NET_OK
+    pair_nonblock_ok = eq pair_nonblock_status, SA_NET_OK
+    pair_read_timeout_status_ok = eq pair_read_timeout_status, SA_NET_OK
+    pair_read_timeout_ok = eq pair_read_timeout_ns, UDS_TEST_TIMEOUT_NS
+    pair_write_timeout_status_ok = eq pair_write_timeout_status, SA_NET_OK
+    pair_write_timeout_ok = eq pair_write_timeout_ns, UDS_TEST_TIMEOUT_NS
+    pair_error_status_ok = eq pair_error_status, SA_NET_OK
+    pair_error_ok = eq pair_error, 0
+    pair_option01 = and pair_set_read_timeout_ok, pair_set_write_timeout_ok
+    pair_option02 = and pair_option01, pair_nonblock_ok
+    pair_option03 = and pair_option02, pair_read_timeout_status_ok
+    pair_option04 = and pair_option03, pair_read_timeout_ok
+    pair_option05 = and pair_option04, pair_write_timeout_status_ok
+    pair_option06 = and pair_option05, pair_write_timeout_ok
+    pair_option07 = and pair_option06, pair_error_status_ok
+    pair_options_ok = and pair_option07, pair_error_ok
+    br pair_options_ok -> L_PAIR_STREAM_CLONE, L_PAIR_FAIL_STREAM_OPTIONS
+
+L_PAIR_FAIL_STREAM_OPTIONS:
+    !pair_options_ok
+    !pair_option07
+    !pair_option06
+    !pair_option05
+    !pair_option04
+    !pair_option03
+    !pair_option02
+    !pair_option01
+    !pair_error_ok
+    !pair_error_status_ok
+    !pair_write_timeout_ok
+    !pair_write_timeout_status_ok
+    !pair_read_timeout_ok
+    !pair_read_timeout_status_ok
+    !pair_nonblock_ok
+    !pair_set_write_timeout_ok
+    !pair_set_read_timeout_ok
+    !pair_error
+    !pair_error_status
+    !pair_write_timeout_ns
+    !pair_write_timeout_status
+    !pair_read_timeout_ns
+    !pair_read_timeout_status
+    !pair_nonblock_status
+    !pair_set_write_timeout_status
+    !pair_set_read_timeout_status
+    !pair_all
+    !right
+    !left
+    panic(10137)
+
+L_PAIR_STREAM_CLONE:
+    !pair_options_ok
+    !pair_option07
+    !pair_option06
+    !pair_option05
+    !pair_option04
+    !pair_option03
+    !pair_option02
+    !pair_option01
+    !pair_error_ok
+    !pair_error_status_ok
+    !pair_write_timeout_ok
+    !pair_write_timeout_status_ok
+    !pair_read_timeout_ok
+    !pair_read_timeout_status_ok
+    !pair_nonblock_ok
+    !pair_set_write_timeout_ok
+    !pair_set_read_timeout_ok
+    !pair_error
+    !pair_error_status
+    !pair_write_timeout_ns
+    !pair_write_timeout_status
+    !pair_read_timeout_ns
+    !pair_read_timeout_status
+    !pair_nonblock_status
+    !pair_set_write_timeout_status
+    !pair_set_read_timeout_status
+    EXPAND NET_UNIX_STREAM_TRY_CLONE pair_clone_status, pair_left_clone, left
+    pair_clone_status_ok = eq pair_clone_status, SA_NET_OK
+    pair_clone_handle_ok = ne pair_left_clone, 0
+    pair_clone_ready = and pair_clone_status_ok, pair_clone_handle_ok
+    br pair_clone_ready -> L_PAIR_CLONE_OWNED, L_PAIR_FAIL_STREAM_CLONE
+
+L_PAIR_FAIL_STREAM_CLONE:
+    !pair_clone_ready
+    !pair_clone_handle_ok
+    !pair_clone_status_ok
+    !pair_left_clone
+    !pair_clone_status
+    !pair_all
+    !right
+    !left
+    panic(986)
+
+L_PAIR_CLONE_OWNED:
+    EXPAND NET_UNIX_STREAM_INTO_OWNED_FD pair_clone_into_owned_status, pair_clone_owned_fd, pair_left_clone
+    pair_clone_into_owned_status_ok = eq pair_clone_into_owned_status, SA_NET_OK
+    pair_clone_owned_fd_ok = ne pair_clone_owned_fd, 0
+    pair_clone_into_owned_ok = and pair_clone_into_owned_status_ok, pair_clone_owned_fd_ok
+    br pair_clone_into_owned_ok -> L_PAIR_CLONE_FROM_OWNED, L_PAIR_FAIL_CLONE_INTO_OWNED
+
+L_PAIR_FAIL_CLONE_INTO_OWNED:
+    !pair_clone_into_owned_ok
+    !pair_clone_owned_fd_ok
+    !pair_clone_into_owned_status_ok
+    !pair_clone_owned_fd
+    !pair_clone_into_owned_status
+    !pair_clone_ready
+    !pair_all
+    !right
+    !left
+    panic(10138)
+
+L_PAIR_CLONE_FROM_OWNED:
+    EXPAND NET_UNIX_STREAM_FROM_OWNED_FD pair_clone_from_owned_status, pair_left_clone, pair_clone_owned_fd
+    pair_clone_from_owned_status_ok = eq pair_clone_from_owned_status, SA_NET_OK
+    pair_clone_from_owned_handle_ok = ne pair_left_clone, 0
+    pair_clone_from_owned_ok = and pair_clone_from_owned_status_ok, pair_clone_from_owned_handle_ok
+    br pair_clone_from_owned_ok -> L_PAIR_CLONE_WRITE, L_PAIR_FAIL_CLONE_FROM_OWNED
+
+L_PAIR_FAIL_CLONE_FROM_OWNED:
+    !pair_clone_from_owned_ok
+    !pair_clone_from_owned_handle_ok
+    !pair_clone_from_owned_status_ok
+    !pair_left_clone
+    !pair_clone_from_owned_status
+    !pair_clone_into_owned_ok
+    !pair_clone_ready
+    !pair_all
+    !right
+    !left
+    panic(10139)
+
+L_PAIR_CLONE_WRITE:
+    EXPAND NET_UNIX_STREAM_AS_RAW_FD pair_clone_raw_status, pair_clone_raw_fd, pair_left_clone
+    pair_clone_raw_status_ok = eq pair_clone_raw_status, SA_NET_OK
+    pair_clone_raw_fd_ok = ne pair_clone_raw_fd, -1
+    pair_clone_raw_ok = and pair_clone_raw_status_ok, pair_clone_raw_fd_ok
+    br pair_clone_raw_ok -> L_PAIR_CLONE_INTO_RAW, L_PAIR_FAIL_CLONE_RAW
+
+L_PAIR_FAIL_CLONE_RAW:
+    !pair_clone_raw_ok
+    !pair_clone_raw_fd_ok
+    !pair_clone_raw_status_ok
+    !pair_clone_raw_fd
+    !pair_clone_raw_status
+    !pair_clone_from_owned_ok
+    !pair_clone_ready
+    !pair_left_clone
+    !pair_all
+    !right
+    !left
+    panic(10140)
+
+L_PAIR_CLONE_INTO_RAW:
+    EXPAND NET_UNIX_STREAM_INTO_RAW_FD pair_clone_into_raw_status, pair_clone_raw_taken, pair_left_clone
+    pair_clone_into_raw_ok = eq pair_clone_into_raw_status, SA_NET_OK
+    pair_clone_raw_match = eq pair_clone_raw_taken, pair_clone_raw_fd
+    pair_clone_take_ok = and pair_clone_into_raw_ok, pair_clone_raw_match
+    br pair_clone_take_ok -> L_PAIR_CLONE_FROM_RAW, L_PAIR_FAIL_CLONE_INTO_RAW
+
+L_PAIR_FAIL_CLONE_INTO_RAW:
+    !pair_clone_take_ok
+    !pair_clone_raw_match
+    !pair_clone_into_raw_ok
+    !pair_clone_raw_taken
+    !pair_clone_into_raw_status
+    !pair_clone_raw_ok
+    !pair_clone_from_owned_ok
+    !pair_clone_ready
+    !pair_all
+    !right
+    !left
+    panic(999)
+
+L_PAIR_CLONE_FROM_RAW:
+    EXPAND NET_UNIX_STREAM_FROM_RAW_FD pair_clone_from_raw_status, pair_left_clone, pair_clone_raw_taken
+    pair_clone_from_raw_status_ok = eq pair_clone_from_raw_status, SA_NET_OK
+    pair_clone_from_raw_handle_ok = ne pair_left_clone, 0
+    pair_clone_from_raw_ok = and pair_clone_from_raw_status_ok, pair_clone_from_raw_handle_ok
+    br pair_clone_from_raw_ok -> L_PAIR_CLONE_WRITE_DONE, L_PAIR_FAIL_CLONE_FROM_RAW
+
+L_PAIR_FAIL_CLONE_FROM_RAW:
+    !pair_clone_from_raw_ok
+    !pair_clone_from_raw_handle_ok
+    !pair_clone_from_raw_status_ok
+    !pair_left_clone
+    !pair_clone_from_raw_status
+    !pair_clone_take_ok
+    !pair_clone_raw_ok
+    !pair_clone_from_owned_ok
+    !pair_clone_ready
+    !pair_all
+    !right
+    !left
+    panic(10141)
+
+L_PAIR_CLONE_WRITE_DONE:
+    clone_send = stack_alloc 4
+    store clone_send+0, 67 as u8
+    store clone_send+1, 76 as u8
+    store clone_send+2, 79 as u8
+    store clone_send+3, 78 as u8
+    EXPAND NET_TCP_STREAM_WRITE clone_write_status, clone_write_len, pair_left_clone, clone_send, 4
+    clone_write_status_ok = eq clone_write_status, SA_NET_OK
+    clone_write_len_ok = eq clone_write_len, 4
+    clone_write_ok = and clone_write_status_ok, clone_write_len_ok
+    !clone_write_len_ok
+    !clone_write_status_ok
+    !clone_write_len
+    !clone_write_status
+    br clone_write_ok -> L_PAIR_CLONE_READ, L_PAIR_FAIL_CLONE_WRITE
+
+L_PAIR_FAIL_CLONE_WRITE:
+    !clone_write_ok
+    !pair_clone_ready
+    !pair_left_clone
+    !pair_all
+    !right
+    !left
+    panic(987)
+
+L_PAIR_CLONE_READ:
+    clone_recv = stack_alloc 4
+    EXPAND NET_TCP_STREAM_READ clone_read_status, clone_read_len, right, clone_recv, 4
+    clone_read_status_ok = eq clone_read_status, SA_NET_OK
+    clone_read_len_ok = eq clone_read_len, 4
+    clone_read_b0 = load clone_recv+0 as u8
+    clone_read_b3 = load clone_recv+3 as u8
+    clone_read_b0_ok = eq clone_read_b0, 67
+    clone_read_b3_ok = eq clone_read_b3, 78
+    clone_read01 = and clone_read_status_ok, clone_read_len_ok
+    clone_read02 = and clone_read01, clone_read_b0_ok
+    clone_read_ok = and clone_read02, clone_read_b3_ok
+    !clone_read02
+    !clone_read01
+    !clone_read_b3_ok
+    !clone_read_b0_ok
+    !clone_read_b3
+    !clone_read_b0
+    !clone_read_len_ok
+    !clone_read_status_ok
+    !clone_read_len
+    !clone_read_status
+    br clone_read_ok -> L_PAIR_CLONE_CLOSE, L_PAIR_FAIL_CLONE_READ
+
+L_PAIR_FAIL_CLONE_READ:
+    !clone_read_ok
+    !clone_write_ok
+    !pair_clone_ready
+    !pair_left_clone
+    !pair_all
+    !right
+    !left
+    panic(10142)
+
+L_PAIR_CLONE_CLOSE:
+    EXPAND NET_TCP_STREAM_CLOSE clone_close_status, pair_left_clone
+    clone_close_ok = eq clone_close_status, SA_NET_OK
+    !clone_close_status
+    !clone_read_ok
+    !clone_write_ok
+    !pair_clone_from_raw_ok
+    !pair_clone_take_ok
+    !pair_clone_raw_ok
+    !pair_clone_from_owned_ok
+    !pair_clone_ready
+    !pair_clone_handle_ok
+    !pair_clone_status_ok
+    !pair_clone_status
+    !pair_left_clone
+    br clone_close_ok -> L_PAIR_PASSCRED, L_PAIR_FAIL_CLONE_CLOSE
+
+L_PAIR_FAIL_CLONE_CLOSE:
+    !clone_close_ok
+    !pair_all
+    !right
+    !left
+    panic(1001)
+
+L_PAIR_PASSCRED:
+    !clone_close_ok
+    EXPAND NET_UNIX_STREAM_SET_PASSCRED passcred_enable_status, left, SA_NET_SOCKET_OPTION_ENABLE
+    EXPAND NET_UNIX_STREAM_PASSCRED passcred_get_status, passcred_enabled, left
+    EXPAND NET_UNIX_STREAM_SET_PASSCRED passcred_disable_status, left, SA_NET_SOCKET_OPTION_DISABLE
+    EXPAND NET_UNIX_STREAM_PASSCRED passcred_get2_status, passcred_enabled2, left
+    EXPAND NET_UNIX_STREAM_SET_MARK stream_mark_status, left, 32
+    passcred_enable_ok = eq passcred_enable_status, SA_NET_OK
+    passcred_get_ok = eq passcred_get_status, SA_NET_OK
+    passcred_enabled_ok = eq passcred_enabled, 1
+    passcred_disable_ok = eq passcred_disable_status, SA_NET_OK
+    passcred_get2_ok = eq passcred_get2_status, SA_NET_OK
+    passcred_enabled2_ok = eq passcred_enabled2, 0
+    stream_mark_ok = eq stream_mark_status, SA_NET_OK
+    stream_mark_access = eq stream_mark_status, SA_NET_ERR_ACCESS
+    stream_mark_unsupported = eq stream_mark_status, SA_NET_ERR_UNSUPPORTED
+    stream_mark_allowed1 = or stream_mark_ok, stream_mark_access
+    stream_mark_allowed = or stream_mark_allowed1, stream_mark_unsupported
+    passcred01 = and passcred_enable_ok, passcred_get_ok
+    passcred02 = and passcred01, passcred_enabled_ok
+    passcred03 = and passcred02, passcred_disable_ok
+    passcred04 = and passcred03, passcred_get2_ok
+    passcred05 = and passcred04, passcred_enabled2_ok
+    passcred_ok = and passcred05, stream_mark_allowed
+    br passcred_ok -> L_PAIR_PEER_CRED, L_PAIR_FAIL_PASSCRED
+
+L_PAIR_FAIL_PASSCRED:
+    !passcred_ok
+    !passcred05
+    !passcred04
+    !passcred03
+    !passcred02
+    !passcred01
+    !stream_mark_allowed
+    !stream_mark_allowed1
+    !stream_mark_unsupported
+    !stream_mark_access
+    !stream_mark_ok
+    !passcred_enabled2_ok
+    !passcred_get2_ok
+    !passcred_disable_ok
+    !passcred_enabled_ok
+    !passcred_get_ok
+    !passcred_enable_ok
+    !passcred_enabled2
+    !passcred_get2_status
+    !passcred_disable_status
+    !passcred_enabled
+    !passcred_get_status
+    !passcred_enable_status
+    !stream_mark_status
+    !pair_all
+    !right
+    !left
+    panic(1002)
+
+L_PAIR_PEER_CRED:
+    EXPAND PROCESS_ID current_pid
+    EXPAND PROCESS_USER_ID current_uid
+    EXPAND PROCESS_GROUP_ID current_gid
+    EXPAND NET_UNIX_STREAM_PEER_CRED peer_cred_status, peer_pid, peer_uid, peer_gid, left
+    peer_cred_status_ok = eq peer_cred_status, SA_NET_OK
+    peer_pid_ok = eq peer_pid, current_pid
+    peer_uid_ok = eq peer_uid, current_uid
+    peer_gid_ok = eq peer_gid, current_gid
+    peer_cred01 = and peer_cred_status_ok, peer_pid_ok
+    peer_cred02 = and peer_cred01, peer_uid_ok
+    peer_cred_ok = and peer_cred02, peer_gid_ok
+    br peer_cred_ok -> L_PAIR_ADDRS, L_PAIR_FAIL_PEER_CRED
+
+L_PAIR_FAIL_PEER_CRED:
+    !peer_cred_ok
+    !peer_cred02
+    !peer_cred01
+    !peer_gid_ok
+    !peer_uid_ok
+    !peer_pid_ok
+    !peer_cred_status_ok
+    !peer_gid
+    !peer_uid
+    !peer_pid
+    !peer_cred_status
+    !current_gid
+    !current_uid
+    !current_pid
+    !passcred_ok
+    !passcred05
+    !passcred04
+    !passcred03
+    !passcred02
+    !passcred01
+    !stream_mark_allowed
+    !stream_mark_allowed1
+    !stream_mark_unsupported
+    !stream_mark_access
+    !stream_mark_ok
+    !passcred_enabled2_ok
+    !passcred_get2_ok
+    !passcred_disable_ok
+    !passcred_enabled_ok
+    !passcred_get_ok
+    !passcred_enable_ok
+    !passcred_enabled2
+    !passcred_get2_status
+    !passcred_disable_status
+    !passcred_enabled
+    !passcred_get_status
+    !passcred_enable_status
+    !stream_mark_status
+    !pair_all
+    !right
+    !left
+    panic(10143)
+
+L_PAIR_ADDRS:
+    !peer_cred_ok
+    !peer_cred02
+    !peer_cred01
+    !peer_gid_ok
+    !peer_uid_ok
+    !peer_pid_ok
+    !peer_cred_status_ok
+    !peer_gid
+    !peer_uid
+    !peer_pid
+    !peer_cred_status
+    !current_gid
+    !current_uid
+    !current_pid
+    !passcred_ok
+    !passcred05
+    !passcred04
+    !passcred03
+    !passcred02
+    !passcred01
+    !stream_mark_allowed
+    !stream_mark_allowed1
+    !stream_mark_unsupported
+    !stream_mark_access
+    !stream_mark_ok
+    !passcred_enabled2_ok
+    !passcred_get2_ok
+    !passcred_disable_ok
+    !passcred_enabled_ok
+    !passcred_get_ok
+    !passcred_enable_ok
+    !passcred_enabled2
+    !passcred_get2_status
+    !passcred_disable_status
+    !passcred_enabled
+    !passcred_get_status
+    !passcred_enable_status
+    !stream_mark_status
+    EXPAND NET_UNIX_STREAM_LOCAL_ADDR left_local_status, left_local_addr, left
+    left_local_status_ok = eq left_local_status, SA_NET_OK
+    EXPAND NET_UNIX_ADDR_IS_UNNAMED left_local_unnamed, left_local_addr
+    left_local_unnamed_ok = eq left_local_unnamed, 1
+    EXPAND NET_UNIX_ADDR_PATH_LEN left_local_path_len, left_local_addr
+    left_local_path_ok = eq left_local_path_len, 0
+    EXPAND NET_UNIX_STREAM_PEER_ADDR left_peer_status, left_peer_addr, left
+    left_peer_status_ok = eq left_peer_status, SA_NET_OK
+    EXPAND NET_UNIX_ADDR_KIND left_peer_kind, left_peer_addr
+    left_peer_kind_ok = eq left_peer_kind, SA_NET_UNIX_ADDR_UNNAMED
+    addr_pair01 = and left_local_status_ok, left_local_unnamed_ok
+    addr_pair02 = and addr_pair01, left_local_path_ok
+    addr_pair03 = and addr_pair02, left_peer_status_ok
+    addr_pair_all = and addr_pair03, left_peer_kind_ok
+    EXPAND NET_UNIX_ADDR_FREE left_local_free, left_local_addr
+    EXPAND NET_UNIX_ADDR_FREE left_peer_free, left_peer_addr
+    left_local_free_ok = eq left_local_free, SA_NET_OK
+    left_peer_free_ok = eq left_peer_free, SA_NET_OK
+    addr_pair04 = and addr_pair_all, left_local_free_ok
+    addr_pair_done = and addr_pair04, left_peer_free_ok
+    !addr_pair04
+    !left_peer_free_ok
+    !left_local_free_ok
+    !left_peer_free
+    !left_local_free
+    !addr_pair_all
+    !addr_pair03
+    !addr_pair02
+    !addr_pair01
+    !left_peer_kind_ok
+    !left_peer_kind
+    !left_peer_status_ok
+    !left_peer_status
+    !left_local_path_ok
+    !left_local_path_len
+    !left_local_unnamed_ok
+    !left_local_unnamed
+    !left_local_status_ok
+    !left_local_status
+    !left_peer_addr
+    !left_local_addr
+    br addr_pair_done -> L_PAIR_WRITE, L_PAIR_FAIL_ADDRS
+
+L_PAIR_FAIL_ADDRS:
+    !addr_pair_done
+    !right
+    !left
+    panic(10144)
+
+L_PAIR_WRITE:
+    pair_send = stack_alloc 4
+    store pair_send+0, 80 as u8
+    store pair_send+1, 65 as u8
+    store pair_send+2, 73 as u8
+    store pair_send+3, 82 as u8
+    EXPAND NET_TCP_STREAM_WRITE pair_write_status, pair_write_len, left, pair_send, 4
+    pair_write_status_ok = eq pair_write_status, SA_NET_OK
+    pair_write_len_ok = eq pair_write_len, 4
+    pair_write_ok = and pair_write_status_ok, pair_write_len_ok
+    !pair_write_len_ok
+    !pair_write_status_ok
+    !pair_write_status
+    !pair_write_len
+    br pair_write_ok -> L_PAIR_PEEK, L_PAIR_FAIL_WRITE
+
+L_PAIR_FAIL_WRITE:
+    !pair_write_ok
+    !addr_pair_done
+    !right
+    !left
+    panic(10145)
+
+L_PAIR_PEEK:
+    pair_peek = stack_alloc 8
+    EXPAND NET_UNIX_STREAM_PEEK pair_peek_status, pair_peek_len, right, pair_peek, 8
+    pair_peek_status_ok = eq pair_peek_status, SA_NET_OK
+    pair_peek_len_ok = eq pair_peek_len, 4
+    pair_peek_b0 = load pair_peek+0 as u8
+    pair_peek_b3 = load pair_peek+3 as u8
+    pair_peek_b0_ok = eq pair_peek_b0, 80
+    pair_peek_b3_ok = eq pair_peek_b3, 82
+    pair_peek01 = and pair_peek_status_ok, pair_peek_len_ok
+    pair_peek02 = and pair_peek01, pair_peek_b0_ok
+    pair_peek_ok = and pair_peek02, pair_peek_b3_ok
+    !pair_peek02
+    !pair_peek01
+    !pair_peek_b3_ok
+    !pair_peek_b0_ok
+    !pair_peek_b3
+    !pair_peek_b0
+    !pair_peek_len_ok
+    !pair_peek_status_ok
+    !pair_peek_status
+    !pair_peek_len
+    br pair_peek_ok -> L_PAIR_READ, L_PAIR_FAIL_PEEK
+
+L_PAIR_FAIL_PEEK:
+    !pair_peek_ok
+    !pair_write_ok
+    !addr_pair_done
+    !right
+    !left
+    panic(10146)
+
+L_PAIR_READ:
+    pair_recv = stack_alloc 8
+    EXPAND NET_TCP_STREAM_READ pair_read_status, pair_read_len, right, pair_recv, 8
+    pair_read_status_ok = eq pair_read_status, SA_NET_OK
+    pair_read_len_ok = eq pair_read_len, 4
+    pair_b0 = load pair_recv+0 as u8
+    pair_b3 = load pair_recv+3 as u8
+    pair_b0_ok = eq pair_b0, 80
+    pair_b3_ok = eq pair_b3, 82
+    pair_read01 = and pair_read_status_ok, pair_read_len_ok
+    pair_read02 = and pair_read01, pair_b0_ok
+    pair_read_ok = and pair_read02, pair_b3_ok
+    !pair_read02
+    !pair_read01
+    !pair_b3_ok
+    !pair_b0_ok
+    !pair_b3
+    !pair_b0
+    !pair_read_len_ok
+    !pair_read_status_ok
+    !pair_read_status
+    !pair_read_len
+    br pair_read_ok -> L_PAIR_SHUTDOWN, L_PAIR_FAIL_READ
+
+L_PAIR_FAIL_READ:
+    !pair_read_ok
+    !pair_peek_ok
+    !pair_write_ok
+    !addr_pair_done
+    !right
+    !left
+    panic(10147)
+
+L_PAIR_SHUTDOWN:
+    EXPAND NET_UNIX_STREAM_SHUTDOWN pair_shutdown_status, left, SA_NET_SHUTDOWN_WRITE
+    pair_shutdown_status_ok = eq pair_shutdown_status, SA_NET_OK
+    pair_eof = stack_alloc 8
+    EXPAND NET_TCP_STREAM_READ pair_eof_status, pair_eof_len, right, pair_eof, 8
+    pair_eof_status_ok = eq pair_eof_status, SA_NET_OK
+    pair_eof_len_ok = eq pair_eof_len, 0
+    pair_shutdown01 = and pair_shutdown_status_ok, pair_eof_status_ok
+    pair_shutdown_ok = and pair_shutdown01, pair_eof_len_ok
+    !pair_shutdown01
+    !pair_eof_len_ok
+    !pair_eof_status_ok
+    !pair_eof_status
+    !pair_eof_len
+    !pair_shutdown_status_ok
+    !pair_shutdown_status
+    br pair_shutdown_ok -> L_PAIR_CLOSE, L_PAIR_FAIL_SHUTDOWN
+
+L_PAIR_FAIL_SHUTDOWN:
+    !pair_shutdown_ok
+    !pair_read_ok
+    !pair_peek_ok
+    !pair_write_ok
+    !addr_pair_done
+    !right
+    !left
+    panic(10148)
+
+L_PAIR_CLOSE:
+    EXPAND NET_TCP_STREAM_CLOSE pair_close_left, left
+    EXPAND NET_TCP_STREAM_CLOSE pair_close_right, right
+    pair_close_left_ok = eq pair_close_left, SA_NET_OK
+    pair_close_right_ok = eq pair_close_right, SA_NET_OK
+    pair_close_ok = and pair_close_left_ok, pair_close_right_ok
+    !pair_close_ok
+    !pair_close_right_ok
+    !pair_close_left_ok
+    !pair_close_right
+    !pair_close_left
+    !pair_shutdown_ok
+    !pair_read_ok
+    !pair_peek_ok
+    !pair_write_ok
+    !addr_pair_done
+    !pair_all
+    return 0
+
+@test "sa_std net unix pathname socket address constructor"():
+L_PATHNAME_ADDR_ENTRY:
+    path_len = add 0, 21
+    EXPAND NET_UNIX_ADDR_FROM_PATHNAME path_addr_status, path_addr, UDS_TEST_PATH, path_len
+    path_addr_status_ok = eq path_addr_status, SA_NET_OK
+    path_addr_handle_ok = ne path_addr, 0
+    path_addr_make_ok = and path_addr_status_ok, path_addr_handle_ok
+    br path_addr_make_ok -> L_PATHNAME_ADDR_CHECK, L_PATHNAME_ADDR_FAIL_MAKE
+
+L_PATHNAME_ADDR_FAIL_MAKE:
+    !path_addr_make_ok
+    !path_addr_handle_ok
+    !path_addr_status_ok
+    !path_addr
+    !path_addr_status
+    panic(10149)
+
+L_PATHNAME_ADDR_CHECK:
+    EXPAND NET_UNIX_ADDR_KIND path_addr_kind, path_addr
+    path_addr_kind_ok = eq path_addr_kind, SA_NET_UNIX_ADDR_PATHNAME
+    EXPAND NET_UNIX_ADDR_AS_PATHNAME_LEN path_addr_len, path_addr
+    path_addr_len_ok = eq path_addr_len, 21
+    EXPAND NET_UNIX_ADDR_AS_PATHNAME_PTR path_addr_ptr, path_addr
+    path_addr_ptr_ok = ne path_addr_ptr, 0
+    path_addr_b0 = load path_addr_ptr+0 as u8
+    path_addr_b20 = load path_addr_ptr+20 as u8
+    path_addr_b0_ok = eq path_addr_b0, 47
+    path_addr_b20_ok = eq path_addr_b20, 107
+    path_addr01 = and path_addr_kind_ok, path_addr_len_ok
+    path_addr02 = and path_addr01, path_addr_ptr_ok
+    path_addr03 = and path_addr02, path_addr_b0_ok
+    path_addr_ok = and path_addr03, path_addr_b20_ok
+    EXPAND NET_UNIX_ADDR_FREE path_addr_free_status, path_addr
+    path_addr_free_ok = eq path_addr_free_status, SA_NET_OK
+    path_addr_done = and path_addr_ok, path_addr_free_ok
+    br path_addr_done -> L_PATHNAME_ADDR_PASS, L_PATHNAME_ADDR_FAIL_CHECK
+
+L_PATHNAME_ADDR_FAIL_CHECK:
+    !path_addr_done
+    !path_addr_free_ok
+    !path_addr_free_status
+    !path_addr_ok
+    !path_addr03
+    !path_addr02
+    !path_addr01
+    !path_addr_b20_ok
+    !path_addr_b0_ok
+    !path_addr_b20
+    !path_addr_b0
+    !path_addr_ptr_ok
+    !path_addr_ptr
+    !path_addr_len_ok
+    !path_addr_len
+    !path_addr_kind_ok
+    !path_addr_kind
+    !path_addr_make_ok
+    panic(10150)
+
+L_PATHNAME_ADDR_PASS:
+    !path_addr_done
+    return 0
+
+@test "sa_std net unix abstract address roundtrip"():
+L_ABSTRACT_ENTRY:
+    EXPAND NET_UNIX_ADDR_FROM_ABSTRACT_NAME make_status, abstract_addr, UDS_ABSTRACT_NAME, UDS_ABSTRACT_NAME_LEN
+    make_status_ok = eq make_status, SA_NET_OK
+    abstract_addr_ok = ne abstract_addr, 0
+    make_ok = and make_status_ok, abstract_addr_ok
+    br make_ok -> L_ABSTRACT_KIND, L_ABSTRACT_FAIL_MAKE
+
+L_ABSTRACT_FAIL_MAKE:
+    !make_ok
+    !abstract_addr_ok
+    !make_status_ok
+    !abstract_addr
+    !make_status
+    panic(10151)
+
+L_ABSTRACT_KIND:
+    EXPAND NET_UNIX_ADDR_KIND abstract_kind, abstract_addr
+    abstract_kind_ok = eq abstract_kind, SA_NET_UNIX_ADDR_ABSTRACT
+    EXPAND NET_UNIX_ADDR_AS_ABSTRACT_NAME_LEN abstract_len, abstract_addr
+    abstract_len_ok = eq abstract_len, UDS_ABSTRACT_NAME_LEN
+    EXPAND NET_UNIX_ADDR_AS_ABSTRACT_NAME_PTR abstract_ptr, abstract_addr
+    abstract_ptr_ok = ne abstract_ptr, 0
+    abstract_b0 = load abstract_ptr+0 as u8
+    abstract_b14 = load abstract_ptr+14 as u8
+    abstract_b0_ok = eq abstract_b0, 115
+    abstract_b14_ok = eq abstract_b14, 116
+    abstract01 = and abstract_kind_ok, abstract_len_ok
+    abstract02 = and abstract01, abstract_ptr_ok
+    abstract03 = and abstract02, abstract_b0_ok
+    abstract_ok = and abstract03, abstract_b14_ok
+    br abstract_ok -> L_ABSTRACT_LISTEN, L_ABSTRACT_FAIL_KIND
+
+L_ABSTRACT_FAIL_KIND:
+    !abstract_ok
+    !abstract03
+    !abstract02
+    !abstract01
+    !abstract_b14_ok
+    !abstract_b0_ok
+    !abstract_b14
+    !abstract_b0
+    !abstract_ptr_ok
+    !abstract_ptr
+    !abstract_len_ok
+    !abstract_len
+    !abstract_kind_ok
+    !abstract_kind
+    !abstract_addr
+    panic(10152)
+
+L_ABSTRACT_LISTEN:
+    EXPAND NET_UNIX_LISTEN_ADDR listen_status, listener, abstract_addr
+    listen_status_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    listen_ok = and listen_status_ok, listener_ok
+    br listen_ok -> L_ABSTRACT_LOCAL, L_ABSTRACT_FAIL_LISTEN
+
+L_ABSTRACT_FAIL_LISTEN:
+    !listen_ok
+    !listener_ok
+    !listen_status_ok
+    !listener
+    !listen_status
+    !abstract_addr
+    panic(10153)
+
+L_ABSTRACT_LOCAL:
+    EXPAND NET_UNIX_LISTENER_LOCAL_ADDR local_status, local_addr, listener
+    local_status_ok = eq local_status, SA_NET_OK
+    local_addr_ok = ne local_addr, 0
+    EXPAND NET_UNIX_ADDR_KIND local_kind, local_addr
+    local_kind_ok = eq local_kind, SA_NET_UNIX_ADDR_ABSTRACT
+    EXPAND NET_UNIX_ADDR_AS_ABSTRACT_NAME_LEN local_len, local_addr
+    local_len_ok = eq local_len, UDS_ABSTRACT_NAME_LEN
+    EXPAND NET_UNIX_ADDR_AS_ABSTRACT_NAME_PTR local_ptr, local_addr
+    local_ptr_ok = ne local_ptr, 0
+    local_b0 = load local_ptr+0 as u8
+    local_b14 = load local_ptr+14 as u8
+    local_b0_ok = eq local_b0, 115
+    local_b14_ok = eq local_b14, 116
+    local01 = and local_status_ok, local_addr_ok
+    local02 = and local01, local_kind_ok
+    local03 = and local02, local_len_ok
+    local04 = and local03, local_ptr_ok
+    local05 = and local04, local_b0_ok
+    local_ok = and local05, local_b14_ok
+    EXPAND NET_UNIX_ADDR_FREE local_free_status, local_addr
+    local_free_ok = eq local_free_status, SA_NET_OK
+    local_all = and local_ok, local_free_ok
+    br local_all -> L_ABSTRACT_INCOMING, L_ABSTRACT_FAIL_LOCAL
+
+L_ABSTRACT_FAIL_LOCAL:
+    !local_all
+    !local_free_ok
+    !local_free_status
+    !local_ok
+    !local05
+    !local04
+    !local03
+    !local02
+    !local01
+    !local_b14_ok
+    !local_b0_ok
+    !local_b14
+    !local_b0
+    !local_ptr_ok
+    !local_ptr
+    !local_len_ok
+    !local_len
+    !local_kind_ok
+    !local_kind
+    !local_addr_ok
+    !local_status_ok
+    !local_addr
+    !local_status
+    !listener
+    !abstract_addr
+    panic(10154)
+
+L_ABSTRACT_INCOMING:
+    incoming = stack_alloc NetTcpIncoming_SIZE
+    EXPAND NET_UNIX_LISTENER_INCOMING incoming, listener
+    EXPAND NET_UNIX_INCOMING_LISTENER incoming_listener, incoming
+    incoming_listener_ok = eq incoming_listener, listener
+    !incoming_listener
+    br incoming_listener_ok -> L_ABSTRACT_CONNECT, L_ABSTRACT_FAIL_INCOMING
+
+L_ABSTRACT_FAIL_INCOMING:
+    !incoming_listener_ok
+    !listener
+    !abstract_addr
+    panic(979)
+
+L_ABSTRACT_CONNECT:
+    EXPAND NET_UNIX_CONNECT_ADDR connect_status, client, abstract_addr
+    connect_status_ok = eq connect_status, SA_NET_OK
+    client_ok = ne client, 0
+    connect_ok = and connect_status_ok, client_ok
+    br connect_ok -> L_ABSTRACT_ACCEPT, L_ABSTRACT_FAIL_CONNECT
+
+L_ABSTRACT_FAIL_CONNECT:
+    !connect_ok
+    !client_ok
+    !connect_status_ok
+    !client
+    !connect_status
+    !incoming_listener_ok
+    !listener
+    !abstract_addr
+    panic(10155)
+
+L_ABSTRACT_ACCEPT:
+    EXPAND NET_UNIX_INCOMING_NEXT accept_status, accept_flag, server, incoming
+    accept_status_ok = eq accept_status, SA_NET_OK
+    accept_flag_ok = eq accept_flag, 1
+    server_ok = ne server, 0
+    accept01 = and accept_status_ok, accept_flag_ok
+    accept_ok = and accept01, server_ok
+    br accept_ok -> L_ABSTRACT_WRITE, L_ABSTRACT_FAIL_ACCEPT
+
+L_ABSTRACT_FAIL_ACCEPT:
+    !accept_ok
+    !accept01
+    !server_ok
+    !accept_flag_ok
+    !accept_status_ok
+    !server
+    !accept_flag
+    !accept_status
+    !client
+    !incoming_listener_ok
+    !listener
+    !abstract_addr
+    panic(975)
+
+L_ABSTRACT_WRITE:
+    abstract_send = stack_alloc 4
+    store abstract_send+0, 65 as u8
+    store abstract_send+1, 66 as u8
+    store abstract_send+2, 83 as u8
+    store abstract_send+3, 33 as u8
+    EXPAND NET_TCP_STREAM_WRITE write_status, write_len, client, abstract_send, 4
+    write_status_ok = eq write_status, SA_NET_OK
+    write_len_ok = eq write_len, 4
+    write_ok = and write_status_ok, write_len_ok
+    br write_ok -> L_ABSTRACT_READ, L_ABSTRACT_FAIL_WRITE
+
+L_ABSTRACT_FAIL_WRITE:
+    !write_ok
+    !write_len_ok
+    !write_status_ok
+    !write_len
+    !write_status
+    !incoming_listener_ok
+    !server
+    !client
+    !listener
+    !abstract_addr
+    panic(976)
+
+L_ABSTRACT_READ:
+    abstract_recv = stack_alloc 8
+    EXPAND NET_TCP_STREAM_READ read_status, read_len, server, abstract_recv, 8
+    read_status_ok = eq read_status, SA_NET_OK
+    read_len_ok = eq read_len, 4
+    read_b0 = load abstract_recv+0 as u8
+    read_b3 = load abstract_recv+3 as u8
+    read_b0_ok = eq read_b0, 65
+    read_b3_ok = eq read_b3, 33
+    read01 = and read_status_ok, read_len_ok
+    read02 = and read01, read_b0_ok
+    read_ok = and read02, read_b3_ok
+    br read_ok -> L_ABSTRACT_CLOSE, L_ABSTRACT_FAIL_READ
+
+L_ABSTRACT_FAIL_READ:
+    !read_ok
+    !read02
+    !read01
+    !read_b3_ok
+    !read_b0_ok
+    !read_b3
+    !read_b0
+    !read_len_ok
+    !read_status_ok
+    !read_len
+    !read_status
+    !incoming_listener_ok
+    !server
+    !client
+    !listener
+    !abstract_addr
+    panic(977)
+
+L_ABSTRACT_CLOSE:
+    EXPAND NET_TCP_STREAM_CLOSE close_client_status, client
+    EXPAND NET_TCP_STREAM_CLOSE close_server_status, server
+    EXPAND NET_TCP_LISTENER_CLOSE close_listener_status, listener
+    EXPAND NET_UNIX_ADDR_FREE abstract_free_status, abstract_addr
+    close_client_ok = eq close_client_status, SA_NET_OK
+    close_server_ok = eq close_server_status, SA_NET_OK
+    close_listener_ok = eq close_listener_status, SA_NET_OK
+    abstract_free_ok = eq abstract_free_status, SA_NET_OK
+    close01 = and close_client_ok, close_server_ok
+    close02 = and close01, close_listener_ok
+    close_ok = and close02, abstract_free_ok
+    br close_ok -> L_ABSTRACT_PASS, L_ABSTRACT_FAIL_CLOSE
+
+L_ABSTRACT_FAIL_CLOSE:
+    !close_ok
+    !close02
+    !close01
+    !abstract_free_ok
+    !close_listener_ok
+    !close_server_ok
+    !close_client_ok
+    !abstract_free_status
+    !close_listener_status
+    !close_server_status
+    !close_client_status
+    !incoming_listener_ok
+    panic(978)
+
+L_ABSTRACT_PASS:
+    !incoming_listener_ok
+    return 0
+
+@test "sa_std net unix datagram pair macros"():
+L_ENTRY:
+    EXPAND NET_UNIX_DATAGRAM_UNBOUND unbound_status, unbound
+    EXPAND NET_UNIX_DATAGRAM_CLOSE unbound_close_status, unbound
+    EXPAND NET_UNIX_DATAGRAM_PAIR pair_status, left, right
+    EXPAND NET_UNIX_DATAGRAM_SET_READ_TIMEOUT read_timeout_status, right, UDS_TEST_TIMEOUT_NS
+    EXPAND NET_UNIX_DATAGRAM_READ_TIMEOUT read_timeout_get_status, read_timeout_ns, right
+    EXPAND NET_UNIX_DATAGRAM_SET_WRITE_TIMEOUT write_timeout_status, left, UDS_TEST_TIMEOUT_NS
+    EXPAND NET_UNIX_DATAGRAM_WRITE_TIMEOUT write_timeout_get_status, write_timeout_ns, left
+    EXPAND NET_UNIX_DATAGRAM_SET_NONBLOCKING nonblock_status, right, SA_NET_SOCKET_OPTION_DISABLE
+    EXPAND NET_UNIX_DATAGRAM_TAKE_ERROR take_error_status, sock_error, left
+
+    EXPAND NET_UNIX_DATAGRAM_LOCAL_ADDR local_addr_status, local_addr, left
+    EXPAND NET_UNIX_ADDR_KIND local_kind, local_addr
+    EXPAND NET_UNIX_DATAGRAM_PEER_ADDR peer_addr_status, peer_addr, left
+    EXPAND NET_UNIX_ADDR_KIND peer_kind, peer_addr
+    EXPAND NET_UNIX_ADDR_FREE local_free_status, local_addr
+    EXPAND NET_UNIX_ADDR_FREE peer_free_status, peer_addr
+
+    EXPAND NET_UNIX_DATAGRAM_SET_PASSCRED passcred_set_status, left, SA_NET_SOCKET_OPTION_ENABLE
+    EXPAND NET_UNIX_DATAGRAM_PASSCRED passcred_get_status, passcred_enabled, left
+    EXPAND NET_UNIX_DATAGRAM_SET_MARK datagram_mark_status, left, 32
+
+    EXPAND NET_UNIX_DATAGRAM_TRY_CLONE clone_status, clone, left
+    EXPAND NET_UNIX_DATAGRAM_AS_RAW_FD as_raw_status, clone_fd, clone
+    EXPAND NET_UNIX_DATAGRAM_INTO_RAW_FD into_raw_status, raw_taken, clone
+    EXPAND NET_UNIX_DATAGRAM_FROM_RAW_FD from_raw_status, clone_from_raw, raw_taken
+    EXPAND NET_UNIX_DATAGRAM_INTO_OWNED_FD into_owned_status, owned_fd, clone_from_raw
+    EXPAND NET_UNIX_DATAGRAM_FROM_OWNED_FD from_owned_status, clone_from_owned, owned_fd
+    EXPAND NET_UNIX_DATAGRAM_CLOSE clone_close_status, clone_from_owned
+
+    peek_buf = stack_alloc 8
+    recv_buf = stack_alloc 8
+    recv_left_buf = stack_alloc 8
+    EXPAND NET_UNIX_DATAGRAM_SEND send_status, send_len, left, UDS_DGRAM_MSG, UDS_DGRAM_MSG_LEN
+    EXPAND NET_UNIX_DATAGRAM_PEEK peek_status, peek_len, right, peek_buf, 8
+    peek_b0 = load peek_buf+0 as u8
+    peek_b2 = load peek_buf+2 as u8
+    EXPAND NET_UNIX_DATAGRAM_RECV recv_status, recv_len, right, recv_buf, 8
+    recv_b0 = load recv_buf+0 as u8
+    recv_b2 = load recv_buf+2 as u8
+    EXPAND NET_UNIX_DATAGRAM_SEND send_back_status, send_back_len, right, UDS_DGRAM_NEXT, UDS_DGRAM_NEXT_LEN
+    EXPAND NET_UNIX_DATAGRAM_RECV recv_left_status, recv_left_len, left, recv_left_buf, 8
+    recv_left_b0 = load recv_left_buf+0 as u8
+    recv_left_b1 = load recv_left_buf+1 as u8
+    EXPAND NET_UNIX_DATAGRAM_SHUTDOWN shutdown_status, left, SA_NET_SHUTDOWN_BOTH
+    EXPAND NET_UNIX_DATAGRAM_CLOSE close_left_status, left
+    EXPAND NET_UNIX_DATAGRAM_CLOSE close_right_status, right
+
+    unbound_ok = eq unbound_status, SA_NET_OK
+    unbound_handle_ok = ne unbound, 0
+    unbound_close_ok = eq unbound_close_status, SA_NET_OK
+    pair_ok = eq pair_status, SA_NET_OK
+    left_ok = ne left, 0
+    right_ok = ne right, 0
+    read_timeout_ok = eq read_timeout_status, SA_NET_OK
+    read_timeout_get_ok = eq read_timeout_get_status, SA_NET_OK
+    read_timeout_value_ok = eq read_timeout_ns, UDS_TEST_TIMEOUT_NS
+    write_timeout_ok = eq write_timeout_status, SA_NET_OK
+    write_timeout_get_ok = eq write_timeout_get_status, SA_NET_OK
+    write_timeout_value_ok = eq write_timeout_ns, UDS_TEST_TIMEOUT_NS
+    nonblock_ok = eq nonblock_status, SA_NET_OK
+    take_error_ok = eq take_error_status, SA_NET_OK
+    sock_error_ok = eq sock_error, 0
+    local_addr_ok = eq local_addr_status, SA_NET_OK
+    local_kind_ok = eq local_kind, SA_NET_UNIX_ADDR_UNNAMED
+    peer_addr_ok = eq peer_addr_status, SA_NET_OK
+    peer_kind_ok = eq peer_kind, SA_NET_UNIX_ADDR_UNNAMED
+    local_free_ok = eq local_free_status, SA_NET_OK
+    peer_free_ok = eq peer_free_status, SA_NET_OK
+    passcred_set_ok = eq passcred_set_status, SA_NET_OK
+    passcred_get_ok = eq passcred_get_status, SA_NET_OK
+    passcred_value_ok = eq passcred_enabled, SA_NET_SOCKET_OPTION_ENABLE
+    datagram_mark_ok = eq datagram_mark_status, SA_NET_OK
+    datagram_mark_access = eq datagram_mark_status, SA_NET_ERR_ACCESS
+    datagram_mark_unsupported = eq datagram_mark_status, SA_NET_ERR_UNSUPPORTED
+    datagram_mark_allowed1 = or datagram_mark_ok, datagram_mark_access
+    datagram_mark_allowed = or datagram_mark_allowed1, datagram_mark_unsupported
+    passcred_value_mark_ok = and passcred_value_ok, datagram_mark_allowed
+    clone_ok = eq clone_status, SA_NET_OK
+    clone_handle_ok = ne clone, 0
+    as_raw_ok = eq as_raw_status, SA_NET_OK
+    clone_fd_ok = ne clone_fd, -1
+    into_raw_ok = eq into_raw_status, SA_NET_OK
+    raw_match_ok = eq raw_taken, clone_fd
+    from_raw_ok = eq from_raw_status, SA_NET_OK
+    clone_from_raw_ok = ne clone_from_raw, 0
+    into_owned_ok = eq into_owned_status, SA_NET_OK
+    owned_fd_ok = ne owned_fd, 0
+    from_owned_ok = eq from_owned_status, SA_NET_OK
+    clone_from_owned_ok = ne clone_from_owned, 0
+    clone_close_ok = eq clone_close_status, SA_NET_OK
+    send_ok = eq send_status, SA_NET_OK
+    send_len_ok = eq send_len, UDS_DGRAM_MSG_LEN
+    peek_ok = eq peek_status, SA_NET_OK
+    peek_len_ok = eq peek_len, UDS_DGRAM_MSG_LEN
+    peek_b0_ok = eq peek_b0, 100
+    peek_b2_ok = eq peek_b2, 33
+    recv_ok = eq recv_status, SA_NET_OK
+    recv_len_ok = eq recv_len, UDS_DGRAM_MSG_LEN
+    recv_b0_ok = eq recv_b0, 100
+    recv_b2_ok = eq recv_b2, 33
+    send_back_ok = eq send_back_status, SA_NET_OK
+    send_back_len_ok = eq send_back_len, UDS_DGRAM_NEXT_LEN
+    recv_left_ok = eq recv_left_status, SA_NET_OK
+    recv_left_len_ok = eq recv_left_len, UDS_DGRAM_NEXT_LEN
+    recv_left_b0_ok = eq recv_left_b0, 111
+    recv_left_b1_ok = eq recv_left_b1, 107
+    shutdown_ok = eq shutdown_status, SA_NET_OK
+    close_left_ok = eq close_left_status, SA_NET_OK
+    close_right_ok = eq close_right_status, SA_NET_OK
+
+    ok01 = and unbound_ok, unbound_handle_ok
+    ok02 = and ok01, unbound_close_ok
+    ok03 = and ok02, pair_ok
+    ok04 = and ok03, left_ok
+    ok05 = and ok04, right_ok
+    ok06 = and ok05, read_timeout_ok
+    ok07 = and ok06, read_timeout_get_ok
+    ok08 = and ok07, read_timeout_value_ok
+    ok09 = and ok08, write_timeout_ok
+    ok10 = and ok09, write_timeout_get_ok
+    ok11 = and ok10, write_timeout_value_ok
+    ok12 = and ok11, nonblock_ok
+    ok13 = and ok12, take_error_ok
+    ok14 = and ok13, sock_error_ok
+    ok15 = and ok14, local_addr_ok
+    ok16 = and ok15, local_kind_ok
+    ok17 = and ok16, peer_addr_ok
+    ok18 = and ok17, peer_kind_ok
+    ok19 = and ok18, local_free_ok
+    ok20 = and ok19, peer_free_ok
+    ok21 = and ok20, passcred_set_ok
+    ok22 = and ok21, passcred_get_ok
+    ok23 = and ok22, passcred_value_mark_ok
+    ok24 = and ok23, clone_ok
+    ok25 = and ok24, clone_handle_ok
+    ok26 = and ok25, as_raw_ok
+    ok27 = and ok26, clone_fd_ok
+    ok28 = and ok27, into_raw_ok
+    ok29 = and ok28, raw_match_ok
+    ok30 = and ok29, from_raw_ok
+    ok31 = and ok30, clone_from_raw_ok
+    ok32 = and ok31, into_owned_ok
+    ok33 = and ok32, owned_fd_ok
+    ok34 = and ok33, from_owned_ok
+    ok35 = and ok34, clone_from_owned_ok
+    ok36 = and ok35, clone_close_ok
+    ok37 = and ok36, send_ok
+    ok38 = and ok37, send_len_ok
+    ok39 = and ok38, peek_ok
+    ok40 = and ok39, peek_len_ok
+    ok41 = and ok40, peek_b0_ok
+    ok42 = and ok41, peek_b2_ok
+    ok43 = and ok42, recv_ok
+    ok44 = and ok43, recv_len_ok
+    ok45 = and ok44, recv_b0_ok
+    ok46 = and ok45, recv_b2_ok
+    ok47 = and ok46, send_back_ok
+    ok48 = and ok47, send_back_len_ok
+    ok49 = and ok48, recv_left_ok
+    ok50 = and ok49, recv_left_len_ok
+    ok51 = and ok50, recv_left_b0_ok
+    ok52 = and ok51, recv_left_b1_ok
+    ok53 = and ok52, shutdown_ok
+    ok54 = and ok53, close_left_ok
+    ok = and ok54, close_right_ok
+
+    !unbound_status
+    !unbound
+    !unbound_close_status
+    !pair_status
+    !left
+    !right
+    !read_timeout_status
+    !read_timeout_get_status
+    !read_timeout_ns
+    !write_timeout_status
+    !write_timeout_get_status
+    !write_timeout_ns
+    !nonblock_status
+    !take_error_status
+    !sock_error
+    !local_addr_status
+    !local_addr
+    !local_kind
+    !peer_addr_status
+    !peer_addr
+    !peer_kind
+    !local_free_status
+    !peer_free_status
+    !passcred_set_status
+    !passcred_get_status
+    !passcred_enabled
+    !datagram_mark_status
+    !clone_status
+    !clone
+    !as_raw_status
+    !clone_fd
+    !into_raw_status
+    !raw_taken
+    !from_raw_status
+    !clone_from_raw
+    !into_owned_status
+    !owned_fd
+    !from_owned_status
+    !clone_from_owned
+    !clone_close_status
+    !send_status
+    !send_len
+    !peek_status
+    !peek_len
+    !peek_b0
+    !peek_b2
+    !recv_status
+    !recv_len
+    !recv_b0
+    !recv_b2
+    !send_back_status
+    !send_back_len
+    !recv_left_status
+    !recv_left_len
+    !recv_left_b0
+    !recv_left_b1
+    !shutdown_status
+    !close_left_status
+    !close_right_status
+    !unbound_ok
+    !unbound_handle_ok
+    !unbound_close_ok
+    !pair_ok
+    !left_ok
+    !right_ok
+    !read_timeout_ok
+    !read_timeout_get_ok
+    !read_timeout_value_ok
+    !write_timeout_ok
+    !write_timeout_get_ok
+    !write_timeout_value_ok
+    !nonblock_ok
+    !take_error_ok
+    !sock_error_ok
+    !local_addr_ok
+    !local_kind_ok
+    !peer_addr_ok
+    !peer_kind_ok
+    !local_free_ok
+    !peer_free_ok
+    !passcred_set_ok
+    !passcred_get_ok
+    !passcred_value_ok
+    !datagram_mark_ok
+    !datagram_mark_access
+    !datagram_mark_unsupported
+    !datagram_mark_allowed1
+    !datagram_mark_allowed
+    !passcred_value_mark_ok
+    !clone_ok
+    !clone_handle_ok
+    !as_raw_ok
+    !clone_fd_ok
+    !into_raw_ok
+    !raw_match_ok
+    !from_raw_ok
+    !clone_from_raw_ok
+    !into_owned_ok
+    !owned_fd_ok
+    !from_owned_ok
+    !clone_from_owned_ok
+    !clone_close_ok
+    !send_ok
+    !send_len_ok
+    !peek_ok
+    !peek_len_ok
+    !peek_b0_ok
+    !peek_b2_ok
+    !recv_ok
+    !recv_len_ok
+    !recv_b0_ok
+    !recv_b2_ok
+    !send_back_ok
+    !send_back_len_ok
+    !recv_left_ok
+    !recv_left_len_ok
+    !recv_left_b0_ok
+    !recv_left_b1_ok
+    !shutdown_ok
+    !close_left_ok
+    !close_right_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    !ok47
+    !ok48
+    !ok49
+    !ok50
+    !ok51
+    !ok52
+    !ok53
+    !ok54
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10156)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std net unix datagram pathname address macros"():
+L_ENTRY:
+    EXPAND NET_UNIX_DATAGRAM_BIND bind_server_status, server, UDS_DGRAM_PATH_A, UDS_DGRAM_PATH_LEN
+    call @sa_assert_eq_i64(bind_server_status, SA_NET_OK, 10417)
+    server_nonzero = ne server, 0
+    call @sa_assert_eq_i64(server_nonzero, 1, 10417)
+    EXPAND NET_UNIX_DATAGRAM_BIND bind_client_status, client, UDS_DGRAM_PATH_B, UDS_DGRAM_PATH_LEN
+    call @sa_assert_eq_i64(bind_client_status, SA_NET_OK, 10417)
+    client_nonzero = ne client, 0
+    call @sa_assert_eq_i64(client_nonzero, 1, 10417)
+    EXPAND NET_UNIX_DATAGRAM_SET_READ_TIMEOUT timeout_status, server, UDS_TEST_TIMEOUT_NS
+    call @sa_assert_eq_i64(timeout_status, SA_NET_OK, 10417)
+
+    EXPAND NET_UNIX_DATAGRAM_CONNECT connect_status, client, UDS_DGRAM_PATH_A, UDS_DGRAM_PATH_LEN
+    call @sa_assert_eq_i64(connect_status, SA_NET_OK, 10417)
+    EXPAND NET_UNIX_DATAGRAM_SEND send_status, send_len, client, UDS_DGRAM_PATH_MSG, UDS_DGRAM_PATH_MSG_LEN
+    call @sa_assert_eq_i64(send_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(send_len, UDS_DGRAM_PATH_MSG_LEN, 10417)
+
+    peek_buf = stack_alloc 8
+    recv_buf = stack_alloc 8
+    recv2_buf = stack_alloc 8
+    recv3_buf = stack_alloc 8
+    EXPAND NET_UNIX_DATAGRAM_PEEK_FROM peek_status, peek_len, peek_addr, server, peek_buf, 8
+    call @sa_assert_eq_i64(peek_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(peek_len, UDS_DGRAM_PATH_MSG_LEN, 10417)
+    peek_b0 = load peek_buf+0 as u8
+    peek_b1 = load peek_buf+1 as u8
+    call @sa_assert_eq_i64(peek_b0, 114, 10417)
+    call @sa_assert_eq_i64(peek_b1, 120, 10417)
+    EXPAND NET_UNIX_ADDR_KIND peek_addr_kind, peek_addr
+    call @sa_assert_eq_i64(peek_addr_kind, SA_NET_UNIX_ADDR_PATHNAME, 10417)
+    EXPAND NET_UNIX_ADDR_AS_PATHNAME_LEN peek_addr_len, peek_addr
+    call @sa_assert_eq_i64(peek_addr_len, UDS_DGRAM_PATH_LEN, 10417)
+    EXPAND NET_UNIX_ADDR_AS_PATHNAME_PTR peek_addr_ptr, peek_addr
+    peek_addr_b0 = load peek_addr_ptr+0 as u8
+    peek_addr_b23 = load peek_addr_ptr+23 as u8
+    call @sa_assert_eq_i64(peek_addr_b0, 47, 10417)
+    call @sa_assert_eq_i64(peek_addr_b23, 107, 10417)
+    EXPAND NET_UNIX_ADDR_FREE peek_addr_free_status, peek_addr
+    call @sa_assert_eq_i64(peek_addr_free_status, SA_NET_OK, 10417)
+
+    EXPAND NET_UNIX_DATAGRAM_RECV_FROM recv_status, recv_len, recv_addr, server, recv_buf, 8
+    call @sa_assert_eq_i64(recv_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(recv_len, UDS_DGRAM_PATH_MSG_LEN, 10417)
+    recv_b0 = load recv_buf+0 as u8
+    recv_b1 = load recv_buf+1 as u8
+    call @sa_assert_eq_i64(recv_b0, 114, 10417)
+    call @sa_assert_eq_i64(recv_b1, 120, 10417)
+    EXPAND NET_UNIX_ADDR_KIND recv_addr_kind, recv_addr
+    call @sa_assert_eq_i64(recv_addr_kind, SA_NET_UNIX_ADDR_PATHNAME, 10417)
+    EXPAND NET_UNIX_ADDR_FREE recv_addr_free_status, recv_addr
+    call @sa_assert_eq_i64(recv_addr_free_status, SA_NET_OK, 10417)
+
+    EXPAND NET_UNIX_DATAGRAM_SEND_TO send_to_status, send_to_len, client, UDS_DGRAM_ADDR_MSG, UDS_DGRAM_ADDR_MSG_LEN, UDS_DGRAM_PATH_A, UDS_DGRAM_PATH_LEN
+    call @sa_assert_eq_i64(send_to_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(send_to_len, UDS_DGRAM_ADDR_MSG_LEN, 10417)
+    EXPAND NET_UNIX_DATAGRAM_RECV_FROM recv2_status, recv2_len, recv2_addr, server, recv2_buf, 8
+    call @sa_assert_eq_i64(recv2_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(recv2_len, UDS_DGRAM_ADDR_MSG_LEN, 10417)
+    recv2_b0 = load recv2_buf+0 as u8
+    recv2_b1 = load recv2_buf+1 as u8
+    call @sa_assert_eq_i64(recv2_b0, 116, 10417)
+    call @sa_assert_eq_i64(recv2_b1, 111, 10417)
+    EXPAND NET_UNIX_ADDR_FREE recv2_addr_free_status, recv2_addr
+    call @sa_assert_eq_i64(recv2_addr_free_status, SA_NET_OK, 10417)
+
+    EXPAND NET_UNIX_ADDR_FROM_PATHNAME path_addr_status, path_addr, UDS_DGRAM_PATH_A, UDS_DGRAM_PATH_LEN
+    call @sa_assert_eq_i64(path_addr_status, SA_NET_OK, 10417)
+    EXPAND NET_UNIX_DATAGRAM_CONNECT_ADDR connect_addr_status, client, path_addr
+    call @sa_assert_eq_i64(connect_addr_status, SA_NET_OK, 10417)
+    EXPAND NET_UNIX_DATAGRAM_SEND send3_status, send3_len, client, UDS_DGRAM_NEXT, UDS_DGRAM_NEXT_LEN
+    call @sa_assert_eq_i64(send3_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(send3_len, UDS_DGRAM_NEXT_LEN, 10417)
+    EXPAND NET_UNIX_DATAGRAM_RECV_FROM recv3_status, recv3_len, recv3_addr, server, recv3_buf, 8
+    call @sa_assert_eq_i64(recv3_status, SA_NET_OK, 10417)
+    call @sa_assert_eq_i64(recv3_len, UDS_DGRAM_NEXT_LEN, 10417)
+    recv3_b0 = load recv3_buf+0 as u8
+    recv3_b1 = load recv3_buf+1 as u8
+    call @sa_assert_eq_i64(recv3_b0, 111, 10417)
+    call @sa_assert_eq_i64(recv3_b1, 107, 10417)
+    EXPAND NET_UNIX_ADDR_FREE recv3_addr_free_status, recv3_addr
+    call @sa_assert_eq_i64(recv3_addr_free_status, SA_NET_OK, 10417)
+    EXPAND NET_UNIX_ADDR_FREE path_addr_free_status, path_addr
+    call @sa_assert_eq_i64(path_addr_free_status, SA_NET_OK, 10417)
+
+    EXPAND NET_UNIX_DATAGRAM_CLOSE close_client_status, client
+    call @sa_assert_eq_i64(close_client_status, SA_NET_OK, 10417)
+    EXPAND NET_UNIX_DATAGRAM_CLOSE close_server_status, server
+    call @sa_assert_eq_i64(close_server_status, SA_NET_OK, 10417)
+
+    !bind_server_status
+    !server_nonzero
+    !bind_client_status
+    !client_nonzero
+    !timeout_status
+    !connect_status
+    !send_status
+    !send_len
+    !peek_status
+    !peek_len
+    !peek_addr
+    !peek_b0
+    !peek_b1
+    !peek_addr_kind
+    !peek_addr_len
+    !peek_addr_ptr
+    !peek_addr_b0
+    !peek_addr_b23
+    !peek_addr_free_status
+    !recv_status
+    !recv_len
+    !recv_addr
+    !recv_b0
+    !recv_b1
+    !recv_addr_kind
+    !recv_addr_free_status
+    !send_to_status
+    !send_to_len
+    !recv2_status
+    !recv2_len
+    !recv2_addr
+    !recv2_b0
+    !recv2_b1
+    !recv2_addr_free_status
+    !path_addr_status
+    !path_addr
+    !connect_addr_status
+    !send3_status
+    !send3_len
+    !recv3_status
+    !recv3_len
+    !recv3_addr
+    !recv3_b0
+    !recv3_b1
+    !recv3_addr_free_status
+    !path_addr_free_status
+    !client
+    !server
+    !close_client_status
+    !close_server_status
+    return 0
+
+@test "sa_std net unix datagram abstract address macros"():
+L_ENTRY:
+    EXPAND NET_UNIX_ADDR_FROM_ABSTRACT_NAME abstract_status, abstract_addr, UDS_DGRAM_ABSTRACT, UDS_DGRAM_ABSTRACT_LEN
+    call @sa_assert_eq_i64(abstract_status, SA_NET_OK, 10418)
+    EXPAND NET_UNIX_DATAGRAM_BIND_ADDR bind_status, server, abstract_addr
+    call @sa_assert_eq_i64(bind_status, SA_NET_OK, 10418)
+    server_nonzero = ne server, 0
+    call @sa_assert_eq_i64(server_nonzero, 1, 10418)
+    EXPAND NET_UNIX_DATAGRAM_UNBOUND client_status, client
+    call @sa_assert_eq_i64(client_status, SA_NET_OK, 10418)
+    client_nonzero = ne client, 0
+    call @sa_assert_eq_i64(client_nonzero, 1, 10418)
+    EXPAND NET_UNIX_DATAGRAM_SET_READ_TIMEOUT timeout_status, server, UDS_TEST_TIMEOUT_NS
+    call @sa_assert_eq_i64(timeout_status, SA_NET_OK, 10418)
+
+    recv_buf = stack_alloc 8
+    recv2_buf = stack_alloc 8
+    EXPAND NET_UNIX_DATAGRAM_SEND_TO_ADDR send_to_status, send_to_len, client, UDS_DGRAM_ADDR_MSG, UDS_DGRAM_ADDR_MSG_LEN, abstract_addr
+    call @sa_assert_eq_i64(send_to_status, SA_NET_OK, 10418)
+    call @sa_assert_eq_i64(send_to_len, UDS_DGRAM_ADDR_MSG_LEN, 10418)
+    EXPAND NET_UNIX_DATAGRAM_RECV_FROM recv_status, recv_len, recv_addr, server, recv_buf, 8
+    call @sa_assert_eq_i64(recv_status, SA_NET_OK, 10418)
+    call @sa_assert_eq_i64(recv_len, UDS_DGRAM_ADDR_MSG_LEN, 10418)
+    recv_b0 = load recv_buf+0 as u8
+    recv_b1 = load recv_buf+1 as u8
+    call @sa_assert_eq_i64(recv_b0, 116, 10418)
+    call @sa_assert_eq_i64(recv_b1, 111, 10418)
+    EXPAND NET_UNIX_ADDR_KIND recv_addr_kind, recv_addr
+    call @sa_assert_eq_i64(recv_addr_kind, SA_NET_UNIX_ADDR_UNNAMED, 10418)
+    EXPAND NET_UNIX_ADDR_FREE recv_addr_free_status, recv_addr
+    call @sa_assert_eq_i64(recv_addr_free_status, SA_NET_OK, 10418)
+
+    EXPAND NET_UNIX_DATAGRAM_CONNECT_ADDR connect_status, client, abstract_addr
+    call @sa_assert_eq_i64(connect_status, SA_NET_OK, 10418)
+    EXPAND NET_UNIX_DATAGRAM_SEND send_status, send_len, client, UDS_DGRAM_NEXT, UDS_DGRAM_NEXT_LEN
+    call @sa_assert_eq_i64(send_status, SA_NET_OK, 10418)
+    call @sa_assert_eq_i64(send_len, UDS_DGRAM_NEXT_LEN, 10418)
+    EXPAND NET_UNIX_DATAGRAM_RECV_FROM recv2_status, recv2_len, recv2_addr, server, recv2_buf, 8
+    call @sa_assert_eq_i64(recv2_status, SA_NET_OK, 10418)
+    call @sa_assert_eq_i64(recv2_len, UDS_DGRAM_NEXT_LEN, 10418)
+    recv2_b0 = load recv2_buf+0 as u8
+    recv2_b1 = load recv2_buf+1 as u8
+    call @sa_assert_eq_i64(recv2_b0, 111, 10418)
+    call @sa_assert_eq_i64(recv2_b1, 107, 10418)
+    EXPAND NET_UNIX_ADDR_FREE recv2_addr_free_status, recv2_addr
+    call @sa_assert_eq_i64(recv2_addr_free_status, SA_NET_OK, 10418)
+
+    EXPAND NET_UNIX_DATAGRAM_CLOSE close_client_status, client
+    call @sa_assert_eq_i64(close_client_status, SA_NET_OK, 10418)
+    EXPAND NET_UNIX_DATAGRAM_CLOSE close_server_status, server
+    call @sa_assert_eq_i64(close_server_status, SA_NET_OK, 10418)
+    EXPAND NET_UNIX_ADDR_FREE abstract_free_status, abstract_addr
+    call @sa_assert_eq_i64(abstract_free_status, SA_NET_OK, 10418)
+
+    !abstract_status
+    !abstract_addr
+    !bind_status
+    !server_nonzero
+    !client_status
+    !client_nonzero
+    !timeout_status
+    !send_to_status
+    !send_to_len
+    !recv_status
+    !recv_len
+    !recv_addr
+    !recv_b0
+    !recv_b1
+    !recv_addr_kind
+    !recv_addr_free_status
+    !connect_status
+    !send_status
+    !send_len
+    !recv2_status
+    !recv2_len
+    !recv2_addr
+    !recv2_b0
+    !recv2_b1
+    !recv2_addr_free_status
+    !client
+    !server
+    !close_client_status
+    !close_server_status
+    !abstract_free_status
+    return 0

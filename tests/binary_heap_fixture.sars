@@ -1,0 +1,137 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@main() -> i32:
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH heap, 7
+    EXPAND BINARY_HEAP_PUSH heap, 2
+    EXPAND BINARY_HEAP_PUSH heap, 9
+    EXPAND BINARY_HEAP_PUSH heap, 3
+    EXPAND BINARY_HEAP_PUSH heap, 8
+    EXPAND BINARY_HEAP_PUSH heap, 6
+    EXPAND BINARY_HEAP_PUSH heap, 5
+    EXPAND BINARY_HEAP_LEN len0, heap
+    EXPAND BINARY_HEAP_CAPACITY cap0, heap
+    EXPAND BINARY_HEAP_IS_EMPTY empty0, heap
+    EXPAND BINARY_HEAP_PEEK peek0, heap
+    EXPAND BINARY_HEAP_TRY_POP ok0, pop0, heap
+    EXPAND BINARY_HEAP_TRY_POP ok1, pop1, heap
+    EXPAND BINARY_HEAP_TRY_POP ok2, pop2, heap
+    EXPAND BINARY_HEAP_TRY_POP ok3, pop3, heap
+    EXPAND BINARY_HEAP_TRY_POP ok4, pop4, heap
+    EXPAND BINARY_HEAP_TRY_POP ok5, pop5, heap
+    EXPAND BINARY_HEAP_TRY_POP ok6, pop6, heap
+    EXPAND BINARY_HEAP_TRY_POP ok7, pop7, heap
+    EXPAND BINARY_HEAP_TRY_POP ok8, pop8, heap
+    EXPAND BINARY_HEAP_TRY_POP ok_empty, empty_value, heap
+    EXPAND BINARY_HEAP_LEN len1, heap
+    EXPAND BINARY_HEAP_CLEAR heap
+    EXPAND BINARY_HEAP_LEN len2, heap
+    EXPAND BINARY_HEAP_IS_EMPTY empty1, heap
+    ok_len0 = eq len0, 9
+    ok_cap0 = eq cap0, 16
+    ok_empty0 = eq empty0, 0
+    ok_peek = eq peek0, 9
+    ok0v = eq pop0, 9
+    ok1v = eq pop1, 8
+    ok2v = eq pop2, 7
+    ok3v = eq pop3, 6
+    ok4v = eq pop4, 5
+    ok5v = eq pop5, 4
+    ok6v = eq pop6, 3
+    ok7v = eq pop7, 2
+    ok8v = eq pop8, 1
+    ok_empty_ok = eq ok_empty, 0
+    ok_empty_value = eq empty_value, 0
+    ok_len1 = eq len1, 0
+    ok_len2 = eq len2, 0
+    ok_empty1 = eq empty1, 1
+    ok01 = and ok_len0, ok_cap0
+    ok02 = and ok01, ok_empty0
+    ok03 = and ok02, ok_peek
+    ok04 = and ok03, ok0v
+    ok05 = and ok04, ok1v
+    ok06 = and ok05, ok2v
+    ok07 = and ok06, ok3v
+    ok08 = and ok07, ok4v
+    ok09 = and ok08, ok5v
+    ok10 = and ok09, ok6v
+    ok11 = and ok10, ok7v
+    ok12 = and ok11, ok8v
+    ok13 = and ok12, ok_empty_ok
+    ok14 = and ok13, ok_empty_value
+    ok15 = and ok14, ok_len1
+    ok = and ok15, ok_len2
+    ok = and ok, ok_empty1
+    !peek0
+    !pop0
+    !pop1
+    !pop2
+    !pop3
+    !pop4
+    !pop5
+    !pop6
+    !pop7
+    !pop8
+    !empty_value
+    !cap0
+    !empty0
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !ok7
+    !ok8
+    !ok_empty
+    !len0
+    !len1
+    !len2
+    !empty1
+    !ok_len0
+    !ok_cap0
+    !ok_empty0
+    !ok_peek
+    !ok0v
+    !ok1v
+    !ok2v
+    !ok3v
+    !ok4v
+    !ok5v
+    !ok6v
+    !ok7v
+    !ok8v
+    !ok_empty_ok
+    !ok_empty_value
+    !ok_len1
+    !ok_len2
+    !ok_empty1
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    EXPAND BINARY_HEAP_FREE heap
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

@@ -1,0 +1,27 @@
+@import "sa_std/io/print.sai"
+@import "registry/publish.sars"
+
+@const RESULT_OK = utf8:"300\n"
+@const RESULT_ERR = utf8:"error\n"
+
+#def EXPECTED_PUBLISH = 300
+
+// 300 - Eco Sa Lang Registry Publish
+// The registry story is split across guest, registry metadata, and host-side publish notes.
+
+@main() -> i32:
+L_ENTRY:
+    published = call @registry_publish_entry()
+    ok = eq published, EXPECTED_PUBLISH
+    !published
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

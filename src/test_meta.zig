@@ -252,7 +252,7 @@ test "collect builds a standalone test list" {
             .return_fallible = false,
             .entry_inst_idx = 0,
             .is_ffi_wrapper = false,
-            .upstream_file = try std.testing.allocator.dupe(u8, "tests/demo.sa"),
+            .upstream_file = try std.testing.allocator.dupe(u8, "tests/demo.sars"),
             .upstream_loc = null,
             .param_ids = &.{},
             .llvm_name = try std.testing.allocator.dupe(u8, "_saasm_test_7"),
@@ -266,5 +266,5 @@ test "collect builds a standalone test list" {
     try std.testing.expectEqual(@as(usize, 1), list.tests.len);
     try std.testing.expectEqualStrings("simple pass", list.tests[0].displayName());
     try std.testing.expectEqualStrings("_saasm_test_7", list.tests[0].selectorName());
-    try std.testing.expectEqualStrings("tests/demo.sa", list.tests[0].desc.source_file.?);
+    try std.testing.expectEqualStrings("tests/demo.sars", list.tests[0].desc.source_file.?);
 }

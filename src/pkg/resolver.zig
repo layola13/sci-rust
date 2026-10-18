@@ -151,7 +151,7 @@ pub const ResolveOptions = struct {
     project_root: ?[]const u8 = null,
     home_dir: ?[]const u8 = null,
     offline: bool = false,
-    entry_candidates: []const []const u8 = &.{ "index.sa", "index.sars", "main.sa", "main.sars" },
+    entry_candidates: []const []const u8 = &.{ "index.sars", "index.sars", "main.sars", "main.sars" },
     std_root: ?[]const u8 = null,
     plugin_import_roots: []const []const u8 = &.{},
     stable_import_roots: []const []const u8 = &.{},
@@ -221,7 +221,7 @@ fn isPackageIdentity(import_path: []const u8) bool {
     if (trimmed.len == 0) return false;
     if (std.fs.path.isAbsolute(trimmed)) return false;
     if (std.mem.startsWith(u8, trimmed, "./") or std.mem.startsWith(u8, trimmed, "../")) return false;
-    return !std.mem.endsWith(u8, trimmed, ".sa") and
+    return !std.mem.endsWith(u8, trimmed, ".sars") and
         !std.mem.endsWith(u8, trimmed, ".sars") and
         !std.mem.endsWith(u8, trimmed, ".sai") and
         !std.mem.endsWith(u8, trimmed, ".sal");
@@ -232,7 +232,7 @@ fn isPluginInterfaceImportPath(import_path: []const u8) bool {
     if (trimmed.len == 0) return false;
     if (std.fs.path.isAbsolute(trimmed)) return false;
     if (std.mem.startsWith(u8, trimmed, "./") or std.mem.startsWith(u8, trimmed, "../")) return false;
-    if (!std.mem.endsWith(u8, trimmed, ".sa") and
+    if (!std.mem.endsWith(u8, trimmed, ".sars") and
         !std.mem.endsWith(u8, trimmed, ".sars") and
         !std.mem.endsWith(u8, trimmed, ".sai") and
         !std.mem.endsWith(u8, trimmed, ".sal")) return false;
@@ -500,7 +500,7 @@ fn localVendorRoot(allocator: std.mem.Allocator, project_root: []const u8, ident
 fn globalCacheRoot(allocator: std.mem.Allocator, home_dir: []const u8, identity: []const u8, ref: []const u8) ResolveError![]u8 {
     const leaf = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ identity, ref });
     errdefer allocator.free(leaf);
-    const root = try pathJoin(allocator, &.{ home_dir, ".sa", "pkg", leaf });
+    const root = try pathJoin(allocator, &.{ home_dir, ".sars", "pkg", leaf });
     allocator.free(leaf);
     return root;
 }
@@ -655,7 +655,7 @@ test "resolveImport prefers a relative source file" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "src");
-    var source_file = try tmp.dir.createFile(std.testing.io, "src/module.sa", .{ .truncate = true });
+    var source_file = try tmp.dir.createFile(std.testing.io, "src/module.sars", .{ .truncate = true });
     defer source_file.close(sio.io());
     {
         var wbuf: [8192]u8 = undefined;
@@ -671,7 +671,7 @@ test "resolveImport prefers a relative source file" {
         std.testing.allocator,
         &.{},
         root,
-        "src/module.sa",
+        "src/module.sars",
         .{},
     );
     defer {
@@ -679,7 +679,7 @@ test "resolveImport prefers a relative source file" {
         owned.deinit(std.testing.allocator);
     }
 
-    try std.testing.expect(pathEndsWithPortable(resolved.entry_path, "src/module.sa"));
+    try std.testing.expect(pathEndsWithPortable(resolved.entry_path, "src/module.sars"));
     try std.testing.expectEqualStrings("@main() -> i32:\n    return 0\n", resolved.source);
     try std.testing.expect(resolved.root_dir == null);
 }
@@ -689,7 +689,7 @@ test "resolveImport falls back to local vendor package roots" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "sa_vendor/github.com/example/pkg");
-    var index = try tmp.dir.createFile(std.testing.io, "sa_vendor/github.com/example/pkg/index.sa", .{ .truncate = true });
+    var index = try tmp.dir.createFile(std.testing.io, "sa_vendor/github.com/example/pkg/index.sars", .{ .truncate = true });
     defer index.close(sio.io());
     {
         var wbuf: [8192]u8 = undefined;
@@ -714,7 +714,7 @@ test "resolveImport falls back to local vendor package roots" {
     }
 
     try std.testing.expect(resolved.root_dir != null);
-    try std.testing.expect(pathEndsWithPortable(resolved.entry_path, "sa_vendor/github.com/example/pkg/index.sa"));
+    try std.testing.expect(pathEndsWithPortable(resolved.entry_path, "sa_vendor/github.com/example/pkg/index.sars"));
     try std.testing.expectEqualStrings("@pkg() -> i32:\n    return 123\n", resolved.source);
     try std.testing.expect(!resolved.is_global);
 }
@@ -724,7 +724,7 @@ test "resolveImport maps global cache entries read-only" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, ".sa/pkg/github.com/example/pkg@v1");
-    var index = try tmp.dir.createFile(std.testing.io, ".sa/pkg/github.com/example/pkg@v1/index.sa", .{ .truncate = true });
+    var index = try tmp.dir.createFile(std.testing.io, ".sa/pkg/github.com/example/pkg@v1/index.sars", .{ .truncate = true });
     defer index.close(sio.io());
     {
         var wbuf: [8192]u8 = undefined;
@@ -755,7 +755,7 @@ test "resolveImport maps global cache entries read-only" {
 
     try std.testing.expect(resolved.is_global);
     try std.testing.expect(resolved.mapped != null);
-    try std.testing.expect(pathEndsWithPortable(resolved.entry_path, ".sa/pkg/github.com/example/pkg@v1/index.sa"));
+    try std.testing.expect(pathEndsWithPortable(resolved.entry_path, ".sa/pkg/github.com/example/pkg@v1/index.sars"));
     try std.testing.expectEqualStrings("@global() -> i32:\n    return 7\n", resolved.source);
 }
 
@@ -764,7 +764,7 @@ test "resolveImport rejects package source when pinned sha mismatches" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, ".sa/pkg/github.com/example/pkg@v1");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = ".sa/pkg/github.com/example/pkg@v1/index.sa", .data = "@global() -> i32:\n    return 7\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = ".sa/pkg/github.com/example/pkg@v1/index.sars", .data = "@global() -> i32:\n    return 7\n" });
 
     const home = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(home);
@@ -796,7 +796,7 @@ test "resolveImport accepts package source matching pinned sha" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, ".sa/pkg/github.com/example/pkg@v1");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = ".sa/pkg/github.com/example/pkg@v1/index.sa", .data = "@global() -> i32:\n    return 7\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = ".sa/pkg/github.com/example/pkg@v1/index.sars", .data = "@global() -> i32:\n    return 7\n" });
 
     const home = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(home);
@@ -831,10 +831,10 @@ test "resolveImport rejects package entry symlinks escaping the package root" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, ".sa/pkg/github.com/example/pkg@v1");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "outside.sa", .data = "@outside() -> i32:\n    return 9\n" });
-    const outside_abs = try tmp.dir.realPathFileAlloc(std.testing.io, "outside.sa", std.testing.allocator);
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "outside.sars", .data = "@outside() -> i32:\n    return 9\n" });
+    const outside_abs = try tmp.dir.realPathFileAlloc(std.testing.io, "outside.sars", std.testing.allocator);
     defer std.testing.allocator.free(outside_abs);
-    try tmp.dir.symLink(std.testing.io, outside_abs, ".sa/pkg/github.com/example/pkg@v1/index.sa", .{});
+    try tmp.dir.symLink(std.testing.io, outside_abs, ".sa/pkg/github.com/example/pkg@v1/index.sars", .{});
 
     const home = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(home);
@@ -916,7 +916,7 @@ test "resolveImport bounds globally mapped source size" {
 
     try tmp.dir.createDirPath(std.testing.io, ".sa/pkg/github.com/example/large@v1");
     try tmp.dir.writeFile(std.testing.io, .{
-        .sub_path = ".sa/pkg/github.com/example/large@v1/index.sa",
+        .sub_path = ".sa/pkg/github.com/example/large@v1/index.sars",
         .data = "@large() -> i32:\n    return 123456789\n",
     });
 

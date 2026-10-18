@@ -1,0 +1,125 @@
+@import "sa_std/default.sars"
+@import "sa_std/marker.sars"
+
+@test "sa_std marker extended trait macro surface"():
+L_ENTRY:
+    EXPAND DEFAULT_PHANTOM_DATA default_phantom
+    EXPAND DEFAULT_PHANTOM_PINNED default_pinned
+
+    EXPAND PHANTOM_DATA_COPY phantom_copy, 41
+    EXPAND PHANTOM_DATA_CLONE_FROM phantom_clone_from, 99
+    EXPAND PHANTOM_DATA_NE phantom_ne, default_phantom, 77
+    EXPAND PHANTOM_DATA_PARTIAL_CMP phantom_partial_cmp, default_phantom, 77
+    EXPAND PHANTOM_DATA_LT phantom_lt, default_phantom, 77
+    EXPAND PHANTOM_DATA_LE phantom_le, default_phantom, 77
+    EXPAND PHANTOM_DATA_GT phantom_gt, default_phantom, 77
+    EXPAND PHANTOM_DATA_GE phantom_ge, default_phantom, 77
+
+    EXPAND PHANTOM_PINNED_COPY pinned_copy, 12
+    EXPAND PHANTOM_PINNED_CLONE_FROM pinned_clone_from, 34
+    EXPAND PHANTOM_PINNED_NE pinned_ne, default_pinned, 56
+    EXPAND PHANTOM_PINNED_PARTIAL_CMP pinned_partial_cmp, default_pinned, 56
+    EXPAND PHANTOM_PINNED_LT pinned_lt, default_pinned, 56
+    EXPAND PHANTOM_PINNED_LE pinned_le, default_pinned, 56
+    EXPAND PHANTOM_PINNED_GT pinned_gt, default_pinned, 56
+    EXPAND PHANTOM_PINNED_GE pinned_ge, default_pinned, 56
+
+    ok_default_phantom = eq default_phantom, 0
+    ok_default_pinned = eq default_pinned, 0
+    ok_phantom_copy = eq phantom_copy, 0
+    ok_phantom_clone_from = eq phantom_clone_from, 0
+    ok_phantom_ne = eq phantom_ne, 0
+    ok_phantom_partial_cmp = eq phantom_partial_cmp, 0
+    ok_phantom_lt = eq phantom_lt, 0
+    ok_phantom_le = eq phantom_le, 1
+    ok_phantom_gt = eq phantom_gt, 0
+    ok_phantom_ge = eq phantom_ge, 1
+    ok_pinned_copy = eq pinned_copy, 0
+    ok_pinned_clone_from = eq pinned_clone_from, 0
+    ok_pinned_ne = eq pinned_ne, 0
+    ok_pinned_partial_cmp = eq pinned_partial_cmp, 0
+    ok_pinned_lt = eq pinned_lt, 0
+    ok_pinned_le = eq pinned_le, 1
+    ok_pinned_gt = eq pinned_gt, 0
+    ok_pinned_ge = eq pinned_ge, 1
+
+    ok01 = and ok_default_phantom, ok_default_pinned
+    ok02 = and ok01, ok_phantom_copy
+    ok03 = and ok02, ok_phantom_clone_from
+    ok04 = and ok03, ok_phantom_ne
+    ok05 = and ok04, ok_phantom_partial_cmp
+    ok06 = and ok05, ok_phantom_lt
+    ok07 = and ok06, ok_phantom_le
+    ok08 = and ok07, ok_phantom_gt
+    ok09 = and ok08, ok_phantom_ge
+    ok10 = and ok09, ok_pinned_copy
+    ok11 = and ok10, ok_pinned_clone_from
+    ok12 = and ok11, ok_pinned_ne
+    ok13 = and ok12, ok_pinned_partial_cmp
+    ok14 = and ok13, ok_pinned_lt
+    ok15 = and ok14, ok_pinned_le
+    ok16 = and ok15, ok_pinned_gt
+    ok = and ok16, ok_pinned_ge
+
+    !default_phantom
+    !default_pinned
+    !phantom_copy
+    !phantom_clone_from
+    !phantom_ne
+    !phantom_partial_cmp
+    !phantom_lt
+    !phantom_le
+    !phantom_gt
+    !phantom_ge
+    !pinned_copy
+    !pinned_clone_from
+    !pinned_ne
+    !pinned_partial_cmp
+    !pinned_lt
+    !pinned_le
+    !pinned_gt
+    !pinned_ge
+    !ok_default_phantom
+    !ok_default_pinned
+    !ok_phantom_copy
+    !ok_phantom_clone_from
+    !ok_phantom_ne
+    !ok_phantom_partial_cmp
+    !ok_phantom_lt
+    !ok_phantom_le
+    !ok_phantom_gt
+    !ok_phantom_ge
+    !ok_pinned_copy
+    !ok_pinned_clone_from
+    !ok_pinned_ne
+    !ok_pinned_partial_cmp
+    !ok_pinned_lt
+    !ok_pinned_le
+    !ok_pinned_gt
+    !ok_pinned_ge
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10603)
+
+L_PASS:
+    !ok
+    return 0

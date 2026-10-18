@@ -1,0 +1,1462 @@
+@import "sa_std/option.sars"
+@import "sa_std/result.sars"
+
+@const EXPECT_SHOULD_BE_SOME = utf8:"option should be some"
+@const EXPECT_SHOULD_BE_OK = utf8:"result should be ok"
+@const EXPECT_SHOULD_BE_ERR = utf8:"result should be err"
+
+@opt_double(value: u64) -> u64:
+L_ENTRY:
+    out = mul value, 2
+    return out
+
+@opt_gt_five(value: u64) -> u64:
+L_ENTRY:
+    out = ugt value, 5
+    return out
+
+@opt_default_value() -> u64:
+L_ENTRY:
+    return 77
+
+@opt_default_option() -> ptr:
+L_ENTRY:
+    opt = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME opt, 44
+    return opt
+
+@opt_then_some(value: u64) -> ptr:
+L_ENTRY:
+    opt = alloc Option_SIZE
+    doubled = mul value, 2
+    EXPAND OPTION_SET_SOME opt, doubled
+    !doubled
+    return opt
+
+@opt_err_value() -> u64:
+L_ENTRY:
+    return 91
+
+@res_err_plus(value: u64) -> u64:
+L_ENTRY:
+    out = add value, 100
+    return out
+
+@res_then_ok(value: u64) -> ptr:
+L_ENTRY:
+    res = alloc Result_SIZE
+    out = add value, 9
+    EXPAND RESULT_SET_OK res, out
+    !out
+    return res
+
+@res_else_ok(err: u64) -> ptr:
+L_ENTRY:
+    res = alloc Result_SIZE
+    out = add err, 1
+    EXPAND RESULT_SET_OK res, out
+    !out
+    return res
+
+@test "sa_std option rust-style combinator macros"():
+L_ENTRY:
+    some = alloc Option_SIZE
+    none = alloc Option_SIZE
+    other = alloc Option_SIZE
+    small = alloc Option_SIZE
+    take_src = alloc Option_SIZE
+    take_if_keep_src = alloc Option_SIZE
+    take_if_drop_src = alloc Option_SIZE
+    take_if_none_src = alloc Option_SIZE
+    replace_none_src = alloc Option_SIZE
+    replace_some_src = alloc Option_SIZE
+    insert_src = alloc Option_SIZE
+    get_or_some_src = alloc Option_SIZE
+    get_or_none_src = alloc Option_SIZE
+    get_or_with_src = alloc Option_SIZE
+    get_or_default_src = alloc Option_SIZE
+    slice_some_src = alloc Option_SIZE
+    slice_none_src = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME some, 8
+    EXPAND OPTION_SET_NONE none
+    EXPAND OPTION_SET_SOME other, 21
+    EXPAND OPTION_SET_SOME small, 3
+    EXPAND OPTION_SET_SOME take_src, 55
+    EXPAND OPTION_SET_SOME take_if_keep_src, 9
+    EXPAND OPTION_SET_SOME take_if_drop_src, 3
+    EXPAND OPTION_SET_NONE take_if_none_src
+    EXPAND OPTION_SET_NONE replace_none_src
+    EXPAND OPTION_SET_SOME replace_some_src, 67
+    EXPAND OPTION_SET_SOME insert_src, 1
+    EXPAND OPTION_SET_SOME get_or_some_src, 71
+    EXPAND OPTION_SET_NONE get_or_none_src
+    EXPAND OPTION_SET_NONE get_or_with_src
+    EXPAND OPTION_SET_NONE get_or_default_src
+    EXPAND OPTION_SET_SOME slice_some_src, 88
+    EXPAND OPTION_SET_NONE slice_none_src
+
+    EXPAND OPTION_COPY copy_some, some
+    EXPAND OPTION_MAP mapped_some, some, @opt_double
+    EXPAND OPTION_MAP mapped_none, none, @opt_double
+    EXPAND OPTION_FILTER filter_keep, some, @opt_gt_five
+    EXPAND OPTION_FILTER filter_drop, other, @opt_gt_five
+    EXPAND OPTION_CONTAINS_U64 contains_8, some, 8
+    EXPAND OPTION_CONTAINS_U64 contains_9, some, 9
+    EXPAND OPTION_IS_SOME_AND some_and_true, some, @opt_gt_five
+    EXPAND OPTION_IS_SOME_AND none_and_false, none, @opt_gt_five
+    EXPAND OPTION_IS_NONE_OR some_none_or_true, some, @opt_gt_five
+    EXPAND OPTION_IS_NONE_OR none_none_or_true, none, @opt_gt_five
+    EXPAND OPTION_IS_NONE_OR small_none_or_false, small, @opt_gt_five
+    EXPAND OPTION_UNWRAP_OR_ELSE unwrap_else_some, some, @opt_default_value
+    EXPAND OPTION_UNWRAP_OR_ELSE unwrap_else_none, none, @opt_default_value
+    EXPAND OPTION_UNWRAP_OR_DEFAULT unwrap_default_some, some
+    EXPAND OPTION_UNWRAP_OR_DEFAULT unwrap_default_none, none
+    EXPAND OPTION_INSPECT inspect_some, some, @opt_double
+    EXPAND OPTION_INSPECT inspect_none, none, @opt_double
+    EXPAND OPTION_TAKE taken, take_src
+    EXPAND OPTION_TAKE_IF take_if_keep, take_if_keep_src, @opt_gt_five
+    EXPAND OPTION_TAKE_IF take_if_drop, take_if_drop_src, @opt_gt_five
+    EXPAND OPTION_TAKE_IF take_if_none, take_if_none_src, @opt_gt_five
+    EXPAND OPTION_REPLACE replaced_none_old, replace_none_src, 66
+    EXPAND OPTION_REPLACE replaced_some_old, replace_some_src, 68
+    EXPAND OPTION_INSERT insert_ptr, insert_src, 77
+    store insert_ptr+0, 78 as u64
+    EXPAND OPTION_GET_OR_INSERT get_or_some_ptr, get_or_some_src, 72
+    store get_or_some_ptr+0, 73 as u64
+    EXPAND OPTION_GET_OR_INSERT get_or_none_ptr, get_or_none_src, 74
+    store get_or_none_ptr+0, 75 as u64
+    EXPAND OPTION_GET_OR_INSERT_WITH get_or_with_ptr, get_or_with_src, @opt_default_value
+    store get_or_with_ptr+0, 79 as u64
+    EXPAND OPTION_GET_OR_INSERT_DEFAULT get_or_default_ptr, get_or_default_src
+    store get_or_default_ptr+0, 80 as u64
+    EXPAND OPTION_AS_SLICE option_slice_some, slice_some_src
+    EXPAND OPTION_AS_SLICE option_slice_none, slice_none_src
+    EXPAND OPTION_AS_MUT_SLICE option_mut_slice, slice_some_src
+    option_mut_ptr = load option_mut_slice+Slice_ptr as ptr
+    store option_mut_ptr+0, 89 as u64
+    EXPAND OPTION_AND and_some, some, other
+    EXPAND OPTION_AND and_none, none, other
+    EXPAND OPTION_OR or_some, some, other
+    EXPAND OPTION_OR or_other, none, other
+    EXPAND OPTION_XOR xor_left, some, none
+    EXPAND OPTION_XOR xor_none, some, other
+    EXPAND OPTION_AND_THEN then_some, some, @opt_then_some
+    EXPAND OPTION_AND_THEN then_none, none, @opt_then_some
+    EXPAND OPTION_OR_ELSE or_else_some, some, @opt_default_option
+    EXPAND OPTION_OR_ELSE or_else_default, none, @opt_default_option
+    EXPAND OPTION_OK_OR ok_or_some, some, 90
+    EXPAND OPTION_OK_OR ok_or_none, none, 90
+    EXPAND OPTION_OK_OR_ELSE ok_or_else_some, some, @opt_err_value
+    EXPAND OPTION_OK_OR_ELSE ok_or_else_none, none, @opt_err_value
+
+    copy_tag = load copy_some+Option_tag as u64
+    copy_value = load copy_some+Option_value as u64
+    mapped_some_tag = load mapped_some+Option_tag as u64
+    mapped_some_value = load mapped_some+Option_value as u64
+    mapped_none_tag = load mapped_none+Option_tag as u64
+    filter_keep_tag = load filter_keep+Option_tag as u64
+    filter_keep_value = load filter_keep+Option_value as u64
+    filter_drop_tag = load filter_drop+Option_tag as u64
+    and_some_value = load and_some+Option_value as u64
+    and_none_tag = load and_none+Option_tag as u64
+    or_some_value = load or_some+Option_value as u64
+    or_other_value = load or_other+Option_value as u64
+    xor_left_tag = load xor_left+Option_tag as u64
+    xor_left_value = load xor_left+Option_value as u64
+    xor_none_tag = load xor_none+Option_tag as u64
+    then_some_value = load then_some+Option_value as u64
+    then_none_tag = load then_none+Option_tag as u64
+    or_else_some_value = load or_else_some+Option_value as u64
+    or_else_default_value = load or_else_default+Option_value as u64
+    ok_or_some_tag = load ok_or_some+Result_tag as u64
+    ok_or_some_value = load ok_or_some+Result_ok as u64
+    ok_or_none_tag = load ok_or_none+Result_tag as u64
+    ok_or_none_err = load ok_or_none+Result_err as u64
+    ok_or_else_some_tag = load ok_or_else_some+Result_tag as u64
+    ok_or_else_some_value = load ok_or_else_some+Result_ok as u64
+    ok_or_else_none_tag = load ok_or_else_none+Result_tag as u64
+    ok_or_else_none_err = load ok_or_else_none+Result_err as u64
+    taken_tag = load taken+Option_tag as u64
+    taken_value = load taken+Option_value as u64
+    take_src_tag = load take_src+Option_tag as u64
+    inspect_some_tag = load inspect_some+Option_tag as u64
+    inspect_some_value = load inspect_some+Option_value as u64
+    inspect_none_tag = load inspect_none+Option_tag as u64
+    take_if_keep_tag = load take_if_keep+Option_tag as u64
+    take_if_keep_value = load take_if_keep+Option_value as u64
+    take_if_keep_src_tag = load take_if_keep_src+Option_tag as u64
+    take_if_drop_tag = load take_if_drop+Option_tag as u64
+    take_if_drop_src_tag = load take_if_drop_src+Option_tag as u64
+    take_if_drop_src_value = load take_if_drop_src+Option_value as u64
+    take_if_none_tag = load take_if_none+Option_tag as u64
+    replaced_none_old_tag = load replaced_none_old+Option_tag as u64
+    replace_none_src_tag = load replace_none_src+Option_tag as u64
+    replace_none_src_value = load replace_none_src+Option_value as u64
+    replaced_some_old_tag = load replaced_some_old+Option_tag as u64
+    replaced_some_old_value = load replaced_some_old+Option_value as u64
+    replace_some_src_value = load replace_some_src+Option_value as u64
+    insert_src_value = load insert_src+Option_value as u64
+    get_or_some_src_value = load get_or_some_src+Option_value as u64
+    get_or_none_src_tag = load get_or_none_src+Option_tag as u64
+    get_or_none_src_value = load get_or_none_src+Option_value as u64
+    get_or_with_src_value = load get_or_with_src+Option_value as u64
+    get_or_default_src_value = load get_or_default_src+Option_value as u64
+    option_slice_some_len = load option_slice_some+Slice_len as u64
+    option_slice_some_ptr = load option_slice_some+Slice_ptr as ptr
+    option_slice_some_value = load option_slice_some_ptr+0 as u64
+    option_slice_none_len = load option_slice_none+Slice_len as u64
+    option_mut_slice_len = load option_mut_slice+Slice_len as u64
+    slice_some_src_value = load slice_some_src+Option_value as u64
+    none_and_is_false = eq none_and_false, 0
+    small_none_or_is_false = eq small_none_or_false, 0
+    contains_9_false = eq contains_9, 0
+
+    ok01 = eq copy_tag, Option_SOME
+    ok02 = eq copy_value, 8
+    ok03 = eq mapped_some_tag, Option_SOME
+    ok04 = eq mapped_some_value, 16
+    ok05 = eq mapped_none_tag, Option_NONE
+    ok06 = eq filter_keep_tag, Option_SOME
+    ok07 = eq filter_keep_value, 8
+    ok08 = eq filter_drop_tag, Option_SOME
+    ok09 = eq contains_8, 1
+    ok10 = eq contains_9_false, 1
+    ok11 = eq some_and_true, 1
+    ok12 = eq none_and_is_false, 1
+    ok13 = eq and_some_value, 21
+    ok14 = eq and_none_tag, Option_NONE
+    ok15 = eq or_some_value, 8
+    ok16 = eq or_other_value, 21
+    ok17 = eq xor_left_tag, Option_SOME
+    ok18 = eq xor_left_value, 8
+    ok19 = eq xor_none_tag, Option_NONE
+    ok20 = eq then_some_value, 16
+    ok21 = eq then_none_tag, Option_NONE
+    ok22 = eq or_else_some_value, 8
+    ok23 = eq or_else_default_value, 44
+    ok24 = eq ok_or_some_tag, Result_OK
+    ok25 = eq ok_or_some_value, 8
+    ok26 = eq ok_or_none_tag, Result_ERR
+    ok27 = eq ok_or_none_err, 90
+    ok28 = eq ok_or_else_some_tag, Result_OK
+    ok29 = eq ok_or_else_some_value, 8
+    ok30 = eq ok_or_else_none_tag, Result_ERR
+    ok31 = eq ok_or_else_none_err, 91
+    ok32 = eq some_none_or_true, 1
+    ok33 = eq none_none_or_true, 1
+    ok34 = eq small_none_or_is_false, 1
+    ok35 = eq unwrap_else_some, 8
+    ok36 = eq unwrap_else_none, 77
+    ok37 = eq unwrap_default_some, 8
+    ok38 = eq unwrap_default_none, 0
+    ok39 = eq taken_tag, Option_SOME
+    ok40 = eq taken_value, 55
+    ok41 = eq take_src_tag, Option_NONE
+    ok42 = eq replaced_none_old_tag, Option_NONE
+    ok43 = eq replace_none_src_tag, Option_SOME
+    ok44 = eq replace_none_src_value, 66
+    ok45 = eq replaced_some_old_tag, Option_SOME
+    ok46 = eq replaced_some_old_value, 67
+    ok47 = eq replace_some_src_value, 68
+    ok48 = eq inspect_some_tag, Option_SOME
+    ok49 = eq inspect_some_value, 8
+    ok50 = eq inspect_none_tag, Option_NONE
+    ok51 = eq take_if_keep_tag, Option_SOME
+    ok52 = eq take_if_keep_value, 9
+    ok53 = eq take_if_keep_src_tag, Option_NONE
+    ok54 = eq take_if_drop_tag, Option_NONE
+    ok55 = eq take_if_drop_src_tag, Option_SOME
+    ok56 = eq take_if_drop_src_value, 3
+    ok57 = eq take_if_none_tag, Option_NONE
+    ok58 = eq insert_src_value, 78
+    ok59 = eq get_or_some_src_value, 73
+    ok60 = eq get_or_none_src_tag, Option_SOME
+    ok61 = eq get_or_none_src_value, 75
+    ok62 = eq get_or_with_src_value, 79
+    ok63 = eq get_or_default_src_value, 80
+    ok64 = eq option_slice_some_len, 1
+    ok65 = eq option_slice_some_value, 89
+    ok66 = eq option_slice_none_len, 0
+    ok67 = eq option_mut_slice_len, 1
+    ok68 = eq slice_some_src_value, 89
+
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all11 = and all10, ok12
+    all12 = and all11, ok13
+    all13 = and all12, ok14
+    all14 = and all13, ok15
+    all15 = and all14, ok16
+    all16 = and all15, ok17
+    all17 = and all16, ok18
+    all18 = and all17, ok19
+    all19 = and all18, ok20
+    all20 = and all19, ok21
+    all21 = and all20, ok22
+    all22 = and all21, ok23
+    all23 = and all22, ok24
+    all24 = and all23, ok25
+    all25 = and all24, ok26
+    all26 = and all25, ok27
+    all27 = and all26, ok28
+    all28 = and all27, ok29
+    all29 = and all28, ok30
+    all30 = and all29, ok31
+    all31 = and all30, ok32
+    all32 = and all31, ok33
+    all33 = and all32, ok34
+    all34 = and all33, ok35
+    all35 = and all34, ok36
+    all36 = and all35, ok37
+    all37 = and all36, ok38
+    all38 = and all37, ok39
+    all39 = and all38, ok40
+    all40 = and all39, ok41
+    all41 = and all40, ok42
+    all42 = and all41, ok43
+    all43 = and all42, ok44
+    all44 = and all43, ok45
+    all45 = and all44, ok46
+    all46 = and all45, ok47
+    all47 = and all46, ok48
+    all48 = and all47, ok49
+    all49 = and all48, ok50
+    all50 = and all49, ok51
+    all51 = and all50, ok52
+    all52 = and all51, ok53
+    all53 = and all52, ok54
+    all54 = and all53, ok55
+    all55 = and all54, ok56
+    all56 = and all55, ok57
+    all57 = and all56, ok58
+    all58 = and all57, ok59
+    all59 = and all58, ok60
+    all60 = and all59, ok61
+    all61 = and all60, ok62
+    all62 = and all61, ok63
+    all63 = and all62, ok64
+    all64 = and all63, ok65
+    all65 = and all64, ok66
+    all66 = and all65, ok67
+    all = and all66, ok68
+
+    !some
+    !none
+    !other
+    !small
+    !take_src
+    !take_if_keep_src
+    !take_if_drop_src
+    !take_if_none_src
+    !replace_none_src
+    !replace_some_src
+    !insert_src
+    !get_or_some_src
+    !get_or_none_src
+    !get_or_with_src
+    !get_or_default_src
+    !slice_some_src
+    !slice_none_src
+    !copy_some
+    !mapped_some
+    !mapped_none
+    !filter_keep
+    !filter_drop
+    !and_some
+    !and_none
+    !or_some
+    !or_other
+    !xor_left
+    !xor_none
+    !then_some
+    !then_none
+    !or_else_some
+    !or_else_default
+    !inspect_some
+    !inspect_none
+    !taken
+    !take_if_keep
+    !take_if_drop
+    !take_if_none
+    !replaced_none_old
+    !replaced_some_old
+    !insert_ptr
+    !get_or_some_ptr
+    !get_or_none_ptr
+    !get_or_with_ptr
+    !get_or_default_ptr
+    !option_slice_some
+    !option_slice_none
+    !option_mut_slice
+    !option_mut_ptr
+    !ok_or_some
+    !ok_or_none
+    !ok_or_else_some
+    !ok_or_else_none
+    !copy_tag
+    !copy_value
+    !mapped_some_tag
+    !mapped_some_value
+    !mapped_none_tag
+    !filter_keep_tag
+    !filter_keep_value
+    !filter_drop_tag
+    !and_some_value
+    !and_none_tag
+    !or_some_value
+    !or_other_value
+    !xor_left_tag
+    !xor_left_value
+    !xor_none_tag
+    !then_some_value
+    !then_none_tag
+    !or_else_some_value
+    !or_else_default_value
+    !ok_or_some_tag
+    !ok_or_some_value
+    !ok_or_none_tag
+    !ok_or_none_err
+    !ok_or_else_some_tag
+    !ok_or_else_some_value
+    !ok_or_else_none_tag
+    !ok_or_else_none_err
+    !taken_tag
+    !taken_value
+    !take_src_tag
+    !inspect_some_tag
+    !inspect_some_value
+    !inspect_none_tag
+    !take_if_keep_tag
+    !take_if_keep_value
+    !take_if_keep_src_tag
+    !take_if_drop_tag
+    !take_if_drop_src_tag
+    !take_if_drop_src_value
+    !take_if_none_tag
+    !replaced_none_old_tag
+    !replace_none_src_tag
+    !replace_none_src_value
+    !replaced_some_old_tag
+    !replaced_some_old_value
+    !replace_some_src_value
+    !insert_src_value
+    !get_or_some_src_value
+    !get_or_none_src_tag
+    !get_or_none_src_value
+    !get_or_with_src_value
+    !get_or_default_src_value
+    !option_slice_some_len
+    !option_slice_some_ptr
+    !option_slice_some_value
+    !option_slice_none_len
+    !option_mut_slice_len
+    !slice_some_src_value
+    !none_and_is_false
+    !small_none_or_is_false
+    !contains_9_false
+    !contains_8
+    !contains_9
+    !some_and_true
+    !none_and_false
+    !some_none_or_true
+    !none_none_or_true
+    !small_none_or_false
+    !unwrap_else_some
+    !unwrap_else_none
+    !unwrap_default_some
+    !unwrap_default_none
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    !ok47
+    !ok48
+    !ok49
+    !ok50
+    !ok51
+    !ok52
+    !ok53
+    !ok54
+    !ok55
+    !ok56
+    !ok57
+    !ok58
+    !ok59
+    !ok60
+    !ok61
+    !ok62
+    !ok63
+    !ok64
+    !ok65
+    !ok66
+    !ok67
+    !ok68
+    !all01
+    !all02
+    !all03
+    !all04
+    !all05
+    !all06
+    !all07
+    !all08
+    !all09
+    !all10
+    !all11
+    !all12
+    !all13
+    !all14
+    !all15
+    !all16
+    !all17
+    !all18
+    !all19
+    !all20
+    !all21
+    !all22
+    !all23
+    !all24
+    !all25
+    !all26
+    !all27
+    !all28
+    !all29
+    !all30
+    !all31
+    !all32
+    !all33
+    !all34
+    !all35
+    !all36
+    !all37
+    !all38
+    !all39
+    !all40
+    !all41
+    !all42
+    !all43
+    !all44
+    !all45
+    !all46
+    !all47
+    !all48
+    !all49
+    !all50
+    !all51
+    !all52
+    !all53
+    !all54
+    !all55
+    !all56
+    !all57
+    !all58
+    !all59
+    !all60
+    !all61
+    !all62
+    !all63
+    !all64
+    !all65
+    !all66
+
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    !all
+    panic(10174)
+
+L_PASS:
+    !all
+    return 0
+
+@test "sa_std result rust-style combinator macros"():
+L_ENTRY:
+    ok_res = alloc Result_SIZE
+    err_res = alloc Result_SIZE
+    other_ok = alloc Result_SIZE
+    other_err = alloc Result_SIZE
+    EXPAND RESULT_SET_OK ok_res, 5
+    EXPAND RESULT_SET_ERR err_res, 7
+    EXPAND RESULT_SET_OK other_ok, 33
+    EXPAND RESULT_SET_ERR other_err, 44
+
+    EXPAND RESULT_COPY copy_ok, ok_res
+    EXPAND RESULT_IS_OK_AND ok_and_true, ok_res, @opt_gt_five
+    EXPAND RESULT_IS_OK_AND err_and_false, err_res, @opt_gt_five
+    EXPAND RESULT_IS_ERR_AND err_and_true, err_res, @opt_gt_five
+    EXPAND RESULT_MAP mapped_ok, ok_res, @opt_double
+    EXPAND RESULT_MAP mapped_err, err_res, @opt_double
+    EXPAND RESULT_INSPECT inspect_ok, ok_res, @opt_double
+    EXPAND RESULT_INSPECT inspect_err_skip, err_res, @opt_double
+    EXPAND RESULT_INSPECT_ERR inspect_err_value, err_res, @res_err_plus
+    EXPAND RESULT_INSPECT_ERR inspect_ok_skip, ok_res, @res_err_plus
+    EXPAND RESULT_MAP_ERR_RESULT mapped_err_value, err_res, @res_err_plus
+    EXPAND RESULT_AND and_ok, ok_res, other_ok
+    EXPAND RESULT_AND and_err, err_res, other_ok
+    EXPAND RESULT_OR or_ok, ok_res, other_err
+    EXPAND RESULT_OR or_err, err_res, other_ok
+    EXPAND RESULT_AND_THEN then_ok, ok_res, @res_then_ok
+    EXPAND RESULT_AND_THEN then_err, err_res, @res_then_ok
+    EXPAND RESULT_OR_ELSE else_ok, ok_res, @res_else_ok
+    EXPAND RESULT_OR_ELSE else_err, err_res, @res_else_ok
+    EXPAND RESULT_OK_TO_OPTION ok_to_opt, ok_res
+    EXPAND RESULT_OK_TO_OPTION err_to_none, err_res
+    EXPAND RESULT_ERR_TO_OPTION err_to_opt, err_res
+    EXPAND RESULT_ERR_TO_OPTION ok_to_none, ok_res
+    EXPAND RESULT_UNWRAP_OR_ELSE unwrap_else_ok, ok_res, @res_err_plus
+    EXPAND RESULT_UNWRAP_OR_ELSE unwrap_else_err, err_res, @res_err_plus
+    EXPAND RESULT_UNWRAP_OR_DEFAULT unwrap_default_ok, ok_res
+    EXPAND RESULT_UNWRAP_OR_DEFAULT unwrap_default_err, err_res
+
+    copy_tag = load copy_ok+Result_tag as u64
+    copy_value = load copy_ok+Result_ok as u64
+    err_and_false_bool = eq err_and_false, 0
+    mapped_ok_tag = load mapped_ok+Result_tag as u64
+    mapped_ok_value = load mapped_ok+Result_ok as u64
+    mapped_err_tag = load mapped_err+Result_tag as u64
+    mapped_err_err = load mapped_err+Result_err as u64
+    inspect_ok_tag = load inspect_ok+Result_tag as u64
+    inspect_ok_value = load inspect_ok+Result_ok as u64
+    inspect_err_skip_tag = load inspect_err_skip+Result_tag as u64
+    inspect_err_skip_err = load inspect_err_skip+Result_err as u64
+    inspect_err_value_tag = load inspect_err_value+Result_tag as u64
+    inspect_err_value_err = load inspect_err_value+Result_err as u64
+    inspect_ok_skip_tag = load inspect_ok_skip+Result_tag as u64
+    inspect_ok_skip_value = load inspect_ok_skip+Result_ok as u64
+    mapped_err_value_tag = load mapped_err_value+Result_tag as u64
+    mapped_err_value_err = load mapped_err_value+Result_err as u64
+    and_ok_value = load and_ok+Result_ok as u64
+    and_err_tag = load and_err+Result_tag as u64
+    and_err_value = load and_err+Result_err as u64
+    or_ok_value = load or_ok+Result_ok as u64
+    or_err_value = load or_err+Result_ok as u64
+    then_ok_value = load then_ok+Result_ok as u64
+    then_err_tag = load then_err+Result_tag as u64
+    then_err_value = load then_err+Result_err as u64
+    else_ok_value = load else_ok+Result_ok as u64
+    else_err_value = load else_err+Result_ok as u64
+    ok_to_opt_tag = load ok_to_opt+Option_tag as u64
+    ok_to_opt_value = load ok_to_opt+Option_value as u64
+    err_to_none_tag = load err_to_none+Option_tag as u64
+    err_to_opt_tag = load err_to_opt+Option_tag as u64
+    err_to_opt_value = load err_to_opt+Option_value as u64
+    ok_to_none_tag = load ok_to_none+Option_tag as u64
+
+    ok01 = eq copy_tag, Result_OK
+    ok02 = eq copy_value, 5
+    ok03 = eq ok_and_true, 0
+    ok04 = eq err_and_false_bool, 1
+    ok05 = eq err_and_true, 1
+    ok06 = eq mapped_ok_tag, Result_OK
+    ok07 = eq mapped_ok_value, 10
+    ok08 = eq mapped_err_tag, Result_ERR
+    ok09 = eq mapped_err_err, 7
+    ok10 = eq mapped_err_value_tag, Result_ERR
+    ok11 = eq mapped_err_value_err, 107
+    ok12 = eq and_ok_value, 33
+    ok13 = eq and_err_tag, Result_ERR
+    ok14 = eq and_err_value, 7
+    ok15 = eq or_ok_value, 5
+    ok16 = eq or_err_value, 33
+    ok17 = eq then_ok_value, 14
+    ok18 = eq then_err_tag, Result_ERR
+    ok19 = eq then_err_value, 7
+    ok20 = eq else_ok_value, 5
+    ok21 = eq else_err_value, 8
+    ok22 = eq ok_to_opt_tag, Option_SOME
+    ok23 = eq ok_to_opt_value, 5
+    ok24 = eq err_to_none_tag, Option_NONE
+    ok25 = eq err_to_opt_tag, Option_SOME
+    ok26 = eq err_to_opt_value, 7
+    ok27 = eq ok_to_none_tag, Option_NONE
+    ok28 = eq unwrap_else_ok, 5
+    ok29 = eq unwrap_else_err, 107
+    ok30 = eq unwrap_default_ok, 5
+    ok31 = eq unwrap_default_err, 0
+    ok32 = eq inspect_ok_tag, Result_OK
+    ok33 = eq inspect_ok_value, 5
+    ok34 = eq inspect_err_skip_tag, Result_ERR
+    ok35 = eq inspect_err_skip_err, 7
+    ok36 = eq inspect_err_value_tag, Result_ERR
+    ok37 = eq inspect_err_value_err, 7
+    ok38 = eq inspect_ok_skip_tag, Result_OK
+    ok39 = eq inspect_ok_skip_value, 5
+
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all11 = and all10, ok12
+    all12 = and all11, ok13
+    all13 = and all12, ok14
+    all14 = and all13, ok15
+    all15 = and all14, ok16
+    all16 = and all15, ok17
+    all17 = and all16, ok18
+    all18 = and all17, ok19
+    all19 = and all18, ok20
+    all20 = and all19, ok21
+    all21 = and all20, ok22
+    all22 = and all21, ok23
+    all23 = and all22, ok24
+    all24 = and all23, ok25
+    all25 = and all24, ok26
+    all26 = and all25, ok27
+    all27 = and all26, ok28
+    all28 = and all27, ok29
+    all29 = and all28, ok30
+    all30 = and all29, ok31
+    all31 = and all30, ok32
+    all32 = and all31, ok33
+    all33 = and all32, ok34
+    all34 = and all33, ok35
+    all35 = and all34, ok36
+    all36 = and all35, ok37
+    all37 = and all36, ok38
+    all = and all37, ok39
+
+    !ok_res
+    !err_res
+    !other_ok
+    !other_err
+    !copy_ok
+    !mapped_ok
+    !mapped_err
+    !inspect_ok
+    !inspect_err_skip
+    !inspect_err_value
+    !inspect_ok_skip
+    !mapped_err_value
+    !and_ok
+    !and_err
+    !or_ok
+    !or_err
+    !then_ok
+    !then_err
+    !else_ok
+    !else_err
+    !ok_to_opt
+    !err_to_none
+    !err_to_opt
+    !ok_to_none
+    !unwrap_else_ok
+    !unwrap_else_err
+    !unwrap_default_ok
+    !unwrap_default_err
+    !ok_and_true
+    !err_and_false
+    !err_and_true
+    !copy_tag
+    !copy_value
+    !err_and_false_bool
+    !mapped_ok_tag
+    !mapped_ok_value
+    !mapped_err_tag
+    !mapped_err_err
+    !inspect_ok_tag
+    !inspect_ok_value
+    !inspect_err_skip_tag
+    !inspect_err_skip_err
+    !inspect_err_value_tag
+    !inspect_err_value_err
+    !inspect_ok_skip_tag
+    !inspect_ok_skip_value
+    !mapped_err_value_tag
+    !mapped_err_value_err
+    !and_ok_value
+    !and_err_tag
+    !and_err_value
+    !or_ok_value
+    !or_err_value
+    !then_ok_value
+    !then_err_tag
+    !then_err_value
+    !else_ok_value
+    !else_err_value
+    !ok_to_opt_tag
+    !ok_to_opt_value
+    !err_to_none_tag
+    !err_to_opt_tag
+    !err_to_opt_value
+    !ok_to_none_tag
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !all01
+    !all02
+    !all03
+    !all04
+    !all05
+    !all06
+    !all07
+    !all08
+    !all09
+    !all10
+    !all11
+    !all12
+    !all13
+    !all14
+    !all15
+    !all16
+    !all17
+    !all18
+    !all19
+    !all20
+    !all21
+    !all22
+    !all23
+    !all24
+    !all25
+    !all26
+    !all27
+    !all28
+    !all29
+    !all30
+    !all31
+    !all32
+    !all33
+    !all34
+    !all35
+    !all36
+    !all37
+
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    !all
+    panic(10175)
+
+L_PASS:
+    !all
+    return 0
+
+@test "sa_std option result nested rust-style macros"():
+L_ENTRY:
+    inner_some = alloc Option_SIZE
+    inner_none = alloc Option_SIZE
+    outer_some_some = alloc Option_SIZE
+    outer_some_none = alloc Option_SIZE
+    outer_none = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME inner_some, 12
+    EXPAND OPTION_SET_NONE inner_none
+    store outer_some_some+Option_tag, Option_SOME as u64
+    store outer_some_some+Option_value, inner_some as ptr
+    store outer_some_none+Option_tag, Option_SOME as u64
+    store outer_some_none+Option_value, inner_none as ptr
+    EXPAND OPTION_SET_NONE outer_none
+
+    inner_ok = alloc Result_SIZE
+    inner_err = alloc Result_SIZE
+    opt_res_ok = alloc Option_SIZE
+    opt_res_err = alloc Option_SIZE
+    opt_res_none = alloc Option_SIZE
+    EXPAND RESULT_SET_OK inner_ok, 22
+    EXPAND RESULT_SET_ERR inner_err, 31
+    store opt_res_ok+Option_tag, Option_SOME as u64
+    store opt_res_ok+Option_value, inner_ok as ptr
+    store opt_res_err+Option_tag, Option_SOME as u64
+    store opt_res_err+Option_value, inner_err as ptr
+    EXPAND OPTION_SET_NONE opt_res_none
+
+    flat_inner_ok = alloc Result_SIZE
+    flat_inner_err = alloc Result_SIZE
+    flat_outer_ok_ok = alloc Result_SIZE
+    flat_outer_ok_err = alloc Result_SIZE
+    flat_outer_err = alloc Result_SIZE
+    EXPAND RESULT_SET_OK flat_inner_ok, 41
+    EXPAND RESULT_SET_ERR flat_inner_err, 42
+    store flat_outer_ok_ok+Result_tag, Result_OK as u64
+    store flat_outer_ok_ok+Result_ok, flat_inner_ok as ptr
+    store flat_outer_ok_ok+Result_err, 0 as u64
+    store flat_outer_ok_err+Result_tag, Result_OK as u64
+    store flat_outer_ok_err+Result_ok, flat_inner_err as ptr
+    store flat_outer_ok_err+Result_err, 0 as u64
+    EXPAND RESULT_SET_ERR flat_outer_err, 43
+
+    trans_inner_some = alloc Option_SIZE
+    trans_inner_none = alloc Option_SIZE
+    res_opt_some = alloc Result_SIZE
+    res_opt_none = alloc Result_SIZE
+    res_opt_err = alloc Result_SIZE
+    EXPAND OPTION_SET_SOME trans_inner_some, 51
+    EXPAND OPTION_SET_NONE trans_inner_none
+    store res_opt_some+Result_tag, Result_OK as u64
+    store res_opt_some+Result_ok, trans_inner_some as ptr
+    store res_opt_some+Result_err, 0 as u64
+    store res_opt_none+Result_tag, Result_OK as u64
+    store res_opt_none+Result_ok, trans_inner_none as ptr
+    store res_opt_none+Result_err, 0 as u64
+    EXPAND RESULT_SET_ERR res_opt_err, 61
+
+    EXPAND OPTION_FLATTEN flat_some_some, outer_some_some
+    EXPAND OPTION_FLATTEN flat_some_none, outer_some_none
+    EXPAND OPTION_FLATTEN flat_none, outer_none
+    EXPAND OPTION_TRANSPOSE trans_opt_ok, opt_res_ok
+    EXPAND OPTION_TRANSPOSE trans_opt_err, opt_res_err
+    EXPAND OPTION_TRANSPOSE trans_opt_none, opt_res_none
+    EXPAND RESULT_FLATTEN result_flat_ok, flat_outer_ok_ok
+    EXPAND RESULT_FLATTEN result_flat_inner_err, flat_outer_ok_err
+    EXPAND RESULT_FLATTEN result_flat_outer_err, flat_outer_err
+    EXPAND RESULT_TRANSPOSE result_trans_some, res_opt_some
+    EXPAND RESULT_TRANSPOSE result_trans_none, res_opt_none
+    EXPAND RESULT_TRANSPOSE result_trans_err, res_opt_err
+
+    flat_some_some_tag = load flat_some_some+Option_tag as u64
+    flat_some_some_value = load flat_some_some+Option_value as u64
+    flat_some_none_tag = load flat_some_none+Option_tag as u64
+    flat_none_tag = load flat_none+Option_tag as u64
+    trans_opt_ok_tag = load trans_opt_ok+Result_tag as u64
+    trans_opt_ok_ptr = load trans_opt_ok+Result_ok as ptr
+    trans_opt_ok_option_tag = load trans_opt_ok_ptr+Option_tag as u64
+    trans_opt_ok_option_value = load trans_opt_ok_ptr+Option_value as u64
+    trans_opt_err_tag = load trans_opt_err+Result_tag as u64
+    trans_opt_err_value = load trans_opt_err+Result_err as u64
+    trans_opt_none_tag = load trans_opt_none+Result_tag as u64
+    trans_opt_none_ptr = load trans_opt_none+Result_ok as ptr
+    trans_opt_none_option_tag = load trans_opt_none_ptr+Option_tag as u64
+    result_flat_ok_tag = load result_flat_ok+Result_tag as u64
+    result_flat_ok_value = load result_flat_ok+Result_ok as u64
+    result_flat_inner_err_tag = load result_flat_inner_err+Result_tag as u64
+    result_flat_inner_err_value = load result_flat_inner_err+Result_err as u64
+    result_flat_outer_err_tag = load result_flat_outer_err+Result_tag as u64
+    result_flat_outer_err_value = load result_flat_outer_err+Result_err as u64
+    result_trans_some_tag = load result_trans_some+Option_tag as u64
+    result_trans_some_ptr = load result_trans_some+Option_value as ptr
+    result_trans_some_result_tag = load result_trans_some_ptr+Result_tag as u64
+    result_trans_some_result_value = load result_trans_some_ptr+Result_ok as u64
+    result_trans_none_tag = load result_trans_none+Option_tag as u64
+    result_trans_err_tag = load result_trans_err+Option_tag as u64
+    result_trans_err_ptr = load result_trans_err+Option_value as ptr
+    result_trans_err_result_tag = load result_trans_err_ptr+Result_tag as u64
+    result_trans_err_result_value = load result_trans_err_ptr+Result_err as u64
+
+    ok01 = eq flat_some_some_tag, Option_SOME
+    ok02 = eq flat_some_some_value, 12
+    ok03 = eq flat_some_none_tag, Option_NONE
+    ok04 = eq flat_none_tag, Option_NONE
+    ok05 = eq trans_opt_ok_tag, Result_OK
+    ok06 = eq trans_opt_ok_option_tag, Option_SOME
+    ok07 = eq trans_opt_ok_option_value, 22
+    ok08 = eq trans_opt_err_tag, Result_ERR
+    ok09 = eq trans_opt_err_value, 31
+    ok10 = eq trans_opt_none_tag, Result_OK
+    ok11 = eq trans_opt_none_option_tag, Option_NONE
+    ok12 = eq result_flat_ok_tag, Result_OK
+    ok13 = eq result_flat_ok_value, 41
+    ok14 = eq result_flat_inner_err_tag, Result_ERR
+    ok15 = eq result_flat_inner_err_value, 42
+    ok16 = eq result_flat_outer_err_tag, Result_ERR
+    ok17 = eq result_flat_outer_err_value, 43
+    ok18 = eq result_trans_some_tag, Option_SOME
+    ok19 = eq result_trans_some_result_tag, Result_OK
+    ok20 = eq result_trans_some_result_value, 51
+    ok21 = eq result_trans_none_tag, Option_NONE
+    ok22 = eq result_trans_err_tag, Option_SOME
+    ok23 = eq result_trans_err_result_tag, Result_ERR
+    ok24 = eq result_trans_err_result_value, 61
+
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all11 = and all10, ok12
+    all12 = and all11, ok13
+    all13 = and all12, ok14
+    all14 = and all13, ok15
+    all15 = and all14, ok16
+    all16 = and all15, ok17
+    all17 = and all16, ok18
+    all18 = and all17, ok19
+    all19 = and all18, ok20
+    all20 = and all19, ok21
+    all21 = and all20, ok22
+    all22 = and all21, ok23
+    all = and all22, ok24
+
+    !inner_some
+    !inner_none
+    !outer_some_some
+    !outer_some_none
+    !outer_none
+    !inner_ok
+    !inner_err
+    !opt_res_ok
+    !opt_res_err
+    !opt_res_none
+    !flat_inner_ok
+    !flat_inner_err
+    !flat_outer_ok_ok
+    !flat_outer_ok_err
+    !flat_outer_err
+    !trans_inner_some
+    !trans_inner_none
+    !res_opt_some
+    !res_opt_none
+    !res_opt_err
+    !flat_some_some
+    !flat_some_none
+    !flat_none
+    !trans_opt_ok
+    !trans_opt_err
+    !trans_opt_none
+    !result_flat_ok
+    !result_flat_inner_err
+    !result_flat_outer_err
+    !result_trans_some
+    !result_trans_none
+    !result_trans_err
+    !flat_some_some_tag
+    !flat_some_some_value
+    !flat_some_none_tag
+    !flat_none_tag
+    !trans_opt_ok_tag
+    !trans_opt_ok_ptr
+    !trans_opt_ok_option_tag
+    !trans_opt_ok_option_value
+    !trans_opt_err_tag
+    !trans_opt_err_value
+    !trans_opt_none_tag
+    !trans_opt_none_ptr
+    !trans_opt_none_option_tag
+    !result_flat_ok_tag
+    !result_flat_ok_value
+    !result_flat_inner_err_tag
+    !result_flat_inner_err_value
+    !result_flat_outer_err_tag
+    !result_flat_outer_err_value
+    !result_trans_some_tag
+    !result_trans_some_ptr
+    !result_trans_some_result_tag
+    !result_trans_some_result_value
+    !result_trans_none_tag
+    !result_trans_err_tag
+    !result_trans_err_ptr
+    !result_trans_err_result_tag
+    !result_trans_err_result_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !all01
+    !all02
+    !all03
+    !all04
+    !all05
+    !all06
+    !all07
+    !all08
+    !all09
+    !all10
+    !all11
+    !all12
+    !all13
+    !all14
+    !all15
+    !all16
+    !all17
+    !all18
+    !all19
+    !all20
+    !all21
+    !all22
+
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    !all
+    panic(10176)
+
+L_PASS:
+    !all
+    return 0
+
+@test "sa_std option result reference copy macros"():
+L_ENTRY:
+    opt_some = alloc Option_SIZE
+    opt_none = alloc Option_SIZE
+    opt_ptr_some = alloc Option_SIZE
+    opt_ptr_none = alloc Option_SIZE
+    opt_value_slot = stack_alloc 8
+    store opt_value_slot+0, 92 as u64
+    EXPAND OPTION_SET_SOME opt_some, 70
+    EXPAND OPTION_SET_NONE opt_none
+    store opt_ptr_some+Option_tag, Option_SOME as u64
+    store opt_ptr_some+Option_value, opt_value_slot as ptr
+    EXPAND OPTION_SET_NONE opt_ptr_none
+
+    EXPAND OPTION_AS_REF opt_ref, opt_some
+    opt_ref_ptr = load opt_ref+Option_value as ptr
+    opt_ref_value = load opt_ref_ptr+0 as u64
+    EXPAND OPTION_AS_REF opt_ref_none, opt_none
+    opt_ref_none_tag = load opt_ref_none+Option_tag as u64
+    EXPAND OPTION_AS_MUT opt_mut, opt_some
+    opt_mut_ptr = load opt_mut+Option_value as ptr
+    store opt_mut_ptr+0, 71 as u64
+    opt_some_value_after_mut = load opt_some+Option_value as u64
+    EXPAND OPTION_COPIED_U64 opt_copied, opt_ptr_some
+    EXPAND OPTION_CLONED_U64 opt_cloned, opt_ptr_some
+    EXPAND OPTION_COPIED_U64 opt_copied_none, opt_ptr_none
+    opt_copied_tag = load opt_copied+Option_tag as u64
+    opt_copied_value = load opt_copied+Option_value as u64
+    opt_cloned_value = load opt_cloned+Option_value as u64
+    opt_copied_none_tag = load opt_copied_none+Option_tag as u64
+
+    res_ok = alloc Result_SIZE
+    res_err = alloc Result_SIZE
+    res_ptr_ok = alloc Result_SIZE
+    res_ptr_err = alloc Result_SIZE
+    res_ok_slot = stack_alloc 8
+    res_err_slot = stack_alloc 8
+    store res_ok_slot+0, 101 as u64
+    store res_err_slot+0, 202 as u64
+    EXPAND RESULT_SET_OK res_ok, 80
+    EXPAND RESULT_SET_ERR res_err, 81
+    store res_ptr_ok+Result_tag, Result_OK as u64
+    store res_ptr_ok+Result_ok, res_ok_slot as ptr
+    store res_ptr_ok+Result_err, 0 as u64
+    store res_ptr_err+Result_tag, Result_ERR as u64
+    store res_ptr_err+Result_ok, 0 as u64
+    store res_ptr_err+Result_err, res_err_slot as ptr
+
+    EXPAND RESULT_AS_REF res_ok_ref, res_ok
+    res_ok_ref_ptr = load res_ok_ref+Result_ok as ptr
+    res_ok_ref_value = load res_ok_ref_ptr+0 as u64
+    EXPAND RESULT_AS_REF res_err_ref, res_err
+    res_err_ref_ptr = load res_err_ref+Result_err as ptr
+    res_err_ref_value = load res_err_ref_ptr+0 as u64
+    EXPAND RESULT_AS_MUT res_ok_mut, res_ok
+    res_ok_mut_ptr = load res_ok_mut+Result_ok as ptr
+    store res_ok_mut_ptr+0, 82 as u64
+    res_ok_after_mut = load res_ok+Result_ok as u64
+    EXPAND RESULT_COPIED_U64 res_copied_ok, res_ptr_ok
+    EXPAND RESULT_COPIED_U64 res_copied_err, res_ptr_err
+    EXPAND RESULT_CLONED_U64 res_cloned_ok, res_ptr_ok
+    res_copied_ok_tag = load res_copied_ok+Result_tag as u64
+    res_copied_ok_value = load res_copied_ok+Result_ok as u64
+    res_copied_err_tag = load res_copied_err+Result_tag as u64
+    res_copied_err_value = load res_copied_err+Result_err as u64
+    res_cloned_ok_value = load res_cloned_ok+Result_ok as u64
+
+    ok01 = eq opt_ref_value, 70
+    ok02 = eq opt_ref_none_tag, Option_NONE
+    ok03 = eq opt_some_value_after_mut, 71
+    ok04 = eq opt_copied_tag, Option_SOME
+    ok05 = eq opt_copied_value, 92
+    ok06 = eq opt_cloned_value, 92
+    ok07 = eq opt_copied_none_tag, Option_NONE
+    ok08 = eq res_ok_ref_value, 80
+    ok09 = eq res_err_ref_value, 81
+    ok10 = eq res_ok_after_mut, 82
+    ok11 = eq res_copied_ok_tag, Result_OK
+    ok12 = eq res_copied_ok_value, 101
+    ok13 = eq res_copied_err_tag, Result_ERR
+    ok14 = eq res_copied_err_value, 202
+    ok15 = eq res_cloned_ok_value, 101
+
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all11 = and all10, ok12
+    all12 = and all11, ok13
+    all13 = and all12, ok14
+    all = and all13, ok15
+
+    !opt_some
+    !opt_none
+    !opt_ptr_some
+    !opt_ptr_none
+    !opt_ref
+    !opt_ref_ptr
+    !opt_ref_value
+    !opt_ref_none
+    !opt_ref_none_tag
+    !opt_mut
+    !opt_mut_ptr
+    !opt_some_value_after_mut
+    !opt_copied
+    !opt_cloned
+    !opt_copied_none
+    !opt_copied_tag
+    !opt_copied_value
+    !opt_cloned_value
+    !opt_copied_none_tag
+    !res_ok
+    !res_err
+    !res_ptr_ok
+    !res_ptr_err
+    !res_ok_ref
+    !res_ok_ref_ptr
+    !res_ok_ref_value
+    !res_err_ref
+    !res_err_ref_ptr
+    !res_err_ref_value
+    !res_ok_mut
+    !res_ok_mut_ptr
+    !res_ok_after_mut
+    !res_copied_ok
+    !res_copied_err
+    !res_cloned_ok
+    !res_copied_ok_tag
+    !res_copied_ok_value
+    !res_copied_err_tag
+    !res_copied_err_value
+    !res_cloned_ok_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !all01
+    !all02
+    !all03
+    !all04
+    !all05
+    !all06
+    !all07
+    !all08
+    !all09
+    !all10
+    !all11
+    !all12
+    !all13
+
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    !all
+    panic(10177)
+
+L_PASS:
+    !all
+    return 0
+
+@test "sa_std option result expect unchecked macros"():
+L_ENTRY:
+    opt_some = alloc Option_SIZE
+    opt_none = alloc Option_SIZE
+    res_ok = alloc Result_SIZE
+    res_err = alloc Result_SIZE
+    EXPAND OPTION_SET_SOME opt_some, 31
+    EXPAND OPTION_SET_NONE opt_none
+    EXPAND RESULT_SET_OK res_ok, 41
+    EXPAND RESULT_SET_ERR res_err, 51
+
+    EXPAND OPTION_EXPECT opt_expect, opt_some, *EXPECT_SHOULD_BE_SOME, 21
+    EXPAND OPTION_UNWRAP_UNCHECKED opt_unchecked, opt_some
+    EXPAND RESULT_EXPECT res_expect, res_ok, *EXPECT_SHOULD_BE_OK, 19
+    EXPAND RESULT_UNWRAP_UNCHECKED res_unchecked, res_ok
+    EXPAND RESULT_EXPECT_ERR res_expect_err, res_err, *EXPECT_SHOULD_BE_ERR, 20
+    EXPAND RESULT_UNWRAP_ERR_UNCHECKED res_err_unchecked, res_err
+    EXPAND RESULT_INTO_OK res_into_ok, res_ok
+    EXPAND RESULT_INTO_ERR res_into_err, res_err
+    EXPAND OPTION_MAP_OR_DEFAULT opt_map_default_some, opt_some, @opt_double
+    EXPAND OPTION_MAP_OR_DEFAULT opt_map_default_none, opt_none, @opt_double
+    EXPAND RESULT_MAP_OR_DEFAULT res_map_default_ok, res_ok, @opt_double
+    EXPAND RESULT_MAP_OR_DEFAULT res_map_default_err, res_err, @opt_double
+
+    ok01 = eq opt_expect, 31
+    ok02 = eq opt_unchecked, 31
+    ok03 = eq res_expect, 41
+    ok04 = eq res_unchecked, 41
+    ok05 = eq res_expect_err, 51
+    ok06 = eq res_err_unchecked, 51
+    ok07 = eq res_into_ok, 41
+    ok08 = eq res_into_err, 51
+    ok09 = eq opt_map_default_some, 62
+    ok10 = eq opt_map_default_none, 0
+    ok11 = eq res_map_default_ok, 82
+    ok12 = eq res_map_default_err, 0
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all = and all10, ok12
+
+    !opt_some
+    !opt_none
+    !res_ok
+    !res_err
+    !opt_expect
+    !opt_unchecked
+    !res_expect
+    !res_unchecked
+    !res_expect_err
+    !res_err_unchecked
+    !res_into_ok
+    !res_into_err
+    !opt_map_default_some
+    !opt_map_default_none
+    !res_map_default_ok
+    !res_map_default_err
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !all01
+    !all02
+    !all03
+    !all04
+    !all05
+    !all06
+    !all07
+    !all08
+    !all09
+    !all10
+
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    !all
+    panic(10178)
+
+L_PASS:
+    !all
+    return 0

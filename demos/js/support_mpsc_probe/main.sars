@@ -1,0 +1,65 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/sync/mpsc.sars"
+
+@const RESULT_OK = utf8:"mpsc ok\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@producer_a(&chan: ptr) -> void:
+L_ENTRY:
+    v10 = 10 as u64
+    v20 = 20 as u64
+    EXPAND MPSC_SEND chan, v10
+    EXPAND MPSC_SEND chan, v20
+    return
+
+@producer_b(&chan: ptr) -> void:
+L_ENTRY:
+    v30 = 30 as u64
+    v40 = 40 as u64
+    EXPAND MPSC_SEND chan, v30
+    EXPAND MPSC_SEND chan, v40
+    return
+
+@main() -> i32:
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 4
+    call @producer_a(&chan)
+    call @producer_b(&chan)
+
+    EXPAND MPSC_RECV first, chan
+    EXPAND MPSC_RECV second, chan
+    EXPAND MPSC_RECV third, chan
+    EXPAND MPSC_RECV fourth, chan
+
+    ok_first = eq first, 10
+    ok_second = eq second, 20
+    ok_third = eq third, 30
+    ok_fourth = eq fourth, 40
+    ok12 = and ok_first, ok_second
+    ok34 = and ok_third, ok_fourth
+    ok = and ok12, ok34
+
+    !first
+    !second
+    !third
+    !fourth
+    !ok_first
+    !ok_second
+    !ok_third
+    !ok_fourth
+    !ok12
+    !ok34
+
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    EXPAND MPSC_FREE chan
+    call @sa_print_bytes(&RESULT_OK, 8)
+    return 0
+
+L_ERR:
+    !ok
+    EXPAND MPSC_FREE chan
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

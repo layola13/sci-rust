@@ -1,0 +1,32 @@
+@import "sa_std/io/print.sai"
+@import "fan/a.sars"
+@import "fan/b.sars"
+@import "fan/c.sars"
+
+@const OUT = utf8:"495\n"
+
+// 495 - Fan-out: main imports three leaves directly and folds them
+// with a local const (400 + 50 + 40 + 5).
+@main() -> i32:
+L_ENTRY:
+    a = call @fan_a()
+    b = call @fan_b()
+    c = call @fan_c()
+    s1 = add a, b
+    s2 = add s1, c
+    s = add s2, 5
+    ok = eq s, 495
+    !a
+    !b
+    !c
+    !s1
+    !s2
+    !s
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

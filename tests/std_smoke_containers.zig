@@ -14,7 +14,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
         vec_layout,
     );
 
-    const vec_src = try common.readFileAlloc(std.testing.allocator, "sa_std/alloc/vec.sa");
+    const vec_src = try common.readFileAlloc(std.testing.allocator, "sa_std/alloc/vec.sars");
     defer std.testing.allocator.free(vec_src);
     try std.testing.expect(!std.mem.containsAtLeast(u8, vec_src, 1, "inttoptr"));
     try std.testing.expect(!std.mem.containsAtLeast(u8, vec_src, 1, "假定"));
@@ -26,7 +26,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, cap, cap"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "EXPAND NUM_U64_CHECKED_MUL shrink_new_bytes_ok, new_bytes, target_cap, elem_size"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "panic(1201)"));
-    var vec_flat = try flattenFixture(std.testing.allocator, "sa_std/alloc/vec.sa", vec_src);
+    var vec_flat = try flattenFixture(std.testing.allocator, "sa_std/alloc/vec.sars", vec_src);
     defer vec_flat.deinit(std.testing.allocator);
     const vec_verified = try saasm.referee.verify(std.testing.allocator, vec_flat.instructions, vec_flat.const_decls);
     switch (vec_verified) {
@@ -45,7 +45,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     defer std.testing.allocator.free(vec_macro_layout);
     try std.testing.expectEqualStrings("#def Vec_data = +0\n", vec_macro_layout);
 
-    const vec_macro_src = try common.readFileAlloc(std.testing.allocator, "sa_std/vec.sa");
+    const vec_macro_src = try common.readFileAlloc(std.testing.allocator, "sa_std/vec.sars");
     defer std.testing.allocator.free(vec_macro_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "@import \"alloc/vec.sa\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "[MACRO] VEC_NEW"));
@@ -93,7 +93,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "[MACRO] VEC_TRY_SPLIT_AT_U64"));
 
     var vec_macro_error_ctx = saasm.flattener.ErrorContext{};
-    var vec_macro_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/vec.sa", vec_macro_src, &vec_macro_error_ctx) catch |err| {
+    var vec_macro_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/vec.sars", vec_macro_src, &vec_macro_error_ctx) catch |err| {
         const source_line = saasm.flattener.takeErrorSourceLine(&vec_macro_error_ctx) orelse 0;
         std.debug.print("vec macro flatten failed on line {d}: {s}\n", .{ source_line, @errorName(err) });
         return err;
@@ -116,7 +116,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
         },
     }
 
-    const vec_fixture = try common.readFileAlloc(std.testing.allocator, "tests/vec_fixture.sa");
+    const vec_fixture = try common.readFileAlloc(std.testing.allocator, "tests/vec_fixture.sars");
     defer std.testing.allocator.free(vec_fixture);
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_fixture, 1, "EXPAND VEC_GET"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_fixture, 1, "EXPAND VEC_TRY_POP"));
@@ -131,7 +131,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_fixture, 1, "EXPAND VEC_TRY_STRIP_SUFFIX_U64"));
 
     var vec_fixture_error_ctx = saasm.flattener.ErrorContext{};
-    var vec_fixture_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "tests/vec_fixture.sa", vec_fixture, &vec_fixture_error_ctx) catch |err| {
+    var vec_fixture_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "tests/vec_fixture.sars", vec_fixture, &vec_fixture_error_ctx) catch |err| {
         const source_line = saasm.flattener.takeErrorSourceLine(&vec_fixture_error_ctx) orelse 0;
         std.debug.print("vec fixture flatten failed on line {d}: {s}\n", .{ source_line, @errorName(err) });
         return err;
@@ -151,7 +151,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
         },
     }
 
-    const string_src = try common.readFileAlloc(std.testing.allocator, "sa_std/alloc/string.sa");
+    const string_src = try common.readFileAlloc(std.testing.allocator, "sa_std/alloc/string.sars");
     defer std.testing.allocator.free(string_src);
     try std.testing.expect(!std.mem.containsAtLeast(u8, string_src, 1, "inttoptr"));
     try std.testing.expect(!std.mem.containsAtLeast(u8, string_src, 1, "假定"));
@@ -159,7 +159,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, string_src, 1, "[MACRO] STR_FROM_CONST"));
     try std.testing.expect(std.mem.containsAtLeast(u8, string_src, 1, "EXPAND SLICE_NEW"));
 
-    const string_macro_src = try common.readFileAlloc(std.testing.allocator, "sa_std/string.sa");
+    const string_macro_src = try common.readFileAlloc(std.testing.allocator, "sa_std/string.sars");
     defer std.testing.allocator.free(string_macro_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, string_macro_src, 1, "@import \"fmt.sai\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, string_macro_src, 1, "[MACRO] STR_LEN"));
@@ -189,8 +189,8 @@ test "sa_std alloc helpers are concrete and verifiable" {
 
     const string_fixture =
         \\@import "sa_std/core/slice.sal"
-        \\@import "sa_std/core/slice.sa"
-        \\@import "sa_std/alloc/string.sa"
+        \\@import "sa_std/core/slice.sars"
+        \\@import "sa_std/alloc/string.sars"
         \\
         \\@const WORD = utf8:"rust"
         \\
@@ -212,7 +212,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
         \\    !ok
         \\    return 1
     ;
-    var string_flat = try flattenFixture(std.testing.allocator, "demos/rosetta/15_string_bytes/main.sa", string_fixture);
+    var string_flat = try flattenFixture(std.testing.allocator, "demos/rosetta/15_string_bytes/main.sars", string_fixture);
     defer string_flat.deinit(std.testing.allocator);
     const string_verified = try saasm.referee.verify(std.testing.allocator, string_flat.instructions, string_flat.const_decls);
     switch (string_verified) {
@@ -228,7 +228,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     }
 
     const string_macro_fixture =
-        \\@import "sa_std/string.sa"
+        \\@import "sa_std/string.sars"
         \\
         \\@const WORD = utf8:"rust"
         \\@const PREFIX = utf8:"ru"
@@ -357,7 +357,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
         \\    !ok
         \\    return 1
     ;
-    var string_macro_flat = try flattenFixture(std.testing.allocator, "tests/string_macro_fixture.sa", string_macro_fixture);
+    var string_macro_flat = try flattenFixture(std.testing.allocator, "tests/string_macro_fixture.sars", string_macro_fixture);
     defer string_macro_flat.deinit(std.testing.allocator);
     const string_macro_verified = try saasm.referee.verify(std.testing.allocator, string_macro_flat.instructions, string_macro_flat.const_decls);
     switch (string_macro_verified) {
@@ -386,11 +386,11 @@ test "sa_std hashset helpers are concrete and verifiable" {
         hashset_layout,
     );
 
-    const collections_hashset = try common.readFileAlloc(std.testing.allocator, "sa_std/collections/hashset.sa");
+    const collections_hashset = try common.readFileAlloc(std.testing.allocator, "sa_std/collections/hashset.sars");
     defer std.testing.allocator.free(collections_hashset);
     try std.testing.expect(std.mem.containsAtLeast(u8, collections_hashset, 1, "@import \"../hashset.sa\""));
 
-    const hashset_src = try common.readFileAlloc(std.testing.allocator, "sa_std/hashset.sa");
+    const hashset_src = try common.readFileAlloc(std.testing.allocator, "sa_std/hashset.sars");
     defer std.testing.allocator.free(hashset_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"hashset.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"hashmap.sa\""));
@@ -428,7 +428,7 @@ test "sa_std hashset helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "[MACRO] SET_LIT2"));
 
     var hashset_error_ctx = saasm.flattener.ErrorContext{};
-    var hashset_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/hashset.sa", hashset_src, &hashset_error_ctx) catch |err| {
+    var hashset_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/hashset.sars", hashset_src, &hashset_error_ctx) catch |err| {
         const source_line = saasm.flattener.takeErrorSourceLine(&hashset_error_ctx) orelse 0;
         std.debug.print("hashset flatten failed on line {d}: {s}\n", .{ source_line, @errorName(err) });
         return err;
@@ -451,14 +451,14 @@ test "sa_std hashset helpers are concrete and verifiable" {
         },
     }
 
-    const hashset_fixture = try common.readFileAlloc(std.testing.allocator, "tests/hashset_fixture.sa");
+    const hashset_fixture = try common.readFileAlloc(std.testing.allocator, "tests/hashset_fixture.sars");
     defer std.testing.allocator.free(hashset_fixture);
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_fixture, 1, "EXPAND SET_WITH_CAPACITY"));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_fixture, 1, "EXPAND SET_CAPACITY"));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_fixture, 1, "EXPAND SET_RESERVE"));
 
     var hashset_fixture_error_ctx = saasm.flattener.ErrorContext{};
-    var hashset_fixture_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "tests/hashset_fixture.sa", hashset_fixture, &hashset_fixture_error_ctx) catch |err| {
+    var hashset_fixture_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "tests/hashset_fixture.sars", hashset_fixture, &hashset_fixture_error_ctx) catch |err| {
         const source_line = saasm.flattener.takeErrorSourceLine(&hashset_fixture_error_ctx) orelse 0;
         std.debug.print("hashset fixture flatten failed on line {d}: {s}\n", .{ source_line, @errorName(err) });
         return err;
@@ -486,11 +486,11 @@ test "sa_std btree_set helpers are concrete and verifiable" {
         btree_set_layout,
     );
 
-    const collections_btree_set = try common.readFileAlloc(std.testing.allocator, "sa_std/collections/btree_set.sa");
+    const collections_btree_set = try common.readFileAlloc(std.testing.allocator, "sa_std/collections/btree_set.sars");
     defer std.testing.allocator.free(collections_btree_set);
     try std.testing.expectEqualStrings("@import \"../btree_set.sa\"\n", collections_btree_set);
 
-    const btree_set_src = try common.readFileAlloc(std.testing.allocator, "sa_std/btree_set.sa");
+    const btree_set_src = try common.readFileAlloc(std.testing.allocator, "sa_std/btree_set.sars");
     defer std.testing.allocator.free(btree_set_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@import \"btree_set.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@import \"btree_map.sa\""));
@@ -536,21 +536,21 @@ test "sa_std btree_set helpers are concrete and verifiable" {
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "[MACRO] BTREE_SET_SPLIT_OFF"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "[MACRO] BTREE_SET_LIT2"));
 
-    const btree_map_src = try common.readFileAlloc(std.testing.allocator, "sa_std/btree_map.sa");
+    const btree_map_src = try common.readFileAlloc(std.testing.allocator, "sa_std/btree_map.sars");
     defer std.testing.allocator.free(btree_map_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "@import \"num.sa\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, old_cap, old_cap"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "EXPAND NUM_U64_CHECKED_MUL new_bytes_ok, new_bytes, next_cap, BTreeMapEntry_SIZE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "EXPAND NUM_U64_CHECKED_MUL clear_bytes_ok, bytes, cap, BTreeMapEntry_SIZE"));
 
-    const hashmap_src = try common.readFileAlloc(std.testing.allocator, "sa_std/hashmap.sa");
+    const hashmap_src = try common.readFileAlloc(std.testing.allocator, "sa_std/hashmap.sars");
     defer std.testing.allocator.free(hashmap_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"core/slice.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"alloc/vec.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"vec.sa\""));
 
     var btree_set_error_ctx = saasm.flattener.ErrorContext{};
-    var btree_set_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/btree_set.sa", btree_set_src, &btree_set_error_ctx) catch |err| {
+    var btree_set_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/btree_set.sars", btree_set_src, &btree_set_error_ctx) catch |err| {
         const source_line = saasm.flattener.takeErrorSourceLine(&btree_set_error_ctx) orelse 0;
         std.debug.print("btree_set flatten failed on line {d}: {s}\n", .{ source_line, @errorName(err) });
         return err;
@@ -575,8 +575,8 @@ test "sa_std btree_set helpers are concrete and verifiable" {
 
     const btree_set_fixture =
         \\@import "sa_std/core/slice.sal"
-        \\@import "sa_std/core/slice.sa"
-        \\@import "sa_std/collections/btree_set.sa"
+        \\@import "sa_std/core/slice.sars"
+        \\@import "sa_std/collections/btree_set.sars"
         \\
         \\@const KEY_ALPHA = utf8:"alpha"
         \\@const KEY_BRAVO = utf8:"bravo"
@@ -663,7 +663,7 @@ test "sa_std btree_set helpers are concrete and verifiable" {
         \\    !ok
         \\    return 1
     ;
-    var btree_set_fixture_flat = try flattenFixture(std.testing.allocator, "tests/btree_set_fixture.sa", btree_set_fixture);
+    var btree_set_fixture_flat = try flattenFixture(std.testing.allocator, "tests/btree_set_fixture.sars", btree_set_fixture);
     defer btree_set_fixture_flat.deinit(std.testing.allocator);
     const btree_set_fixture_verified = try saasm.referee.verify(std.testing.allocator, btree_set_fixture_flat.instructions, btree_set_fixture_flat.const_decls);
     switch (btree_set_fixture_verified) {
@@ -680,7 +680,7 @@ test "sa_std btree_set helpers are concrete and verifiable" {
 }
 
 test "sa_std deque and binary heap capacity arithmetic is checked" {
-    const deque_src = try common.readFileAlloc(std.testing.allocator, "sa_std/vec_deque.sa");
+    const deque_src = try common.readFileAlloc(std.testing.allocator, "sa_std/vec_deque.sars");
     defer std.testing.allocator.free(deque_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "@import \"alloc/vec.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "@import \"num.sa\""));
@@ -689,7 +689,7 @@ test "sa_std deque and binary heap capacity arithmetic is checked" {
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "EXPAND NUM_U64_CHECKED_ADD reserve_needed_ok, needed, len, additional"));
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "EXPAND NUM_U64_CHECKED_MUL clear_bytes_ok, bytes, cap, VecDeque_SLOT_SIZE"));
 
-    var deque_flat = try flattenFixture(std.testing.allocator, "sa_std/vec_deque.sa", deque_src);
+    var deque_flat = try flattenFixture(std.testing.allocator, "sa_std/vec_deque.sars", deque_src);
     defer deque_flat.deinit(std.testing.allocator);
     try std.testing.expect(deque_flat.instructions.len > 0);
     const deque_verified = try saasm.referee.verify(std.testing.allocator, deque_flat.instructions, deque_flat.const_decls);
@@ -705,7 +705,7 @@ test "sa_std deque and binary heap capacity arithmetic is checked" {
         },
     }
 
-    const heap_src = try common.readFileAlloc(std.testing.allocator, "sa_std/binary_heap.sa");
+    const heap_src = try common.readFileAlloc(std.testing.allocator, "sa_std/binary_heap.sars");
     defer std.testing.allocator.free(heap_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "@import \"num.sa\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, cap, cap"));
@@ -714,7 +714,7 @@ test "sa_std deque and binary heap capacity arithmetic is checked" {
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "EXPAND NUM_U64_CHECKED_MUL new_bytes_ok, new_bytes, next_cap, BinaryHeap_SLOT_SIZE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "EXPAND NUM_U64_CHECKED_MUL clear_bytes_ok, bytes, cap, BinaryHeap_SLOT_SIZE"));
 
-    var heap_flat = try flattenFixture(std.testing.allocator, "sa_std/binary_heap.sa", heap_src);
+    var heap_flat = try flattenFixture(std.testing.allocator, "sa_std/binary_heap.sars", heap_src);
     defer heap_flat.deinit(std.testing.allocator);
     try std.testing.expect(heap_flat.instructions.len > 0);
     const heap_verified = try saasm.referee.verify(std.testing.allocator, heap_flat.instructions, heap_flat.const_decls);

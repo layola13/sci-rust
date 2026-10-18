@@ -1,0 +1,145 @@
+@import "sa_std/hash.sars"
+
+@test "sa_std hash integer primitive macro surface"():
+L_ENTRY:
+    u8_hasher = stack_alloc DefaultHasher_SIZE
+    u16_hasher = stack_alloc DefaultHasher_SIZE
+    u32_hasher = stack_alloc DefaultHasher_SIZE
+    i8_hasher = stack_alloc DefaultHasher_SIZE
+    i16_hasher = stack_alloc DefaultHasher_SIZE
+    i32_hasher = stack_alloc DefaultHasher_SIZE
+    i64_hasher = stack_alloc DefaultHasher_SIZE
+    isize_hasher = stack_alloc DefaultHasher_SIZE
+
+    EXPAND DEFAULT_HASHER_NEW u8_hasher
+    EXPAND DEFAULT_HASHER_WRITE_U8 u8_hasher, 7
+    EXPAND DEFAULT_HASHER_FINISH u8_manual, u8_hasher
+    EXPAND HASH_U8 u8_hash, 7
+
+    EXPAND DEFAULT_HASHER_NEW u16_hasher
+    EXPAND DEFAULT_HASHER_WRITE_U16 u16_hasher, 300
+    EXPAND DEFAULT_HASHER_FINISH u16_manual, u16_hasher
+    EXPAND HASH_U16 u16_hash, 300
+
+    EXPAND DEFAULT_HASHER_NEW u32_hasher
+    EXPAND DEFAULT_HASHER_WRITE_U32 u32_hasher, 70000
+    EXPAND DEFAULT_HASHER_FINISH u32_manual, u32_hasher
+    EXPAND HASH_U32 u32_hash, 70000
+
+    EXPAND DEFAULT_HASHER_NEW i8_hasher
+    EXPAND DEFAULT_HASHER_WRITE_I8 i8_hasher, 7
+    EXPAND DEFAULT_HASHER_FINISH i8_manual, i8_hasher
+    EXPAND HASH_I8 i8_hash, 7
+
+    EXPAND DEFAULT_HASHER_NEW i16_hasher
+    EXPAND DEFAULT_HASHER_WRITE_I16 i16_hasher, 300
+    EXPAND DEFAULT_HASHER_FINISH i16_manual, i16_hasher
+    EXPAND HASH_I16 i16_hash, 300
+
+    EXPAND DEFAULT_HASHER_NEW i32_hasher
+    EXPAND DEFAULT_HASHER_WRITE_I32 i32_hasher, 70000
+    EXPAND DEFAULT_HASHER_FINISH i32_manual, i32_hasher
+    EXPAND HASH_I32 i32_hash, 70000
+
+    EXPAND DEFAULT_HASHER_NEW i64_hasher
+    EXPAND DEFAULT_HASHER_WRITE_I64 i64_hasher, 9000000
+    EXPAND DEFAULT_HASHER_FINISH i64_manual, i64_hasher
+    EXPAND HASH_I64 i64_hash, 9000000
+
+    EXPAND DEFAULT_HASHER_NEW isize_hasher
+    EXPAND DEFAULT_HASHER_WRITE_ISIZE isize_hasher, 11
+    EXPAND DEFAULT_HASHER_FINISH isize_manual, isize_hasher
+    EXPAND HASH_ISIZE isize_hash, 11
+
+    EXPAND HASH_U64 u64_hash, 9000000
+    EXPAND HASH_USIZE usize_hash, 11
+    EXPAND HASH_U32 u32_other_hash, 70001
+
+    u8_matches = eq u8_hash, u8_manual
+    u16_matches = eq u16_hash, u16_manual
+    u32_matches = eq u32_hash, u32_manual
+    i8_matches = eq i8_hash, i8_manual
+    i16_matches = eq i16_hash, i16_manual
+    i32_matches = eq i32_hash, i32_manual
+    i64_matches = eq i64_hash, i64_manual
+    isize_matches = eq isize_hash, isize_manual
+
+    i8_matches_u8 = eq i8_hash, u8_hash
+    i16_matches_u16 = eq i16_hash, u16_hash
+    i32_matches_u32 = eq i32_hash, u32_hash
+    i64_matches_u64 = eq i64_hash, u64_hash
+    isize_matches_usize = eq isize_hash, usize_hash
+    different_values_differ = ne u32_hash, u32_other_hash
+    changed = ne u8_hash, HASHER_DEFAULT_SEED
+
+    c01 = and u8_matches, u16_matches
+    c02 = and c01, u32_matches
+    c03 = and c02, i8_matches
+    c04 = and c03, i16_matches
+    c05 = and c04, i32_matches
+    c06 = and c05, i64_matches
+    c07 = and c06, isize_matches
+    c08 = and c07, i8_matches_u8
+    c09 = and c08, i16_matches_u16
+    c10 = and c09, i32_matches_u32
+    c11 = and c10, i64_matches_u64
+    c12 = and c11, isize_matches_usize
+    c13 = and c12, different_values_differ
+    ok = and c13, changed
+
+    !u8_manual
+    !u16_manual
+    !u32_manual
+    !i8_manual
+    !i16_manual
+    !i32_manual
+    !i64_manual
+    !isize_manual
+    !u8_hash
+    !u16_hash
+    !u32_hash
+    !i8_hash
+    !i16_hash
+    !i32_hash
+    !i64_hash
+    !isize_hash
+    !u64_hash
+    !usize_hash
+    !u32_other_hash
+    !u8_matches
+    !u16_matches
+    !u32_matches
+    !i8_matches
+    !i16_matches
+    !i32_matches
+    !i64_matches
+    !isize_matches
+    !i8_matches_u8
+    !i16_matches_u16
+    !i32_matches_u32
+    !i64_matches_u64
+    !isize_matches_usize
+    !different_values_differ
+    !changed
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10560)
+
+L_PASS:
+    !ok
+    return 0

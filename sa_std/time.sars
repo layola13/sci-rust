@@ -1,0 +1,850 @@
+@import "time.sal"
+@import "time.sai"
+@import "hash.sars"
+
+[MACRO] TIME_NOW_NS %out_ns
+    %out_ns = call @sa_time_instant_ns()
+[END_MACRO]
+
+[MACRO] TIME_NOW_UNIX_S %out_secs
+    %out_secs = call @sa_time_unix_s()
+[END_MACRO]
+
+[MACRO] TIME_NOW_UNIX_MS %out_ms
+    %out_ms = call @sa_time_unix_ms()
+[END_MACRO]
+
+[MACRO] TIME_NOW_UNIX_NS %out_ns
+    %out_ns = call @sa_time_unix_ns()
+[END_MACRO]
+
+[MACRO] TIME_UTC_NOW %out_date
+    __time_utc_status = call @sa_time_utc_now(&%out_date)
+    !__time_utc_status
+[END_MACRO]
+
+[MACRO] TIME_SLEEP_NS %ns
+    __time_sleep_status = call @sa_time_sleep_ns(%ns)
+    !__time_sleep_status
+[END_MACRO]
+
+[MACRO] TIME_SLEEP_MS %ms
+    __time_sleep_ms_status = call @sa_time_sleep_ms(%ms)
+    !__time_sleep_ms_status
+[END_MACRO]
+
+[MACRO] TIME_THREAD_SLEEP_NS %ns
+    __time_thread_sleep_status = call @sa_time_sleep_ns(%ns)
+    !__time_thread_sleep_status
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_MS %out_ns, %ms
+    %out_ns = mul %ms, Time_NS_PER_MS
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_US %out_ns, %us
+    %out_ns = mul %us, Time_NS_PER_US
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_S %out_ns, %secs
+    %out_ns = mul %secs, Time_NS_PER_S
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_NS %out_ns, %ns
+    %out_ns = add %ns, 0
+[END_MACRO]
+
+[MACRO] TIME_DURATION_NEW %out_ns, %secs, %nanos
+    __time_new_secs_ns_%out_ns = mul %secs, Time_NS_PER_S
+    %out_ns = add __time_new_secs_ns_%out_ns, %nanos
+    !__time_new_secs_ns_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_SECS %out_ns, %secs
+    EXPAND TIME_DURATION_FROM_S %out_ns, %secs
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_MILLIS %out_ns, %millis
+    EXPAND TIME_DURATION_FROM_MS %out_ns, %millis
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_MICROS %out_ns, %micros
+    EXPAND TIME_DURATION_FROM_US %out_ns, %micros
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_NANOS %out_ns, %nanos
+    EXPAND TIME_DURATION_FROM_NS %out_ns, %nanos
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_MINS %out_ns, %mins
+    __time_mins_secs_%out_ns = mul %mins, Time_S_PER_MIN
+    EXPAND TIME_DURATION_FROM_S %out_ns, __time_mins_secs_%out_ns
+    !__time_mins_secs_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_HOURS %out_ns, %hours
+    __time_hours_secs_%out_ns = mul %hours, Time_S_PER_HOUR
+    EXPAND TIME_DURATION_FROM_S %out_ns, __time_hours_secs_%out_ns
+    !__time_hours_secs_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_DAYS %out_ns, %days
+    __time_days_secs_%out_ns = mul %days, Time_S_PER_DAY
+    EXPAND TIME_DURATION_FROM_S %out_ns, __time_days_secs_%out_ns
+    !__time_days_secs_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_FROM_WEEKS %out_ns, %weeks
+    __time_weeks_secs_%out_ns = mul %weeks, Time_S_PER_WEEK
+    EXPAND TIME_DURATION_FROM_S %out_ns, __time_weeks_secs_%out_ns
+    !__time_weeks_secs_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_NANOS %out_ok, %out_ns, %nanos
+    %out_ns = add %nanos, 0
+    %out_ok = add 0, 1
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_SECS %out_ok, %out_ns, %secs
+    EXPAND TIME_CHECKED_MUL_NS %out_ok, %out_ns, %secs, Time_NS_PER_S
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_MILLIS %out_ok, %out_ns, %millis
+    EXPAND TIME_CHECKED_MUL_NS %out_ok, %out_ns, %millis, Time_NS_PER_MS
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_MICROS %out_ok, %out_ns, %micros
+    EXPAND TIME_CHECKED_MUL_NS %out_ok, %out_ns, %micros, Time_NS_PER_US
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_MINS %out_ok, %out_ns, %mins
+    EXPAND TIME_CHECKED_MUL_NS __time_checked_mins_secs_ok_%out_ok, __time_checked_mins_secs_%out_ok, %mins, Time_S_PER_MIN
+    br __time_checked_mins_secs_ok_%out_ok -> L_TIME_CHECKED_FROM_MINS_SECS_OK_%out_ok, L_TIME_CHECKED_FROM_MINS_FAIL_%out_ok
+
+L_TIME_CHECKED_FROM_MINS_SECS_OK_%out_ok:
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS %out_ok, %out_ns, __time_checked_mins_secs_%out_ok
+    !__time_checked_mins_secs_%out_ok
+    !__time_checked_mins_secs_ok_%out_ok
+    jmp L_TIME_CHECKED_FROM_MINS_END_%out_ok
+
+L_TIME_CHECKED_FROM_MINS_FAIL_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_checked_mins_secs_%out_ok
+    !__time_checked_mins_secs_ok_%out_ok
+
+L_TIME_CHECKED_FROM_MINS_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_HOURS %out_ok, %out_ns, %hours
+    EXPAND TIME_CHECKED_MUL_NS __time_checked_hours_secs_ok_%out_ok, __time_checked_hours_secs_%out_ok, %hours, Time_S_PER_HOUR
+    br __time_checked_hours_secs_ok_%out_ok -> L_TIME_CHECKED_FROM_HOURS_SECS_OK_%out_ok, L_TIME_CHECKED_FROM_HOURS_FAIL_%out_ok
+
+L_TIME_CHECKED_FROM_HOURS_SECS_OK_%out_ok:
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS %out_ok, %out_ns, __time_checked_hours_secs_%out_ok
+    !__time_checked_hours_secs_%out_ok
+    !__time_checked_hours_secs_ok_%out_ok
+    jmp L_TIME_CHECKED_FROM_HOURS_END_%out_ok
+
+L_TIME_CHECKED_FROM_HOURS_FAIL_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_checked_hours_secs_%out_ok
+    !__time_checked_hours_secs_ok_%out_ok
+
+L_TIME_CHECKED_FROM_HOURS_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_DAYS %out_ok, %out_ns, %days
+    EXPAND TIME_CHECKED_MUL_NS __time_checked_days_secs_ok_%out_ok, __time_checked_days_secs_%out_ok, %days, Time_S_PER_DAY
+    br __time_checked_days_secs_ok_%out_ok -> L_TIME_CHECKED_FROM_DAYS_SECS_OK_%out_ok, L_TIME_CHECKED_FROM_DAYS_FAIL_%out_ok
+
+L_TIME_CHECKED_FROM_DAYS_SECS_OK_%out_ok:
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS %out_ok, %out_ns, __time_checked_days_secs_%out_ok
+    !__time_checked_days_secs_%out_ok
+    !__time_checked_days_secs_ok_%out_ok
+    jmp L_TIME_CHECKED_FROM_DAYS_END_%out_ok
+
+L_TIME_CHECKED_FROM_DAYS_FAIL_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_checked_days_secs_%out_ok
+    !__time_checked_days_secs_ok_%out_ok
+
+L_TIME_CHECKED_FROM_DAYS_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_FROM_WEEKS %out_ok, %out_ns, %weeks
+    EXPAND TIME_CHECKED_MUL_NS __time_checked_weeks_secs_ok_%out_ok, __time_checked_weeks_secs_%out_ok, %weeks, Time_S_PER_WEEK
+    br __time_checked_weeks_secs_ok_%out_ok -> L_TIME_CHECKED_FROM_WEEKS_SECS_OK_%out_ok, L_TIME_CHECKED_FROM_WEEKS_FAIL_%out_ok
+
+L_TIME_CHECKED_FROM_WEEKS_SECS_OK_%out_ok:
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS %out_ok, %out_ns, __time_checked_weeks_secs_%out_ok
+    !__time_checked_weeks_secs_%out_ok
+    !__time_checked_weeks_secs_ok_%out_ok
+    jmp L_TIME_CHECKED_FROM_WEEKS_END_%out_ok
+
+L_TIME_CHECKED_FROM_WEEKS_FAIL_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_checked_weeks_secs_%out_ok
+    !__time_checked_weeks_secs_ok_%out_ok
+
+L_TIME_CHECKED_FROM_WEEKS_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_NEW %out_ok, %out_ns, %secs, %nanos
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS __time_checked_new_secs_ok_%out_ok, __time_checked_new_secs_ns_%out_ok, %secs
+    br __time_checked_new_secs_ok_%out_ok -> L_TIME_CHECKED_NEW_SECS_OK_%out_ok, L_TIME_CHECKED_NEW_FAIL_%out_ok
+
+L_TIME_CHECKED_NEW_SECS_OK_%out_ok:
+    EXPAND TIME_CHECKED_ADD_NS %out_ok, %out_ns, __time_checked_new_secs_ns_%out_ok, %nanos
+    !__time_checked_new_secs_ns_%out_ok
+    !__time_checked_new_secs_ok_%out_ok
+    jmp L_TIME_CHECKED_NEW_END_%out_ok
+
+L_TIME_CHECKED_NEW_FAIL_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_checked_new_secs_ns_%out_ok
+    !__time_checked_new_secs_ok_%out_ok
+
+L_TIME_CHECKED_NEW_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_ZERO %out_ns
+    %out_ns = add 0, 0
+[END_MACRO]
+
+[MACRO] TIME_DURATION_MAX %out_ns
+    %out_ns = sub 0, 1
+[END_MACRO]
+
+[MACRO] TIME_DURATION_IS_ZERO %out_bool, %duration_ns
+    %out_bool = eq %duration_ns, 0
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_MS %out_ms, %ns
+    %out_ms = udiv %ns, Time_NS_PER_MS
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_US %out_us, %ns
+    %out_us = udiv %ns, Time_NS_PER_US
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_S %out_secs, %ns
+    %out_secs = udiv %ns, Time_NS_PER_S
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_NS %out_ns, %duration_ns
+    %out_ns = add %duration_ns, 0
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_SECS %out_secs, %duration_ns
+    EXPAND TIME_DURATION_AS_S %out_secs, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_MILLIS %out_ms, %duration_ns
+    EXPAND TIME_DURATION_AS_MS %out_ms, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_MICROS %out_us, %duration_ns
+    EXPAND TIME_DURATION_AS_US %out_us, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_AS_NANOS %out_ns, %duration_ns
+    EXPAND TIME_DURATION_AS_NS %out_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_DURATION %hasher, %duration_ns
+    __time_duration_hash_secs_%hasher = udiv %duration_ns, Time_NS_PER_S
+    __time_duration_hash_nanos_%hasher = urem %duration_ns, Time_NS_PER_S
+    EXPAND DEFAULT_HASHER_WRITE_U64 %hasher, __time_duration_hash_secs_%hasher
+    EXPAND DEFAULT_HASHER_WRITE_U32 %hasher, __time_duration_hash_nanos_%hasher
+    !__time_duration_hash_nanos_%hasher
+    !__time_duration_hash_secs_%hasher
+[END_MACRO]
+
+[MACRO] TIME_DURATION_HASH %out_hash, %duration_ns
+    __time_duration_hash_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW __time_duration_hash_hasher_%out_hash
+    EXPAND DEFAULT_HASHER_WRITE_DURATION __time_duration_hash_hasher_%out_hash, %duration_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __time_duration_hash_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_DURATION %out_hash, %builder, %duration_ns
+    __build_hash_one_duration_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_duration_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_DURATION __build_hash_one_duration_hasher_%out_hash, %duration_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_duration_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_DURATION %out_hash, %state, %duration_ns
+    __random_state_hash_one_duration_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_duration_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_DURATION __random_state_hash_one_duration_hasher_%out_hash, %duration_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_duration_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_UNIX_TIMESPEC_NS %hasher, %time_ns
+    __time_timespec_hash_secs_%hasher = udiv %time_ns, Time_NS_PER_S
+    __time_timespec_hash_nanos_%hasher = urem %time_ns, Time_NS_PER_S
+    EXPAND DEFAULT_HASHER_WRITE_I64 %hasher, __time_timespec_hash_secs_%hasher
+    EXPAND DEFAULT_HASHER_WRITE_U32 %hasher, __time_timespec_hash_nanos_%hasher
+    !__time_timespec_hash_nanos_%hasher
+    !__time_timespec_hash_secs_%hasher
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_INSTANT %hasher, %instant_ns
+    EXPAND DEFAULT_HASHER_WRITE_UNIX_TIMESPEC_NS %hasher, %instant_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_HASH %out_hash, %instant_ns
+    __time_instant_hash_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW __time_instant_hash_hasher_%out_hash
+    EXPAND DEFAULT_HASHER_WRITE_INSTANT __time_instant_hash_hasher_%out_hash, %instant_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __time_instant_hash_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_INSTANT %out_hash, %builder, %instant_ns
+    __build_hash_one_instant_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_instant_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_INSTANT __build_hash_one_instant_hasher_%out_hash, %instant_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_instant_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_INSTANT %out_hash, %state, %instant_ns
+    __random_state_hash_one_instant_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_instant_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_INSTANT __random_state_hash_one_instant_hasher_%out_hash, %instant_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_instant_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_SYSTEM_TIME %hasher, %system_ns
+    EXPAND DEFAULT_HASHER_WRITE_UNIX_TIMESPEC_NS %hasher, %system_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_HASH %out_hash, %system_ns
+    __time_system_hash_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW __time_system_hash_hasher_%out_hash
+    EXPAND DEFAULT_HASHER_WRITE_SYSTEM_TIME __time_system_hash_hasher_%out_hash, %system_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __time_system_hash_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_SYSTEM_TIME %out_hash, %builder, %system_ns
+    __build_hash_one_system_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_system_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_SYSTEM_TIME __build_hash_one_system_hasher_%out_hash, %system_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_system_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_SYSTEM_TIME %out_hash, %state, %system_ns
+    __random_state_hash_one_system_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_system_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_SYSTEM_TIME __random_state_hash_one_system_hasher_%out_hash, %system_ns
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_system_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] TIME_DURATION_DIV_DURATION_FLOOR %out_ok, %out_ratio, %duration_ns, %rhs_ns
+    __time_div_dur_zero_%out_ok = eq %rhs_ns, 0
+    br __time_div_dur_zero_%out_ok -> L_TIME_DIV_DUR_FLOOR_ZERO_%out_ok, L_TIME_DIV_DUR_FLOOR_OK_%out_ok
+
+L_TIME_DIV_DUR_FLOOR_OK_%out_ok:
+    %out_ratio = udiv %duration_ns, %rhs_ns
+    %out_ok = add 0, 1
+    !__time_div_dur_zero_%out_ok
+    jmp L_TIME_DIV_DUR_FLOOR_END_%out_ok
+
+L_TIME_DIV_DUR_FLOOR_ZERO_%out_ok:
+    %out_ratio = add 0, 0
+    %out_ok = add 0, 0
+    !__time_div_dur_zero_%out_ok
+
+L_TIME_DIV_DUR_FLOOR_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_DIV_DURATION_CEIL %out_ok, %out_ratio, %duration_ns, %rhs_ns
+    __time_div_ceil_zero_%out_ok = eq %rhs_ns, 0
+    br __time_div_ceil_zero_%out_ok -> L_TIME_DIV_DUR_CEIL_ZERO_%out_ok, L_TIME_DIV_DUR_CEIL_COMPUTE_%out_ok
+
+L_TIME_DIV_DUR_CEIL_COMPUTE_%out_ok:
+    __time_div_ceil_q_%out_ok = udiv %duration_ns, %rhs_ns
+    __time_div_ceil_r_%out_ok = urem %duration_ns, %rhs_ns
+    __time_div_ceil_has_rem_%out_ok = ne __time_div_ceil_r_%out_ok, 0
+    br __time_div_ceil_has_rem_%out_ok -> L_TIME_DIV_DUR_CEIL_ADD_%out_ok, L_TIME_DIV_DUR_CEIL_EXACT_%out_ok
+
+L_TIME_DIV_DUR_CEIL_ADD_%out_ok:
+    %out_ratio = add __time_div_ceil_q_%out_ok, 1
+    %out_ok = add 0, 1
+    !__time_div_ceil_has_rem_%out_ok
+    !__time_div_ceil_r_%out_ok
+    !__time_div_ceil_q_%out_ok
+    !__time_div_ceil_zero_%out_ok
+    jmp L_TIME_DIV_DUR_CEIL_END_%out_ok
+
+L_TIME_DIV_DUR_CEIL_EXACT_%out_ok:
+    %out_ratio = add __time_div_ceil_q_%out_ok, 0
+    %out_ok = add 0, 1
+    !__time_div_ceil_has_rem_%out_ok
+    !__time_div_ceil_r_%out_ok
+    !__time_div_ceil_q_%out_ok
+    !__time_div_ceil_zero_%out_ok
+    jmp L_TIME_DIV_DUR_CEIL_END_%out_ok
+
+L_TIME_DIV_DUR_CEIL_ZERO_%out_ok:
+    %out_ratio = add 0, 0
+    %out_ok = add 0, 0
+    !__time_div_ceil_zero_%out_ok
+
+L_TIME_DIV_DUR_CEIL_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SUBSEC_NANOS %out_ns, %duration_ns
+    %out_ns = urem %duration_ns, Time_NS_PER_S
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SUBSEC_MICROS %out_us, %duration_ns
+    __time_subsec_ns_%out_us = urem %duration_ns, Time_NS_PER_S
+    %out_us = udiv __time_subsec_ns_%out_us, Time_NS_PER_US
+    !__time_subsec_ns_%out_us
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SUBSEC_MILLIS %out_ms, %duration_ns
+    __time_subsec_ns_%out_ms = urem %duration_ns, Time_NS_PER_S
+    %out_ms = udiv __time_subsec_ns_%out_ms, Time_NS_PER_MS
+    !__time_subsec_ns_%out_ms
+[END_MACRO]
+
+[MACRO] TIME_CHECKED_ADD_NS %out_ok, %out_ns, %base_ns, %duration_ns
+    __time_add_sum_%out_ok = add %base_ns, %duration_ns
+    __time_add_overflow_%out_ok = ult __time_add_sum_%out_ok, %base_ns
+    br __time_add_overflow_%out_ok -> L_TIME_CHECKED_ADD_OVERFLOW_%out_ok, L_TIME_CHECKED_ADD_OK_%out_ok
+
+L_TIME_CHECKED_ADD_OK_%out_ok:
+    %out_ns = add __time_add_sum_%out_ok, 0
+    %out_ok = add 0, 1
+    !__time_add_overflow_%out_ok
+    !__time_add_sum_%out_ok
+    jmp L_TIME_CHECKED_ADD_END_%out_ok
+
+L_TIME_CHECKED_ADD_OVERFLOW_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_add_overflow_%out_ok
+    !__time_add_sum_%out_ok
+
+L_TIME_CHECKED_ADD_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_CHECKED_SUB_NS %out_ok, %out_ns, %base_ns, %duration_ns
+    __time_sub_ok_%out_ok = ule %duration_ns, %base_ns
+    br __time_sub_ok_%out_ok -> L_TIME_CHECKED_SUB_OK_%out_ok, L_TIME_CHECKED_SUB_UNDERFLOW_%out_ok
+
+L_TIME_CHECKED_SUB_OK_%out_ok:
+    %out_ns = sub %base_ns, %duration_ns
+    %out_ok = add 0, 1
+    !__time_sub_ok_%out_ok
+    jmp L_TIME_CHECKED_SUB_END_%out_ok
+
+L_TIME_CHECKED_SUB_UNDERFLOW_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_sub_ok_%out_ok
+
+L_TIME_CHECKED_SUB_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_SATURATING_ADD_NS %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_CHECKED_ADD_NS __time_sat_add_ok_%out_ns, __time_sat_add_value_%out_ns, %base_ns, %duration_ns
+    br __time_sat_add_ok_%out_ns -> L_TIME_SAT_ADD_OK_%out_ns, L_TIME_SAT_ADD_MAX_%out_ns
+
+L_TIME_SAT_ADD_OK_%out_ns:
+    %out_ns = add __time_sat_add_value_%out_ns, 0
+    !__time_sat_add_value_%out_ns
+    !__time_sat_add_ok_%out_ns
+    jmp L_TIME_SAT_ADD_END_%out_ns
+
+L_TIME_SAT_ADD_MAX_%out_ns:
+    %out_ns = sub 0, 1
+    !__time_sat_add_value_%out_ns
+    !__time_sat_add_ok_%out_ns
+
+L_TIME_SAT_ADD_END_%out_ns:
+[END_MACRO]
+
+[MACRO] TIME_SATURATING_SUB_NS %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_CHECKED_SUB_NS __time_sat_sub_ok_%out_ns, __time_sat_sub_value_%out_ns, %base_ns, %duration_ns
+    br __time_sat_sub_ok_%out_ns -> L_TIME_SAT_SUB_OK_%out_ns, L_TIME_SAT_SUB_ZERO_%out_ns
+
+L_TIME_SAT_SUB_OK_%out_ns:
+    %out_ns = add __time_sat_sub_value_%out_ns, 0
+    !__time_sat_sub_value_%out_ns
+    !__time_sat_sub_ok_%out_ns
+    jmp L_TIME_SAT_SUB_END_%out_ns
+
+L_TIME_SAT_SUB_ZERO_%out_ns:
+    %out_ns = add 0, 0
+    !__time_sat_sub_value_%out_ns
+    !__time_sat_sub_ok_%out_ns
+
+L_TIME_SAT_SUB_END_%out_ns:
+[END_MACRO]
+
+[MACRO] TIME_CHECKED_MUL_NS %out_ok, %out_ns, %duration_ns, %factor
+    __time_mul_zero_factor_%out_ok = eq %factor, 0
+    br __time_mul_zero_factor_%out_ok -> L_TIME_CHECKED_MUL_ZERO_FACTOR_%out_ok, L_TIME_CHECKED_MUL_COMPUTE_%out_ok
+
+L_TIME_CHECKED_MUL_COMPUTE_%out_ok:
+    __time_mul_product_%out_ok = mul %duration_ns, %factor
+    __time_mul_roundtrip_%out_ok = udiv __time_mul_product_%out_ok, %factor
+    __time_mul_ok_%out_ok = eq __time_mul_roundtrip_%out_ok, %duration_ns
+    br __time_mul_ok_%out_ok -> L_TIME_CHECKED_MUL_OK_%out_ok, L_TIME_CHECKED_MUL_OVERFLOW_%out_ok
+
+L_TIME_CHECKED_MUL_OK_%out_ok:
+    %out_ns = add __time_mul_product_%out_ok, 0
+    %out_ok = add 0, 1
+    !__time_mul_ok_%out_ok
+    !__time_mul_roundtrip_%out_ok
+    !__time_mul_product_%out_ok
+    !__time_mul_zero_factor_%out_ok
+    jmp L_TIME_CHECKED_MUL_END_%out_ok
+
+L_TIME_CHECKED_MUL_OVERFLOW_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_mul_ok_%out_ok
+    !__time_mul_roundtrip_%out_ok
+    !__time_mul_product_%out_ok
+    !__time_mul_zero_factor_%out_ok
+    jmp L_TIME_CHECKED_MUL_END_%out_ok
+
+L_TIME_CHECKED_MUL_ZERO_FACTOR_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 1
+    !__time_mul_zero_factor_%out_ok
+
+L_TIME_CHECKED_MUL_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_CHECKED_DIV_NS %out_ok, %out_ns, %duration_ns, %divisor
+    __time_div_zero_%out_ok = eq %divisor, 0
+    br __time_div_zero_%out_ok -> L_TIME_CHECKED_DIV_ZERO_%out_ok, L_TIME_CHECKED_DIV_OK_%out_ok
+
+L_TIME_CHECKED_DIV_OK_%out_ok:
+    %out_ns = udiv %duration_ns, %divisor
+    %out_ok = add 0, 1
+    !__time_div_zero_%out_ok
+    jmp L_TIME_CHECKED_DIV_END_%out_ok
+
+L_TIME_CHECKED_DIV_ZERO_%out_ok:
+    %out_ns = add 0, 0
+    %out_ok = add 0, 0
+    !__time_div_zero_%out_ok
+
+L_TIME_CHECKED_DIV_END_%out_ok:
+[END_MACRO]
+
+[MACRO] TIME_SATURATING_MUL_NS %out_ns, %duration_ns, %factor
+    EXPAND TIME_CHECKED_MUL_NS __time_sat_mul_ok_%out_ns, __time_sat_mul_value_%out_ns, %duration_ns, %factor
+    br __time_sat_mul_ok_%out_ns -> L_TIME_SAT_MUL_OK_%out_ns, L_TIME_SAT_MUL_MAX_%out_ns
+
+L_TIME_SAT_MUL_OK_%out_ns:
+    %out_ns = add __time_sat_mul_value_%out_ns, 0
+    !__time_sat_mul_value_%out_ns
+    !__time_sat_mul_ok_%out_ns
+    jmp L_TIME_SAT_MUL_END_%out_ns
+
+L_TIME_SAT_MUL_MAX_%out_ns:
+    %out_ns = sub 0, 1
+    !__time_sat_mul_value_%out_ns
+    !__time_sat_mul_ok_%out_ns
+
+L_TIME_SAT_MUL_END_%out_ns:
+[END_MACRO]
+
+[MACRO] TIME_SATURATING_DIV_NS %out_ns, %duration_ns, %divisor
+    EXPAND TIME_CHECKED_DIV_NS __time_sat_div_ok_%out_ns, __time_sat_div_value_%out_ns, %duration_ns, %divisor
+    br __time_sat_div_ok_%out_ns -> L_TIME_SAT_DIV_OK_%out_ns, L_TIME_SAT_DIV_MAX_%out_ns
+
+L_TIME_SAT_DIV_OK_%out_ns:
+    %out_ns = add __time_sat_div_value_%out_ns, 0
+    !__time_sat_div_value_%out_ns
+    !__time_sat_div_ok_%out_ns
+    jmp L_TIME_SAT_DIV_END_%out_ns
+
+L_TIME_SAT_DIV_MAX_%out_ns:
+    %out_ns = sub 0, 1
+    !__time_sat_div_value_%out_ns
+    !__time_sat_div_ok_%out_ns
+
+L_TIME_SAT_DIV_END_%out_ns:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_ADD_NS %out_ok, %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_CHECKED_ADD_NS %out_ok, %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_ADD %out_ok, %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_CHECKED_ADD_NS %out_ok, %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_SUB_NS %out_ok, %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_CHECKED_SUB_NS %out_ok, %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_SUB %out_ok, %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_CHECKED_SUB_NS %out_ok, %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_MUL_NS %out_ok, %out_ns, %duration_ns, %factor
+    EXPAND TIME_CHECKED_MUL_NS %out_ok, %out_ns, %duration_ns, %factor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_MUL %out_ok, %out_ns, %duration_ns, %factor
+    EXPAND TIME_DURATION_CHECKED_MUL_NS %out_ok, %out_ns, %duration_ns, %factor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_DIV_NS %out_ok, %out_ns, %duration_ns, %divisor
+    EXPAND TIME_CHECKED_DIV_NS %out_ok, %out_ns, %duration_ns, %divisor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_CHECKED_DIV %out_ok, %out_ns, %duration_ns, %divisor
+    EXPAND TIME_DURATION_CHECKED_DIV_NS %out_ok, %out_ns, %duration_ns, %divisor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_ADD_NS %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_SATURATING_ADD_NS %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_ADD %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_SATURATING_ADD_NS %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_SUB_NS %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_SATURATING_SUB_NS %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_SUB %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_SATURATING_SUB_NS %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_MUL_NS %out_ns, %duration_ns, %factor
+    EXPAND TIME_SATURATING_MUL_NS %out_ns, %duration_ns, %factor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_MUL %out_ns, %duration_ns, %factor
+    EXPAND TIME_DURATION_SATURATING_MUL_NS %out_ns, %duration_ns, %factor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SATURATING_DIV_NS %out_ns, %duration_ns, %divisor
+    EXPAND TIME_SATURATING_DIV_NS %out_ns, %duration_ns, %divisor
+[END_MACRO]
+
+[MACRO] TIME_DURATION_ABS_DIFF_NS %out_ns, %left_ns, %right_ns
+    __time_abs_left_ge_%out_ns = uge %left_ns, %right_ns
+    br __time_abs_left_ge_%out_ns -> L_TIME_ABS_DIFF_LEFT_%out_ns, L_TIME_ABS_DIFF_RIGHT_%out_ns
+
+L_TIME_ABS_DIFF_LEFT_%out_ns:
+    %out_ns = sub %left_ns, %right_ns
+    !__time_abs_left_ge_%out_ns
+    jmp L_TIME_ABS_DIFF_END_%out_ns
+
+L_TIME_ABS_DIFF_RIGHT_%out_ns:
+    %out_ns = sub %right_ns, %left_ns
+    !__time_abs_left_ge_%out_ns
+
+L_TIME_ABS_DIFF_END_%out_ns:
+[END_MACRO]
+
+[MACRO] TIME_DURATION_ABS_DIFF %out_ns, %left_ns, %right_ns
+    EXPAND TIME_DURATION_ABS_DIFF_NS %out_ns, %left_ns, %right_ns
+[END_MACRO]
+
+[MACRO] TIME_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_CHECKED_SUB_NS %out_ok, %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] TIME_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_CHECKED_DURATION_SINCE __time_since_ok_%out_ns, %out_ns, %later_ns, %earlier_ns
+    !__time_since_ok_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_CHECKED_ADD %out_ok, %out_instant_ns, %instant_ns, %duration_ns
+    EXPAND TIME_CHECKED_ADD_NS %out_ok, %out_instant_ns, %instant_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_CHECKED_SUB %out_ok, %out_instant_ns, %instant_ns, %duration_ns
+    EXPAND TIME_CHECKED_SUB_NS %out_ok, %out_instant_ns, %instant_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_ELAPSED %out_ns, %instant_ns
+    EXPAND TIME_NOW_NS __time_elapsed_now_%out_ns
+    EXPAND TIME_DURATION_SINCE %out_ns, __time_elapsed_now_%out_ns, %instant_ns
+    !__time_elapsed_now_%out_ns
+[END_MACRO]
+
+// Instant / SystemTime naming aliases over existing ns clocks.
+// Instant uses monotonic TIME_NOW_NS; SystemTime uses unix epoch ns.
+
+[MACRO] TIME_INSTANT_NOW %out_instant_ns
+    EXPAND TIME_NOW_NS %out_instant_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_NOW %out_system_ns
+    EXPAND TIME_NOW_UNIX_NS %out_system_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_FROM_UNIX_NS %out_system_ns, %unix_ns
+    %out_system_ns = add %unix_ns, 0
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_AS_UNIX_NS %out_unix_ns, %system_ns
+    %out_unix_ns = add %system_ns, 0
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_ELAPSED %out_ns, %system_ns
+    EXPAND TIME_NOW_UNIX_NS __time_system_elapsed_now_%out_ns
+    EXPAND TIME_DURATION_SINCE %out_ns, __time_system_elapsed_now_%out_ns, %system_ns
+    !__time_system_elapsed_now_%out_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_CHECKED_ADD %out_ok, %out_system_ns, %system_ns, %duration_ns
+    EXPAND TIME_CHECKED_ADD_NS %out_ok, %out_system_ns, %system_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_CHECKED_SUB %out_ok, %out_system_ns, %system_ns, %duration_ns
+    EXPAND TIME_CHECKED_SUB_NS %out_ok, %out_system_ns, %system_ns, %duration_ns
+[END_MACRO]
+
+// Extra Instant/SystemTime/Duration naming aliases.
+
+[MACRO] TIME_DURATION_DEFAULT %out_ns
+    EXPAND TIME_DURATION_ZERO %out_ns
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_UNIX_EPOCH %out_system_ns
+    %out_system_ns = add 0, 0
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_SATURATING_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_INSTANT_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+// Additional Duration/Instant/SystemTime naming aliases.
+
+[MACRO] TIME_SLEEP_DURATION_NS %duration_ns
+    EXPAND TIME_SLEEP_NS %duration_ns
+[END_MACRO]
+
+[MACRO] TIME_INSTANT_DEFAULT %out_instant_ns
+    %out_instant_ns = add 0, 0
+[END_MACRO]
+
+[MACRO] TIME_SYSTEM_TIME_DEFAULT %out_system_ns
+    EXPAND TIME_SYSTEM_TIME_UNIX_EPOCH %out_system_ns
+[END_MACRO]
+
+// Stable std-style aliases for Duration, Instant, and SystemTime operations.
+[MACRO] DURATION_ZERO %out_ns
+    EXPAND TIME_DURATION_ZERO %out_ns
+[END_MACRO]
+
+[MACRO] DURATION_MAX %out_ns
+    EXPAND TIME_DURATION_MAX %out_ns
+[END_MACRO]
+
+[MACRO] DURATION_FROM_NANOS %out_ns, %nanos
+    EXPAND TIME_DURATION_FROM_NANOS %out_ns, %nanos
+[END_MACRO]
+
+[MACRO] DURATION_FROM_MICROS %out_ns, %micros
+    EXPAND TIME_DURATION_FROM_MICROS %out_ns, %micros
+[END_MACRO]
+
+[MACRO] DURATION_FROM_MILLIS %out_ns, %millis
+    EXPAND TIME_DURATION_FROM_MILLIS %out_ns, %millis
+[END_MACRO]
+
+[MACRO] DURATION_FROM_SECS %out_ns, %secs
+    EXPAND TIME_DURATION_FROM_SECS %out_ns, %secs
+[END_MACRO]
+
+[MACRO] DURATION_AS_NANOS %out_ns, %duration_ns
+    EXPAND TIME_DURATION_AS_NANOS %out_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_AS_MICROS %out_us, %duration_ns
+    EXPAND TIME_DURATION_AS_MICROS %out_us, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_AS_MILLIS %out_ms, %duration_ns
+    EXPAND TIME_DURATION_AS_MILLIS %out_ms, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_AS_SECS %out_secs, %duration_ns
+    EXPAND TIME_DURATION_AS_SECS %out_secs, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_CHECKED_ADD %out_ok, %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_CHECKED_ADD %out_ok, %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_CHECKED_SUB %out_ok, %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_CHECKED_SUB %out_ok, %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_SATURATING_ADD %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_SATURATING_ADD %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_SATURATING_SUB %out_ns, %base_ns, %duration_ns
+    EXPAND TIME_DURATION_SATURATING_SUB %out_ns, %base_ns, %duration_ns
+[END_MACRO]
+
+[MACRO] DURATION_ABS_DIFF %out_ns, %left_ns, %right_ns
+    EXPAND TIME_DURATION_ABS_DIFF %out_ns, %left_ns, %right_ns
+[END_MACRO]
+
+[MACRO] INSTANT_NOW %out_instant_ns
+    EXPAND TIME_INSTANT_NOW %out_instant_ns
+[END_MACRO]
+
+[MACRO] INSTANT_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_INSTANT_DURATION_SINCE %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] INSTANT_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+    EXPAND TIME_INSTANT_CHECKED_DURATION_SINCE %out_ok, %out_ns, %later_ns, %earlier_ns
+[END_MACRO]
+
+[MACRO] INSTANT_ELAPSED %out_ns, %instant_ns
+    EXPAND TIME_INSTANT_ELAPSED %out_ns, %instant_ns
+[END_MACRO]
+
+[MACRO] SYSTEM_TIME_NOW %out_system_ns
+    EXPAND TIME_SYSTEM_TIME_NOW %out_system_ns
+[END_MACRO]
+
+[MACRO] SYSTEM_TIME_FROM_UNIX_NS %out_system_ns, %unix_ns
+    EXPAND TIME_SYSTEM_TIME_FROM_UNIX_NS %out_system_ns, %unix_ns
+[END_MACRO]
+
+[MACRO] SYSTEM_TIME_AS_UNIX_NS %out_unix_ns, %system_ns
+    EXPAND TIME_SYSTEM_TIME_AS_UNIX_NS %out_unix_ns, %system_ns
+[END_MACRO]

@@ -1,0 +1,214 @@
+@import "sa_std/any.sars"
+@import "sa_std/borrow.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std any type id and any ref macros"():
+L_ENTRY:
+    type_u64 = stack_alloc TypeId_SIZE
+    type_i64 = stack_alloc TypeId_SIZE
+    type_u64_copy = stack_alloc TypeId_SIZE
+    EXPAND TYPE_ID_U64 type_u64
+    EXPAND TYPE_ID_I64 type_i64
+    EXPAND TYPE_ID_U64 type_u64_copy
+    EXPAND TYPE_ID_EQ type_eq_same, type_u64, type_u64_copy
+    EXPAND TYPE_ID_EQ type_eq_diff, type_u64, type_i64
+    EXPAND TYPE_ID_LO type_u64_lo, type_u64
+    EXPAND TYPE_ID_HI type_u64_hi, type_u64
+
+    value_slot = stack_alloc 8
+    store value_slot+0, 123 as u64
+    any_ref = stack_alloc AnyRef_SIZE
+    EXPAND ANY_REF_NEW any_ref, type_u64, value_slot
+    EXPAND ANY_REF_IS any_is_u64, any_ref, type_u64
+    EXPAND ANY_REF_IS any_is_i64, any_ref, type_i64
+    EXPAND ANY_REF_DOWNCAST_PTR down_ok, down_ptr, any_ref, type_u64
+    EXPAND ANY_REF_DOWNCAST_PTR miss_ok, miss_ptr, any_ref, type_i64
+    down_value = load down_ptr+0 as u64
+    miss_is_null = eq miss_ptr, 0
+    any_not_i64 = eq any_is_i64, 0
+    type_not_diff = eq type_eq_diff, 0
+    ok_lo = eq type_u64_lo, ANY_TYPE_U64_LO
+    ok_hi = eq type_u64_hi, ANY_TYPE_ID_HI
+    ok_down = eq down_value, 123
+    ok_miss = eq miss_ok, 0
+    ok01 = and type_eq_same, type_not_diff
+    ok02 = and ok01, ok_lo
+    ok03 = and ok02, ok_hi
+    ok04 = and ok03, any_is_u64
+    ok05 = and ok04, any_not_i64
+    ok06 = and ok05, down_ok
+    ok07 = and ok06, ok_down
+    ok08 = and ok07, ok_miss
+    ok = and ok08, miss_is_null
+
+    !type_eq_same
+    !type_eq_diff
+    !type_u64_lo
+    !type_u64_hi
+    !any_is_u64
+    !any_is_i64
+    !down_ok
+    !down_ptr
+    !miss_ok
+    !miss_ptr
+    !down_value
+    !miss_is_null
+    !any_not_i64
+    !type_not_diff
+    !ok_lo
+    !ok_hi
+    !ok_down
+    !ok_miss
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(994)
+
+L_PASS:
+    return 0
+
+@test "sa_std borrow and cow slice macros"():
+L_ENTRY:
+    data = stack_alloc 16
+    store data+0, 11 as u64
+    store data+8, 22 as u64
+    other = stack_alloc 8
+    store other+0, 33 as u64
+
+    borrow_ref = stack_alloc BorrowRef_SIZE
+    borrow_mut = stack_alloc BorrowMut_SIZE
+    EXPAND BORROW_REF_NEW borrow_ref, data
+    EXPAND BORROW_MUT_NEW borrow_mut, other
+    EXPAND BORROW_REF_GET borrowed_ptr, borrow_ref
+    EXPAND BORROW_MUT_GET borrowed_mut_ptr, borrow_mut
+    EXPAND BORROW_PTR direct_borrow, data
+    EXPAND BORROW_MUT_PTR direct_borrow_mut, other
+    borrowed_value = load borrowed_ptr+8 as u64
+    borrowed_mut_value = load borrowed_mut_ptr+0 as u64
+
+    slice = stack_alloc Slice_SIZE
+    owned_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 2
+    EXPAND SLICE_NEW owned_slice, other, 1
+    cow_borrowed = stack_alloc CowSlice_SIZE
+    cow_owned = stack_alloc CowSlice_SIZE
+    cow_view = stack_alloc Slice_SIZE
+    cow_mut_view = stack_alloc Slice_SIZE
+    cow_owned_view = stack_alloc Slice_SIZE
+    EXPAND COW_SLICE_BORROWED cow_borrowed, slice
+    EXPAND COW_SLICE_OWNED cow_owned, owned_slice
+    EXPAND COW_SLICE_IS_BORROWED cow_is_borrowed, cow_borrowed
+    EXPAND COW_SLICE_IS_OWNED cow_borrowed_is_owned, cow_borrowed
+    EXPAND COW_SLICE_IS_OWNED cow_is_owned, cow_owned
+    EXPAND COW_SLICE_LEN cow_len, cow_borrowed
+    EXPAND COW_SLICE_PTR cow_ptr, cow_borrowed
+    EXPAND COW_SLICE_AS_SLICE cow_view, cow_borrowed
+    EXPAND COW_SLICE_TO_MUT cow_mut_ok, cow_mut_view, cow_borrowed
+    EXPAND COW_SLICE_INTO_OWNED cow_owned_ok, cow_owned_view, cow_owned
+    cow_view_ptr = load cow_view+Slice_ptr as ptr
+    cow_view_len = load cow_view+Slice_len as u64
+    cow_view_value = load cow_view_ptr+0 as u64
+    cow_owned_ptr = load cow_owned_view+Slice_ptr as ptr
+    cow_owned_len = load cow_owned_view+Slice_len as u64
+    cow_owned_value = load cow_owned_ptr+0 as u64
+
+    ok_ref_ptr = eq borrowed_ptr, data
+    ok_mut_ptr = eq borrowed_mut_ptr, other
+    ok_direct = eq direct_borrow, data
+    ok_direct_mut = eq direct_borrow_mut, other
+    ok_ref_value = eq borrowed_value, 22
+    ok_mut_value = eq borrowed_mut_value, 33
+    cow_borrowed_not_owned = eq cow_borrowed_is_owned, 0
+    ok_cow_len = eq cow_len, 2
+    ok_cow_ptr = eq cow_ptr, data
+    ok_view_ptr = eq cow_view_ptr, data
+    ok_view_len = eq cow_view_len, 2
+    ok_view_value = eq cow_view_value, 11
+    ok_mut_miss = eq cow_mut_ok, 0
+    ok_owned_len = eq cow_owned_len, 1
+    ok_owned_value = eq cow_owned_value, 33
+    ok01 = and ok_ref_ptr, ok_mut_ptr
+    ok02 = and ok01, ok_direct
+    ok03 = and ok02, ok_direct_mut
+    ok04 = and ok03, ok_ref_value
+    ok05 = and ok04, ok_mut_value
+    ok06 = and ok05, cow_is_borrowed
+    ok07 = and ok06, cow_borrowed_not_owned
+    ok08 = and ok07, cow_is_owned
+    ok09 = and ok08, ok_cow_len
+    ok10 = and ok09, ok_cow_ptr
+    ok11 = and ok10, ok_view_ptr
+    ok12 = and ok11, ok_view_len
+    ok13 = and ok12, ok_view_value
+    ok14 = and ok13, ok_mut_miss
+    ok15 = and ok14, cow_owned_ok
+    ok16 = and ok15, ok_owned_len
+    ok = and ok16, ok_owned_value
+
+    !borrowed_ptr
+    !borrowed_mut_ptr
+    !direct_borrow
+    !direct_borrow_mut
+    !borrowed_value
+    !borrowed_mut_value
+    !cow_is_borrowed
+    !cow_borrowed_is_owned
+    !cow_is_owned
+    !cow_len
+    !cow_ptr
+    !cow_mut_ok
+    !cow_owned_ok
+    !cow_view_ptr
+    !cow_view_len
+    !cow_view_value
+    !cow_owned_ptr
+    !cow_owned_len
+    !cow_owned_value
+    !ok_ref_ptr
+    !ok_mut_ptr
+    !ok_direct
+    !ok_direct_mut
+    !ok_ref_value
+    !ok_mut_value
+    !cow_borrowed_not_owned
+    !ok_cow_len
+    !ok_cow_ptr
+    !ok_view_ptr
+    !ok_view_len
+    !ok_view_value
+    !ok_mut_miss
+    !ok_owned_len
+    !ok_owned_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(995)
+
+L_PASS:
+    return 0

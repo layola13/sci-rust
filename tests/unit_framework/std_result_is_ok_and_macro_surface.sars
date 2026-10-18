@@ -1,0 +1,35 @@
+@import "sa_std/core/result.sars"
+
+@gt_10(v: u64) -> u64:
+L_ENTRY:
+    out = ugt v, 10
+    !v
+    return out
+
+@test "sa_std result is_ok_and"():
+L_ENTRY:
+    EXPAND RESULT_NEW_OK r1, 20
+    EXPAND RESULT_IS_OK_AND yes, r1, @gt_10
+    EXPAND RESULT_NEW_OK r2, 5
+    EXPAND RESULT_IS_OK_AND no, r2, @gt_10
+    EXPAND RESULT_NEW_ERR r3, 1
+    EXPAND RESULT_IS_OK_AND no2, r3, @gt_10
+    a = eq yes, 1
+    b = eq no, 0
+    c = eq no2, 0
+    ok01 = and a, b
+    ok = and ok01, c
+    !yes
+    !no
+    !no2
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10908)

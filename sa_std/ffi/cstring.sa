@@ -1,3 +1,0 @@
-// CStr/CString namespace facade.
-@import "../ffi.sal"
-@import "../ffi.sa"

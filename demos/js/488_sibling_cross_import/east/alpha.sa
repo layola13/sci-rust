@@ -1,8 +1,0 @@
-@import "east/../west/beta.sa"
-
-@export alpha_value() -> i32:
-L_ENTRY:
-    beta = call @beta_value()
-    value = add beta, 88
-    !beta
-    return value

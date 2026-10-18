@@ -1,0 +1,51 @@
+@import "sa_std/num.sars"
+
+@test "sa_std num narrow unsigned saturating div macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_SATURATING_DIV u8_mid, 42, 7
+    EXPAND NUM_U8_SATURATING_DIV u8_zero, 42, 0
+    EXPAND NUM_U8_SATURATING_DIV u8_range, 300, 10
+    EXPAND NUM_U8_SATURATING_DIV u8_over, 1024, 2
+
+    EXPAND NUM_U16_SATURATING_DIV u16_mid, 420, 7
+    EXPAND NUM_U16_SATURATING_DIV u16_zero, 420, 0
+    EXPAND NUM_U16_SATURATING_DIV u16_range, 70000, 10
+    EXPAND NUM_U16_SATURATING_DIV u16_over, 131072, 1
+
+    EXPAND NUM_U32_SATURATING_DIV u32_mid, 420000, 7
+    EXPAND NUM_U32_SATURATING_DIV u32_zero, 420000, 0
+    EXPAND NUM_U32_SATURATING_DIV u32_range, 8589934592, 4
+    EXPAND NUM_U32_SATURATING_DIV u32_over, 8589934592, 1
+
+    ok01 = eq u8_mid, 6
+    ok02 = eq u8_zero, NUM_U8_MAX
+    ok03 = eq u8_range, 30
+    ok04 = eq u8_over, NUM_U8_MAX
+    ok05 = eq u16_mid, 60
+    ok06 = eq u16_zero, NUM_U16_MAX
+    ok07 = eq u16_range, 7000
+    ok08 = eq u16_over, NUM_U16_MAX
+    ok09 = eq u32_mid, 60000
+    ok10 = eq u32_zero, NUM_U32_MAX
+    ok11 = eq u32_range, 2147483648
+    ok12 = eq u32_over, NUM_U32_MAX
+
+    chain01 = and ok01, ok02
+    chain02 = and chain01, ok03
+    chain03 = and chain02, ok04
+    chain04 = and chain03, ok05
+    chain05 = and chain04, ok06
+    chain06 = and chain05, ok07
+    chain07 = and chain06, ok08
+    chain08 = and chain07, ok09
+    chain09 = and chain08, ok10
+    chain10 = and chain09, ok11
+    ok = and chain10, ok12
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10678)
+
+L_PASS:
+    return 0

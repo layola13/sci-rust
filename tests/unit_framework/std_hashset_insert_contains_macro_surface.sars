@@ -1,0 +1,45 @@
+@import "sa_std/collections/hashset.sars"
+
+@const A = utf8:"alpha"
+@const B = utf8:"bravo"
+
+@test "sa_std hashset insert contains"():
+L_ENTRY:
+    EXPAND SET_NEW set
+    key_a = &A
+    key_b = &B
+    EXPAND SET_INSERT ins_a, set, key_a
+    EXPAND SET_INSERT ins_b, set, key_b
+    EXPAND SET_CONTAINS has_a, set, key_a
+    EXPAND SET_CONTAINS has_b, set, key_b
+    EXPAND SET_LEN ln, set
+    EXPAND SET_FREE set
+    a = eq ins_a, 1
+    b = eq ins_b, 1
+    c = eq has_a, 1
+    d = eq has_b, 1
+    e = eq ln, 2
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok03 = and ok02, d
+    ok = and ok03, e
+    !ins_a
+    !ins_b
+    !has_a
+    !has_b
+    !ln
+    !a
+    !b
+    !c
+    !d
+    !e
+    !ok01
+    !ok02
+    !ok03
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10923)

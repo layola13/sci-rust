@@ -1,0 +1,81 @@
+@import "sa_std/net.sars"
+
+// TLS 指纹 (JA3 / JA4) 计算底层测试。
+// JA3 = MD5(ja3_string) 的 32 位十六进制;JA4 的 cipher/extension 段 = SHA256 取前 12 位十六进制。
+// 这是 Go 系代理 (CLIProxyAPI / sub2api) 用 uTLS 做指纹伪装时,识别/生成指纹所依赖的纯计算底层。
+// 权威向量:
+//   JA3 串 "769,47-53-5-10-49161-49162-49171-49172-50-56-19-4,0-10-11,23-24-25,0"
+//     -> MD5 "ada70206e40642a3e4461f35503241d5"
+//   JA4 cipher 段 "002f,0035,009c,009d,1301,1302,1303,c02b,c02c,c02f,c030,cca8,cca9"
+//     -> SHA256[:12] "f4ad024020fe"
+
+@const JA3_INPUT = utf8:"769,47-53-5-10-49161-49162-49171-49172-50-56-19-4,0-10-11,23-24-25,0"
+@const JA4_INPUT = utf8:"002f,0035,009c,009d,1301,1302,1303,c02b,c02c,c02f,c030,cca8,cca9"
+
+@test "sa_std net ja3 fingerprint hash macro surface"():
+L_ENTRY:
+    ja3_out = stack_alloc 40
+    EXPAND NET_JA3_HASH ja3_status, ja3_len, JA3_INPUT, 67, ja3_out, 40
+    status_ok = eq ja3_status, SA_NET_OK
+    len_ok = eq ja3_len, 32
+    // 校验 "ada70206...241d5" 的关键字节
+    b0 = load ja3_out+0 as u8
+    b1 = load ja3_out+1 as u8
+    b2 = load ja3_out+2 as u8
+    b3 = load ja3_out+3 as u8
+    b31 = load ja3_out+31 as u8
+    b0_ok = eq b0, 97
+    b1_ok = eq b1, 100
+    b2_ok = eq b2, 97
+    b3_ok = eq b3, 55
+    b31_ok = eq b31, 53
+    ok01 = and status_ok, len_ok
+    ok02 = and ok01, b0_ok
+    ok03 = and ok02, b1_ok
+    ok04 = and ok03, b2_ok
+    ok05 = and ok04, b3_ok
+    ok = and ok05, b31_ok
+    !ja3_status
+    !ja3_len
+    !b0
+    !b1
+    !b2
+    !b3
+    !b31
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10076)
+
+L_PASS:
+    return 0
+
+@test "sa_std net ja4 truncated sha256 hash macro surface"():
+L_ENTRY:
+    ja4_out = stack_alloc 16
+    EXPAND NET_JA4_HASH12 ja4_status, ja4_len, JA4_INPUT, 63, ja4_out, 16
+    status_ok = eq ja4_status, SA_NET_OK
+    len_ok = eq ja4_len, 12
+    // 校验 "f4ad024020fe" 的关键字节
+    c0 = load ja4_out+0 as u8
+    c1 = load ja4_out+1 as u8
+    c11 = load ja4_out+11 as u8
+    c0_ok = eq c0, 102
+    c1_ok = eq c1, 52
+    c11_ok = eq c11, 101
+    ok01 = and status_ok, len_ok
+    ok02 = and ok01, c0_ok
+    ok03 = and ok02, c1_ok
+    ok = and ok03, c11_ok
+    !ja4_status
+    !ja4_len
+    !c0
+    !c1
+    !c11
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10077)
+
+L_PASS:
+    return 0

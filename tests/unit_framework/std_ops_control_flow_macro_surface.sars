@@ -1,0 +1,57 @@
+@import "sa_std/ops.sars"
+@import "sa_std/core/result.sal"
+
+@test "sa_std ops ControlFlow layout and u64 macros"():
+L_ENTRY:
+    cont = stack_alloc ControlFlowU64_SIZE
+    brk = stack_alloc ControlFlowU64_SIZE
+
+    EXPAND CONTROL_FLOW_CONTINUE_U64 cont, 42
+    EXPAND CONTROL_FLOW_BREAK_U64 brk, 77
+
+    EXPAND CONTROL_FLOW_TAG cont_tag, cont
+    EXPAND CONTROL_FLOW_VALUE_U64 cont_value, cont
+    EXPAND CONTROL_FLOW_IS_CONTINUE cont_is_continue, cont
+    EXPAND CONTROL_FLOW_IS_BREAK cont_is_break, cont
+
+    EXPAND CONTROL_FLOW_TAG break_tag, brk
+    EXPAND CONTROL_FLOW_VALUE_U64 break_value, brk
+    EXPAND CONTROL_FLOW_IS_CONTINUE break_is_continue, brk
+    EXPAND CONTROL_FLOW_IS_BREAK break_is_break, brk
+
+    ok_size = eq ControlFlowU64_SIZE, 16
+    ok_align = eq ControlFlowU64_ALIGN, 8
+    ok_tag_off = eq ControlFlowU64_tag, +0
+    ok_value_off = eq ControlFlowU64_value, +8
+    ok_continue_discriminant = eq CONTROL_FLOW_CONTINUE, Result_OK
+    ok_break_discriminant = eq CONTROL_FLOW_BREAK, Result_ERR
+    ok_cont_tag = eq cont_tag, CONTROL_FLOW_CONTINUE
+    ok_cont_value = eq cont_value, 42
+    ok_cont_is_continue = eq cont_is_continue, 1
+    ok_cont_is_break = eq cont_is_break, 0
+    ok_break_tag = eq break_tag, CONTROL_FLOW_BREAK
+    ok_break_value = eq break_value, 77
+    ok_break_is_continue = eq break_is_continue, 0
+    ok_break_is_break = eq break_is_break, 1
+
+    c01 = and ok_size, ok_align
+    c02 = and c01, ok_tag_off
+    c03 = and c02, ok_value_off
+    c04 = and c03, ok_continue_discriminant
+    c05 = and c04, ok_break_discriminant
+    c06 = and c05, ok_cont_tag
+    c07 = and c06, ok_cont_value
+    c08 = and c07, ok_cont_is_continue
+    c09 = and c08, ok_cont_is_break
+    c10 = and c09, ok_break_tag
+    c11 = and c10, ok_break_value
+    c12 = and c11, ok_break_is_continue
+    ok = and c12, ok_break_is_break
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10505)
+
+L_PASS:
+    return 0

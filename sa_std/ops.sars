@@ -1,0 +1,1884 @@
+@import "ops.sal"
+@import "core/option.sal"
+@import "core/result.sal"
+@import "core/slice.sal"
+@import "core/slice.sars"
+
+[MACRO] RANGE_U64_NEW %range_ptr, %start, %end
+    store %range_ptr+RangeU64_start, %start as u64
+    store %range_ptr+RangeU64_end, %end as u64
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_CONTINUE_U64 %control_flow_ptr, %value
+    store %control_flow_ptr+ControlFlowU64_tag, CONTROL_FLOW_CONTINUE as u64
+    store %control_flow_ptr+ControlFlowU64_value, %value as u64
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_CONTINUE_U64.
+[MACRO] CONTROL_FLOW_CONTINUE %control_flow_ptr, %value
+    EXPAND CONTROL_FLOW_CONTINUE_U64 %control_flow_ptr, %value
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_BREAK_U64 %control_flow_ptr, %value
+    store %control_flow_ptr+ControlFlowU64_tag, CONTROL_FLOW_BREAK as u64
+    store %control_flow_ptr+ControlFlowU64_value, %value as u64
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_BREAK_U64.
+[MACRO] CONTROL_FLOW_BREAK %control_flow_ptr, %value
+    EXPAND CONTROL_FLOW_BREAK_U64 %control_flow_ptr, %value
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_TAG %out_tag, %control_flow_ptr
+    %out_tag = load %control_flow_ptr+ControlFlowU64_tag as u64
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_VALUE_U64 %out_value, %control_flow_ptr
+    %out_value = load %control_flow_ptr+ControlFlowU64_value as u64
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_VALUE_U64.
+[MACRO] CONTROL_FLOW_VALUE %out_value, %control_flow_ptr
+    EXPAND CONTROL_FLOW_VALUE_U64 %out_value, %control_flow_ptr
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_IS_CONTINUE %out_bool, %control_flow_ptr
+    __control_flow_tag_%out_bool = load %control_flow_ptr+ControlFlowU64_tag as u64
+    %out_bool = eq __control_flow_tag_%out_bool, CONTROL_FLOW_CONTINUE
+    !__control_flow_tag_%out_bool
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_IS_BREAK %out_bool, %control_flow_ptr
+    __control_flow_tag_%out_bool = load %control_flow_ptr+ControlFlowU64_tag as u64
+    %out_bool = eq __control_flow_tag_%out_bool, CONTROL_FLOW_BREAK
+    !__control_flow_tag_%out_bool
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_BREAK_VALUE_U64 %out_option_ptr, %control_flow_ptr
+    __control_flow_break_value_tag_%out_option_ptr = load %control_flow_ptr+ControlFlowU64_tag as u64
+    __control_flow_break_value_is_break_%out_option_ptr = eq __control_flow_break_value_tag_%out_option_ptr, CONTROL_FLOW_BREAK
+    br __control_flow_break_value_is_break_%out_option_ptr -> L_CONTROL_FLOW_BREAK_VALUE_SOME_%out_option_ptr, L_CONTROL_FLOW_BREAK_VALUE_NONE_%out_option_ptr
+
+L_CONTROL_FLOW_BREAK_VALUE_SOME_%out_option_ptr:
+    __control_flow_break_value_%out_option_ptr = load %control_flow_ptr+ControlFlowU64_value as u64
+    store %out_option_ptr+Option_tag, Option_SOME as u64
+    store %out_option_ptr+Option_value, __control_flow_break_value_%out_option_ptr as u64
+    !__control_flow_break_value_%out_option_ptr
+    !__control_flow_break_value_is_break_%out_option_ptr
+    !__control_flow_break_value_tag_%out_option_ptr
+    jmp L_CONTROL_FLOW_BREAK_VALUE_DONE_%out_option_ptr
+
+L_CONTROL_FLOW_BREAK_VALUE_NONE_%out_option_ptr:
+    store %out_option_ptr+Option_tag, Option_NONE as u64
+    store %out_option_ptr+Option_value, 0 as u64
+    !__control_flow_break_value_is_break_%out_option_ptr
+    !__control_flow_break_value_tag_%out_option_ptr
+
+L_CONTROL_FLOW_BREAK_VALUE_DONE_%out_option_ptr:
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_BREAK_VALUE_U64.
+[MACRO] CONTROL_FLOW_BREAK_VALUE %out_option_ptr, %control_flow_ptr
+    EXPAND CONTROL_FLOW_BREAK_VALUE_U64 %out_option_ptr, %control_flow_ptr
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_CONTINUE_VALUE_U64 %out_option_ptr, %control_flow_ptr
+    __control_flow_continue_value_tag_%out_option_ptr = load %control_flow_ptr+ControlFlowU64_tag as u64
+    __control_flow_continue_value_is_continue_%out_option_ptr = eq __control_flow_continue_value_tag_%out_option_ptr, CONTROL_FLOW_CONTINUE
+    br __control_flow_continue_value_is_continue_%out_option_ptr -> L_CONTROL_FLOW_CONTINUE_VALUE_SOME_%out_option_ptr, L_CONTROL_FLOW_CONTINUE_VALUE_NONE_%out_option_ptr
+
+L_CONTROL_FLOW_CONTINUE_VALUE_SOME_%out_option_ptr:
+    __control_flow_continue_value_%out_option_ptr = load %control_flow_ptr+ControlFlowU64_value as u64
+    store %out_option_ptr+Option_tag, Option_SOME as u64
+    store %out_option_ptr+Option_value, __control_flow_continue_value_%out_option_ptr as u64
+    !__control_flow_continue_value_%out_option_ptr
+    !__control_flow_continue_value_is_continue_%out_option_ptr
+    !__control_flow_continue_value_tag_%out_option_ptr
+    jmp L_CONTROL_FLOW_CONTINUE_VALUE_DONE_%out_option_ptr
+
+L_CONTROL_FLOW_CONTINUE_VALUE_NONE_%out_option_ptr:
+    store %out_option_ptr+Option_tag, Option_NONE as u64
+    store %out_option_ptr+Option_value, 0 as u64
+    !__control_flow_continue_value_is_continue_%out_option_ptr
+    !__control_flow_continue_value_tag_%out_option_ptr
+
+L_CONTROL_FLOW_CONTINUE_VALUE_DONE_%out_option_ptr:
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_CONTINUE_VALUE_U64.
+[MACRO] CONTROL_FLOW_CONTINUE_VALUE %out_option_ptr, %control_flow_ptr
+    EXPAND CONTROL_FLOW_CONTINUE_VALUE_U64 %out_option_ptr, %control_flow_ptr
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_BREAK_OK_U64 %out_result_ptr, %control_flow_ptr
+    __control_flow_break_ok_tag_%out_result_ptr = load %control_flow_ptr+ControlFlowU64_tag as u64
+    __control_flow_break_ok_value_%out_result_ptr = load %control_flow_ptr+ControlFlowU64_value as u64
+    __control_flow_break_ok_is_break_%out_result_ptr = eq __control_flow_break_ok_tag_%out_result_ptr, CONTROL_FLOW_BREAK
+    br __control_flow_break_ok_is_break_%out_result_ptr -> L_CONTROL_FLOW_BREAK_OK_OK_%out_result_ptr, L_CONTROL_FLOW_BREAK_OK_ERR_%out_result_ptr
+
+L_CONTROL_FLOW_BREAK_OK_OK_%out_result_ptr:
+    store %out_result_ptr+Result_tag, Result_OK as u64
+    store %out_result_ptr+Result_ok, __control_flow_break_ok_value_%out_result_ptr as u64
+    store %out_result_ptr+Result_err, 0 as u64
+    !__control_flow_break_ok_is_break_%out_result_ptr
+    !__control_flow_break_ok_value_%out_result_ptr
+    !__control_flow_break_ok_tag_%out_result_ptr
+    jmp L_CONTROL_FLOW_BREAK_OK_DONE_%out_result_ptr
+
+L_CONTROL_FLOW_BREAK_OK_ERR_%out_result_ptr:
+    store %out_result_ptr+Result_tag, Result_ERR as u64
+    store %out_result_ptr+Result_ok, 0 as u64
+    store %out_result_ptr+Result_err, __control_flow_break_ok_value_%out_result_ptr as u64
+    !__control_flow_break_ok_is_break_%out_result_ptr
+    !__control_flow_break_ok_value_%out_result_ptr
+    !__control_flow_break_ok_tag_%out_result_ptr
+
+L_CONTROL_FLOW_BREAK_OK_DONE_%out_result_ptr:
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_BREAK_OK_U64.
+[MACRO] CONTROL_FLOW_BREAK_OK %out_result_ptr, %control_flow_ptr
+    EXPAND CONTROL_FLOW_BREAK_OK_U64 %out_result_ptr, %control_flow_ptr
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_CONTINUE_OK_U64 %out_result_ptr, %control_flow_ptr
+    __control_flow_continue_ok_tag_%out_result_ptr = load %control_flow_ptr+ControlFlowU64_tag as u64
+    __control_flow_continue_ok_value_%out_result_ptr = load %control_flow_ptr+ControlFlowU64_value as u64
+    __control_flow_continue_ok_is_continue_%out_result_ptr = eq __control_flow_continue_ok_tag_%out_result_ptr, CONTROL_FLOW_CONTINUE
+    br __control_flow_continue_ok_is_continue_%out_result_ptr -> L_CONTROL_FLOW_CONTINUE_OK_OK_%out_result_ptr, L_CONTROL_FLOW_CONTINUE_OK_ERR_%out_result_ptr
+
+L_CONTROL_FLOW_CONTINUE_OK_OK_%out_result_ptr:
+    store %out_result_ptr+Result_tag, Result_OK as u64
+    store %out_result_ptr+Result_ok, __control_flow_continue_ok_value_%out_result_ptr as u64
+    store %out_result_ptr+Result_err, 0 as u64
+    !__control_flow_continue_ok_is_continue_%out_result_ptr
+    !__control_flow_continue_ok_value_%out_result_ptr
+    !__control_flow_continue_ok_tag_%out_result_ptr
+    jmp L_CONTROL_FLOW_CONTINUE_OK_DONE_%out_result_ptr
+
+L_CONTROL_FLOW_CONTINUE_OK_ERR_%out_result_ptr:
+    store %out_result_ptr+Result_tag, Result_ERR as u64
+    store %out_result_ptr+Result_ok, 0 as u64
+    store %out_result_ptr+Result_err, __control_flow_continue_ok_value_%out_result_ptr as u64
+    !__control_flow_continue_ok_is_continue_%out_result_ptr
+    !__control_flow_continue_ok_value_%out_result_ptr
+    !__control_flow_continue_ok_tag_%out_result_ptr
+
+L_CONTROL_FLOW_CONTINUE_OK_DONE_%out_result_ptr:
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_CONTINUE_OK_U64.
+[MACRO] CONTROL_FLOW_CONTINUE_OK %out_result_ptr, %control_flow_ptr
+    EXPAND CONTROL_FLOW_CONTINUE_OK_U64 %out_result_ptr, %control_flow_ptr
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_MAP_BREAK_U64 %out_control_flow_ptr, %control_flow_ptr, %map_fn
+    __control_flow_map_break_tag_%out_control_flow_ptr = load %control_flow_ptr+ControlFlowU64_tag as u64
+    __control_flow_map_break_value_%out_control_flow_ptr = load %control_flow_ptr+ControlFlowU64_value as u64
+    __control_flow_map_break_is_break_%out_control_flow_ptr = eq __control_flow_map_break_tag_%out_control_flow_ptr, CONTROL_FLOW_BREAK
+    br __control_flow_map_break_is_break_%out_control_flow_ptr -> L_CONTROL_FLOW_MAP_BREAK_CALL_%out_control_flow_ptr, L_CONTROL_FLOW_MAP_BREAK_COPY_%out_control_flow_ptr
+
+L_CONTROL_FLOW_MAP_BREAK_CALL_%out_control_flow_ptr:
+    __control_flow_map_break_mapped_%out_control_flow_ptr = call %map_fn(__control_flow_map_break_value_%out_control_flow_ptr)
+    store %out_control_flow_ptr+ControlFlowU64_tag, CONTROL_FLOW_BREAK as u64
+    store %out_control_flow_ptr+ControlFlowU64_value, __control_flow_map_break_mapped_%out_control_flow_ptr as u64
+    !__control_flow_map_break_mapped_%out_control_flow_ptr
+    !__control_flow_map_break_is_break_%out_control_flow_ptr
+    !__control_flow_map_break_value_%out_control_flow_ptr
+    !__control_flow_map_break_tag_%out_control_flow_ptr
+    jmp L_CONTROL_FLOW_MAP_BREAK_DONE_%out_control_flow_ptr
+
+L_CONTROL_FLOW_MAP_BREAK_COPY_%out_control_flow_ptr:
+    store %out_control_flow_ptr+ControlFlowU64_tag, __control_flow_map_break_tag_%out_control_flow_ptr as u64
+    store %out_control_flow_ptr+ControlFlowU64_value, __control_flow_map_break_value_%out_control_flow_ptr as u64
+    !__control_flow_map_break_is_break_%out_control_flow_ptr
+    !__control_flow_map_break_value_%out_control_flow_ptr
+    !__control_flow_map_break_tag_%out_control_flow_ptr
+
+L_CONTROL_FLOW_MAP_BREAK_DONE_%out_control_flow_ptr:
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_MAP_BREAK_U64.
+[MACRO] CONTROL_FLOW_MAP_BREAK %out_control_flow_ptr, %control_flow_ptr, %map_fn
+    EXPAND CONTROL_FLOW_MAP_BREAK_U64 %out_control_flow_ptr, %control_flow_ptr, %map_fn
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_MAP_CONTINUE_U64 %out_control_flow_ptr, %control_flow_ptr, %map_fn
+    __control_flow_map_continue_tag_%out_control_flow_ptr = load %control_flow_ptr+ControlFlowU64_tag as u64
+    __control_flow_map_continue_value_%out_control_flow_ptr = load %control_flow_ptr+ControlFlowU64_value as u64
+    __control_flow_map_continue_is_continue_%out_control_flow_ptr = eq __control_flow_map_continue_tag_%out_control_flow_ptr, CONTROL_FLOW_CONTINUE
+    br __control_flow_map_continue_is_continue_%out_control_flow_ptr -> L_CONTROL_FLOW_MAP_CONTINUE_CALL_%out_control_flow_ptr, L_CONTROL_FLOW_MAP_CONTINUE_COPY_%out_control_flow_ptr
+
+L_CONTROL_FLOW_MAP_CONTINUE_CALL_%out_control_flow_ptr:
+    __control_flow_map_continue_mapped_%out_control_flow_ptr = call %map_fn(__control_flow_map_continue_value_%out_control_flow_ptr)
+    store %out_control_flow_ptr+ControlFlowU64_tag, CONTROL_FLOW_CONTINUE as u64
+    store %out_control_flow_ptr+ControlFlowU64_value, __control_flow_map_continue_mapped_%out_control_flow_ptr as u64
+    !__control_flow_map_continue_mapped_%out_control_flow_ptr
+    !__control_flow_map_continue_is_continue_%out_control_flow_ptr
+    !__control_flow_map_continue_value_%out_control_flow_ptr
+    !__control_flow_map_continue_tag_%out_control_flow_ptr
+    jmp L_CONTROL_FLOW_MAP_CONTINUE_DONE_%out_control_flow_ptr
+
+L_CONTROL_FLOW_MAP_CONTINUE_COPY_%out_control_flow_ptr:
+    store %out_control_flow_ptr+ControlFlowU64_tag, __control_flow_map_continue_tag_%out_control_flow_ptr as u64
+    store %out_control_flow_ptr+ControlFlowU64_value, __control_flow_map_continue_value_%out_control_flow_ptr as u64
+    !__control_flow_map_continue_is_continue_%out_control_flow_ptr
+    !__control_flow_map_continue_value_%out_control_flow_ptr
+    !__control_flow_map_continue_tag_%out_control_flow_ptr
+
+L_CONTROL_FLOW_MAP_CONTINUE_DONE_%out_control_flow_ptr:
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_MAP_CONTINUE_U64.
+[MACRO] CONTROL_FLOW_MAP_CONTINUE %out_control_flow_ptr, %control_flow_ptr, %map_fn
+    EXPAND CONTROL_FLOW_MAP_CONTINUE_U64 %out_control_flow_ptr, %control_flow_ptr, %map_fn
+[END_MACRO]
+
+[MACRO] CONTROL_FLOW_INTO_VALUE_U64 %out_value, %control_flow_ptr
+    %out_value = load %control_flow_ptr+ControlFlowU64_value as u64
+[END_MACRO]
+
+// Rust method-name alias over CONTROL_FLOW_INTO_VALUE_U64.
+[MACRO] CONTROL_FLOW_INTO_VALUE %out_value, %control_flow_ptr
+    EXPAND CONTROL_FLOW_INTO_VALUE_U64 %out_value, %control_flow_ptr
+[END_MACRO]
+
+[MACRO] RANGE_U64_START %out_start, %range_ptr
+    %out_start = load %range_ptr+RangeU64_start as u64
+[END_MACRO]
+
+[MACRO] RANGE_U64_END %out_end, %range_ptr
+    %out_end = load %range_ptr+RangeU64_end as u64
+[END_MACRO]
+
+[MACRO] RANGE_U64_CONTAINS %out_bool, %range_ptr, %item
+    __range_start_%out_bool = load %range_ptr+RangeU64_start as u64
+    __range_end_%out_bool = load %range_ptr+RangeU64_end as u64
+    __range_ge_start_%out_bool = ule __range_start_%out_bool, %item
+    __range_lt_end_%out_bool = ult %item, __range_end_%out_bool
+    %out_bool = and __range_ge_start_%out_bool, __range_lt_end_%out_bool
+    !__range_lt_end_%out_bool
+    !__range_ge_start_%out_bool
+    !__range_end_%out_bool
+    !__range_start_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_U64_IS_EMPTY %out_bool, %range_ptr
+    __range_empty_start_%out_bool = load %range_ptr+RangeU64_start as u64
+    __range_empty_end_%out_bool = load %range_ptr+RangeU64_end as u64
+    __range_not_empty_%out_bool = ult __range_empty_start_%out_bool, __range_empty_end_%out_bool
+    %out_bool = eq __range_not_empty_%out_bool, 0
+    !__range_not_empty_%out_bool
+    !__range_empty_end_%out_bool
+    !__range_empty_start_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_U64_LEN %out_len, %range_ptr
+    EXPAND RANGE_U64_IS_EMPTY __range_len_empty_%out_len, %range_ptr
+    br __range_len_empty_%out_len -> L_RANGE_U64_LEN_EMPTY_%out_len, L_RANGE_U64_LEN_NONEMPTY_%out_len
+
+L_RANGE_U64_LEN_NONEMPTY_%out_len:
+    __range_len_start_%out_len = load %range_ptr+RangeU64_start as u64
+    __range_len_end_%out_len = load %range_ptr+RangeU64_end as u64
+    %out_len = sub __range_len_end_%out_len, __range_len_start_%out_len
+    !__range_len_end_%out_len
+    !__range_len_start_%out_len
+    !__range_len_empty_%out_len
+    jmp L_RANGE_U64_LEN_END_%out_len
+
+L_RANGE_U64_LEN_EMPTY_%out_len:
+    %out_len = add 0, 0
+    !__range_len_empty_%out_len
+
+L_RANGE_U64_LEN_END_%out_len:
+[END_MACRO]
+
+[MACRO] RANGE_U64_NEXT %out_ok, %out_value, %range_ptr
+    __range_next_start_%out_ok = load %range_ptr+RangeU64_start as u64
+    __range_next_end_%out_ok = load %range_ptr+RangeU64_end as u64
+    __range_next_has_%out_ok = ult __range_next_start_%out_ok, __range_next_end_%out_ok
+    br __range_next_has_%out_ok -> L_RANGE_U64_NEXT_SOME_%out_ok, L_RANGE_U64_NEXT_NONE_%out_ok
+L_RANGE_U64_NEXT_SOME_%out_ok:
+    %out_value = add __range_next_start_%out_ok, 0
+    __range_next_start2_%out_ok = add __range_next_start_%out_ok, 1
+    store %range_ptr+RangeU64_start, __range_next_start2_%out_ok as u64
+    %out_ok = add 0, 1
+    !__range_next_start2_%out_ok
+    !__range_next_has_%out_ok
+    !__range_next_end_%out_ok
+    !__range_next_start_%out_ok
+    jmp L_RANGE_U64_NEXT_END_%out_ok
+L_RANGE_U64_NEXT_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_ok = add 0, 0
+    !__range_next_has_%out_ok
+    !__range_next_end_%out_ok
+    !__range_next_start_%out_ok
+L_RANGE_U64_NEXT_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_U64_NEXT_BACK %out_ok, %out_value, %range_ptr
+    __range_back_start_%out_ok = load %range_ptr+RangeU64_start as u64
+    __range_back_end_%out_ok = load %range_ptr+RangeU64_end as u64
+    __range_back_has_%out_ok = ult __range_back_start_%out_ok, __range_back_end_%out_ok
+    br __range_back_has_%out_ok -> L_RANGE_U64_BACK_SOME_%out_ok, L_RANGE_U64_BACK_NONE_%out_ok
+L_RANGE_U64_BACK_SOME_%out_ok:
+    __range_back_end2_%out_ok = sub __range_back_end_%out_ok, 1
+    store %range_ptr+RangeU64_end, __range_back_end2_%out_ok as u64
+    %out_value = add __range_back_end2_%out_ok, 0
+    %out_ok = add 0, 1
+    !__range_back_end2_%out_ok
+    !__range_back_has_%out_ok
+    !__range_back_end_%out_ok
+    !__range_back_start_%out_ok
+    jmp L_RANGE_U64_BACK_END_%out_ok
+L_RANGE_U64_BACK_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_ok = add 0, 0
+    !__range_back_has_%out_ok
+    !__range_back_end_%out_ok
+    !__range_back_start_%out_ok
+L_RANGE_U64_BACK_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_U64_NTH %out_ok, %out_value, %range_ptr, %nth
+    EXPAND RANGE_U64_LEN __range_nth_len_%out_ok, %range_ptr
+    __range_nth_has_%out_ok = ult %nth, __range_nth_len_%out_ok
+    br __range_nth_has_%out_ok -> L_RANGE_U64_NTH_SOME_%out_ok, L_RANGE_U64_NTH_NONE_%out_ok
+L_RANGE_U64_NTH_SOME_%out_ok:
+    __range_nth_start_%out_ok = load %range_ptr+RangeU64_start as u64
+    __range_nth_value_%out_ok = add __range_nth_start_%out_ok, %nth
+    __range_nth_next_%out_ok = add __range_nth_value_%out_ok, 1
+    store %range_ptr+RangeU64_start, __range_nth_next_%out_ok as u64
+    %out_value = add __range_nth_value_%out_ok, 0
+    %out_ok = add 0, 1
+    !__range_nth_next_%out_ok
+    !__range_nth_value_%out_ok
+    !__range_nth_start_%out_ok
+    !__range_nth_has_%out_ok
+    !__range_nth_len_%out_ok
+    jmp L_RANGE_U64_NTH_END_%out_ok
+L_RANGE_U64_NTH_NONE_%out_ok:
+    __range_nth_end_%out_ok = load %range_ptr+RangeU64_end as u64
+    store %range_ptr+RangeU64_start, __range_nth_end_%out_ok as u64
+    %out_value = add 0, 0
+    %out_ok = add 0, 0
+    !__range_nth_end_%out_ok
+    !__range_nth_has_%out_ok
+    !__range_nth_len_%out_ok
+L_RANGE_U64_NTH_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_U64_COUNT %out_count, %range_ptr
+    EXPAND RANGE_U64_LEN %out_count, %range_ptr
+    __range_count_end_%out_count = load %range_ptr+RangeU64_end as u64
+    store %range_ptr+RangeU64_start, __range_count_end_%out_count as u64
+    !__range_count_end_%out_count
+[END_MACRO]
+
+[MACRO] RANGE_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    __range_slice_start_%out_ok = load %range_ptr+RangeU64_start as u64
+    __range_slice_end_%out_ok = load %range_ptr+RangeU64_end as u64
+    __range_slice_len_%out_ok = load %base_slice+Slice_len as u64
+    __range_slice_order_%out_ok = ule __range_slice_start_%out_ok, __range_slice_end_%out_ok
+    __range_slice_bound_%out_ok = ule __range_slice_end_%out_ok, __range_slice_len_%out_ok
+    __range_slice_valid_%out_ok = and __range_slice_order_%out_ok, __range_slice_bound_%out_ok
+    br __range_slice_valid_%out_ok -> L_RANGE_U64_SLICE_HIT_%out_ok, L_RANGE_U64_SLICE_MISS_%out_ok
+
+L_RANGE_U64_SLICE_HIT_%out_ok:
+    __range_slice_base_%out_ok = load %base_slice+Slice_ptr as ptr
+    __range_slice_byte_off_%out_ok = mul __range_slice_start_%out_ok, 8
+    __range_slice_ptr_%out_ok = ptr_add __range_slice_base_%out_ok, __range_slice_byte_off_%out_ok
+    __range_slice_view_len_%out_ok = sub __range_slice_end_%out_ok, __range_slice_start_%out_ok
+    EXPAND SLICE_NEW %out_slice, __range_slice_ptr_%out_ok, __range_slice_view_len_%out_ok
+    %out_ok = add 0, 1
+    !__range_slice_view_len_%out_ok
+    !__range_slice_ptr_%out_ok
+    !__range_slice_byte_off_%out_ok
+    !__range_slice_base_%out_ok
+    !__range_slice_valid_%out_ok
+    !__range_slice_bound_%out_ok
+    !__range_slice_order_%out_ok
+    !__range_slice_len_%out_ok
+    !__range_slice_end_%out_ok
+    !__range_slice_start_%out_ok
+    jmp L_RANGE_U64_SLICE_END_%out_ok
+
+L_RANGE_U64_SLICE_MISS_%out_ok:
+    __range_slice_null_%out_ok = 0 as ptr
+    EXPAND SLICE_NEW %out_slice, __range_slice_null_%out_ok, 0
+    %out_ok = add 0, 0
+    !__range_slice_null_%out_ok
+    !__range_slice_valid_%out_ok
+    !__range_slice_bound_%out_ok
+    !__range_slice_order_%out_ok
+    !__range_slice_len_%out_ok
+    !__range_slice_end_%out_ok
+    !__range_slice_start_%out_ok
+
+L_RANGE_U64_SLICE_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_NEW %range_ptr, %start
+    store %range_ptr+RangeFromU64_start, %start as u64
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_START %out_start, %range_ptr
+    %out_start = load %range_ptr+RangeFromU64_start as u64
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_CONTAINS %out_bool, %range_ptr, %item
+    __range_from_start_%out_bool = load %range_ptr+RangeFromU64_start as u64
+    %out_bool = ule __range_from_start_%out_bool, %item
+    !__range_from_start_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    __range_from_start_%out_ok = load %range_ptr+RangeFromU64_start as u64
+    __range_from_len_%out_ok = load %base_slice+Slice_len as u64
+    __range_from_valid_%out_ok = ule __range_from_start_%out_ok, __range_from_len_%out_ok
+    br __range_from_valid_%out_ok -> L_RANGE_FROM_SLICE_HIT_%out_ok, L_RANGE_FROM_SLICE_MISS_%out_ok
+
+L_RANGE_FROM_SLICE_HIT_%out_ok:
+    __range_from_base_%out_ok = load %base_slice+Slice_ptr as ptr
+    __range_from_byte_off_%out_ok = mul __range_from_start_%out_ok, 8
+    __range_from_ptr_%out_ok = ptr_add __range_from_base_%out_ok, __range_from_byte_off_%out_ok
+    __range_from_view_len_%out_ok = sub __range_from_len_%out_ok, __range_from_start_%out_ok
+    EXPAND SLICE_NEW %out_slice, __range_from_ptr_%out_ok, __range_from_view_len_%out_ok
+    %out_ok = add 0, 1
+    !__range_from_view_len_%out_ok
+    !__range_from_ptr_%out_ok
+    !__range_from_byte_off_%out_ok
+    !__range_from_base_%out_ok
+    !__range_from_valid_%out_ok
+    !__range_from_len_%out_ok
+    !__range_from_start_%out_ok
+    jmp L_RANGE_FROM_SLICE_END_%out_ok
+
+L_RANGE_FROM_SLICE_MISS_%out_ok:
+    __range_from_null_%out_ok = 0 as ptr
+    EXPAND SLICE_NEW %out_slice, __range_from_null_%out_ok, 0
+    %out_ok = add 0, 0
+    !__range_from_null_%out_ok
+    !__range_from_valid_%out_ok
+    !__range_from_len_%out_ok
+    !__range_from_start_%out_ok
+
+L_RANGE_FROM_SLICE_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_NEW %range_ptr, %end
+    store %range_ptr+RangeToU64_end, %end as u64
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_END %out_end, %range_ptr
+    %out_end = load %range_ptr+RangeToU64_end as u64
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_CONTAINS %out_bool, %range_ptr, %item
+    __range_to_end_%out_bool = load %range_ptr+RangeToU64_end as u64
+    %out_bool = ult %item, __range_to_end_%out_bool
+    !__range_to_end_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    __range_to_end_%out_ok = load %range_ptr+RangeToU64_end as u64
+    __range_to_len_%out_ok = load %base_slice+Slice_len as u64
+    __range_to_valid_%out_ok = ule __range_to_end_%out_ok, __range_to_len_%out_ok
+    br __range_to_valid_%out_ok -> L_RANGE_TO_SLICE_HIT_%out_ok, L_RANGE_TO_SLICE_MISS_%out_ok
+
+L_RANGE_TO_SLICE_HIT_%out_ok:
+    __range_to_base_%out_ok = load %base_slice+Slice_ptr as ptr
+    EXPAND SLICE_NEW %out_slice, __range_to_base_%out_ok, __range_to_end_%out_ok
+    %out_ok = add 0, 1
+    !__range_to_base_%out_ok
+    !__range_to_valid_%out_ok
+    !__range_to_len_%out_ok
+    !__range_to_end_%out_ok
+    jmp L_RANGE_TO_SLICE_END_%out_ok
+
+L_RANGE_TO_SLICE_MISS_%out_ok:
+    __range_to_null_%out_ok = 0 as ptr
+    EXPAND SLICE_NEW %out_slice, __range_to_null_%out_ok, 0
+    %out_ok = add 0, 0
+    !__range_to_null_%out_ok
+    !__range_to_valid_%out_ok
+    !__range_to_len_%out_ok
+    !__range_to_end_%out_ok
+
+L_RANGE_TO_SLICE_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_NEW %range_ptr, %start, %end
+    store %range_ptr+RangeInclusiveU64_start, %start as u64
+    store %range_ptr+RangeInclusiveU64_end, %end as u64
+    store %range_ptr+RangeInclusiveU64_exhausted, 0 as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_SET_EXHAUSTED %range_ptr, %exhausted
+    store %range_ptr+RangeInclusiveU64_exhausted, %exhausted as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_START %out_start, %range_ptr
+    %out_start = load %range_ptr+RangeInclusiveU64_start as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_END %out_end, %range_ptr
+    %out_end = load %range_ptr+RangeInclusiveU64_end as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_INTO_INNER %out_start, %out_end, %range_ptr
+    %out_start = load %range_ptr+RangeInclusiveU64_start as u64
+    %out_end = load %range_ptr+RangeInclusiveU64_end as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_CONTAINS %out_bool, %range_ptr, %item
+    __range_inc_start_%out_bool = load %range_ptr+RangeInclusiveU64_start as u64
+    __range_inc_end_%out_bool = load %range_ptr+RangeInclusiveU64_end as u64
+    __range_inc_exhausted_%out_bool = load %range_ptr+RangeInclusiveU64_exhausted as u64
+    __range_inc_not_exhausted_%out_bool = eq __range_inc_exhausted_%out_bool, 0
+    __range_inc_ge_start_%out_bool = ule __range_inc_start_%out_bool, %item
+    __range_inc_le_end_%out_bool = ule %item, __range_inc_end_%out_bool
+    __range_inc_bounds_%out_bool = and __range_inc_ge_start_%out_bool, __range_inc_le_end_%out_bool
+    %out_bool = and __range_inc_not_exhausted_%out_bool, __range_inc_bounds_%out_bool
+    !__range_inc_bounds_%out_bool
+    !__range_inc_le_end_%out_bool
+    !__range_inc_ge_start_%out_bool
+    !__range_inc_not_exhausted_%out_bool
+    !__range_inc_exhausted_%out_bool
+    !__range_inc_end_%out_bool
+    !__range_inc_start_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_IS_EMPTY %out_bool, %range_ptr
+    __range_inc_empty_start_%out_bool = load %range_ptr+RangeInclusiveU64_start as u64
+    __range_inc_empty_end_%out_bool = load %range_ptr+RangeInclusiveU64_end as u64
+    __range_inc_empty_exhausted_%out_bool = load %range_ptr+RangeInclusiveU64_exhausted as u64
+    __range_inc_empty_order_%out_bool = ult __range_inc_empty_end_%out_bool, __range_inc_empty_start_%out_bool
+    __range_inc_empty_exh_%out_bool = ne __range_inc_empty_exhausted_%out_bool, 0
+    %out_bool = or __range_inc_empty_order_%out_bool, __range_inc_empty_exh_%out_bool
+    !__range_inc_empty_exh_%out_bool
+    !__range_inc_empty_order_%out_bool
+    !__range_inc_empty_exhausted_%out_bool
+    !__range_inc_empty_end_%out_bool
+    !__range_inc_empty_start_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_LEN %out_len, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY __range_inc_len_empty_%out_len, %range_ptr
+    br __range_inc_len_empty_%out_len -> L_RANGE_INC_LEN_EMPTY_%out_len, L_RANGE_INC_LEN_NONEMPTY_%out_len
+
+L_RANGE_INC_LEN_NONEMPTY_%out_len:
+    __range_inc_len_start_%out_len = load %range_ptr+RangeInclusiveU64_start as u64
+    __range_inc_len_end_%out_len = load %range_ptr+RangeInclusiveU64_end as u64
+    __range_inc_len_span_%out_len = sub __range_inc_len_end_%out_len, __range_inc_len_start_%out_len
+    %out_len = add __range_inc_len_span_%out_len, 1
+    !__range_inc_len_span_%out_len
+    !__range_inc_len_end_%out_len
+    !__range_inc_len_start_%out_len
+    !__range_inc_len_empty_%out_len
+    jmp L_RANGE_INC_LEN_END_%out_len
+
+L_RANGE_INC_LEN_EMPTY_%out_len:
+    %out_len = add 0, 0
+    !__range_inc_len_empty_%out_len
+
+L_RANGE_INC_LEN_END_%out_len:
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_NEXT %out_ok, %out_value, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY __range_inc_next_empty_%out_ok, %range_ptr
+    br __range_inc_next_empty_%out_ok -> L_RANGE_INC_NEXT_NONE_%out_ok, L_RANGE_INC_NEXT_SOME_%out_ok
+L_RANGE_INC_NEXT_SOME_%out_ok:
+    __range_inc_next_start_%out_ok = load %range_ptr+RangeInclusiveU64_start as u64
+    __range_inc_next_end_%out_ok = load %range_ptr+RangeInclusiveU64_end as u64
+    %out_value = add __range_inc_next_start_%out_ok, 0
+    __range_inc_next_last_%out_ok = eq __range_inc_next_start_%out_ok, __range_inc_next_end_%out_ok
+    br __range_inc_next_last_%out_ok -> L_RANGE_INC_NEXT_EXHAUST_%out_ok, L_RANGE_INC_NEXT_ADVANCE_%out_ok
+L_RANGE_INC_NEXT_ADVANCE_%out_ok:
+    __range_inc_next_start2_%out_ok = add __range_inc_next_start_%out_ok, 1
+    store %range_ptr+RangeInclusiveU64_start, __range_inc_next_start2_%out_ok as u64
+    %out_ok = add 0, 1
+    !__range_inc_next_start2_%out_ok
+    !__range_inc_next_last_%out_ok
+    !__range_inc_next_end_%out_ok
+    !__range_inc_next_start_%out_ok
+    !__range_inc_next_empty_%out_ok
+    jmp L_RANGE_INC_NEXT_END_%out_ok
+L_RANGE_INC_NEXT_EXHAUST_%out_ok:
+    store %range_ptr+RangeInclusiveU64_exhausted, 1 as u64
+    %out_ok = add 0, 1
+    !__range_inc_next_last_%out_ok
+    !__range_inc_next_end_%out_ok
+    !__range_inc_next_start_%out_ok
+    !__range_inc_next_empty_%out_ok
+    jmp L_RANGE_INC_NEXT_END_%out_ok
+L_RANGE_INC_NEXT_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_ok = add 0, 0
+    !__range_inc_next_empty_%out_ok
+L_RANGE_INC_NEXT_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_NEXT_BACK %out_ok, %out_value, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY __range_inc_back_empty_%out_ok, %range_ptr
+    br __range_inc_back_empty_%out_ok -> L_RANGE_INC_BACK_NONE_%out_ok, L_RANGE_INC_BACK_SOME_%out_ok
+L_RANGE_INC_BACK_SOME_%out_ok:
+    __range_inc_back_start_%out_ok = load %range_ptr+RangeInclusiveU64_start as u64
+    __range_inc_back_end_%out_ok = load %range_ptr+RangeInclusiveU64_end as u64
+    %out_value = add __range_inc_back_end_%out_ok, 0
+    __range_inc_back_last_%out_ok = eq __range_inc_back_start_%out_ok, __range_inc_back_end_%out_ok
+    br __range_inc_back_last_%out_ok -> L_RANGE_INC_BACK_EXHAUST_%out_ok, L_RANGE_INC_BACK_ADVANCE_%out_ok
+L_RANGE_INC_BACK_ADVANCE_%out_ok:
+    __range_inc_back_end2_%out_ok = sub __range_inc_back_end_%out_ok, 1
+    store %range_ptr+RangeInclusiveU64_end, __range_inc_back_end2_%out_ok as u64
+    %out_ok = add 0, 1
+    !__range_inc_back_end2_%out_ok
+    !__range_inc_back_last_%out_ok
+    !__range_inc_back_end_%out_ok
+    !__range_inc_back_start_%out_ok
+    !__range_inc_back_empty_%out_ok
+    jmp L_RANGE_INC_BACK_END_%out_ok
+L_RANGE_INC_BACK_EXHAUST_%out_ok:
+    store %range_ptr+RangeInclusiveU64_exhausted, 1 as u64
+    %out_ok = add 0, 1
+    !__range_inc_back_last_%out_ok
+    !__range_inc_back_end_%out_ok
+    !__range_inc_back_start_%out_ok
+    !__range_inc_back_empty_%out_ok
+    jmp L_RANGE_INC_BACK_END_%out_ok
+L_RANGE_INC_BACK_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_ok = add 0, 0
+    !__range_inc_back_empty_%out_ok
+L_RANGE_INC_BACK_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_COUNT %out_count, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_LEN %out_count, %range_ptr
+    store %range_ptr+RangeInclusiveU64_exhausted, 1 as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY __range_inc_slice_empty_%out_ok, %range_ptr
+    br __range_inc_slice_empty_%out_ok -> L_RANGE_INC_SLICE_EMPTY_%out_ok, L_RANGE_INC_SLICE_CHECK_%out_ok
+
+L_RANGE_INC_SLICE_CHECK_%out_ok:
+    __range_inc_slice_start_%out_ok = load %range_ptr+RangeInclusiveU64_start as u64
+    __range_inc_slice_end_%out_ok = load %range_ptr+RangeInclusiveU64_end as u64
+    __range_inc_slice_len_%out_ok = load %base_slice+Slice_len as u64
+    __range_inc_slice_bound_%out_ok = ult __range_inc_slice_end_%out_ok, __range_inc_slice_len_%out_ok
+    br __range_inc_slice_bound_%out_ok -> L_RANGE_INC_SLICE_HIT_%out_ok, L_RANGE_INC_SLICE_MISS_%out_ok
+
+L_RANGE_INC_SLICE_HIT_%out_ok:
+    __range_inc_slice_base_%out_ok = load %base_slice+Slice_ptr as ptr
+    __range_inc_slice_byte_off_%out_ok = mul __range_inc_slice_start_%out_ok, 8
+    __range_inc_slice_ptr_%out_ok = ptr_add __range_inc_slice_base_%out_ok, __range_inc_slice_byte_off_%out_ok
+    __range_inc_slice_span_%out_ok = sub __range_inc_slice_end_%out_ok, __range_inc_slice_start_%out_ok
+    __range_inc_slice_view_len_%out_ok = add __range_inc_slice_span_%out_ok, 1
+    EXPAND SLICE_NEW %out_slice, __range_inc_slice_ptr_%out_ok, __range_inc_slice_view_len_%out_ok
+    %out_ok = add 0, 1
+    !__range_inc_slice_view_len_%out_ok
+    !__range_inc_slice_span_%out_ok
+    !__range_inc_slice_ptr_%out_ok
+    !__range_inc_slice_byte_off_%out_ok
+    !__range_inc_slice_base_%out_ok
+    !__range_inc_slice_bound_%out_ok
+    !__range_inc_slice_len_%out_ok
+    !__range_inc_slice_end_%out_ok
+    !__range_inc_slice_start_%out_ok
+    !__range_inc_slice_empty_%out_ok
+    jmp L_RANGE_INC_SLICE_END_%out_ok
+
+L_RANGE_INC_SLICE_MISS_%out_ok:
+    !__range_inc_slice_bound_%out_ok
+    !__range_inc_slice_len_%out_ok
+    !__range_inc_slice_end_%out_ok
+    !__range_inc_slice_start_%out_ok
+    jmp L_RANGE_INC_SLICE_EMPTY_%out_ok
+
+L_RANGE_INC_SLICE_EMPTY_%out_ok:
+    __range_inc_slice_null_%out_ok = 0 as ptr
+    EXPAND SLICE_NEW %out_slice, __range_inc_slice_null_%out_ok, 0
+    %out_ok = add 0, 0
+    !__range_inc_slice_null_%out_ok
+    !__range_inc_slice_empty_%out_ok
+
+L_RANGE_INC_SLICE_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_NEW %range_ptr, %end
+    store %range_ptr+RangeToInclusiveU64_end, %end as u64
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_END %out_end, %range_ptr
+    %out_end = load %range_ptr+RangeToInclusiveU64_end as u64
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_CONTAINS %out_bool, %range_ptr, %item
+    __range_to_inc_end_%out_bool = load %range_ptr+RangeToInclusiveU64_end as u64
+    %out_bool = ule %item, __range_to_inc_end_%out_bool
+    !__range_to_inc_end_%out_bool
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    __range_to_inc_end_%out_ok = load %range_ptr+RangeToInclusiveU64_end as u64
+    __range_to_inc_len_%out_ok = load %base_slice+Slice_len as u64
+    __range_to_inc_valid_%out_ok = ult __range_to_inc_end_%out_ok, __range_to_inc_len_%out_ok
+    br __range_to_inc_valid_%out_ok -> L_RANGE_TO_INC_SLICE_HIT_%out_ok, L_RANGE_TO_INC_SLICE_MISS_%out_ok
+
+L_RANGE_TO_INC_SLICE_HIT_%out_ok:
+    __range_to_inc_base_%out_ok = load %base_slice+Slice_ptr as ptr
+    __range_to_inc_view_len_%out_ok = add __range_to_inc_end_%out_ok, 1
+    EXPAND SLICE_NEW %out_slice, __range_to_inc_base_%out_ok, __range_to_inc_view_len_%out_ok
+    %out_ok = add 0, 1
+    !__range_to_inc_view_len_%out_ok
+    !__range_to_inc_base_%out_ok
+    !__range_to_inc_valid_%out_ok
+    !__range_to_inc_len_%out_ok
+    !__range_to_inc_end_%out_ok
+    jmp L_RANGE_TO_INC_SLICE_END_%out_ok
+
+L_RANGE_TO_INC_SLICE_MISS_%out_ok:
+    __range_to_inc_null_%out_ok = 0 as ptr
+    EXPAND SLICE_NEW %out_slice, __range_to_inc_null_%out_ok, 0
+    %out_ok = add 0, 0
+    !__range_to_inc_null_%out_ok
+    !__range_to_inc_valid_%out_ok
+    !__range_to_inc_len_%out_ok
+    !__range_to_inc_end_%out_ok
+
+L_RANGE_TO_INC_SLICE_END_%out_ok:
+[END_MACRO]
+
+[MACRO] RANGE_FULL_CONTAINS_U64 %out_bool, %item
+    %out_bool = add 0, 1
+[END_MACRO]
+
+// Rust method-name alias over RANGE_FULL_CONTAINS_U64.
+[MACRO] RANGE_FULL_CONTAINS %out_bool, %item
+    EXPAND RANGE_FULL_CONTAINS_U64 %out_bool, %item
+[END_MACRO]
+
+[MACRO] RANGE_FULL_GET_SLICE %out_slice, %base_slice
+    __range_full_ptr_%out_slice = load %base_slice+Slice_ptr as ptr
+    __range_full_len_%out_slice = load %base_slice+Slice_len as u64
+    EXPAND SLICE_NEW %out_slice, __range_full_ptr_%out_slice, __range_full_len_%out_slice
+    !__range_full_len_%out_slice
+    !__range_full_ptr_%out_slice
+[END_MACRO]
+
+[MACRO] BOUND_U64_UNBOUNDED_NEW %bound_ptr
+    store %bound_ptr+BoundU64_tag, BOUND_U64_UNBOUNDED as u64
+    store %bound_ptr+BoundU64_value, 0 as u64
+[END_MACRO]
+
+[MACRO] BOUND_U64_INCLUDED_NEW %bound_ptr, %value
+    store %bound_ptr+BoundU64_tag, BOUND_U64_INCLUDED as u64
+    store %bound_ptr+BoundU64_value, %value as u64
+[END_MACRO]
+
+[MACRO] BOUND_U64_EXCLUDED_NEW %bound_ptr, %value
+    store %bound_ptr+BoundU64_tag, BOUND_U64_EXCLUDED as u64
+    store %bound_ptr+BoundU64_value, %value as u64
+[END_MACRO]
+
+[MACRO] BOUND_U64_TAG %out_tag, %bound_ptr
+    %out_tag = load %bound_ptr+BoundU64_tag as u64
+[END_MACRO]
+
+[MACRO] BOUND_U64_VALUE %out_value, %bound_ptr
+    %out_value = load %bound_ptr+BoundU64_value as u64
+[END_MACRO]
+
+[MACRO] BOUND_U64_AS_REF %dst_bound_ref_ptr, %src_bound_ptr
+    __bound_u64_as_ref_tag_%dst_bound_ref_ptr = load %src_bound_ptr+BoundU64_tag as u64
+    __bound_u64_as_ref_unbounded_%dst_bound_ref_ptr = eq __bound_u64_as_ref_tag_%dst_bound_ref_ptr, BOUND_U64_UNBOUNDED
+    store %dst_bound_ref_ptr+BoundU64Ref_tag, __bound_u64_as_ref_tag_%dst_bound_ref_ptr as u64
+    br __bound_u64_as_ref_unbounded_%dst_bound_ref_ptr -> L_BOUND_U64_AS_REF_UNBOUNDED_%dst_bound_ref_ptr, L_BOUND_U64_AS_REF_VALUE_%dst_bound_ref_ptr
+
+L_BOUND_U64_AS_REF_VALUE_%dst_bound_ref_ptr:
+    __bound_u64_as_ref_ptr_%dst_bound_ref_ptr = ptr_add %src_bound_ptr, BoundU64_value
+    store %dst_bound_ref_ptr+BoundU64Ref_ptr, __bound_u64_as_ref_ptr_%dst_bound_ref_ptr as ptr
+    !__bound_u64_as_ref_ptr_%dst_bound_ref_ptr
+    !__bound_u64_as_ref_unbounded_%dst_bound_ref_ptr
+    !__bound_u64_as_ref_tag_%dst_bound_ref_ptr
+    jmp L_BOUND_U64_AS_REF_DONE_%dst_bound_ref_ptr
+
+L_BOUND_U64_AS_REF_UNBOUNDED_%dst_bound_ref_ptr:
+    store %dst_bound_ref_ptr+BoundU64Ref_ptr, 0 as u64
+    !__bound_u64_as_ref_unbounded_%dst_bound_ref_ptr
+    !__bound_u64_as_ref_tag_%dst_bound_ref_ptr
+
+L_BOUND_U64_AS_REF_DONE_%dst_bound_ref_ptr:
+[END_MACRO]
+
+[MACRO] BOUND_U64_AS_MUT %dst_bound_ref_ptr, %src_bound_ptr
+    EXPAND BOUND_U64_AS_REF %dst_bound_ref_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_REF_TAG %out_tag, %bound_ref_ptr
+    %out_tag = load %bound_ref_ptr+BoundU64Ref_tag as u64
+[END_MACRO]
+
+[MACRO] BOUND_U64_REF_PTR %out_ptr, %bound_ref_ptr
+    %out_ptr = load %bound_ref_ptr+BoundU64Ref_ptr as ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_REF_COPIED %dst_bound_ptr, %src_bound_ref_ptr
+    __bound_u64_ref_copied_tag_%dst_bound_ptr = load %src_bound_ref_ptr+BoundU64Ref_tag as u64
+    __bound_u64_ref_copied_unbounded_%dst_bound_ptr = eq __bound_u64_ref_copied_tag_%dst_bound_ptr, BOUND_U64_UNBOUNDED
+    store %dst_bound_ptr+BoundU64_tag, __bound_u64_ref_copied_tag_%dst_bound_ptr as u64
+    br __bound_u64_ref_copied_unbounded_%dst_bound_ptr -> L_BOUND_U64_REF_COPIED_UNBOUNDED_%dst_bound_ptr, L_BOUND_U64_REF_COPIED_VALUE_%dst_bound_ptr
+
+L_BOUND_U64_REF_COPIED_VALUE_%dst_bound_ptr:
+    __bound_u64_ref_copied_ptr_%dst_bound_ptr = load %src_bound_ref_ptr+BoundU64Ref_ptr as ptr
+    __bound_u64_ref_copied_value_%dst_bound_ptr = load __bound_u64_ref_copied_ptr_%dst_bound_ptr+0 as u64
+    store %dst_bound_ptr+BoundU64_value, __bound_u64_ref_copied_value_%dst_bound_ptr as u64
+    !__bound_u64_ref_copied_value_%dst_bound_ptr
+    !__bound_u64_ref_copied_ptr_%dst_bound_ptr
+    !__bound_u64_ref_copied_unbounded_%dst_bound_ptr
+    !__bound_u64_ref_copied_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_REF_COPIED_DONE_%dst_bound_ptr
+
+L_BOUND_U64_REF_COPIED_UNBOUNDED_%dst_bound_ptr:
+    store %dst_bound_ptr+BoundU64_value, 0 as u64
+    !__bound_u64_ref_copied_unbounded_%dst_bound_ptr
+    !__bound_u64_ref_copied_tag_%dst_bound_ptr
+
+L_BOUND_U64_REF_COPIED_DONE_%dst_bound_ptr:
+[END_MACRO]
+
+[MACRO] BOUND_U64_REF_CLONED %dst_bound_ptr, %src_bound_ref_ptr
+    EXPAND BOUND_U64_REF_COPIED %dst_bound_ptr, %src_bound_ref_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_IS_UNBOUNDED %out_bool, %bound_ptr
+    __bound_tag_%out_bool = load %bound_ptr+BoundU64_tag as u64
+    %out_bool = eq __bound_tag_%out_bool, BOUND_U64_UNBOUNDED
+    !__bound_tag_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_U64_IS_INCLUDED %out_bool, %bound_ptr
+    __bound_tag_%out_bool = load %bound_ptr+BoundU64_tag as u64
+    %out_bool = eq __bound_tag_%out_bool, BOUND_U64_INCLUDED
+    !__bound_tag_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_U64_IS_EXCLUDED %out_bool, %bound_ptr
+    __bound_tag_%out_bool = load %bound_ptr+BoundU64_tag as u64
+    %out_bool = eq __bound_tag_%out_bool, BOUND_U64_EXCLUDED
+    !__bound_tag_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_U64_CONTAINS_START %out_bool, %bound_ptr, %item
+    __bound_start_tag_%out_bool = load %bound_ptr+BoundU64_tag as u64
+    __bound_start_unbounded_%out_bool = eq __bound_start_tag_%out_bool, BOUND_U64_UNBOUNDED
+    br __bound_start_unbounded_%out_bool -> L_BOUND_START_TRUE_%out_bool, L_BOUND_START_CHECK_%out_bool
+
+L_BOUND_START_CHECK_%out_bool:
+    __bound_start_value_%out_bool = load %bound_ptr+BoundU64_value as u64
+    __bound_start_included_%out_bool = eq __bound_start_tag_%out_bool, BOUND_U64_INCLUDED
+    br __bound_start_included_%out_bool -> L_BOUND_START_INCLUDED_%out_bool, L_BOUND_START_EXCLUDED_%out_bool
+
+L_BOUND_START_INCLUDED_%out_bool:
+    %out_bool = ule __bound_start_value_%out_bool, %item
+    !__bound_start_included_%out_bool
+    !__bound_start_value_%out_bool
+    !__bound_start_unbounded_%out_bool
+    !__bound_start_tag_%out_bool
+    jmp L_BOUND_START_END_%out_bool
+
+L_BOUND_START_EXCLUDED_%out_bool:
+    %out_bool = ult __bound_start_value_%out_bool, %item
+    !__bound_start_included_%out_bool
+    !__bound_start_value_%out_bool
+    !__bound_start_unbounded_%out_bool
+    !__bound_start_tag_%out_bool
+    jmp L_BOUND_START_END_%out_bool
+
+L_BOUND_START_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__bound_start_unbounded_%out_bool
+    !__bound_start_tag_%out_bool
+
+L_BOUND_START_END_%out_bool:
+[END_MACRO]
+
+[MACRO] BOUND_U64_CONTAINS_END %out_bool, %bound_ptr, %item
+    __bound_end_tag_%out_bool = load %bound_ptr+BoundU64_tag as u64
+    __bound_end_unbounded_%out_bool = eq __bound_end_tag_%out_bool, BOUND_U64_UNBOUNDED
+    br __bound_end_unbounded_%out_bool -> L_BOUND_END_TRUE_%out_bool, L_BOUND_END_CHECK_%out_bool
+
+L_BOUND_END_CHECK_%out_bool:
+    __bound_end_value_%out_bool = load %bound_ptr+BoundU64_value as u64
+    __bound_end_included_%out_bool = eq __bound_end_tag_%out_bool, BOUND_U64_INCLUDED
+    br __bound_end_included_%out_bool -> L_BOUND_END_INCLUDED_%out_bool, L_BOUND_END_EXCLUDED_%out_bool
+
+L_BOUND_END_INCLUDED_%out_bool:
+    %out_bool = ule %item, __bound_end_value_%out_bool
+    !__bound_end_included_%out_bool
+    !__bound_end_value_%out_bool
+    !__bound_end_unbounded_%out_bool
+    !__bound_end_tag_%out_bool
+    jmp L_BOUND_END_END_%out_bool
+
+L_BOUND_END_EXCLUDED_%out_bool:
+    %out_bool = ult %item, __bound_end_value_%out_bool
+    !__bound_end_included_%out_bool
+    !__bound_end_value_%out_bool
+    !__bound_end_unbounded_%out_bool
+    !__bound_end_tag_%out_bool
+    jmp L_BOUND_END_END_%out_bool
+
+L_BOUND_END_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__bound_end_unbounded_%out_bool
+    !__bound_end_tag_%out_bool
+
+L_BOUND_END_END_%out_bool:
+[END_MACRO]
+
+[MACRO] BOUND_U64_RANGE_CONTAINS %out_bool, %start_bound_ptr, %end_bound_ptr, %item
+    EXPAND BOUND_U64_CONTAINS_START __bound_range_start_%out_bool, %start_bound_ptr, %item
+    EXPAND BOUND_U64_CONTAINS_END __bound_range_end_%out_bool, %end_bound_ptr, %item
+    %out_bool = and __bound_range_start_%out_bool, __bound_range_end_%out_bool
+    !__bound_range_end_%out_bool
+    !__bound_range_start_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_U64_RANGE_IS_EMPTY %out_bool, %start_bound_ptr, %end_bound_ptr
+    __bound_u64_empty_start_tag_%out_bool = load %start_bound_ptr+BoundU64_tag as u64
+    __bound_u64_empty_end_tag_%out_bool = load %end_bound_ptr+BoundU64_tag as u64
+    __bound_u64_empty_start_unbounded_%out_bool = eq __bound_u64_empty_start_tag_%out_bool, BOUND_U64_UNBOUNDED
+    __bound_u64_empty_end_unbounded_%out_bool = eq __bound_u64_empty_end_tag_%out_bool, BOUND_U64_UNBOUNDED
+    __bound_u64_empty_unbounded_%out_bool = or __bound_u64_empty_start_unbounded_%out_bool, __bound_u64_empty_end_unbounded_%out_bool
+    br __bound_u64_empty_unbounded_%out_bool -> L_BOUND_U64_EMPTY_FALSE_%out_bool, L_BOUND_U64_EMPTY_CHECK_%out_bool
+
+L_BOUND_U64_EMPTY_CHECK_%out_bool:
+    __bound_u64_empty_start_value_%out_bool = load %start_bound_ptr+BoundU64_value as u64
+    __bound_u64_empty_end_value_%out_bool = load %end_bound_ptr+BoundU64_value as u64
+    __bound_u64_empty_start_included_%out_bool = eq __bound_u64_empty_start_tag_%out_bool, BOUND_U64_INCLUDED
+    __bound_u64_empty_end_included_%out_bool = eq __bound_u64_empty_end_tag_%out_bool, BOUND_U64_INCLUDED
+    __bound_u64_empty_both_included_%out_bool = and __bound_u64_empty_start_included_%out_bool, __bound_u64_empty_end_included_%out_bool
+    br __bound_u64_empty_both_included_%out_bool -> L_BOUND_U64_EMPTY_INCLUDED_%out_bool, L_BOUND_U64_EMPTY_STRICT_%out_bool
+
+L_BOUND_U64_EMPTY_INCLUDED_%out_bool:
+    __bound_u64_empty_valid_inc_%out_bool = ule __bound_u64_empty_start_value_%out_bool, __bound_u64_empty_end_value_%out_bool
+    %out_bool = eq __bound_u64_empty_valid_inc_%out_bool, 0
+    !__bound_u64_empty_valid_inc_%out_bool
+    !__bound_u64_empty_both_included_%out_bool
+    !__bound_u64_empty_end_included_%out_bool
+    !__bound_u64_empty_start_included_%out_bool
+    !__bound_u64_empty_end_value_%out_bool
+    !__bound_u64_empty_start_value_%out_bool
+    !__bound_u64_empty_unbounded_%out_bool
+    !__bound_u64_empty_end_unbounded_%out_bool
+    !__bound_u64_empty_start_unbounded_%out_bool
+    !__bound_u64_empty_end_tag_%out_bool
+    !__bound_u64_empty_start_tag_%out_bool
+    jmp L_BOUND_U64_EMPTY_DONE_%out_bool
+
+L_BOUND_U64_EMPTY_STRICT_%out_bool:
+    __bound_u64_empty_valid_strict_%out_bool = ult __bound_u64_empty_start_value_%out_bool, __bound_u64_empty_end_value_%out_bool
+    %out_bool = eq __bound_u64_empty_valid_strict_%out_bool, 0
+    !__bound_u64_empty_valid_strict_%out_bool
+    !__bound_u64_empty_both_included_%out_bool
+    !__bound_u64_empty_end_included_%out_bool
+    !__bound_u64_empty_start_included_%out_bool
+    !__bound_u64_empty_end_value_%out_bool
+    !__bound_u64_empty_start_value_%out_bool
+    !__bound_u64_empty_unbounded_%out_bool
+    !__bound_u64_empty_end_unbounded_%out_bool
+    !__bound_u64_empty_start_unbounded_%out_bool
+    !__bound_u64_empty_end_tag_%out_bool
+    !__bound_u64_empty_start_tag_%out_bool
+    jmp L_BOUND_U64_EMPTY_DONE_%out_bool
+
+L_BOUND_U64_EMPTY_FALSE_%out_bool:
+    %out_bool = add 0, 0
+    !__bound_u64_empty_unbounded_%out_bool
+    !__bound_u64_empty_end_unbounded_%out_bool
+    !__bound_u64_empty_start_unbounded_%out_bool
+    !__bound_u64_empty_end_tag_%out_bool
+    !__bound_u64_empty_start_tag_%out_bool
+
+L_BOUND_U64_EMPTY_DONE_%out_bool:
+[END_MACRO]
+
+[MACRO] RANGE_U64_DEFAULT %range_ptr
+    store %range_ptr+RangeU64_start, 0 as u64
+    store %range_ptr+RangeU64_end, 0 as u64
+[END_MACRO]
+
+[MACRO] RANGE_FULL_DEFAULT %range_ptr
+    __range_full_noop_%range_ptr = add 0, 0
+    !__range_full_noop_%range_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_DEFAULT %bound_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_COPY %dst_bound_ptr, %src_bound_ptr
+    __bound_u64_copy_tag_%dst_bound_ptr = load %src_bound_ptr+BoundU64_tag as u64
+    __bound_u64_copy_value_%dst_bound_ptr = load %src_bound_ptr+BoundU64_value as u64
+    store %dst_bound_ptr+BoundU64_tag, __bound_u64_copy_tag_%dst_bound_ptr as u64
+    store %dst_bound_ptr+BoundU64_value, __bound_u64_copy_value_%dst_bound_ptr as u64
+    !__bound_u64_copy_value_%dst_bound_ptr
+    !__bound_u64_copy_tag_%dst_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_COPIED %dst_bound_ptr, %src_bound_ptr
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_CLONED %dst_bound_ptr, %src_bound_ptr
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_MAP %dst_bound_ptr, %src_bound_ptr, %map_fn
+    __bound_u64_map_tag_%dst_bound_ptr = load %src_bound_ptr+BoundU64_tag as u64
+    __bound_u64_map_unbounded_%dst_bound_ptr = eq __bound_u64_map_tag_%dst_bound_ptr, BOUND_U64_UNBOUNDED
+    br __bound_u64_map_unbounded_%dst_bound_ptr -> L_BOUND_U64_MAP_UNBOUNDED_%dst_bound_ptr, L_BOUND_U64_MAP_VALUE_%dst_bound_ptr
+
+L_BOUND_U64_MAP_VALUE_%dst_bound_ptr:
+    __bound_u64_map_value_%dst_bound_ptr = load %src_bound_ptr+BoundU64_value as u64
+    __bound_u64_map_mapped_%dst_bound_ptr = call %map_fn(__bound_u64_map_value_%dst_bound_ptr)
+    store %dst_bound_ptr+BoundU64_tag, __bound_u64_map_tag_%dst_bound_ptr as u64
+    store %dst_bound_ptr+BoundU64_value, __bound_u64_map_mapped_%dst_bound_ptr as u64
+    !__bound_u64_map_mapped_%dst_bound_ptr
+    !__bound_u64_map_value_%dst_bound_ptr
+    !__bound_u64_map_unbounded_%dst_bound_ptr
+    !__bound_u64_map_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_MAP_DONE_%dst_bound_ptr
+
+L_BOUND_U64_MAP_UNBOUNDED_%dst_bound_ptr:
+    store %dst_bound_ptr+BoundU64_tag, BOUND_U64_UNBOUNDED as u64
+    store %dst_bound_ptr+BoundU64_value, 0 as u64
+    !__bound_u64_map_unbounded_%dst_bound_ptr
+    !__bound_u64_map_tag_%dst_bound_ptr
+
+L_BOUND_U64_MAP_DONE_%dst_bound_ptr:
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+    store %bound_ptr+BoundUsize_tag, BOUND_USIZE_UNBOUNDED as u64
+    store %bound_ptr+BoundUsize_value, 0 as u64
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_INCLUDED_NEW %bound_ptr, %value
+    store %bound_ptr+BoundUsize_tag, BOUND_USIZE_INCLUDED as u64
+    store %bound_ptr+BoundUsize_value, %value as u64
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_EXCLUDED_NEW %bound_ptr, %value
+    store %bound_ptr+BoundUsize_tag, BOUND_USIZE_EXCLUDED as u64
+    store %bound_ptr+BoundUsize_value, %value as u64
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_TAG %out_tag, %bound_ptr
+    %out_tag = load %bound_ptr+BoundUsize_tag as u64
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_VALUE %out_value, %bound_ptr
+    %out_value = load %bound_ptr+BoundUsize_value as u64
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_AS_REF %dst_bound_ref_ptr, %src_bound_ptr
+    EXPAND BOUND_U64_AS_REF %dst_bound_ref_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_AS_MUT %dst_bound_ref_ptr, %src_bound_ptr
+    EXPAND BOUND_U64_AS_MUT %dst_bound_ref_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_REF_TAG %out_tag, %bound_ref_ptr
+    %out_tag = load %bound_ref_ptr+BoundUsizeRef_tag as u64
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_REF_PTR %out_ptr, %bound_ref_ptr
+    %out_ptr = load %bound_ref_ptr+BoundUsizeRef_ptr as ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_REF_COPIED %dst_bound_ptr, %src_bound_ref_ptr
+    EXPAND BOUND_U64_REF_COPIED %dst_bound_ptr, %src_bound_ref_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_REF_CLONED %dst_bound_ptr, %src_bound_ref_ptr
+    EXPAND BOUND_U64_REF_CLONED %dst_bound_ptr, %src_bound_ref_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_IS_UNBOUNDED %out_bool, %bound_ptr
+    __bound_usize_tag_%out_bool = load %bound_ptr+BoundUsize_tag as u64
+    %out_bool = eq __bound_usize_tag_%out_bool, BOUND_USIZE_UNBOUNDED
+    !__bound_usize_tag_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_IS_INCLUDED %out_bool, %bound_ptr
+    __bound_usize_tag_%out_bool = load %bound_ptr+BoundUsize_tag as u64
+    %out_bool = eq __bound_usize_tag_%out_bool, BOUND_USIZE_INCLUDED
+    !__bound_usize_tag_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_IS_EXCLUDED %out_bool, %bound_ptr
+    __bound_usize_tag_%out_bool = load %bound_ptr+BoundUsize_tag as u64
+    %out_bool = eq __bound_usize_tag_%out_bool, BOUND_USIZE_EXCLUDED
+    !__bound_usize_tag_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_CONTAINS_START %out_bool, %bound_ptr, %item
+    __bound_usize_start_tag_%out_bool = load %bound_ptr+BoundUsize_tag as u64
+    __bound_usize_start_unbounded_%out_bool = eq __bound_usize_start_tag_%out_bool, BOUND_USIZE_UNBOUNDED
+    br __bound_usize_start_unbounded_%out_bool -> L_BOUND_USIZE_START_TRUE_%out_bool, L_BOUND_USIZE_START_CHECK_%out_bool
+
+L_BOUND_USIZE_START_CHECK_%out_bool:
+    __bound_usize_start_value_%out_bool = load %bound_ptr+BoundUsize_value as u64
+    __bound_usize_start_included_%out_bool = eq __bound_usize_start_tag_%out_bool, BOUND_USIZE_INCLUDED
+    br __bound_usize_start_included_%out_bool -> L_BOUND_USIZE_START_INCLUDED_%out_bool, L_BOUND_USIZE_START_EXCLUDED_%out_bool
+
+L_BOUND_USIZE_START_INCLUDED_%out_bool:
+    %out_bool = ule __bound_usize_start_value_%out_bool, %item
+    !__bound_usize_start_included_%out_bool
+    !__bound_usize_start_value_%out_bool
+    !__bound_usize_start_unbounded_%out_bool
+    !__bound_usize_start_tag_%out_bool
+    jmp L_BOUND_USIZE_START_END_%out_bool
+
+L_BOUND_USIZE_START_EXCLUDED_%out_bool:
+    %out_bool = ult __bound_usize_start_value_%out_bool, %item
+    !__bound_usize_start_included_%out_bool
+    !__bound_usize_start_value_%out_bool
+    !__bound_usize_start_unbounded_%out_bool
+    !__bound_usize_start_tag_%out_bool
+    jmp L_BOUND_USIZE_START_END_%out_bool
+
+L_BOUND_USIZE_START_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__bound_usize_start_unbounded_%out_bool
+    !__bound_usize_start_tag_%out_bool
+
+L_BOUND_USIZE_START_END_%out_bool:
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_CONTAINS_END %out_bool, %bound_ptr, %item
+    __bound_usize_end_tag_%out_bool = load %bound_ptr+BoundUsize_tag as u64
+    __bound_usize_end_unbounded_%out_bool = eq __bound_usize_end_tag_%out_bool, BOUND_USIZE_UNBOUNDED
+    br __bound_usize_end_unbounded_%out_bool -> L_BOUND_USIZE_END_TRUE_%out_bool, L_BOUND_USIZE_END_CHECK_%out_bool
+
+L_BOUND_USIZE_END_CHECK_%out_bool:
+    __bound_usize_end_value_%out_bool = load %bound_ptr+BoundUsize_value as u64
+    __bound_usize_end_included_%out_bool = eq __bound_usize_end_tag_%out_bool, BOUND_USIZE_INCLUDED
+    br __bound_usize_end_included_%out_bool -> L_BOUND_USIZE_END_INCLUDED_%out_bool, L_BOUND_USIZE_END_EXCLUDED_%out_bool
+
+L_BOUND_USIZE_END_INCLUDED_%out_bool:
+    %out_bool = ule %item, __bound_usize_end_value_%out_bool
+    !__bound_usize_end_included_%out_bool
+    !__bound_usize_end_value_%out_bool
+    !__bound_usize_end_unbounded_%out_bool
+    !__bound_usize_end_tag_%out_bool
+    jmp L_BOUND_USIZE_END_END_%out_bool
+
+L_BOUND_USIZE_END_EXCLUDED_%out_bool:
+    %out_bool = ult %item, __bound_usize_end_value_%out_bool
+    !__bound_usize_end_included_%out_bool
+    !__bound_usize_end_value_%out_bool
+    !__bound_usize_end_unbounded_%out_bool
+    !__bound_usize_end_tag_%out_bool
+    jmp L_BOUND_USIZE_END_END_%out_bool
+
+L_BOUND_USIZE_END_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__bound_usize_end_unbounded_%out_bool
+    !__bound_usize_end_tag_%out_bool
+
+L_BOUND_USIZE_END_END_%out_bool:
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_RANGE_CONTAINS %out_bool, %start_bound_ptr, %end_bound_ptr, %item
+    EXPAND BOUND_USIZE_CONTAINS_START __bound_usize_range_start_%out_bool, %start_bound_ptr, %item
+    EXPAND BOUND_USIZE_CONTAINS_END __bound_usize_range_end_%out_bool, %end_bound_ptr, %item
+    %out_bool = and __bound_usize_range_start_%out_bool, __bound_usize_range_end_%out_bool
+    !__bound_usize_range_end_%out_bool
+    !__bound_usize_range_start_%out_bool
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_RANGE_IS_EMPTY %out_bool, %start_bound_ptr, %end_bound_ptr
+    __bound_usize_empty_start_tag_%out_bool = load %start_bound_ptr+BoundUsize_tag as u64
+    __bound_usize_empty_end_tag_%out_bool = load %end_bound_ptr+BoundUsize_tag as u64
+    __bound_usize_empty_start_unbounded_%out_bool = eq __bound_usize_empty_start_tag_%out_bool, BOUND_USIZE_UNBOUNDED
+    __bound_usize_empty_end_unbounded_%out_bool = eq __bound_usize_empty_end_tag_%out_bool, BOUND_USIZE_UNBOUNDED
+    __bound_usize_empty_unbounded_%out_bool = or __bound_usize_empty_start_unbounded_%out_bool, __bound_usize_empty_end_unbounded_%out_bool
+    br __bound_usize_empty_unbounded_%out_bool -> L_BOUND_USIZE_EMPTY_FALSE_%out_bool, L_BOUND_USIZE_EMPTY_CHECK_%out_bool
+
+L_BOUND_USIZE_EMPTY_CHECK_%out_bool:
+    __bound_usize_empty_start_value_%out_bool = load %start_bound_ptr+BoundUsize_value as u64
+    __bound_usize_empty_end_value_%out_bool = load %end_bound_ptr+BoundUsize_value as u64
+    __bound_usize_empty_start_included_%out_bool = eq __bound_usize_empty_start_tag_%out_bool, BOUND_USIZE_INCLUDED
+    __bound_usize_empty_end_included_%out_bool = eq __bound_usize_empty_end_tag_%out_bool, BOUND_USIZE_INCLUDED
+    __bound_usize_empty_both_included_%out_bool = and __bound_usize_empty_start_included_%out_bool, __bound_usize_empty_end_included_%out_bool
+    br __bound_usize_empty_both_included_%out_bool -> L_BOUND_USIZE_EMPTY_INCLUDED_%out_bool, L_BOUND_USIZE_EMPTY_STRICT_%out_bool
+
+L_BOUND_USIZE_EMPTY_INCLUDED_%out_bool:
+    __bound_usize_empty_valid_inc_%out_bool = ule __bound_usize_empty_start_value_%out_bool, __bound_usize_empty_end_value_%out_bool
+    %out_bool = eq __bound_usize_empty_valid_inc_%out_bool, 0
+    !__bound_usize_empty_valid_inc_%out_bool
+    !__bound_usize_empty_both_included_%out_bool
+    !__bound_usize_empty_end_included_%out_bool
+    !__bound_usize_empty_start_included_%out_bool
+    !__bound_usize_empty_end_value_%out_bool
+    !__bound_usize_empty_start_value_%out_bool
+    !__bound_usize_empty_unbounded_%out_bool
+    !__bound_usize_empty_end_unbounded_%out_bool
+    !__bound_usize_empty_start_unbounded_%out_bool
+    !__bound_usize_empty_end_tag_%out_bool
+    !__bound_usize_empty_start_tag_%out_bool
+    jmp L_BOUND_USIZE_EMPTY_DONE_%out_bool
+
+L_BOUND_USIZE_EMPTY_STRICT_%out_bool:
+    __bound_usize_empty_valid_strict_%out_bool = ult __bound_usize_empty_start_value_%out_bool, __bound_usize_empty_end_value_%out_bool
+    %out_bool = eq __bound_usize_empty_valid_strict_%out_bool, 0
+    !__bound_usize_empty_valid_strict_%out_bool
+    !__bound_usize_empty_both_included_%out_bool
+    !__bound_usize_empty_end_included_%out_bool
+    !__bound_usize_empty_start_included_%out_bool
+    !__bound_usize_empty_end_value_%out_bool
+    !__bound_usize_empty_start_value_%out_bool
+    !__bound_usize_empty_unbounded_%out_bool
+    !__bound_usize_empty_end_unbounded_%out_bool
+    !__bound_usize_empty_start_unbounded_%out_bool
+    !__bound_usize_empty_end_tag_%out_bool
+    !__bound_usize_empty_start_tag_%out_bool
+    jmp L_BOUND_USIZE_EMPTY_DONE_%out_bool
+
+L_BOUND_USIZE_EMPTY_FALSE_%out_bool:
+    %out_bool = add 0, 0
+    !__bound_usize_empty_unbounded_%out_bool
+    !__bound_usize_empty_end_unbounded_%out_bool
+    !__bound_usize_empty_start_unbounded_%out_bool
+    !__bound_usize_empty_end_tag_%out_bool
+    !__bound_usize_empty_start_tag_%out_bool
+
+L_BOUND_USIZE_EMPTY_DONE_%out_bool:
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_DEFAULT %bound_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_COPY %dst_bound_ptr, %src_bound_ptr
+    __bound_usize_copy_tag_%dst_bound_ptr = load %src_bound_ptr+BoundUsize_tag as u64
+    __bound_usize_copy_value_%dst_bound_ptr = load %src_bound_ptr+BoundUsize_value as u64
+    store %dst_bound_ptr+BoundUsize_tag, __bound_usize_copy_tag_%dst_bound_ptr as u64
+    store %dst_bound_ptr+BoundUsize_value, __bound_usize_copy_value_%dst_bound_ptr as u64
+    !__bound_usize_copy_value_%dst_bound_ptr
+    !__bound_usize_copy_tag_%dst_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_COPIED %dst_bound_ptr, %src_bound_ptr
+    EXPAND BOUND_USIZE_COPY %dst_bound_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_CLONED %dst_bound_ptr, %src_bound_ptr
+    EXPAND BOUND_USIZE_COPY %dst_bound_ptr, %src_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_MAP %dst_bound_ptr, %src_bound_ptr, %map_fn
+    __bound_usize_map_tag_%dst_bound_ptr = load %src_bound_ptr+BoundUsize_tag as u64
+    __bound_usize_map_unbounded_%dst_bound_ptr = eq __bound_usize_map_tag_%dst_bound_ptr, BOUND_USIZE_UNBOUNDED
+    br __bound_usize_map_unbounded_%dst_bound_ptr -> L_BOUND_USIZE_MAP_UNBOUNDED_%dst_bound_ptr, L_BOUND_USIZE_MAP_VALUE_%dst_bound_ptr
+
+L_BOUND_USIZE_MAP_VALUE_%dst_bound_ptr:
+    __bound_usize_map_value_%dst_bound_ptr = load %src_bound_ptr+BoundUsize_value as u64
+    __bound_usize_map_mapped_%dst_bound_ptr = call %map_fn(__bound_usize_map_value_%dst_bound_ptr)
+    store %dst_bound_ptr+BoundUsize_tag, __bound_usize_map_tag_%dst_bound_ptr as u64
+    store %dst_bound_ptr+BoundUsize_value, __bound_usize_map_mapped_%dst_bound_ptr as u64
+    !__bound_usize_map_mapped_%dst_bound_ptr
+    !__bound_usize_map_value_%dst_bound_ptr
+    !__bound_usize_map_unbounded_%dst_bound_ptr
+    !__bound_usize_map_tag_%dst_bound_ptr
+    jmp L_BOUND_USIZE_MAP_DONE_%dst_bound_ptr
+
+L_BOUND_USIZE_MAP_UNBOUNDED_%dst_bound_ptr:
+    store %dst_bound_ptr+BoundUsize_tag, BOUND_USIZE_UNBOUNDED as u64
+    store %dst_bound_ptr+BoundUsize_value, 0 as u64
+    !__bound_usize_map_unbounded_%dst_bound_ptr
+    !__bound_usize_map_tag_%dst_bound_ptr
+
+L_BOUND_USIZE_MAP_DONE_%dst_bound_ptr:
+[END_MACRO]
+
+[MACRO] RANGE_FULL_START_BOUND_U64 %bound_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+// Rust method-name alias over RANGE_FULL_START_BOUND_U64.
+[MACRO] RANGE_FULL_START_BOUND %bound_ptr
+    EXPAND RANGE_FULL_START_BOUND_U64 %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FULL_END_BOUND_U64 %bound_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+// Rust method-name alias over RANGE_FULL_END_BOUND_U64.
+[MACRO] RANGE_FULL_END_BOUND %bound_ptr
+    EXPAND RANGE_FULL_END_BOUND_U64 %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FULL_INTO_BOUNDS_U64 %start_bound_ptr, %end_bound_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %start_bound_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %end_bound_ptr
+[END_MACRO]
+
+// Rust method-name alias over RANGE_FULL_INTO_BOUNDS_U64.
+[MACRO] RANGE_FULL_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr
+    EXPAND RANGE_FULL_INTO_BOUNDS_U64 %start_bound_ptr, %end_bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_U64_START_BOUND %bound_ptr, %range_ptr
+    __range_bound_start_%bound_ptr = load %range_ptr+RangeU64_start as u64
+    EXPAND BOUND_U64_INCLUDED_NEW %bound_ptr, __range_bound_start_%bound_ptr
+    !__range_bound_start_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_U64_END_BOUND %bound_ptr, %range_ptr
+    __range_bound_end_%bound_ptr = load %range_ptr+RangeU64_end as u64
+    EXPAND BOUND_U64_EXCLUDED_NEW %bound_ptr, __range_bound_end_%bound_ptr
+    !__range_bound_end_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_U64_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_U64_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_U64_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_START_BOUND %bound_ptr, %range_ptr
+    __range_from_bound_start_%bound_ptr = load %range_ptr+RangeFromU64_start as u64
+    EXPAND BOUND_U64_INCLUDED_NEW %bound_ptr, __range_from_bound_start_%bound_ptr
+    !__range_from_bound_start_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_END_BOUND %bound_ptr, %range_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_FROM_U64_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_FROM_U64_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_START_BOUND %bound_ptr, %range_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_END_BOUND %bound_ptr, %range_ptr
+    __range_to_bound_end_%bound_ptr = load %range_ptr+RangeToU64_end as u64
+    EXPAND BOUND_U64_EXCLUDED_NEW %bound_ptr, __range_to_bound_end_%bound_ptr
+    !__range_to_bound_end_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_U64_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_U64_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_START_BOUND %bound_ptr, %range_ptr
+    __range_inc_bound_start_%bound_ptr = load %range_ptr+RangeInclusiveU64_start as u64
+    EXPAND BOUND_U64_INCLUDED_NEW %bound_ptr, __range_inc_bound_start_%bound_ptr
+    !__range_inc_bound_start_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_END_BOUND %bound_ptr, %range_ptr
+    __range_inc_bound_end_%bound_ptr = load %range_ptr+RangeInclusiveU64_end as u64
+    __range_inc_bound_exhausted_%bound_ptr = load %range_ptr+RangeInclusiveU64_exhausted as u64
+    br __range_inc_bound_exhausted_%bound_ptr -> L_RANGE_INC_BOUND_END_EXCLUDED_%bound_ptr, L_RANGE_INC_BOUND_END_INCLUDED_%bound_ptr
+
+L_RANGE_INC_BOUND_END_INCLUDED_%bound_ptr:
+    EXPAND BOUND_U64_INCLUDED_NEW %bound_ptr, __range_inc_bound_end_%bound_ptr
+    !__range_inc_bound_exhausted_%bound_ptr
+    !__range_inc_bound_end_%bound_ptr
+    jmp L_RANGE_INC_BOUND_END_DONE_%bound_ptr
+
+L_RANGE_INC_BOUND_END_EXCLUDED_%bound_ptr:
+    EXPAND BOUND_U64_EXCLUDED_NEW %bound_ptr, __range_inc_bound_end_%bound_ptr
+    !__range_inc_bound_exhausted_%bound_ptr
+    !__range_inc_bound_end_%bound_ptr
+
+L_RANGE_INC_BOUND_END_DONE_%bound_ptr:
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_START_BOUND %bound_ptr, %range_ptr
+    EXPAND BOUND_U64_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_END_BOUND %bound_ptr, %range_ptr
+    __range_to_inc_bound_end_%bound_ptr = load %range_ptr+RangeToInclusiveU64_end as u64
+    EXPAND BOUND_U64_INCLUDED_NEW %bound_ptr, __range_to_inc_bound_end_%bound_ptr
+    !__range_to_inc_bound_end_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_U64_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_U64_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FULL_START_BOUND_USIZE %bound_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FULL_END_BOUND_USIZE %bound_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FULL_INTO_BOUNDS_USIZE %start_bound_ptr, %end_bound_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %start_bound_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %end_bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_START_BOUND %bound_ptr, %range_ptr
+    __range_usize_bound_start_%bound_ptr = load %range_ptr+RangeUsize_start as u64
+    EXPAND BOUND_USIZE_INCLUDED_NEW %bound_ptr, __range_usize_bound_start_%bound_ptr
+    !__range_usize_bound_start_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_END_BOUND %bound_ptr, %range_ptr
+    __range_usize_bound_end_%bound_ptr = load %range_ptr+RangeUsize_end as u64
+    EXPAND BOUND_USIZE_EXCLUDED_NEW %bound_ptr, __range_usize_bound_end_%bound_ptr
+    !__range_usize_bound_end_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_USIZE_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_USIZE_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_START_BOUND %bound_ptr, %range_ptr
+    __range_from_usize_bound_start_%bound_ptr = load %range_ptr+RangeFromUsize_start as u64
+    EXPAND BOUND_USIZE_INCLUDED_NEW %bound_ptr, __range_from_usize_bound_start_%bound_ptr
+    !__range_from_usize_bound_start_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_END_BOUND %bound_ptr, %range_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_FROM_USIZE_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_FROM_USIZE_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_START_BOUND %bound_ptr, %range_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_END_BOUND %bound_ptr, %range_ptr
+    __range_to_usize_bound_end_%bound_ptr = load %range_ptr+RangeToUsize_end as u64
+    EXPAND BOUND_USIZE_EXCLUDED_NEW %bound_ptr, __range_to_usize_bound_end_%bound_ptr
+    !__range_to_usize_bound_end_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_USIZE_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_USIZE_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_START_BOUND %bound_ptr, %range_ptr
+    __range_inc_usize_bound_start_%bound_ptr = load %range_ptr+RangeInclusiveUsize_start as u64
+    EXPAND BOUND_USIZE_INCLUDED_NEW %bound_ptr, __range_inc_usize_bound_start_%bound_ptr
+    !__range_inc_usize_bound_start_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_END_BOUND %bound_ptr, %range_ptr
+    __range_inc_usize_bound_end_%bound_ptr = load %range_ptr+RangeInclusiveUsize_end as u64
+    __range_inc_usize_bound_exhausted_%bound_ptr = load %range_ptr+RangeInclusiveUsize_exhausted as u64
+    br __range_inc_usize_bound_exhausted_%bound_ptr -> L_RANGE_INC_USIZE_BOUND_END_EXCLUDED_%bound_ptr, L_RANGE_INC_USIZE_BOUND_END_INCLUDED_%bound_ptr
+
+L_RANGE_INC_USIZE_BOUND_END_INCLUDED_%bound_ptr:
+    EXPAND BOUND_USIZE_INCLUDED_NEW %bound_ptr, __range_inc_usize_bound_end_%bound_ptr
+    !__range_inc_usize_bound_exhausted_%bound_ptr
+    !__range_inc_usize_bound_end_%bound_ptr
+    jmp L_RANGE_INC_USIZE_BOUND_END_DONE_%bound_ptr
+
+L_RANGE_INC_USIZE_BOUND_END_EXCLUDED_%bound_ptr:
+    EXPAND BOUND_USIZE_EXCLUDED_NEW %bound_ptr, __range_inc_usize_bound_end_%bound_ptr
+    !__range_inc_usize_bound_exhausted_%bound_ptr
+    !__range_inc_usize_bound_end_%bound_ptr
+
+L_RANGE_INC_USIZE_BOUND_END_DONE_%bound_ptr:
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_INCLUSIVE_USIZE_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_INCLUSIVE_USIZE_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_START_BOUND %bound_ptr, %range_ptr
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW %bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_END_BOUND %bound_ptr, %range_ptr
+    __range_to_inc_usize_bound_end_%bound_ptr = load %range_ptr+RangeToInclusiveUsize_end as u64
+    EXPAND BOUND_USIZE_INCLUDED_NEW %bound_ptr, __range_to_inc_usize_bound_end_%bound_ptr
+    !__range_to_inc_usize_bound_end_%bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_INTO_BOUNDS %start_bound_ptr, %end_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_USIZE_START_BOUND %start_bound_ptr, %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_USIZE_END_BOUND %end_bound_ptr, %range_ptr
+[END_MACRO]
+
+[MACRO] BOUND_U64_INTERSECT_START %dst_bound_ptr, %left_bound_ptr, %right_bound_ptr
+    __bound_u64_intersect_start_left_tag_%dst_bound_ptr = load %left_bound_ptr+BoundU64_tag as u64
+    __bound_u64_intersect_start_right_tag_%dst_bound_ptr = load %right_bound_ptr+BoundU64_tag as u64
+    __bound_u64_intersect_start_left_unbounded_%dst_bound_ptr = eq __bound_u64_intersect_start_left_tag_%dst_bound_ptr, BOUND_U64_UNBOUNDED
+    br __bound_u64_intersect_start_left_unbounded_%dst_bound_ptr -> L_BOUND_U64_INTERSECT_START_COPY_RIGHT_UNBOUNDED_%dst_bound_ptr, L_BOUND_U64_INTERSECT_START_CHECK_RIGHT_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_CHECK_RIGHT_%dst_bound_ptr:
+    __bound_u64_intersect_start_right_unbounded_%dst_bound_ptr = eq __bound_u64_intersect_start_right_tag_%dst_bound_ptr, BOUND_U64_UNBOUNDED
+    br __bound_u64_intersect_start_right_unbounded_%dst_bound_ptr -> L_BOUND_U64_INTERSECT_START_COPY_LEFT_UNBOUNDED_%dst_bound_ptr, L_BOUND_U64_INTERSECT_START_BOUNDED_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_BOUNDED_%dst_bound_ptr:
+    __bound_u64_intersect_start_left_value_%dst_bound_ptr = load %left_bound_ptr+BoundU64_value as u64
+    __bound_u64_intersect_start_right_value_%dst_bound_ptr = load %right_bound_ptr+BoundU64_value as u64
+    __bound_u64_intersect_start_left_gt_%dst_bound_ptr = ugt __bound_u64_intersect_start_left_value_%dst_bound_ptr, __bound_u64_intersect_start_right_value_%dst_bound_ptr
+    __bound_u64_intersect_start_values_eq_%dst_bound_ptr = eq __bound_u64_intersect_start_left_value_%dst_bound_ptr, __bound_u64_intersect_start_right_value_%dst_bound_ptr
+    __bound_u64_intersect_start_left_excluded_%dst_bound_ptr = eq __bound_u64_intersect_start_left_tag_%dst_bound_ptr, BOUND_U64_EXCLUDED
+    __bound_u64_intersect_start_right_included_%dst_bound_ptr = eq __bound_u64_intersect_start_right_tag_%dst_bound_ptr, BOUND_U64_INCLUDED
+    __bound_u64_intersect_start_tie_excluded_%dst_bound_ptr = and __bound_u64_intersect_start_left_excluded_%dst_bound_ptr, __bound_u64_intersect_start_right_included_%dst_bound_ptr
+    __bound_u64_intersect_start_tie_left_%dst_bound_ptr = and __bound_u64_intersect_start_values_eq_%dst_bound_ptr, __bound_u64_intersect_start_tie_excluded_%dst_bound_ptr
+    __bound_u64_intersect_start_choose_left_%dst_bound_ptr = or __bound_u64_intersect_start_left_gt_%dst_bound_ptr, __bound_u64_intersect_start_tie_left_%dst_bound_ptr
+    br __bound_u64_intersect_start_choose_left_%dst_bound_ptr -> L_BOUND_U64_INTERSECT_START_COPY_LEFT_BOUNDED_%dst_bound_ptr, L_BOUND_U64_INTERSECT_START_COPY_RIGHT_BOUNDED_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_COPY_LEFT_BOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %left_bound_ptr
+    !__bound_u64_intersect_start_choose_left_%dst_bound_ptr
+    !__bound_u64_intersect_start_tie_left_%dst_bound_ptr
+    !__bound_u64_intersect_start_tie_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_included_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_start_values_eq_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_gt_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_value_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_value_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_INTERSECT_START_DONE_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_COPY_RIGHT_BOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %right_bound_ptr
+    !__bound_u64_intersect_start_choose_left_%dst_bound_ptr
+    !__bound_u64_intersect_start_tie_left_%dst_bound_ptr
+    !__bound_u64_intersect_start_tie_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_included_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_start_values_eq_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_gt_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_value_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_value_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_INTERSECT_START_DONE_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_COPY_LEFT_UNBOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %left_bound_ptr
+    !__bound_u64_intersect_start_right_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_INTERSECT_START_DONE_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_COPY_RIGHT_UNBOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %right_bound_ptr
+    !__bound_u64_intersect_start_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_start_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_start_left_tag_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_START_DONE_%dst_bound_ptr:
+[END_MACRO]
+
+[MACRO] BOUND_U64_INTERSECT_END %dst_bound_ptr, %left_bound_ptr, %right_bound_ptr
+    __bound_u64_intersect_end_left_tag_%dst_bound_ptr = load %left_bound_ptr+BoundU64_tag as u64
+    __bound_u64_intersect_end_right_tag_%dst_bound_ptr = load %right_bound_ptr+BoundU64_tag as u64
+    __bound_u64_intersect_end_left_unbounded_%dst_bound_ptr = eq __bound_u64_intersect_end_left_tag_%dst_bound_ptr, BOUND_U64_UNBOUNDED
+    br __bound_u64_intersect_end_left_unbounded_%dst_bound_ptr -> L_BOUND_U64_INTERSECT_END_COPY_RIGHT_UNBOUNDED_%dst_bound_ptr, L_BOUND_U64_INTERSECT_END_CHECK_RIGHT_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_CHECK_RIGHT_%dst_bound_ptr:
+    __bound_u64_intersect_end_right_unbounded_%dst_bound_ptr = eq __bound_u64_intersect_end_right_tag_%dst_bound_ptr, BOUND_U64_UNBOUNDED
+    br __bound_u64_intersect_end_right_unbounded_%dst_bound_ptr -> L_BOUND_U64_INTERSECT_END_COPY_LEFT_UNBOUNDED_%dst_bound_ptr, L_BOUND_U64_INTERSECT_END_BOUNDED_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_BOUNDED_%dst_bound_ptr:
+    __bound_u64_intersect_end_left_value_%dst_bound_ptr = load %left_bound_ptr+BoundU64_value as u64
+    __bound_u64_intersect_end_right_value_%dst_bound_ptr = load %right_bound_ptr+BoundU64_value as u64
+    __bound_u64_intersect_end_left_lt_%dst_bound_ptr = ult __bound_u64_intersect_end_left_value_%dst_bound_ptr, __bound_u64_intersect_end_right_value_%dst_bound_ptr
+    __bound_u64_intersect_end_values_eq_%dst_bound_ptr = eq __bound_u64_intersect_end_left_value_%dst_bound_ptr, __bound_u64_intersect_end_right_value_%dst_bound_ptr
+    __bound_u64_intersect_end_left_excluded_%dst_bound_ptr = eq __bound_u64_intersect_end_left_tag_%dst_bound_ptr, BOUND_U64_EXCLUDED
+    __bound_u64_intersect_end_right_included_%dst_bound_ptr = eq __bound_u64_intersect_end_right_tag_%dst_bound_ptr, BOUND_U64_INCLUDED
+    __bound_u64_intersect_end_tie_excluded_%dst_bound_ptr = and __bound_u64_intersect_end_left_excluded_%dst_bound_ptr, __bound_u64_intersect_end_right_included_%dst_bound_ptr
+    __bound_u64_intersect_end_tie_left_%dst_bound_ptr = and __bound_u64_intersect_end_values_eq_%dst_bound_ptr, __bound_u64_intersect_end_tie_excluded_%dst_bound_ptr
+    __bound_u64_intersect_end_choose_left_%dst_bound_ptr = or __bound_u64_intersect_end_left_lt_%dst_bound_ptr, __bound_u64_intersect_end_tie_left_%dst_bound_ptr
+    br __bound_u64_intersect_end_choose_left_%dst_bound_ptr -> L_BOUND_U64_INTERSECT_END_COPY_LEFT_BOUNDED_%dst_bound_ptr, L_BOUND_U64_INTERSECT_END_COPY_RIGHT_BOUNDED_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_COPY_LEFT_BOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %left_bound_ptr
+    !__bound_u64_intersect_end_choose_left_%dst_bound_ptr
+    !__bound_u64_intersect_end_tie_left_%dst_bound_ptr
+    !__bound_u64_intersect_end_tie_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_included_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_end_values_eq_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_lt_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_value_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_value_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_INTERSECT_END_DONE_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_COPY_RIGHT_BOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %right_bound_ptr
+    !__bound_u64_intersect_end_choose_left_%dst_bound_ptr
+    !__bound_u64_intersect_end_tie_left_%dst_bound_ptr
+    !__bound_u64_intersect_end_tie_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_included_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_excluded_%dst_bound_ptr
+    !__bound_u64_intersect_end_values_eq_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_lt_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_value_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_value_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_INTERSECT_END_DONE_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_COPY_LEFT_UNBOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %left_bound_ptr
+    !__bound_u64_intersect_end_right_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_tag_%dst_bound_ptr
+    jmp L_BOUND_U64_INTERSECT_END_DONE_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_COPY_RIGHT_UNBOUNDED_%dst_bound_ptr:
+    EXPAND BOUND_U64_COPY %dst_bound_ptr, %right_bound_ptr
+    !__bound_u64_intersect_end_left_unbounded_%dst_bound_ptr
+    !__bound_u64_intersect_end_right_tag_%dst_bound_ptr
+    !__bound_u64_intersect_end_left_tag_%dst_bound_ptr
+
+L_BOUND_U64_INTERSECT_END_DONE_%dst_bound_ptr:
+[END_MACRO]
+
+[MACRO] BOUND_U64_INTERSECT_RANGE %out_start_bound_ptr, %out_end_bound_ptr, %left_start_bound_ptr, %left_end_bound_ptr, %right_start_bound_ptr, %right_end_bound_ptr
+    EXPAND BOUND_U64_INTERSECT_START %out_start_bound_ptr, %left_start_bound_ptr, %right_start_bound_ptr
+    EXPAND BOUND_U64_INTERSECT_END %out_end_bound_ptr, %left_end_bound_ptr, %right_end_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_INTERSECT_START %dst_bound_ptr, %left_bound_ptr, %right_bound_ptr
+    EXPAND BOUND_U64_INTERSECT_START %dst_bound_ptr, %left_bound_ptr, %right_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_INTERSECT_END %dst_bound_ptr, %left_bound_ptr, %right_bound_ptr
+    EXPAND BOUND_U64_INTERSECT_END %dst_bound_ptr, %left_bound_ptr, %right_bound_ptr
+[END_MACRO]
+
+[MACRO] BOUND_USIZE_INTERSECT_RANGE %out_start_bound_ptr, %out_end_bound_ptr, %left_start_bound_ptr, %left_end_bound_ptr, %right_start_bound_ptr, %right_end_bound_ptr
+    EXPAND BOUND_U64_INTERSECT_RANGE %out_start_bound_ptr, %out_end_bound_ptr, %left_start_bound_ptr, %left_end_bound_ptr, %right_start_bound_ptr, %right_end_bound_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_U64_DEFAULT %range_ptr
+    store %range_ptr+RangeFromU64_start, 0 as u64
+[END_MACRO]
+
+[MACRO] RANGE_TO_U64_DEFAULT %range_ptr
+    store %range_ptr+RangeToU64_end, 0 as u64
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_U64_DEFAULT %range_ptr
+    store %range_ptr+RangeToInclusiveU64_end, 0 as u64
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_U64_DEFAULT %range_ptr
+    store %range_ptr+RangeInclusiveU64_start, 0 as u64
+    store %range_ptr+RangeInclusiveU64_end, 0 as u64
+    store %range_ptr+RangeInclusiveU64_exhausted, 0 as u64
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_NEW %range_ptr, %start, %end
+    EXPAND RANGE_U64_NEW %range_ptr, %start, %end
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_START %out_start, %range_ptr
+    EXPAND RANGE_U64_START %out_start, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_END %out_end, %range_ptr
+    EXPAND RANGE_U64_END %out_end, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_CONTAINS %out_bool, %range_ptr, %item
+    EXPAND RANGE_U64_CONTAINS %out_bool, %range_ptr, %item
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_IS_EMPTY %out_bool, %range_ptr
+    EXPAND RANGE_U64_IS_EMPTY %out_bool, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_LEN %out_len, %range_ptr
+    EXPAND RANGE_U64_LEN %out_len, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_NEXT %out_ok, %out_value, %range_ptr
+    EXPAND RANGE_U64_NEXT %out_ok, %out_value, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_NEXT_BACK %out_ok, %out_value, %range_ptr
+    EXPAND RANGE_U64_NEXT_BACK %out_ok, %out_value, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_NTH %out_ok, %out_value, %range_ptr, %nth
+    EXPAND RANGE_U64_NTH %out_ok, %out_value, %range_ptr, %nth
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_COUNT %out_count, %range_ptr
+    EXPAND RANGE_U64_COUNT %out_count, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    EXPAND RANGE_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_USIZE_DEFAULT %range_ptr
+    EXPAND RANGE_U64_DEFAULT %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_NEW %range_ptr, %start
+    EXPAND RANGE_FROM_U64_NEW %range_ptr, %start
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_START %out_start, %range_ptr
+    EXPAND RANGE_FROM_U64_START %out_start, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_CONTAINS %out_bool, %range_ptr, %item
+    EXPAND RANGE_FROM_U64_CONTAINS %out_bool, %range_ptr, %item
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    EXPAND RANGE_FROM_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_NEW %range_ptr, %end
+    EXPAND RANGE_TO_U64_NEW %range_ptr, %end
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_END %out_end, %range_ptr
+    EXPAND RANGE_TO_U64_END %out_end, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_CONTAINS %out_bool, %range_ptr, %item
+    EXPAND RANGE_TO_U64_CONTAINS %out_bool, %range_ptr, %item
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    EXPAND RANGE_TO_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_NEW %range_ptr, %start, %end
+    EXPAND RANGE_INCLUSIVE_U64_NEW %range_ptr, %start, %end
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_SET_EXHAUSTED %range_ptr, %exhausted
+    EXPAND RANGE_INCLUSIVE_U64_SET_EXHAUSTED %range_ptr, %exhausted
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_START %out_start, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_START %out_start, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_END %out_end, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_END %out_end, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_INTO_INNER %out_start, %out_end, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_INTO_INNER %out_start, %out_end, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_CONTAINS %out_bool, %range_ptr, %item
+    EXPAND RANGE_INCLUSIVE_U64_CONTAINS %out_bool, %range_ptr, %item
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_IS_EMPTY %out_bool, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_IS_EMPTY %out_bool, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_LEN %out_len, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_LEN %out_len, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_NEXT %out_ok, %out_value, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_NEXT %out_ok, %out_value, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_NEXT_BACK %out_ok, %out_value, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_NEXT_BACK %out_ok, %out_value, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_COUNT %out_count, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_COUNT %out_count, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_NEW %range_ptr, %end
+    EXPAND RANGE_TO_INCLUSIVE_U64_NEW %range_ptr, %end
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_END %out_end, %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_U64_END %out_end, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_CONTAINS %out_bool, %range_ptr, %item
+    EXPAND RANGE_TO_INCLUSIVE_U64_CONTAINS %out_bool, %range_ptr, %item
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_U64_TRY_GET_SLICE %out_ok, %out_slice, %base_slice, %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FULL_CONTAINS_USIZE %out_bool, %item
+    EXPAND RANGE_FULL_CONTAINS_U64 %out_bool, %item
+[END_MACRO]
+
+[MACRO] RANGE_INCLUSIVE_USIZE_DEFAULT %range_ptr
+    EXPAND RANGE_INCLUSIVE_U64_DEFAULT %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_FROM_USIZE_DEFAULT %range_ptr
+    EXPAND RANGE_FROM_U64_DEFAULT %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_USIZE_DEFAULT %range_ptr
+    EXPAND RANGE_TO_U64_DEFAULT %range_ptr
+[END_MACRO]
+
+[MACRO] RANGE_TO_INCLUSIVE_USIZE_DEFAULT %range_ptr
+    EXPAND RANGE_TO_INCLUSIVE_U64_DEFAULT %range_ptr
+[END_MACRO]
+
+
+[MACRO] RANGE_USIZE_FULL_DEFAULT %range_ptr
+    EXPAND RANGE_FULL_DEFAULT %range_ptr
+[END_MACRO]

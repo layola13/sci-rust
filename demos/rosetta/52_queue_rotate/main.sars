@@ -1,0 +1,27 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+
+@const RESULT_OK = utf8:"2,3,1\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@rotate_three(a: i32, b: i32, c: i32) -> i32:
+L_ENTRY:
+    first = add b, 0
+    second = add c, 0
+    third = add a, 0
+    total = add first, second
+    total2 = add total, third
+    !first
+    !second
+    !third
+    !total
+    !total2
+    return 0
+
+@main() -> i32:
+L_ENTRY:
+    value = call @rotate_three(1, 2, 3)
+    call @sa_print_bytes(&RESULT_OK, 6)
+    !value
+    return 0

@@ -1,0 +1,50 @@
+@import "sa_std/convert.sars"
+
+@test "sa_std convert identity macro surface"():
+L_ENTRY:
+    neg_value = sub 0, 77
+
+    EXPAND CONVERT_IDENTITY_U64 id_u64, 123
+    EXPAND CONVERT_IDENTITY_I64 id_i64, neg_value
+    EXPAND CONVERT_IDENTITY_USIZE id_usize, 4096
+    EXPAND CONVERT_IDENTITY_BOOL id_bool, 1
+
+    EXPAND IDENTITY_U64 alias_u64, 987
+    EXPAND IDENTITY_I64 alias_i64, neg_value
+    EXPAND IDENTITY_USIZE alias_usize, 8192
+    EXPAND IDENTITY_BOOL alias_bool, 0
+
+    ok_u64 = eq id_u64, 123
+    ok_i64 = eq id_i64, neg_value
+    ok_usize = eq id_usize, 4096
+    ok_bool = eq id_bool, 1
+    ok_alias_u64 = eq alias_u64, 987
+    ok_alias_i64 = eq alias_i64, neg_value
+    ok_alias_usize = eq alias_usize, 8192
+    ok_alias_bool = eq alias_bool, 0
+
+    !neg_value
+    !id_u64
+    !id_i64
+    !id_usize
+    !id_bool
+    !alias_u64
+    !alias_i64
+    !alias_usize
+    !alias_bool
+
+    c1 = and ok_u64, ok_i64
+    c2 = and c1, ok_usize
+    c3 = and c2, ok_bool
+    c4 = and c3, ok_alias_u64
+    c5 = and c4, ok_alias_i64
+    c6 = and c5, ok_alias_usize
+    ok = and c6, ok_alias_bool
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10517)
+
+L_PASS:
+    return 0

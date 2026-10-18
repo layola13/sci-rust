@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "submodule/index.sars"
+
+@const RESULT_OK = utf8:"237\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 237 - Mod Inline Submodule
+// Nested ordinary files stand in for the inline submodule shape.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @submodule_value()
+    ok = eq value, 237
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

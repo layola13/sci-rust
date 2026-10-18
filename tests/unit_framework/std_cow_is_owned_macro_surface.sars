@@ -1,0 +1,28 @@
+@import "sa_std/borrow.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std cow is_owned borrowed"():
+L_ENTRY:
+    data = alloc 8
+    store data+0, 1 as u64
+    slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 1
+    cow = stack_alloc CowSlice_SIZE
+    EXPAND COW_SLICE_BORROWED cow, slice
+    EXPAND COW_SLICE_IS_BORROWED ib, cow
+    EXPAND COW_SLICE_IS_OWNED io, cow
+    a = eq ib, 1
+    b = eq io, 0
+    ok = and a, b
+    !ib
+    !io
+    !a
+    !b
+    !data
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10972)

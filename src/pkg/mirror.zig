@@ -23,11 +23,11 @@ fn globalConfigExists(path: []const u8) bool {
 }
 
 fn rejectForbiddenHomeConfig(allocator: std.mem.Allocator, home: []const u8) !void {
-    const config = try std.fs.path.join(allocator, &.{ home, ".sa", "config.toml" });
+    const config = try std.fs.path.join(allocator, &.{ home, ".sars", "config.toml" });
     defer allocator.free(config);
     if (globalConfigExists(config)) return error.ForbiddenGlobalConfig;
 
-    const mirror_config = try std.fs.path.join(allocator, &.{ home, ".sa", "mirror.toml" });
+    const mirror_config = try std.fs.path.join(allocator, &.{ home, ".sars", "mirror.toml" });
     defer allocator.free(mirror_config);
     if (globalConfigExists(mirror_config)) return error.ForbiddenGlobalConfig;
 }
@@ -211,7 +211,7 @@ test "mirror rejects forbidden global config files" {
     var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
 
-    try tmp.dir.createDirPath(std.testing.io, "home/.sa");
+    try tmp.dir.createDirPath(std.testing.io, "home/.sars");
     try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "home/.sa/mirror.toml", .data = "github.com = mirror\n" });
     const home = try tmp.dir.realPathFileAlloc(std.testing.io, "home", std.testing.allocator);
     defer std.testing.allocator.free(home);

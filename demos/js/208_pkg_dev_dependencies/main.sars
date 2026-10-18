@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "src/index.sars"
+
+@const RESULT_OK = utf8:"208\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 208 - Package Dev Dependencies
+// The release path stays under src/ while dev/test helpers live in dev/.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @src_package_value()
+    ok = eq value, 208
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

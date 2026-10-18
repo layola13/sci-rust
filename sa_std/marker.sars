@@ -1,0 +1,220 @@
+@import "marker.sal"
+@import "hash.sars"
+
+[MACRO] MARKER_ZST_SIZE %out_size
+    %out_size = add 0, 0
+[END_MACRO]
+
+[MACRO] MARKER_ZST_ALIGN %out_align
+    %out_align = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_IS_ZST %out_bool, %size
+    %out_bool = eq %size, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_DEFAULT %out_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_COPY %out_token, %phantom_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_CLONE %out_token, %phantom_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_CLONE_FROM %out_token, %phantom_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_EQ %out_bool, %left_token, %right_token
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_NE %out_bool, %left_token, %right_token
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_CMP %out_ordering, %left_token, %right_token
+    %out_ordering = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_PARTIAL_CMP %out_ordering, %left_token, %right_token
+    %out_ordering = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_LT %out_bool, %left_token, %right_token
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_LE %out_bool, %left_token, %right_token
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_GT %out_bool, %left_token, %right_token
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_GE %out_bool, %left_token, %right_token
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_PHANTOM_DATA %hasher, %phantom_token
+    EXPAND DEFAULT_HASHER_WRITE_UNIT %hasher, %phantom_token
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_HASH %out_hash, %phantom_token
+    __phantom_data_hash_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW __phantom_data_hash_hasher_%out_hash
+    EXPAND DEFAULT_HASHER_WRITE_PHANTOM_DATA __phantom_data_hash_hasher_%out_hash, %phantom_token
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __phantom_data_hash_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_PHANTOM_DATA %out_hash, %builder, %phantom_token
+    __build_hash_one_phantom_data_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_phantom_data_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_PHANTOM_DATA __build_hash_one_phantom_data_hasher_%out_hash, %phantom_token
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_phantom_data_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_PHANTOM_DATA %out_hash, %state, %phantom_token
+    __random_state_hash_one_phantom_data_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_phantom_data_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_PHANTOM_DATA __random_state_hash_one_phantom_data_hasher_%out_hash, %phantom_token
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_phantom_data_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_IS_COPY %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_IS_SEND %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_IS_SYNC %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_DATA_IS_UNPIN %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_DEFAULT %out_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_COPY %out_token, %pinned_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_CLONE %out_token, %pinned_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_CLONE_FROM %out_token, %pinned_token
+    %out_token = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_EQ %out_bool, %left_token, %right_token
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_NE %out_bool, %left_token, %right_token
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_CMP %out_ordering, %left_token, %right_token
+    %out_ordering = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_PARTIAL_CMP %out_ordering, %left_token, %right_token
+    %out_ordering = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_LT %out_bool, %left_token, %right_token
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_LE %out_bool, %left_token, %right_token
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_GT %out_bool, %left_token, %right_token
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_GE %out_bool, %left_token, %right_token
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] DEFAULT_HASHER_WRITE_PHANTOM_PINNED %hasher, %pinned_token
+    EXPAND DEFAULT_HASHER_WRITE_UNIT %hasher, %pinned_token
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_HASH %out_hash, %pinned_token
+    __phantom_pinned_hash_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW __phantom_pinned_hash_hasher_%out_hash
+    EXPAND DEFAULT_HASHER_WRITE_PHANTOM_PINNED __phantom_pinned_hash_hasher_%out_hash, %pinned_token
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __phantom_pinned_hash_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] BUILD_HASHER_DEFAULT_HASH_ONE_PHANTOM_PINNED %out_hash, %builder, %pinned_token
+    __build_hash_one_phantom_pinned_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD __build_hash_one_phantom_pinned_hasher_%out_hash, %builder
+    EXPAND DEFAULT_HASHER_WRITE_PHANTOM_PINNED __build_hash_one_phantom_pinned_hasher_%out_hash, %pinned_token
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __build_hash_one_phantom_pinned_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] RANDOM_STATE_HASH_ONE_PHANTOM_PINNED %out_hash, %state, %pinned_token
+    __random_state_hash_one_phantom_pinned_hasher_%out_hash = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD __random_state_hash_one_phantom_pinned_hasher_%out_hash, %state
+    EXPAND DEFAULT_HASHER_WRITE_PHANTOM_PINNED __random_state_hash_one_phantom_pinned_hasher_%out_hash, %pinned_token
+    EXPAND DEFAULT_HASHER_FINISH %out_hash, __random_state_hash_one_phantom_pinned_hasher_%out_hash
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_IS_COPY %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_IS_SEND %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_IS_SYNC %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] PHANTOM_PINNED_IS_UNPIN %out_bool
+    %out_bool = add 0, 0
+[END_MACRO]
+
+[MACRO] MARKER_PRIMITIVE_IS_SIZED %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_PRIMITIVE_IS_COPY %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_PRIMITIVE_IS_SEND %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_PRIMITIVE_IS_SYNC %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_PRIMITIVE_IS_UNPIN %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_PRIMITIVE_IS_FREEZE %out_bool
+    %out_bool = add 0, 1
+[END_MACRO]
+
+[MACRO] MARKER_CAPABILITY %out_bool, %enabled
+    %out_bool = ne %enabled, 0
+[END_MACRO]

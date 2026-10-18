@@ -1,0 +1,151 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive checked strict pow macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_CHECKED_POW u8_ok, u8_value, 3, 4
+    EXPAND NUM_U16_CHECKED_POW u16_ok, u16_value, 2, 15
+    EXPAND NUM_U32_CHECKED_POW u32_ok, u32_value, 2, 31
+    EXPAND NUM_U64_CHECKED_POW u64_ok, u64_value, 3, 4
+    EXPAND NUM_USIZE_CHECKED_POW usize_ok, usize_value, 2, 10
+
+    EXPAND NUM_I8_CHECKED_POW i8_ok, i8_value, -2, 7
+    EXPAND NUM_I16_CHECKED_POW i16_ok, i16_value, -2, 15
+    EXPAND NUM_I32_CHECKED_POW i32_ok, i32_value, -2, 30
+    EXPAND NUM_I64_CHECKED_POW i64_ok, i64_value, -3, 3
+    EXPAND NUM_ISIZE_CHECKED_POW isize_ok, isize_value, -5, 3
+
+    EXPAND NUM_U8_CHECKED_POW u8_over_ok, u8_over_value, 16, 2
+    EXPAND NUM_U16_CHECKED_POW u16_over_ok, u16_over_value, 256, 2
+    EXPAND NUM_U32_CHECKED_POW u32_over_ok, u32_over_value, 65536, 2
+    EXPAND NUM_U64_CHECKED_POW u64_over_ok, u64_over_value, NUM_U64_MAX, 2
+    EXPAND NUM_I8_CHECKED_POW i8_over_ok, i8_over_value, 12, 3
+    EXPAND NUM_I16_CHECKED_POW i16_over_ok, i16_over_value, 256, 2
+    EXPAND NUM_I32_CHECKED_POW i32_over_ok, i32_over_value, 65536, 2
+    EXPAND NUM_I64_CHECKED_POW i64_over_ok, i64_over_value, NUM_I64_MAX, 2
+
+    EXPAND NUM_U8_STRICT_POW u8_strict, 2, 7
+    EXPAND NUM_U16_STRICT_POW u16_strict, 3, 4
+    EXPAND NUM_U32_STRICT_POW u32_strict, 3, 4
+    EXPAND NUM_U64_STRICT_POW u64_strict, 3, 4
+    EXPAND NUM_USIZE_STRICT_POW usize_strict, 2, 10
+    EXPAND NUM_I8_STRICT_POW i8_strict, -2, 7
+    EXPAND NUM_I16_STRICT_POW i16_strict, -2, 15
+    EXPAND NUM_I32_STRICT_POW i32_strict, -2, 30
+    EXPAND NUM_I64_STRICT_POW i64_strict, -3, 3
+    EXPAND NUM_ISIZE_STRICT_POW isize_strict, -5, 3
+
+    ok_01 = eq u8_ok, 1
+    ok_02 = eq u8_value, 81
+    ok_03 = eq u16_ok, 1
+    ok_04 = eq u16_value, 32768
+    ok_05 = eq u32_ok, 1
+    ok_06 = eq u32_value, 2147483648
+    ok_07 = eq u64_ok, 1
+    ok_08 = eq u64_value, 81
+    ok_09 = eq usize_ok, 1
+    ok_10 = eq usize_value, 1024
+    ok_11 = eq i8_ok, 1
+    ok_12 = eq i8_value, -128
+    ok_13 = eq i16_ok, 1
+    ok_14 = eq i16_value, -32768
+    ok_15 = eq i32_ok, 1
+    ok_16 = eq i32_value, 1073741824
+    ok_17 = eq i64_ok, 1
+    ok_18 = eq i64_value, -27
+    ok_19 = eq isize_ok, 1
+    ok_20 = eq isize_value, -125
+
+    ok_21 = eq u8_over_ok, 0
+    ok_22 = eq u8_over_value, 0
+    ok_23 = eq u16_over_ok, 0
+    ok_24 = eq u16_over_value, 0
+    ok_25 = eq u32_over_ok, 0
+    ok_26 = eq u32_over_value, 0
+    ok_27 = eq u64_over_ok, 0
+    ok_28 = eq u64_over_value, 0
+    ok_29 = eq i8_over_ok, 0
+    ok_30 = eq i8_over_value, 0
+    ok_31 = eq i16_over_ok, 0
+    ok_32 = eq i16_over_value, 0
+    ok_33 = eq i32_over_ok, 0
+    ok_34 = eq i32_over_value, 0
+    ok_35 = eq i64_over_ok, 0
+    ok_36 = eq i64_over_value, 0
+
+    ok_37 = eq u8_strict, 128
+    ok_38 = eq u16_strict, 81
+    ok_39 = eq u32_strict, 81
+    ok_40 = eq u64_strict, 81
+    ok_41 = eq usize_strict, 1024
+    ok_42 = eq i8_strict, -128
+    ok_43 = eq i16_strict, -32768
+    ok_44 = eq i32_strict, 1073741824
+    ok_45 = eq i64_strict, -27
+    ok_46 = eq isize_strict, -125
+
+    acc_01 = and ok_01, ok_02
+    acc_02 = and acc_01, ok_03
+    acc_03 = and acc_02, ok_04
+    acc_04 = and acc_03, ok_05
+    acc_05 = and acc_04, ok_06
+    acc_06 = and acc_05, ok_07
+    acc_07 = and acc_06, ok_08
+    acc_08 = and acc_07, ok_09
+    acc_09 = and acc_08, ok_10
+    acc_10 = and acc_09, ok_11
+    acc_11 = and acc_10, ok_12
+    acc_12 = and acc_11, ok_13
+    acc_13 = and acc_12, ok_14
+    acc_14 = and acc_13, ok_15
+    acc_15 = and acc_14, ok_16
+    acc_16 = and acc_15, ok_17
+    acc_17 = and acc_16, ok_18
+    acc_18 = and acc_17, ok_19
+    acc_19 = and acc_18, ok_20
+    acc_20 = and acc_19, ok_21
+    acc_21 = and acc_20, ok_22
+    acc_22 = and acc_21, ok_23
+    acc_23 = and acc_22, ok_24
+    acc_24 = and acc_23, ok_25
+    acc_25 = and acc_24, ok_26
+    acc_26 = and acc_25, ok_27
+    acc_27 = and acc_26, ok_28
+    acc_28 = and acc_27, ok_29
+    acc_29 = and acc_28, ok_30
+    acc_30 = and acc_29, ok_31
+    acc_31 = and acc_30, ok_32
+    acc_32 = and acc_31, ok_33
+    acc_33 = and acc_32, ok_34
+    acc_34 = and acc_33, ok_35
+    acc_35 = and acc_34, ok_36
+    acc_36 = and acc_35, ok_37
+    acc_37 = and acc_36, ok_38
+    acc_38 = and acc_37, ok_39
+    acc_39 = and acc_38, ok_40
+    acc_40 = and acc_39, ok_41
+    acc_41 = and acc_40, ok_42
+    acc_42 = and acc_41, ok_43
+    acc_43 = and acc_42, ok_44
+    acc_44 = and acc_43, ok_45
+    ok = and acc_44, ok_46
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10632)
+
+L_PASS:
+    !ok
+    return 0
+
+@test should_panic "sa_std unsigned strict pow panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_POW u8_strict, 16, 2
+    !u8_strict
+    return 0
+
+@test should_panic "sa_std signed strict pow panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_I8_STRICT_POW i8_strict, 12, 3
+    !i8_strict
+    return 0

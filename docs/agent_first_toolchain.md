@@ -36,7 +36,7 @@
       "code": "SA-REF-010",
       "severity": "error",
       "message": "RegisterRedefinition: register %x is already defined.",
-      "location": { "file": "src/main.sa", "line": 45, "column": 4 },
+      "location": { "file": "src/main.sars", "line": 45, "column": 4 },
       "repair": {
         "action": "rename",
         "hint": "Try using a fresh register name, e.g., %x_1.",

@@ -1,0 +1,10 @@
+@import "consumer/../bridge/maker.sars"
+
+@export read_slot() -> i64!:
+L_ENTRY:
+    r = call @make_slot()
+    buf = ?r
+    v = load buf+0 as i64
+    !r
+    !buf
+    return v

@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "saasm-0.6"
 
 [targets]
-entry = "main.sa"
-entry_module = "src/entry.sa"
-manifest_module = "pkg/manifest.sa"
-meta_module = "src/meta.sa"
+entry = "main.sars"
+entry_module = "src/entry.sars"
+manifest_module = "pkg/manifest.sars"
+meta_module = "src/meta.sars"
 
 [notes]
 compiler_input = false

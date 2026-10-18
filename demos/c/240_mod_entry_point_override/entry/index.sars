@@ -1,0 +1,7 @@
+@import "entry/default/index.sars"
+@import "entry/override/index.sars"
+
+@export entry_value() -> i32:
+L_ENTRY:
+    value = call @override_entry_value()
+    return value

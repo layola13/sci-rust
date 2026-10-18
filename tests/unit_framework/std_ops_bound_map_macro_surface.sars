@@ -1,0 +1,110 @@
+@import "sa_std/ops.sars"
+
+@add_ten(value: u64) -> u64:
+L_ENTRY:
+    result = add value, 10
+    return result
+
+@times_two(value: u64) -> u64:
+L_ENTRY:
+    result = mul value, 2
+    return result
+
+@test "sa_std ops Bound map copy cloned macros"():
+L_ENTRY:
+    included = stack_alloc BoundU64_SIZE
+    excluded = stack_alloc BoundU64_SIZE
+    unbounded = stack_alloc BoundU64_SIZE
+    copy = stack_alloc BoundU64_SIZE
+    copied = stack_alloc BoundU64_SIZE
+    cloned = stack_alloc BoundU64_SIZE
+    mapped_included = stack_alloc BoundU64_SIZE
+    mapped_excluded = stack_alloc BoundU64_SIZE
+    mapped_unbounded = stack_alloc BoundU64_SIZE
+
+    included_usize = stack_alloc BoundUsize_SIZE
+    unbounded_usize = stack_alloc BoundUsize_SIZE
+    copy_usize = stack_alloc BoundUsize_SIZE
+    mapped_usize = stack_alloc BoundUsize_SIZE
+    mapped_unbounded_usize = stack_alloc BoundUsize_SIZE
+
+    EXPAND BOUND_U64_INCLUDED_NEW included, 5
+    EXPAND BOUND_U64_EXCLUDED_NEW excluded, 7
+    EXPAND BOUND_U64_UNBOUNDED_NEW unbounded
+    EXPAND BOUND_U64_COPY copy, included
+    EXPAND BOUND_U64_COPIED copied, excluded
+    EXPAND BOUND_U64_CLONED cloned, included
+    EXPAND BOUND_U64_MAP mapped_included, included, add_ten
+    EXPAND BOUND_U64_MAP mapped_excluded, excluded, times_two
+    EXPAND BOUND_U64_MAP mapped_unbounded, unbounded, add_ten
+
+    EXPAND BOUND_USIZE_INCLUDED_NEW included_usize, 11
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW unbounded_usize
+    EXPAND BOUND_USIZE_COPY copy_usize, included_usize
+    EXPAND BOUND_USIZE_MAP mapped_usize, included_usize, times_two
+    EXPAND BOUND_USIZE_MAP mapped_unbounded_usize, unbounded_usize, times_two
+
+    EXPAND BOUND_U64_TAG copy_tag, copy
+    EXPAND BOUND_U64_VALUE copy_value, copy
+    EXPAND BOUND_U64_TAG copied_tag, copied
+    EXPAND BOUND_U64_VALUE copied_value, copied
+    EXPAND BOUND_U64_TAG cloned_tag, cloned
+    EXPAND BOUND_U64_VALUE cloned_value, cloned
+    EXPAND BOUND_U64_TAG mapped_included_tag, mapped_included
+    EXPAND BOUND_U64_VALUE mapped_included_value, mapped_included
+    EXPAND BOUND_U64_TAG mapped_excluded_tag, mapped_excluded
+    EXPAND BOUND_U64_VALUE mapped_excluded_value, mapped_excluded
+    EXPAND BOUND_U64_TAG mapped_unbounded_tag, mapped_unbounded
+    EXPAND BOUND_U64_VALUE mapped_unbounded_value, mapped_unbounded
+
+    EXPAND BOUND_USIZE_TAG copy_usize_tag, copy_usize
+    EXPAND BOUND_USIZE_VALUE copy_usize_value, copy_usize
+    EXPAND BOUND_USIZE_TAG mapped_usize_tag, mapped_usize
+    EXPAND BOUND_USIZE_VALUE mapped_usize_value, mapped_usize
+    EXPAND BOUND_USIZE_TAG mapped_unbounded_usize_tag, mapped_unbounded_usize
+    EXPAND BOUND_USIZE_VALUE mapped_unbounded_usize_value, mapped_unbounded_usize
+
+    ok_copy_tag = eq copy_tag, BOUND_U64_INCLUDED
+    ok_copy_value = eq copy_value, 5
+    ok_copied_tag = eq copied_tag, BOUND_U64_EXCLUDED
+    ok_copied_value = eq copied_value, 7
+    ok_cloned_tag = eq cloned_tag, BOUND_U64_INCLUDED
+    ok_cloned_value = eq cloned_value, 5
+    ok_mapped_included_tag = eq mapped_included_tag, BOUND_U64_INCLUDED
+    ok_mapped_included_value = eq mapped_included_value, 15
+    ok_mapped_excluded_tag = eq mapped_excluded_tag, BOUND_U64_EXCLUDED
+    ok_mapped_excluded_value = eq mapped_excluded_value, 14
+    ok_mapped_unbounded_tag = eq mapped_unbounded_tag, BOUND_U64_UNBOUNDED
+    ok_mapped_unbounded_value = eq mapped_unbounded_value, 0
+    ok_copy_usize_tag = eq copy_usize_tag, BOUND_USIZE_INCLUDED
+    ok_copy_usize_value = eq copy_usize_value, 11
+    ok_mapped_usize_tag = eq mapped_usize_tag, BOUND_USIZE_INCLUDED
+    ok_mapped_usize_value = eq mapped_usize_value, 22
+    ok_mapped_unbounded_usize_tag = eq mapped_unbounded_usize_tag, BOUND_USIZE_UNBOUNDED
+    ok_mapped_unbounded_usize_value = eq mapped_unbounded_usize_value, 0
+
+    c01 = and ok_copy_tag, ok_copy_value
+    c02 = and c01, ok_copied_tag
+    c03 = and c02, ok_copied_value
+    c04 = and c03, ok_cloned_tag
+    c05 = and c04, ok_cloned_value
+    c06 = and c05, ok_mapped_included_tag
+    c07 = and c06, ok_mapped_included_value
+    c08 = and c07, ok_mapped_excluded_tag
+    c09 = and c08, ok_mapped_excluded_value
+    c10 = and c09, ok_mapped_unbounded_tag
+    c11 = and c10, ok_mapped_unbounded_value
+    c12 = and c11, ok_copy_usize_tag
+    c13 = and c12, ok_copy_usize_value
+    c14 = and c13, ok_mapped_usize_tag
+    c15 = and c14, ok_mapped_usize_value
+    c16 = and c15, ok_mapped_unbounded_usize_tag
+    ok = and c16, ok_mapped_unbounded_usize_value
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10512)
+
+L_PASS:
+    return 0

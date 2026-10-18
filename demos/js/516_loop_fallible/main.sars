@@ -1,0 +1,39 @@
+@import "sa_std/io/print.sai"
+@import "step/step.sars"
+
+@const OUT = utf8:"516\n"
+
+// 516 - Loop over a fallible step living in another file
+// (511 + 1 five times).
+@main() -> i32:
+L_ENTRY:
+    acc = 511 as i64
+    i = 0 as i64
+    one = 1 as i64
+    jmp L_LOOP
+L_LOOP:
+    c = slt i, 5
+    br c -> L_BODY, L_DONE
+L_BODY:
+    r = call @step_once(acc)
+    v = ?r
+    acc = add v, 0
+    i = add i, one
+    !c
+    !r
+    !v
+    jmp L_LOOP
+L_DONE:
+    !c
+    ok = eq acc, 516
+    !acc
+    !i
+    !one
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

@@ -1,0 +1,8 @@
+@import "consumer/../bridge/ownership_float_bridge.sars"
+
+@ownership_float_consumer_value() -> f64:
+L_ENTRY:
+    buf = call @make_float_slot()
+    v = load buf+0 as f64
+    !buf
+    return v

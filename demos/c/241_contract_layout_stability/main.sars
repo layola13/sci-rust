@@ -1,0 +1,26 @@
+@import "sa_std/io/print.sai"
+@import "consumer/point_consumer.sars"
+
+@const RESULT_OK = utf8:"241\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 241 - Contract Layout Stability
+// The tree is split into layout/point.sal, bridge/point_bridge.sa,
+// and consumer/point_consumer.sa.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @point_consumer_value()
+    ok = eq value, 241
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

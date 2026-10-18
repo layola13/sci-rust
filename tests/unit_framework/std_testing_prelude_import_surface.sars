@@ -1,0 +1,50 @@
+@import "sa_std/testing/prelude.sars"
+
+@test "sa_std testing prelude imports"():
+L_ENTRY:
+    return 0
+
+@test "sa_std testing prelude exposes mock io behavior"():
+L_ENTRY:
+    storage = stack_alloc 8
+    mock = stack_alloc MockIo_SIZE
+    src = stack_alloc 3
+    dst = stack_alloc 3
+    store src+0, 65 as u8
+    store src+1, 66 as u8
+    store src+2, 67 as u8
+    EXPAND MOCK_IO_INIT mock, storage, 8
+    EXPAND MOCK_IO_WRITE written, mock, src, 3
+    EXPAND MOCK_IO_REWIND mock
+    EXPAND MOCK_IO_READ read, mock, dst, 3
+    got_a = load dst+0 as u8
+    got_b = load dst+1 as u8
+    got_c = load dst+2 as u8
+    ok_written = eq written, 3
+    ok_read = eq read, 3
+    ok_a = eq got_a, 65
+    ok_b = eq got_b, 66
+    ok_c = eq got_c, 67
+    ok = and ok_written, ok_read
+    ok = and ok, ok_a
+    ok = and ok, ok_b
+    ok = and ok, ok_c
+    !got_a
+    !got_b
+    !got_c
+    !ok_written
+    !ok_read
+    !ok_a
+    !ok_b
+    !ok_c
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    !written
+    !read
+    panic(11152)
+L_PASS:
+    !ok
+    !written
+    !read
+    return 0

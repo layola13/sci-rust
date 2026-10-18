@@ -1,8 +1,0 @@
-@import "right/../shared/leaf.sa"
-
-@export b_value() -> i32:
-L_ENTRY:
-    leaf = call @leaf_value()
-    value = add leaf, 46
-    !leaf
-    return value

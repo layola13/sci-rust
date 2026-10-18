@@ -1,0 +1,60 @@
+@import "../math.sars"
+@import "slice.sal"
+@import "slice.sars"
+@import "iter.sal"
+@import "iter.sars"
+
+[MACRO] WHILE %cond, %body_label, %done_label
+    br %cond -> %body_label, %done_label
+[END_MACRO]
+
+[MACRO] WHILE_COND %cond, %body_label, %done_label
+    EXPAND WHILE %cond, %body_label, %done_label
+[END_MACRO]
+
+[MACRO] FOR_RANGE %out_index, %start_value, %end_value, %body_label, %done_label
+    %out_index = add %start_value, 0
+    __for_range_take_%out_index = ult %out_index, %end_value
+    br __for_range_take_%out_index -> %body_label, %done_label
+[END_MACRO]
+
+[MACRO] INDEX_LOOP %out_index, %start_value, %end_value, %body_label, %done_label
+    EXPAND FOR_RANGE %out_index, %start_value, %end_value, %body_label, %done_label
+[END_MACRO]
+
+[MACRO] ARRAY_FOR_EACH %out_index, %slice_reg, %body_label, %done_label
+    __array_len_%out_index = load %slice_reg+Slice_len as u64
+    %out_index = add 0, 0
+    __array_has_item_%out_index = ult %out_index, __array_len_%out_index
+    br __array_has_item_%out_index -> %body_label, %done_label
+[END_MACRO]
+
+[MACRO] ARRAY_SCAN_MIN %out_value, %current_value, %next_value
+    __array_take_left_%out_value = ult %current_value, %next_value
+    br __array_take_left_%out_value -> L_ARRAY_SCAN_MIN_LEFT_%out_value, L_ARRAY_SCAN_MIN_RIGHT_%out_value
+L_ARRAY_SCAN_MIN_LEFT_%out_value:
+    %out_value = add %current_value, 0
+    !__array_take_left_%out_value
+    jmp L_ARRAY_SCAN_MIN_END_%out_value
+L_ARRAY_SCAN_MIN_RIGHT_%out_value:
+    %out_value = add %next_value, 0
+    !__array_take_left_%out_value
+L_ARRAY_SCAN_MIN_END_%out_value:
+[END_MACRO]
+
+[MACRO] ARRAY_SCAN_MAX %out_value, %current_value, %next_value
+    __array_take_left_%out_value = ugt %current_value, %next_value
+    br __array_take_left_%out_value -> L_ARRAY_SCAN_MAX_LEFT_%out_value, L_ARRAY_SCAN_MAX_RIGHT_%out_value
+L_ARRAY_SCAN_MAX_LEFT_%out_value:
+    %out_value = add %current_value, 0
+    !__array_take_left_%out_value
+    jmp L_ARRAY_SCAN_MAX_END_%out_value
+L_ARRAY_SCAN_MAX_RIGHT_%out_value:
+    %out_value = add %next_value, 0
+    !__array_take_left_%out_value
+L_ARRAY_SCAN_MAX_END_%out_value:
+[END_MACRO]
+
+[MACRO] SLICE_GET_U64_AT %out_value, %slice_reg, %index
+    EXPAND SLICE_GET_U64 %out_value, %slice_reg, %index
+[END_MACRO]

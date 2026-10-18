@@ -1,0 +1,45 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/option.sars"
+
+@const RESULT_OK = utf8:"5\n"
+@const RESULT_ERR = utf8:"0\n"
+
+@main() -> i32:
+L_ENTRY:
+    value = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME value, 5
+    EXPAND OPTION_IS_SOME ok, value
+    br ok -> L_SOME, L_NONE
+
+L_SOME:
+    EXPAND OPTION_GET x, value
+    sum = add x, 0
+    result = add sum, 0
+    ok_value = eq result, 5
+    !sum
+    !ok
+    !value
+    br ok_value -> L_OK, L_ERR
+
+L_NONE:
+    x = 0
+    result = add 0, 0
+    ok_value = eq result, 5
+    !ok
+    !value
+    br ok_value -> L_OK, L_ERR
+
+L_OK:
+    !ok_value
+    !result
+    !x
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    !ok_value
+    !result
+    !x
+    call @sa_print_bytes(&RESULT_ERR, 2)
+    return 1

@@ -1,0 +1,289 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/collections/hashmap.sars"
+@import "sa_std/collections/hashset.sars"
+@import "sa_std/collections/btree_map.sars"
+@import "sa_std/collections/btree_set.sars"
+
+@const KEY_A = utf8:"a"
+@const KEY_B = utf8:"b"
+@const KEY_C = utf8:"c"
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+@const VALUE_A = utf8:"A"
+@const VALUE_B = utf8:"B"
+
+@test "sa_std map/set entry bare and bitops alias surface"():
+L_ENTRY:
+    // --- HashMap MAP_ENTRY bare alias (or_insert path) ---
+    EXPAND MAP_NEW hmap
+    key_a = &KEY_A
+    key_b = &KEY_B
+    value_a = &VALUE_A
+    value_b = &VALUE_B
+    EXPAND MAP_ENTRY hmap_ins, hmap_ptr, hmap, key_a, value_a
+    hmap_ins_ok = eq hmap_ins, 1
+    hmap_val = load hmap_ptr+0 as ptr
+    hmap_val_ok = eq hmap_val, value_a
+    EXPAND MAP_ENTRY hmap_again, hmap_ptr2, hmap, key_a, value_b
+    hmap_again_ok = eq hmap_again, 0
+    hmap_val2 = load hmap_ptr2+0 as ptr
+    hmap_val2_ok = eq hmap_val2, value_a
+    EXPAND MAP_GET hmap_get, hmap, key_a
+    hmap_get_ok = eq hmap_get, value_a
+
+    // --- HashSet SET_ENTRY bare alias + bitops ---
+    EXPAND SET_NEW left
+    EXPAND SET_NEW right
+    EXPAND SET_INSERT left_ins_a, left, key_a
+    EXPAND SET_INSERT left_ins_b, left, key_b
+    EXPAND SET_INSERT right_ins_b, right, key_b
+    key_c = &KEY_C
+    EXPAND SET_INSERT right_ins_c, right, key_c
+
+    EXPAND SET_ENTRY set_entry_ins, set_entry_key, left, key_c
+    set_entry_ins_ok = eq set_entry_ins, 1
+    EXPAND SET_CONTAINS left_has_c, left, key_c
+    left_has_c_ok = eq left_has_c, 1
+    EXPAND SET_ENTRY set_entry_again, set_entry_key2, left, key_c
+    set_entry_again_ok = eq set_entry_again, 0
+    // restore left to {a,b} for bitops (remove c)
+    EXPAND SET_REMOVE left_rm_c, left, key_c
+
+    EXPAND SET_BITOR bitor_set, left, right
+    EXPAND SET_BITAND bitand_set, left, right
+    EXPAND SET_LEN bitor_len, bitor_set
+    EXPAND SET_LEN bitand_len, bitand_set
+    EXPAND SET_CONTAINS bitor_has_a, bitor_set, key_a
+    EXPAND SET_CONTAINS bitor_has_c, bitor_set, key_c
+    EXPAND SET_CONTAINS bitand_has_b, bitand_set, key_b
+    EXPAND SET_CONTAINS bitand_has_a, bitand_set, key_a
+    ok_bitor_len = eq bitor_len, 3
+    ok_bitand_len = eq bitand_len, 1
+    ok_bitor_has_a = eq bitor_has_a, 1
+    ok_bitor_has_c = eq bitor_has_c, 1
+    ok_bitand_has_b = eq bitand_has_b, 1
+    ok_bitand_has_a = eq bitand_has_a, 0
+
+    // --- BTreeMap BTREE_MAP_ENTRY bare alias ---
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+
+    EXPAND BTREE_MAP_NEW bmap
+    EXPAND BTREE_MAP_ENTRY bmap_ins, bmap_ptr, bmap, alpha, 10
+    bmap_ins_ok = eq bmap_ins, 1
+    bmap_val = load bmap_ptr+0 as u64
+    bmap_val_ok = eq bmap_val, 10
+    EXPAND BTREE_MAP_ENTRY bmap_again, bmap_ptr2, bmap, alpha, 99
+    bmap_again_ok = eq bmap_again, 0
+    bmap_val2 = load bmap_ptr2+0 as u64
+    bmap_val2_ok = eq bmap_val2, 10
+    EXPAND BTREE_MAP_GET bmap_get, bmap, alpha
+    bmap_get_ok = eq bmap_get, 10
+
+    // --- BTreeSet BTREE_SET_ENTRY bare alias + bitops ---
+    EXPAND BTREE_SET_NEW bleft
+    EXPAND BTREE_SET_NEW bright
+    EXPAND BTREE_SET_INSERT bleft_a, bleft, alpha
+    EXPAND BTREE_SET_INSERT bleft_b, bleft, bravo
+    EXPAND BTREE_SET_INSERT bright_b, bright, bravo
+    EXPAND BTREE_SET_INSERT bright_c, bright, charlie
+
+    EXPAND BTREE_SET_ENTRY bset_entry_ins, bset_entry_key, bleft, charlie
+    bset_entry_ins_ok = eq bset_entry_ins, 1
+    EXPAND BTREE_SET_CONTAINS bleft_has_c, bleft, charlie
+    bleft_has_c_ok = eq bleft_has_c, 1
+    EXPAND BTREE_SET_ENTRY bset_entry_again, bset_entry_key2, bleft, charlie
+    bset_entry_again_ok = eq bset_entry_again, 0
+    EXPAND BTREE_SET_REMOVE bleft_rm_c, bleft, charlie
+
+    EXPAND BTREE_SET_BITOR bbitor, bleft, bright
+    EXPAND BTREE_SET_BITAND bbitand, bleft, bright
+    EXPAND BTREE_SET_LEN bbitor_len, bbitor
+    EXPAND BTREE_SET_LEN bbitand_len, bbitand
+    EXPAND BTREE_SET_CONTAINS bbitor_has_a, bbitor, alpha
+    EXPAND BTREE_SET_CONTAINS bbitor_has_c, bbitor, charlie
+    EXPAND BTREE_SET_CONTAINS bbitand_has_b, bbitand, bravo
+    EXPAND BTREE_SET_CONTAINS bbitand_has_a, bbitand, alpha
+    ok_bbitor_len = eq bbitor_len, 3
+    ok_bbitand_len = eq bbitand_len, 1
+    ok_bbitor_has_a = eq bbitor_has_a, 1
+    ok_bbitor_has_c = eq bbitor_has_c, 1
+    ok_bbitand_has_b = eq bbitand_has_b, 1
+    ok_bbitand_has_a = eq bbitand_has_a, 0
+
+    ok_left_ins = and left_ins_a, left_ins_b
+    ok_right_ins = and right_ins_b, right_ins_c
+    ok_bleft_ins = and bleft_a, bleft_b
+    ok_bright_ins = and bright_b, bright_c
+
+    ok01 = and hmap_ins_ok, hmap_val_ok
+    ok02 = and ok01, hmap_again_ok
+    ok03 = and ok02, hmap_val2_ok
+    ok04 = and ok03, hmap_get_ok
+    ok05 = and ok04, set_entry_ins_ok
+    ok06 = and ok05, left_has_c_ok
+    ok07 = and ok06, set_entry_again_ok
+    ok08 = and ok07, ok_left_ins
+    ok09 = and ok08, ok_right_ins
+    ok10 = and ok09, ok_bitor_len
+    ok11 = and ok10, ok_bitand_len
+    ok12 = and ok11, ok_bitor_has_a
+    ok13 = and ok12, ok_bitor_has_c
+    ok14 = and ok13, ok_bitand_has_b
+    ok15 = and ok14, ok_bitand_has_a
+    ok16 = and ok15, bmap_ins_ok
+    ok17 = and ok16, bmap_val_ok
+    ok18 = and ok17, bmap_again_ok
+    ok19 = and ok18, bmap_val2_ok
+    ok20 = and ok19, bmap_get_ok
+    ok21 = and ok20, bset_entry_ins_ok
+    ok22 = and ok21, bleft_has_c_ok
+    ok23 = and ok22, bset_entry_again_ok
+    ok24 = and ok23, ok_bleft_ins
+    ok25 = and ok24, ok_bright_ins
+    ok26 = and ok25, ok_bbitor_len
+    ok27 = and ok26, ok_bbitand_len
+    ok28 = and ok27, ok_bbitor_has_a
+    ok29 = and ok28, ok_bbitor_has_c
+    ok30 = and ok29, ok_bbitand_has_b
+    ok = and ok30, ok_bbitand_has_a
+
+    !hmap_ins
+    !hmap_ptr
+    !hmap_val
+    !hmap_again
+    !hmap_ptr2
+    !hmap_val2
+    !hmap_get
+    !left_ins_a
+    !left_ins_b
+    !right_ins_b
+    !right_ins_c
+    !set_entry_ins
+    !set_entry_key
+    !left_has_c
+    !set_entry_again
+    !set_entry_key2
+    !left_rm_c
+    !bitor_len
+    !bitand_len
+    !bitor_has_a
+    !bitor_has_c
+    !bitand_has_b
+    !bitand_has_a
+    !bmap_ins
+    !bmap_ptr
+    !bmap_val
+    !bmap_again
+    !bmap_ptr2
+    !bmap_val2
+    !bmap_get
+    !bleft_a
+    !bleft_b
+    !bright_b
+    !bright_c
+    !bset_entry_ins
+    !bset_entry_key
+    !bleft_has_c
+    !bset_entry_again
+    !bset_entry_key2
+    !bleft_rm_c
+    !bbitor_len
+    !bbitand_len
+    !bbitor_has_a
+    !bbitor_has_c
+    !bbitand_has_b
+    !bbitand_has_a
+    !hmap_ins_ok
+    !hmap_val_ok
+    !hmap_again_ok
+    !hmap_val2_ok
+    !hmap_get_ok
+    !set_entry_ins_ok
+    !left_has_c_ok
+    !set_entry_again_ok
+    !ok_left_ins
+    !ok_right_ins
+    !ok_bitor_len
+    !ok_bitand_len
+    !ok_bitor_has_a
+    !ok_bitor_has_c
+    !ok_bitand_has_b
+    !ok_bitand_has_a
+    !bmap_ins_ok
+    !bmap_val_ok
+    !bmap_again_ok
+    !bmap_val2_ok
+    !bmap_get_ok
+    !bset_entry_ins_ok
+    !bleft_has_c_ok
+    !bset_entry_again_ok
+    !ok_bleft_ins
+    !ok_bright_ins
+    !ok_bbitor_len
+    !ok_bbitand_len
+    !ok_bbitor_has_a
+    !ok_bbitor_has_c
+    !ok_bbitand_has_b
+    !ok_bbitand_has_a
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !key_c
+    !value_b
+    !value_a
+    !key_b
+    !key_a
+    !charlie
+    !bravo
+    !alpha
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND BTREE_SET_FREE bbitand
+    EXPAND BTREE_SET_FREE bbitor
+    EXPAND BTREE_SET_FREE bright
+    EXPAND BTREE_SET_FREE bleft
+    EXPAND BTREE_MAP_FREE bmap
+    EXPAND SET_FREE bitand_set
+    EXPAND SET_FREE bitor_set
+    EXPAND SET_FREE right
+    EXPAND SET_FREE left
+    EXPAND MAP_FREE hmap
+    return 0
+
+L_FAIL:
+    panic(10849)

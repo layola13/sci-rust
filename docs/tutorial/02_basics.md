@@ -24,8 +24,8 @@ L_ENTRY:
 SA 使用 `@import` 引入其他文件的内容（包括宏、常量和函数声明）。
 
 ```sa
-@import "sa_std/io.sa"
-@import "../my_lib.sa"
+@import "sa_std/io.sars"
+@import "../my_lib.sars"
 ```
 - **路径**：支持相对路径和标准库路径。
 - **作用**：被导入的文件中的所有 `@export` 函数和宏将在当前文件可用。

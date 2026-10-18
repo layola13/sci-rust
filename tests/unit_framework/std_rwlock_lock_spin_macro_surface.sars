@@ -1,0 +1,68 @@
+@import "sa_std/sync/rwlock.sars"
+
+@test "sa_std rwlock blocking read write spin"():
+L_ENTRY:
+    EXPAND RWLOCK_NEW lock
+    EXPAND RWLOCK_IS_UNLOCKED u0, lock
+    EXPAND RWLOCK_READ lock
+    EXPAND RWLOCK_READER_COUNT c1, lock
+    EXPAND RWLOCK_TRY_WRITE_NOERR tw_ok, guard, lock
+    EXPAND RWLOCK_RELEASE_READ lock
+    EXPAND RWLOCK_IS_UNLOCKED u1, lock
+    EXPAND RWLOCK_WRITE lock
+    EXPAND RWLOCK_IS_WRITING w1, lock
+    EXPAND RWLOCK_RELEASE_WRITE lock
+    EXPAND RWLOCK_LOCK_READ lock
+    EXPAND RWLOCK_READER_COUNT c2, lock
+    EXPAND RWLOCK_RELEASE_READ lock
+    EXPAND RWLOCK_LOCK_WRITE lock
+    EXPAND RWLOCK_IS_WRITING w2, lock
+    EXPAND RWLOCK_FORCE_UNLOCKED lock
+    EXPAND RWLOCK_IS_UNLOCKED u2, lock
+
+    ok_u0 = eq u0, 1
+    ok_c1 = eq c1, 1
+    ok_tw = eq tw_ok, 0
+    ok_u1 = eq u1, 1
+    ok_w1 = eq w1, 1
+    ok_c2 = eq c2, 1
+    ok_w2 = eq w2, 1
+    ok_u2 = eq u2, 1
+    ok01 = and ok_u0, ok_c1
+    ok02 = and ok01, ok_tw
+    ok03 = and ok02, ok_u1
+    ok04 = and ok03, ok_w1
+    ok05 = and ok04, ok_c2
+    ok06 = and ok05, ok_w2
+    ok = and ok06, ok_u2
+
+    !u0
+    !c1
+    !tw_ok
+    !guard
+    !u1
+    !w1
+    !c2
+    !w2
+    !u2
+    !ok_u0
+    !ok_c1
+    !ok_tw
+    !ok_u1
+    !ok_w1
+    !ok_c2
+    !ok_w2
+    !ok_u2
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10875)

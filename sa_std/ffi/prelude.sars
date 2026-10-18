@@ -1,0 +1,2 @@
+// Stable FFI namespace aggregation.
+@import "cstring.sars"

@@ -1,0 +1,68 @@
+@import "sa_std/collections/linked_list.sars"
+
+@ll_is_even(v: u64) -> u64:
+L_ENTRY:
+    rem = urem v, 2
+    out = eq rem, 0
+    !rem
+    !v
+    return out
+
+@test "sa_std linked_list pop_front_if pop_back_if"():
+L_ENTRY:
+    EXPAND LINKED_LIST_NEW list
+    EXPAND LINKED_LIST_PUSH_BACK list, 2
+    EXPAND LINKED_LIST_PUSH_BACK list, 3
+    EXPAND LINKED_LIST_PUSH_BACK list, 4
+    EXPAND LINKED_LIST_POP_FRONT_IF f_ok, f, list, @ll_is_even
+    EXPAND LINKED_LIST_POP_BACK_IF b_ok, b, list, @ll_is_even
+    EXPAND LINKED_LIST_POP_FRONT_IF skip_ok, skip, list, @ll_is_even
+    EXPAND LINKED_LIST_LEN len, list
+    EXPAND LINKED_LIST_TRY_FRONT mid_ok, mid, list
+    EXPAND LINKED_LIST_FREE list
+
+    a = eq f_ok, 1
+    b1 = eq f, 2
+    c = eq b_ok, 1
+    d = eq b, 4
+    e = eq skip_ok, 0
+    f1 = eq len, 1
+    g = eq mid_ok, 1
+    h = eq mid, 3
+    ok01 = and a, b1
+    ok02 = and ok01, c
+    ok03 = and ok02, d
+    ok04 = and ok03, e
+    ok05 = and ok04, f1
+    ok06 = and ok05, g
+    ok = and ok06, h
+    !f_ok
+    !f
+    !b_ok
+    !b
+    !skip_ok
+    !skip
+    !len
+    !mid_ok
+    !mid
+    !a
+    !b1
+    !c
+    !d
+    !e
+    !f1
+    !g
+    !h
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10886)

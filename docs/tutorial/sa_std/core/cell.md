@@ -4,8 +4,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/core/refcell.sa"
-@import "sa_std/core/cell.sa"
+@import "sa_std/core/refcell.sars"
+@import "sa_std/core/cell.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -13,7 +13,7 @@
 ### RefCell 运行时多重借用冲突校验示例
 
 ```sa
-@import "sa_std/core/refcell.sa"
+@import "sa_std/core/refcell.sars"
 
 @main() -> i32:
 L_ENTRY:
@@ -59,7 +59,7 @@ L_ERR_MUT:
 ### Cell 简单直接赋值示例
 
 ```sa
-@import "sa_std/core/cell.sa"
+@import "sa_std/core/cell.sars"
 
 @main() -> i32:
 L_ENTRY:

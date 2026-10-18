@@ -1,0 +1,49 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive same-width sign cast macro surface"():
+L_ENTRY:
+    isize_min_bits = shl 1, 63
+
+    EXPAND NUM_U8_CAST_SIGNED u8_signed, NUM_U8_MAX
+    EXPAND NUM_U16_CAST_SIGNED u16_signed, NUM_U16_MAX
+    EXPAND NUM_U32_CAST_SIGNED u32_signed, NUM_U32_MAX
+    EXPAND NUM_U64_CAST_SIGNED u64_signed, NUM_U64_MAX
+    EXPAND NUM_USIZE_CAST_SIGNED usize_signed, NUM_U64_MAX
+
+    EXPAND NUM_I8_CAST_UNSIGNED i8_unsigned, -1
+    EXPAND NUM_I16_CAST_UNSIGNED i16_unsigned, -2
+    EXPAND NUM_I32_CAST_UNSIGNED i32_unsigned, -3
+    EXPAND NUM_I64_CAST_UNSIGNED i64_unsigned, -1
+    EXPAND NUM_ISIZE_CAST_UNSIGNED isize_unsigned, NUM_I64_MIN
+
+    ok_u8 = eq u8_signed, -1
+    ok_u16 = eq u16_signed, -1
+    ok_u32 = eq u32_signed, -1
+    ok_u64 = eq u64_signed, -1
+    ok_usize = eq usize_signed, -1
+    ok_i8 = eq i8_unsigned, NUM_U8_MAX
+    ok_i16 = eq i16_unsigned, 65534
+    ok_i32 = eq i32_unsigned, 4294967293
+    ok_i64 = eq i64_unsigned, NUM_U64_MAX
+    ok_isize = eq isize_unsigned, isize_min_bits
+
+    ok_01 = and ok_u8, ok_u16
+    ok_02 = and ok_01, ok_u32
+    ok_03 = and ok_02, ok_u64
+    ok_04 = and ok_03, ok_usize
+    ok_05 = and ok_04, ok_i8
+    ok_06 = and ok_05, ok_i16
+    ok_07 = and ok_06, ok_i32
+    ok_08 = and ok_07, ok_i64
+    ok = and ok_08, ok_isize
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !isize_min_bits
+    panic(10628)
+
+L_PASS:
+    !ok
+    !isize_min_bits
+    return 0

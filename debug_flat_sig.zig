@@ -7,7 +7,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const source_path = "/tmp/json_writer_debug.sa";
+    const source_path = "/tmp/json_writer_debug.sars";
     const source = try sio.cwd().readFileAlloc(allocator, source_path, 4 * 1024 * 1024);
     defer allocator.free(source);
     const project_root = try sio.cwd().realpathAlloc(allocator, ".");

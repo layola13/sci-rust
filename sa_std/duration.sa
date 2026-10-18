@@ -1,3 +1,0 @@
-// Public Duration facade. Runtime and arithmetic macros live in time.sa.
-@import "time.sal"
-@import "time.sa"

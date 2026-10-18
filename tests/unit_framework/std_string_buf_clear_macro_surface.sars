@@ -1,0 +1,21 @@
+@import "sa_std/string.sars"
+@import "sa_std/core/slice.sars"
+
+@const S = utf8:"hi"
+
+@test "sa_std string_buf clear"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS s, &S, 2
+    EXPAND STRING_BUF_FROM_STR buf, s
+    EXPAND STRING_BUF_CLEAR buf
+    EXPAND STRING_BUF_LEN ln, buf
+    EXPAND STRING_BUF_FREE buf
+    ok = eq ln, 0
+    !ln
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10990)

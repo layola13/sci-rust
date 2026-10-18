@@ -94,7 +94,7 @@ skip=0
 fail_list=""
 
 for dir in demos/rosetta/*; do
-    [ -f "$dir/main.sa" ] || continue
+    [ -f "$dir/main.sars" ] || continue
 
     base=$(basename "$dir")
     # Skip HTTP demos that need special runtime
@@ -113,7 +113,7 @@ for dir in demos/rosetta/*; do
         continue
     fi
 
-    source_path=$(realpath "$dir/main.sa")
+    source_path=$(realpath "$dir/main.sars")
     native_stdout="$tmp_root/$base.native.stdout"
     native_stderr="$tmp_root/$base.native.stderr"
     wasm_stdout="$tmp_root/$base.wasm.stdout"
@@ -207,8 +207,8 @@ for dir in demos/rosetta/*; do
     esac
 
     if [ "$base" = "220_pkg_lib_dynamic" ]; then
-        main_source=$(realpath "$dir/main.sa")
-        lib_source=$(realpath "$dir/lib/index.sa")
+        main_source=$(realpath "$dir/main.sars")
+        lib_source=$(realpath "$dir/lib/index.sars")
         sa_std_archive_path="artifacts/sa_std/libsa_std.a"
         main_obj="$tmp_root/$base.main.o"
         lib_obj="$tmp_root/$base.lib.o"

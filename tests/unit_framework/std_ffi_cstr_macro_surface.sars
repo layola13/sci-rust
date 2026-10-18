@@ -1,0 +1,512 @@
+@import "sa_std/ffi.sars"
+@import "sa_std/string.sars"
+
+@test "sa_std ffi cstr borrowed view macros"():
+L_ENTRY:
+    cbuf = stack_alloc 8
+    store cbuf+0, 102 as u8
+    store cbuf+1, 111 as u8
+    store cbuf+2, 111 as u8
+    store cbuf+3, 0 as u8
+    store cbuf+4, 120 as u8
+
+    EXPAND CSTR_LEN ptr_len, cbuf
+    from_ptr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_PTR from_ptr, cbuf
+    EXPAND CSTR_COUNT_BYTES from_ptr_count, from_ptr
+    EXPAND CSTR_IS_EMPTY from_ptr_empty, from_ptr
+    from_ptr_bytes = stack_alloc Slice_SIZE
+    from_ptr_bytes_nul = stack_alloc Slice_SIZE
+    EXPAND CSTR_TO_BYTES from_ptr_bytes, from_ptr
+    EXPAND CSTR_TO_BYTES_WITH_NUL from_ptr_bytes_nul, from_ptr
+    from_ptr_bytes_len = load from_ptr_bytes+Slice_len as u64
+    from_ptr_bytes_nul_len = load from_ptr_bytes_nul+Slice_len as u64
+    from_ptr_bytes_ptr = load from_ptr_bytes+Slice_ptr as ptr
+    from_ptr_b0 = load from_ptr_bytes_ptr+0 as u8
+
+    empty_buf = stack_alloc 1
+    store empty_buf+0, 0 as u8
+    empty_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW empty_slice, empty_buf, 1
+    empty_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_WITH_NUL empty_status, empty_cstr, empty_slice
+    EXPAND CSTR_IS_EMPTY empty_is_empty, empty_cstr
+    EXPAND CSTR_VALIDATE_WITH_NUL_DETAIL empty_detail_status, empty_detail_pos, empty_slice
+
+    good_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW good_slice, cbuf, 4
+    good_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_WITH_NUL good_status, good_cstr, good_slice
+    EXPAND CSTR_COUNT_BYTES good_count, good_cstr
+    good_bytes = stack_alloc Slice_SIZE
+    EXPAND CSTR_TO_BYTES good_bytes, good_cstr
+    good_bytes_len = load good_bytes+Slice_len as u64
+    good_str = stack_alloc Slice_SIZE
+    EXPAND CSTR_TO_STR good_str_status, good_str, good_cstr
+    good_str_len = load good_str+Slice_len as u64
+    good_str_ptr = load good_str+Slice_ptr as ptr
+    good_str_b0 = load good_str_ptr+0 as u8
+    EXPAND CSTR_VALIDATE_WITH_NUL_DETAIL good_detail_status, good_detail_pos, good_slice
+
+    interior = stack_alloc 5
+    store interior+0, 102 as u8
+    store interior+1, 0 as u8
+    store interior+2, 111 as u8
+    store interior+3, 111 as u8
+    store interior+4, 0 as u8
+    interior_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW interior_slice, interior, 5
+    interior_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_WITH_NUL interior_status, interior_cstr, interior_slice
+    interior_len = load interior_cstr+CStr_len as u64
+    EXPAND CSTR_VALIDATE_WITH_NUL_DETAIL interior_detail_status, interior_detail_pos, interior_slice
+
+    unterminated = stack_alloc 3
+    store unterminated+0, 98 as u8
+    store unterminated+1, 97 as u8
+    store unterminated+2, 114 as u8
+    unterminated_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW unterminated_slice, unterminated, 3
+    unterminated_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_WITH_NUL unterminated_status, unterminated_cstr, unterminated_slice
+    unterminated_len = load unterminated_cstr+CStr_len as u64
+    EXPAND CSTR_VALIDATE_WITH_NUL_DETAIL unterminated_detail_status, unterminated_detail_pos, unterminated_slice
+
+    until = stack_alloc 6
+    store until+0, 97 as u8
+    store until+1, 98 as u8
+    store until+2, 0 as u8
+    store until+3, 99 as u8
+    store until+4, 100 as u8
+    store until+5, 0 as u8
+    until_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW until_slice, until, 6
+    until_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_UNTIL_NUL until_ok, until_cstr, until_slice
+    until_len = load until_cstr+CStr_len as u64
+    until_bytes = stack_alloc Slice_SIZE
+    EXPAND CSTR_TO_BYTES until_bytes, until_cstr
+    until_bytes_len = load until_bytes+Slice_len as u64
+
+    no_nul_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW no_nul_slice, unterminated, 3
+    no_nul_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_UNTIL_NUL no_nul_ok, no_nul_cstr, no_nul_slice
+    no_nul_len = load no_nul_cstr+CStr_len as u64
+
+    invalid_utf8 = stack_alloc 3
+    store invalid_utf8+0, 195 as u8
+    store invalid_utf8+1, 40 as u8
+    store invalid_utf8+2, 0 as u8
+    invalid_utf8_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW invalid_utf8_slice, invalid_utf8, 3
+    invalid_utf8_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_BYTES_WITH_NUL invalid_utf8_cstr_status, invalid_utf8_cstr, invalid_utf8_slice
+    invalid_utf8_str = stack_alloc Slice_SIZE
+    EXPAND CSTR_TO_STR invalid_utf8_str_status, invalid_utf8_str, invalid_utf8_cstr
+    invalid_utf8_str_len = load invalid_utf8_str+Slice_len as u64
+
+    ok_ptr_len = eq ptr_len, 3
+    ok_from_ptr_count = eq from_ptr_count, 3
+    ok_from_ptr_empty = eq from_ptr_empty, 0
+    ok_from_ptr_bytes_len = eq from_ptr_bytes_len, 3
+    ok_from_ptr_bytes_nul_len = eq from_ptr_bytes_nul_len, 4
+    ok_from_ptr_b0 = eq from_ptr_b0, 102
+    ok_empty_status = eq empty_status, CSTR_FROM_BYTES_OK
+    ok_empty_is_empty = eq empty_is_empty, 1
+    ok_empty_detail_status = eq empty_detail_status, CSTR_FROM_BYTES_OK
+    ok_empty_detail_pos = eq empty_detail_pos, CSTR_ERROR_POS_NONE
+    ok_good_status = eq good_status, CSTR_FROM_BYTES_OK
+    ok_good_count = eq good_count, 3
+    ok_good_bytes_len = eq good_bytes_len, 3
+    ok_good_str_status = eq good_str_status, CSTR_FROM_BYTES_OK
+    ok_good_str_len = eq good_str_len, 3
+    ok_good_str_b0 = eq good_str_b0, 102
+    ok_good_detail_status = eq good_detail_status, CSTR_FROM_BYTES_OK
+    ok_good_detail_pos = eq good_detail_pos, CSTR_ERROR_POS_NONE
+    ok_interior_status = eq interior_status, CSTR_FROM_BYTES_INTERIOR_NUL
+    ok_interior_len = eq interior_len, 0
+    ok_interior_detail_status = eq interior_detail_status, CSTR_FROM_BYTES_INTERIOR_NUL
+    ok_interior_detail_pos = eq interior_detail_pos, 1
+    ok_unterminated_status = eq unterminated_status, CSTR_FROM_BYTES_NOT_NUL_TERMINATED
+    ok_unterminated_len = eq unterminated_len, 0
+    ok_unterminated_detail_status = eq unterminated_detail_status, CSTR_FROM_BYTES_NOT_NUL_TERMINATED
+    ok_unterminated_detail_pos = eq unterminated_detail_pos, 3
+    ok_until_flag = eq until_ok, 1
+    ok_until_len = eq until_len, 3
+    ok_until_bytes_len = eq until_bytes_len, 2
+    ok_no_nul_flag = eq no_nul_ok, 0
+    ok_no_nul_len = eq no_nul_len, 0
+    ok_invalid_utf8_cstr_status = eq invalid_utf8_cstr_status, CSTR_FROM_BYTES_OK
+    ok_invalid_utf8_str_status = eq invalid_utf8_str_status, CSTR_TO_STR_INVALID_UTF8
+    ok_invalid_utf8_str_len = eq invalid_utf8_str_len, 0
+
+    ok01 = and ok_ptr_len, ok_from_ptr_count
+    ok02 = and ok01, ok_from_ptr_empty
+    ok03 = and ok02, ok_from_ptr_bytes_len
+    ok04 = and ok03, ok_from_ptr_bytes_nul_len
+    ok05 = and ok04, ok_from_ptr_b0
+    ok06 = and ok05, ok_empty_status
+    ok07 = and ok06, ok_empty_is_empty
+    ok08 = and ok07, ok_empty_detail_status
+    ok09 = and ok08, ok_empty_detail_pos
+    ok10 = and ok09, ok_good_status
+    ok11 = and ok10, ok_good_count
+    ok12 = and ok11, ok_good_bytes_len
+    ok13 = and ok12, ok_good_str_status
+    ok14 = and ok13, ok_good_str_len
+    ok15 = and ok14, ok_good_str_b0
+    ok16 = and ok15, ok_good_detail_status
+    ok17 = and ok16, ok_good_detail_pos
+    ok18 = and ok17, ok_interior_status
+    ok19 = and ok18, ok_interior_len
+    ok20 = and ok19, ok_interior_detail_status
+    ok21 = and ok20, ok_interior_detail_pos
+    ok22 = and ok21, ok_unterminated_status
+    ok23 = and ok22, ok_unterminated_len
+    ok24 = and ok23, ok_unterminated_detail_status
+    ok25 = and ok24, ok_unterminated_detail_pos
+    ok26 = and ok25, ok_until_flag
+    ok27 = and ok26, ok_until_len
+    ok28 = and ok27, ok_until_bytes_len
+    ok29 = and ok28, ok_no_nul_flag
+    ok30 = and ok29, ok_no_nul_len
+    ok31 = and ok30, ok_invalid_utf8_cstr_status
+    ok32 = and ok31, ok_invalid_utf8_str_status
+    ok = and ok32, ok_invalid_utf8_str_len
+
+    !from_ptr_bytes_ptr
+    !good_str_ptr
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(980)
+
+L_PASS:
+    return 0
+
+@test "sa_std ffi owned cstring macros"():
+L_ENTRY:
+    bytes = stack_alloc 3
+    store bytes+0, 98 as u8
+    store bytes+1, 97 as u8
+    store bytes+2, 114 as u8
+    bytes_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW bytes_slice, bytes, 3
+
+    owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_NEW owned_status, owned, bytes_slice
+    owned_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTRING_AS_CSTR owned_cstr, owned
+    EXPAND CSTR_COUNT_BYTES owned_count, owned_cstr
+    owned_bytes = stack_alloc Slice_SIZE
+    owned_bytes_nul = stack_alloc Slice_SIZE
+    EXPAND CSTRING_AS_BYTES owned_bytes, owned
+    EXPAND CSTRING_AS_BYTES_WITH_NUL owned_bytes_nul, owned
+    EXPAND CSTRING_AS_PTR owned_ptr, owned
+    EXPAND CSTRING_COUNT_BYTES owned_count_direct, owned
+    EXPAND CSTRING_IS_EMPTY owned_is_empty, owned
+    owned_str = stack_alloc Slice_SIZE
+    EXPAND CSTRING_TO_STR owned_str_status, owned_str, owned
+    owned_bytes_len = load owned_bytes+Slice_len as u64
+    owned_bytes_nul_len = load owned_bytes_nul+Slice_len as u64
+    owned_str_len = load owned_str+Slice_len as u64
+    owned_str_ptr = load owned_str+Slice_ptr as ptr
+    owned_bytes_ptr = load owned_bytes+Slice_ptr as ptr
+    owned_b0 = load owned_bytes_ptr+0 as u8
+    owned_b2 = load owned_bytes_ptr+2 as u8
+    owned_str_b1 = load owned_str_ptr+1 as u8
+    owned_bytes_nul_ptr = load owned_bytes_nul+Slice_ptr as ptr
+    owned_nul = load owned_bytes_nul_ptr+3 as u8
+
+    raw = stack_alloc CString_SIZE
+    EXPAND CSTRING_NEW raw_status, raw, bytes_slice
+    EXPAND CSTRING_INTO_RAW raw_ptr, raw
+    raw_len_after = load raw+CString_len as u64
+    raw_roundtrip = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_RAW raw_roundtrip, raw_ptr
+    raw_roundtrip_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTRING_AS_CSTR raw_roundtrip_cstr, raw_roundtrip
+    EXPAND CSTR_COUNT_BYTES raw_roundtrip_count, raw_roundtrip_cstr
+
+    with_nul_buf = stack_alloc 4
+    store with_nul_buf+0, 98 as u8
+    store with_nul_buf+1, 97 as u8
+    store with_nul_buf+2, 122 as u8
+    store with_nul_buf+3, 0 as u8
+    with_nul_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW with_nul_slice, with_nul_buf, 4
+    with_nul_owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_BYTES_WITH_NUL with_nul_status, with_nul_owned, with_nul_slice
+    EXPAND CSTRING_COUNT_BYTES with_nul_count, with_nul_owned
+    with_nul_bytes = stack_alloc Slice_SIZE
+    EXPAND CSTRING_AS_BYTES with_nul_bytes, with_nul_owned
+    with_nul_bytes_ptr = load with_nul_bytes+Slice_ptr as ptr
+    with_nul_b2 = load with_nul_bytes_ptr+2 as u8
+
+    unchecked_owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_BYTES_WITH_NUL_UNCHECKED unchecked_owned, with_nul_slice
+    EXPAND CSTRING_COUNT_BYTES unchecked_count, unchecked_owned
+
+    empty_src = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW empty_src, bytes, 0
+    empty_owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_NEW empty_status, empty_owned, empty_src
+    empty_cstr = stack_alloc CStr_SIZE
+    EXPAND CSTRING_AS_CSTR empty_cstr, empty_owned
+    EXPAND CSTR_COUNT_BYTES empty_count, empty_cstr
+    empty_bytes_nul = stack_alloc Slice_SIZE
+    EXPAND CSTRING_AS_BYTES_WITH_NUL empty_bytes_nul, empty_owned
+    EXPAND CSTRING_IS_EMPTY empty_is_empty, empty_owned
+    empty_bytes_nul_len = load empty_bytes_nul+Slice_len as u64
+    empty_bytes_nul_ptr = load empty_bytes_nul+Slice_ptr as ptr
+    empty_nul = load empty_bytes_nul_ptr+0 as u8
+
+    bad = stack_alloc 3
+    store bad+0, 97 as u8
+    store bad+1, 0 as u8
+    store bad+2, 98 as u8
+    bad_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW bad_slice, bad, 3
+    bad_owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_NEW bad_status, bad_owned, bad_slice
+    bad_len = load bad_owned+CString_len as u64
+
+    bad_with_nul = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_BYTES_WITH_NUL bad_with_nul_status, bad_with_nul, bad_slice
+    bad_with_nul_len = load bad_with_nul+CString_len as u64
+
+    missing_nul = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_BYTES_WITH_NUL missing_nul_status, missing_nul, bytes_slice
+    missing_nul_len = load missing_nul+CString_len as u64
+
+    invalid_utf8_buf = stack_alloc 2
+    store invalid_utf8_buf+0, 255 as u8
+    store invalid_utf8_buf+1, 0 as u8
+    invalid_utf8_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW invalid_utf8_slice, invalid_utf8_buf, 2
+    invalid_utf8_owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_BYTES_WITH_NUL invalid_utf8_status, invalid_utf8_owned, invalid_utf8_slice
+    invalid_utf8_str = stack_alloc Slice_SIZE
+    EXPAND CSTRING_TO_STR invalid_utf8_str_status, invalid_utf8_str, invalid_utf8_owned
+
+    ok_owned_status = eq owned_status, CSTRING_NEW_OK
+    ok_owned_count = eq owned_count, 3
+    ok_owned_count_direct = eq owned_count_direct, 3
+    ok_owned_is_empty = eq owned_is_empty, 0
+    ok_owned_str_status = eq owned_str_status, CSTR_FROM_BYTES_OK
+    ok_owned_str_len = eq owned_str_len, 3
+    ok_owned_str_b1 = eq owned_str_b1, 97
+    ok_owned_bytes_len = eq owned_bytes_len, 3
+    ok_owned_bytes_nul_len = eq owned_bytes_nul_len, 4
+    ok_owned_ptr = eq owned_ptr, owned_bytes_ptr
+    ok_owned_b0 = eq owned_b0, 98
+    ok_owned_b2 = eq owned_b2, 114
+    ok_owned_nul = eq owned_nul, 0
+    ok_raw_status = eq raw_status, CSTRING_NEW_OK
+    ok_raw_len_after = eq raw_len_after, 0
+    ok_raw_roundtrip_count = eq raw_roundtrip_count, 3
+    ok_with_nul_status = eq with_nul_status, CSTR_FROM_BYTES_OK
+    ok_with_nul_count = eq with_nul_count, 3
+    ok_with_nul_b2 = eq with_nul_b2, 122
+    ok_unchecked_count = eq unchecked_count, 3
+    ok_empty_status = eq empty_status, CSTRING_NEW_OK
+    ok_empty_count = eq empty_count, 0
+    ok_empty_is_empty = eq empty_is_empty, 1
+    ok_empty_bytes_nul_len = eq empty_bytes_nul_len, 1
+    ok_empty_nul = eq empty_nul, 0
+    ok_bad_status = eq bad_status, CSTRING_NEW_INTERIOR_NUL
+    ok_bad_len = eq bad_len, 0
+    ok_bad_with_nul_status = eq bad_with_nul_status, CSTR_FROM_BYTES_INTERIOR_NUL
+    ok_bad_with_nul_len = eq bad_with_nul_len, 0
+    ok_missing_nul_status = eq missing_nul_status, CSTR_FROM_BYTES_NOT_NUL_TERMINATED
+    ok_missing_nul_len = eq missing_nul_len, 0
+    ok_invalid_utf8_status = eq invalid_utf8_status, CSTR_FROM_BYTES_OK
+    ok_invalid_utf8_str_status = eq invalid_utf8_str_status, CSTR_TO_STR_INVALID_UTF8
+
+    ok01 = and ok_owned_status, ok_owned_count
+    ok02 = and ok01, ok_owned_count_direct
+    ok03 = and ok02, ok_owned_is_empty
+    ok04 = and ok03, ok_owned_str_status
+    ok05 = and ok04, ok_owned_str_len
+    ok06 = and ok05, ok_owned_str_b1
+    ok07 = and ok06, ok_owned_bytes_len
+    ok08 = and ok07, ok_owned_bytes_nul_len
+    ok09 = and ok08, ok_owned_ptr
+    ok10 = and ok09, ok_owned_b0
+    ok11 = and ok10, ok_owned_b2
+    ok12 = and ok11, ok_owned_nul
+    ok13 = and ok12, ok_raw_status
+    ok14 = and ok13, ok_raw_len_after
+    ok15 = and ok14, ok_raw_roundtrip_count
+    ok16 = and ok15, ok_with_nul_status
+    ok17 = and ok16, ok_with_nul_count
+    ok18 = and ok17, ok_with_nul_b2
+    ok19 = and ok18, ok_unchecked_count
+    ok20 = and ok19, ok_empty_status
+    ok21 = and ok20, ok_empty_count
+    ok22 = and ok21, ok_empty_is_empty
+    ok23 = and ok22, ok_empty_bytes_nul_len
+    ok24 = and ok23, ok_empty_nul
+    ok25 = and ok24, ok_bad_status
+    ok26 = and ok25, ok_bad_len
+    ok27 = and ok26, ok_bad_with_nul_status
+    ok28 = and ok27, ok_bad_with_nul_len
+    ok29 = and ok28, ok_missing_nul_status
+    ok30 = and ok29, ok_missing_nul_len
+    ok31 = and ok30, ok_invalid_utf8_status
+    ok = and ok31, ok_invalid_utf8_str_status
+
+    EXPAND CSTRING_FREE owned
+    EXPAND CSTRING_FREE raw_roundtrip
+    EXPAND CSTRING_FREE with_nul_owned
+    EXPAND CSTRING_FREE unchecked_owned
+    EXPAND CSTRING_FREE empty_owned
+    EXPAND CSTRING_FREE invalid_utf8_owned
+
+    !owned_str_ptr
+    !owned_bytes_ptr
+    !owned_bytes_nul_ptr
+    !owned_ptr
+    !raw_ptr
+    !with_nul_bytes_ptr
+    !empty_bytes_nul_ptr
+
+    br ok -> L_CSTRING_PASS, L_CSTRING_FAIL
+
+L_CSTRING_FAIL:
+    panic(981)
+
+L_CSTRING_PASS:
+    return 0
+
+@test "sa_std ffi cstring default/clone macros"():
+L_ENTRY:
+    default_cs = stack_alloc CString_SIZE
+    EXPAND CSTRING_DEFAULT default_status, default_cs
+    EXPAND CSTRING_COUNT_BYTES default_count, default_cs
+    EXPAND CSTRING_IS_EMPTY default_empty, default_cs
+
+    bytes = stack_alloc 3
+    store bytes+0, 97 as u8
+    store bytes+1, 98 as u8
+    store bytes+2, 99 as u8
+    bytes_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW bytes_slice, bytes, 3
+    src = stack_alloc CString_SIZE
+    EXPAND CSTRING_LIT1 lit_status, src, bytes_slice
+    EXPAND CSTRING_COUNT_BYTES src_count, src
+
+    cloned = stack_alloc CString_SIZE
+    EXPAND CSTRING_CLONE clone_status, cloned, src
+    EXPAND CSTRING_COUNT_BYTES clone_count, cloned
+    clone_bytes = stack_alloc Slice_SIZE
+    EXPAND CSTRING_AS_BYTES clone_bytes, cloned
+    clone_ptr = load clone_bytes+Slice_ptr as ptr
+    clone_b0 = load clone_ptr+0 as u8
+    clone_b2 = load clone_ptr+2 as u8
+
+    ok_default_status = eq default_status, CSTRING_NEW_OK
+    ok_default_count = eq default_count, 0
+    ok_default_empty = eq default_empty, 1
+    ok_lit_status = eq lit_status, CSTRING_NEW_OK
+    ok_src_count = eq src_count, 3
+    ok_clone_status = eq clone_status, CSTR_FROM_BYTES_OK
+    ok_clone_count = eq clone_count, 3
+    ok_clone_b0 = eq clone_b0, 97
+    ok_clone_b2 = eq clone_b2, 99
+
+    ok = and ok_default_status, ok_default_count
+    ok = and ok, ok_default_empty
+    ok = and ok, ok_lit_status
+    ok = and ok, ok_src_count
+    ok = and ok, ok_clone_status
+    ok = and ok, ok_clone_count
+    ok = and ok, ok_clone_b0
+    ok = and ok, ok_clone_b2
+
+    EXPAND CSTRING_FREE default_cs
+    EXPAND CSTRING_FREE src
+    EXPAND CSTRING_FREE cloned
+
+    !default_status
+    !default_count
+    !default_empty
+    !lit_status
+    !src_count
+    !clone_status
+    !clone_count
+    !clone_ptr
+    !clone_b0
+    !clone_b2
+    !ok_default_status
+    !ok_default_count
+    !ok_default_empty
+    !ok_lit_status
+    !ok_src_count
+    !ok_clone_status
+    !ok_clone_count
+    !ok_clone_b0
+    !ok_clone_b2
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(982)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std ffi cstring to_string_lossy macros"():
+L_ENTRY:
+    bytes = stack_alloc 3
+    store bytes+0, 120 as u8
+    store bytes+1, 121 as u8
+    store bytes+2, 122 as u8
+    bytes_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW bytes_slice, bytes, 3
+    owned = stack_alloc CString_SIZE
+    EXPAND CSTRING_NEW status, owned, bytes_slice
+    EXPAND CSTRING_TO_STRING_LOSSY lossy, owned
+    EXPAND STRING_BUF_LEN lossy_len, lossy
+    ok_status = eq status, CSTRING_NEW_OK
+    ok_len = eq lossy_len, 3
+    ok = and ok_status, ok_len
+    EXPAND STRING_BUF_FREE lossy
+    EXPAND CSTRING_FREE owned
+    !status
+    !lossy_len
+    !ok_status
+    !ok_len
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(983)
+L_OK:
+    !ok
+    return 0
+
+@test "sa_std ffi cstr to_string_lossy macros"():
+L_ENTRY:
+    cbuf = stack_alloc 4
+    store cbuf+0, 102 as u8
+    store cbuf+1, 111 as u8
+    store cbuf+2, 111 as u8
+    store cbuf+3, 0 as u8
+    cstr = stack_alloc CStr_SIZE
+    EXPAND CSTR_FROM_PTR cstr, cbuf
+    EXPAND CSTR_TO_STRING_LOSSY lossy, cstr
+    EXPAND STRING_BUF_LEN lossy_len, lossy
+    ok_len = eq lossy_len, 3
+    EXPAND STRING_BUF_FREE lossy
+    !lossy_len
+    br ok_len -> L_OK, L_FAIL
+L_FAIL:
+    !ok_len
+    panic(984)
+L_OK:
+    !ok_len
+    return 0
+

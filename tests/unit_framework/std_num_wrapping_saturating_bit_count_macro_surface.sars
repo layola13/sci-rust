@@ -1,0 +1,123 @@
+@import "sa_std/num.sars"
+
+@test "sa_std Wrapping and Saturating bit-count macro surface"():
+L_ENTRY:
+    wrap_u64 = stack_alloc WrappingU64_SIZE
+    wrap_u64_zero = stack_alloc WrappingU64_SIZE
+    wrap_u32 = stack_alloc WrappingU32_SIZE
+    wrap_u32_zero = stack_alloc WrappingU32_SIZE
+    wrap_u32_wide = stack_alloc WrappingU32_SIZE
+    wrap_i64 = stack_alloc WrappingI64_SIZE
+    sat_u64 = stack_alloc SaturatingU64_SIZE
+    sat_u64_zero = stack_alloc SaturatingU64_SIZE
+    sat_i64 = stack_alloc SaturatingI64_SIZE
+
+    EXPAND WRAPPING_U64_NEW wrap_u64, 76
+    EXPAND WRAPPING_U64_NEW wrap_u64_zero, 0
+    EXPAND WRAPPING_U32_NEW wrap_u32, 2147483656
+    EXPAND WRAPPING_U32_NEW wrap_u32_zero, 0
+    EXPAND WRAPPING_U32_NEW wrap_u32_wide, NUM_U64_MAX
+    EXPAND WRAPPING_I64_NEW wrap_i64, -8
+    EXPAND SATURATING_U64_NEW sat_u64, 8
+    EXPAND SATURATING_U64_NEW sat_u64_zero, 0
+    EXPAND SATURATING_I64_NEW sat_i64, NUM_I64_MIN
+
+    EXPAND WRAPPING_U64_COUNT_ONES wrap_u64_ones, wrap_u64
+    EXPAND WRAPPING_U64_COUNT_ZEROS wrap_u64_zeros, wrap_u64
+    EXPAND WRAPPING_U64_LEADING_ZEROS wrap_u64_lz, wrap_u64
+    EXPAND WRAPPING_U64_TRAILING_ZEROS wrap_u64_tz, wrap_u64
+    EXPAND WRAPPING_U64_LEADING_ZEROS wrap_u64_zero_lz, wrap_u64_zero
+    EXPAND WRAPPING_U64_TRAILING_ZEROS wrap_u64_zero_tz, wrap_u64_zero
+
+    EXPAND WRAPPING_U32_COUNT_ONES wrap_u32_ones, wrap_u32
+    EXPAND WRAPPING_U32_COUNT_ZEROS wrap_u32_zeros, wrap_u32
+    EXPAND WRAPPING_U32_LEADING_ZEROS wrap_u32_lz, wrap_u32
+    EXPAND WRAPPING_U32_TRAILING_ZEROS wrap_u32_tz, wrap_u32
+    EXPAND WRAPPING_U32_COUNT_ONES wrap_u32_wide_ones, wrap_u32_wide
+    EXPAND WRAPPING_U32_COUNT_ZEROS wrap_u32_zero_zeros, wrap_u32_zero
+    EXPAND WRAPPING_U32_LEADING_ZEROS wrap_u32_zero_lz, wrap_u32_zero
+    EXPAND WRAPPING_U32_TRAILING_ZEROS wrap_u32_zero_tz, wrap_u32_zero
+
+    EXPAND WRAPPING_I64_COUNT_ONES wrap_i64_ones, wrap_i64
+    EXPAND WRAPPING_I64_COUNT_ZEROS wrap_i64_zeros, wrap_i64
+    EXPAND WRAPPING_I64_LEADING_ZEROS wrap_i64_lz, wrap_i64
+    EXPAND WRAPPING_I64_TRAILING_ZEROS wrap_i64_tz, wrap_i64
+
+    EXPAND SATURATING_U64_COUNT_ONES sat_u64_ones, sat_u64
+    EXPAND SATURATING_U64_COUNT_ZEROS sat_u64_zeros, sat_u64
+    EXPAND SATURATING_U64_LEADING_ZEROS sat_u64_lz, sat_u64
+    EXPAND SATURATING_U64_TRAILING_ZEROS sat_u64_tz, sat_u64
+    EXPAND SATURATING_U64_LEADING_ZEROS sat_u64_zero_lz, sat_u64_zero
+    EXPAND SATURATING_U64_TRAILING_ZEROS sat_u64_zero_tz, sat_u64_zero
+
+    EXPAND SATURATING_I64_COUNT_ONES sat_i64_ones, sat_i64
+    EXPAND SATURATING_I64_COUNT_ZEROS sat_i64_zeros, sat_i64
+    EXPAND SATURATING_I64_LEADING_ZEROS sat_i64_lz, sat_i64
+    EXPAND SATURATING_I64_TRAILING_ZEROS sat_i64_tz, sat_i64
+
+    ok01 = eq wrap_u64_ones, 3
+    ok02 = eq wrap_u64_zeros, 61
+    ok03 = eq wrap_u64_lz, 57
+    ok04 = eq wrap_u64_tz, 2
+    ok05 = eq wrap_u64_zero_lz, 64
+    ok06 = eq wrap_u64_zero_tz, 64
+    ok07 = eq wrap_u32_ones, 2
+    ok08 = eq wrap_u32_zeros, 30
+    ok09 = eq wrap_u32_lz, 0
+    ok10 = eq wrap_u32_tz, 3
+    ok11 = eq wrap_u32_wide_ones, 32
+    ok12 = eq wrap_u32_zero_zeros, 32
+    ok13 = eq wrap_u32_zero_lz, 32
+    ok14 = eq wrap_u32_zero_tz, 32
+    ok15 = eq wrap_i64_ones, 61
+    ok16 = eq wrap_i64_zeros, 3
+    ok17 = eq wrap_i64_lz, 0
+    ok18 = eq wrap_i64_tz, 3
+    ok19 = eq sat_u64_ones, 1
+    ok20 = eq sat_u64_zeros, 63
+    ok21 = eq sat_u64_lz, 60
+    ok22 = eq sat_u64_tz, 3
+    ok23 = eq sat_u64_zero_lz, 64
+    ok24 = eq sat_u64_zero_tz, 64
+    ok25 = eq sat_i64_ones, 1
+    ok26 = eq sat_i64_zeros, 63
+    ok27 = eq sat_i64_lz, 0
+    ok28 = eq sat_i64_tz, 63
+
+    c01 = and ok01, ok02
+    c02 = and c01, ok03
+    c03 = and c02, ok04
+    c04 = and c03, ok05
+    c05 = and c04, ok06
+    c06 = and c05, ok07
+    c07 = and c06, ok08
+    c08 = and c07, ok09
+    c09 = and c08, ok10
+    c10 = and c09, ok11
+    c11 = and c10, ok12
+    c12 = and c11, ok13
+    c13 = and c12, ok14
+    c14 = and c13, ok15
+    c15 = and c14, ok16
+    c16 = and c15, ok17
+    c17 = and c16, ok18
+    c18 = and c17, ok19
+    c19 = and c18, ok20
+    c20 = and c19, ok21
+    c21 = and c20, ok22
+    c22 = and c21, ok23
+    c23 = and c22, ok24
+    c24 = and c23, ok25
+    c25 = and c24, ok26
+    c26 = and c25, ok27
+    ok = and c26, ok28
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10617)
+
+L_PASS:
+    !ok
+    return 0

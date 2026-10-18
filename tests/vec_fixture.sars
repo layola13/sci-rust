@@ -1,0 +1,276 @@
+@import "sa_std/vec.sars"
+
+@main() -> i32:
+L_ENTRY:
+    EXPAND VEC_NEW vec0
+    EXPAND VEC_CAPACITY cap0, vec0
+    EXPAND VEC_IS_EMPTY empty0, vec0
+    EXPAND VEC_PUSH vec0, 11, 8
+    EXPAND VEC_PUSH vec0, 22, 8
+    EXPAND VEC_PUSH vec0, 33, 8
+    EXPAND VEC_LEN len0, vec0
+    EXPAND VEC_CAPACITY cap1, vec0
+    EXPAND VEC_GET mid0, vec0, 1
+    EXPAND VEC_TRY_POP ok0, pop0, vec0
+    EXPAND VEC_LEN len1, vec0
+    EXPAND VEC_TRUNCATE vec0, 1
+    EXPAND VEC_LEN len2, vec0
+    EXPAND VEC_CLEAR vec0
+    EXPAND VEC_LEN len3, vec0
+    EXPAND VEC_IS_EMPTY empty1, vec0
+    EXPAND VEC_WITH_CAPACITY vec1, 4, 8
+    EXPAND VEC_CAPACITY cap2, vec1
+    EXPAND VEC_LEN len4, vec1
+    EXPAND VEC_IS_EMPTY empty2, vec1
+    EXPAND VEC_RESERVE_EXACT_U64 vec1, 3
+    EXPAND VEC_CAPACITY cap_exact, vec1
+    EXPAND VEC_RESERVE_U64 vec1, 5
+    EXPAND VEC_CAPACITY cap3, vec1
+    EXPAND VEC_PUSH_U64 vec1, 44
+    EXPAND VEC_PUSH_U64 vec1, 55
+    EXPAND VEC_TRY_FRONT_U64 front_ok0, front0, vec1
+    EXPAND VEC_TRY_BACK_U64 back_ok0, back0, vec1
+    prefix_data = alloc 8
+    suffix_data = alloc 8
+    miss_prefix_data = alloc 8
+    long_suffix_data = alloc 24
+    store prefix_data+0, 44 as u64
+    store suffix_data+0, 55 as u64
+    store miss_prefix_data+0, 66 as u64
+    store long_suffix_data+0, 44 as u64
+    store long_suffix_data+8, 55 as u64
+    store long_suffix_data+16, 66 as u64
+    prefix = alloc Slice_SIZE
+    suffix = alloc Slice_SIZE
+    miss_prefix = alloc Slice_SIZE
+    long_suffix = alloc Slice_SIZE
+    EXPAND SLICE_NEW prefix, prefix_data, 1
+    EXPAND SLICE_NEW suffix, suffix_data, 1
+    EXPAND SLICE_NEW miss_prefix, miss_prefix_data, 1
+    EXPAND SLICE_NEW long_suffix, long_suffix_data, 3
+    EXPAND VEC_CONTAINS_U64 contains_44, vec1, 44
+    EXPAND VEC_CONTAINS_U64 contains_99, vec1, 99
+    EXPAND VEC_STARTS_WITH_U64 starts_ok, vec1, prefix
+    EXPAND VEC_ENDS_WITH_U64 ends_ok, vec1, suffix
+    EXPAND VEC_STARTS_WITH_U64 starts_miss, vec1, miss_prefix
+    EXPAND VEC_ENDS_WITH_U64 ends_long_miss, vec1, long_suffix
+    EXPAND VEC_TRY_STRIP_PREFIX_U64 strip_prefix_ok, strip_prefix_tail, vec1, prefix
+    EXPAND VEC_TRY_STRIP_SUFFIX_U64 strip_suffix_ok, strip_suffix_head, vec1, suffix
+    EXPAND VEC_TRY_STRIP_PREFIX_U64 strip_prefix_miss_ok, strip_prefix_miss, vec1, miss_prefix
+    EXPAND SLICE_GET_LEN strip_prefix_tail_len, strip_prefix_tail
+    EXPAND SLICE_FIRST_U64 strip_prefix_tail_first, strip_prefix_tail
+    EXPAND SLICE_GET_LEN strip_suffix_head_len, strip_suffix_head
+    EXPAND SLICE_FIRST_U64 strip_suffix_head_first, strip_suffix_head
+    EXPAND SLICE_IS_EMPTY strip_prefix_miss_empty, strip_prefix_miss
+    EXPAND VEC_CLEAR vec1
+    EXPAND VEC_TRY_FRONT_U64 empty_front_ok, empty_front, vec1
+    EXPAND VEC_TRY_BACK_U64 empty_back_ok, empty_back, vec1
+    ok_cap0 = eq cap0, 0
+    ok_empty0 = eq empty0, 1
+    ok_len0 = eq len0, 3
+    ok_cap1 = eq cap1, 3
+    ok_mid0 = eq mid0, 22
+    ok_pop_ok = eq ok0, 1
+    ok_pop0 = eq pop0, 33
+    ok_len1 = eq len1, 2
+    ok_len2 = eq len2, 1
+    ok_len3 = eq len3, 0
+    ok_empty1 = eq empty1, 1
+    ok_cap2 = eq cap2, 4
+    ok_len4 = eq len4, 0
+    ok_empty2 = eq empty2, 1
+    ok_cap_exact = eq cap_exact, 4
+    ok_cap3 = eq cap3, 5
+    ok_front_flag = eq front_ok0, 1
+    ok_front = eq front0, 44
+    ok_back_flag = eq back_ok0, 1
+    ok_back = eq back0, 55
+    ok_contains_44 = eq contains_44, 1
+    ok_contains_99 = eq contains_99, 0
+    ok_starts = eq starts_ok, 1
+    ok_ends = eq ends_ok, 1
+    ok_starts_miss = eq starts_miss, 0
+    ok_ends_long_miss = eq ends_long_miss, 0
+    ok_strip_prefix_flag = eq strip_prefix_ok, 1
+    ok_strip_suffix_flag = eq strip_suffix_ok, 1
+    ok_strip_prefix_miss_flag = eq strip_prefix_miss_ok, 0
+    ok_strip_prefix_tail_len = eq strip_prefix_tail_len, 1
+    ok_strip_prefix_tail_first = eq strip_prefix_tail_first, 55
+    ok_strip_suffix_head_len = eq strip_suffix_head_len, 1
+    ok_strip_suffix_head_first = eq strip_suffix_head_first, 44
+    ok_strip_prefix_miss_empty = eq strip_prefix_miss_empty, 1
+    ok_empty_front_flag = eq empty_front_ok, 0
+    ok_empty_front = eq empty_front, 0
+    ok_empty_back_flag = eq empty_back_ok, 0
+    ok_empty_back = eq empty_back, 0
+    ok01 = and ok_cap0, ok_empty0
+    ok02 = and ok01, ok_len0
+    ok03 = and ok02, ok_cap1
+    ok04 = and ok03, ok_mid0
+    ok05 = and ok04, ok_pop_ok
+    ok06 = and ok05, ok_pop0
+    ok07 = and ok06, ok_len1
+    ok08 = and ok07, ok_len2
+    ok09 = and ok08, ok_len3
+    ok10 = and ok09, ok_empty1
+    ok11 = and ok10, ok_cap2
+    ok12 = and ok11, ok_len4
+    ok13 = and ok12, ok_empty2
+    ok14 = and ok13, ok_cap_exact
+    ok15 = and ok14, ok_cap3
+    ok16 = and ok15, ok_front_flag
+    ok17 = and ok16, ok_front
+    ok18 = and ok17, ok_back_flag
+    ok19 = and ok18, ok_back
+    ok20 = and ok19, ok_contains_44
+    ok21 = and ok20, ok_contains_99
+    ok22 = and ok21, ok_starts
+    ok23 = and ok22, ok_ends
+    ok24 = and ok23, ok_starts_miss
+    ok25 = and ok24, ok_ends_long_miss
+    ok26 = and ok25, ok_strip_prefix_flag
+    ok27 = and ok26, ok_strip_suffix_flag
+    ok28 = and ok27, ok_strip_prefix_miss_flag
+    ok29 = and ok28, ok_strip_prefix_tail_len
+    ok30 = and ok29, ok_strip_prefix_tail_first
+    ok31 = and ok30, ok_strip_suffix_head_len
+    ok32 = and ok31, ok_strip_suffix_head_first
+    ok33 = and ok32, ok_strip_prefix_miss_empty
+    ok34 = and ok33, ok_empty_front_flag
+    ok35 = and ok34, ok_empty_front
+    ok36 = and ok35, ok_empty_back_flag
+    ok = and ok36, ok_empty_back
+    !cap0
+    !empty0
+    !len0
+    !cap1
+    !mid0
+    !ok0
+    !pop0
+    !len1
+    !len2
+    !len3
+    !empty1
+    !cap2
+    !len4
+    !empty2
+    !cap_exact
+    !cap3
+    !front_ok0
+    !front0
+    !back_ok0
+    !back0
+    !contains_44
+    !contains_99
+    !starts_ok
+    !ends_ok
+    !starts_miss
+    !ends_long_miss
+    !strip_prefix_ok
+    !strip_prefix_tail
+    !strip_suffix_ok
+    !strip_suffix_head
+    !strip_prefix_miss_ok
+    !strip_prefix_miss
+    !strip_prefix_tail_len
+    !strip_prefix_tail_first
+    !strip_suffix_head_len
+    !strip_suffix_head_first
+    !strip_prefix_miss_empty
+    !empty_front_ok
+    !empty_front
+    !empty_back_ok
+    !empty_back
+    !ok_cap0
+    !ok_empty0
+    !ok_len0
+    !ok_cap1
+    !ok_mid0
+    !ok_pop_ok
+    !ok_pop0
+    !ok_len1
+    !ok_len2
+    !ok_len3
+    !ok_empty1
+    !ok_cap2
+    !ok_len4
+    !ok_empty2
+    !ok_cap_exact
+    !ok_cap3
+    !ok_front_flag
+    !ok_front
+    !ok_back_flag
+    !ok_back
+    !ok_contains_44
+    !ok_contains_99
+    !ok_starts
+    !ok_ends
+    !ok_starts_miss
+    !ok_ends_long_miss
+    !ok_strip_prefix_flag
+    !ok_strip_suffix_flag
+    !ok_strip_prefix_miss_flag
+    !ok_strip_prefix_tail_len
+    !ok_strip_prefix_tail_first
+    !ok_strip_suffix_head_len
+    !ok_strip_suffix_head_first
+    !ok_strip_prefix_miss_empty
+    !ok_empty_front_flag
+    !ok_empty_front
+    !ok_empty_back_flag
+    !ok_empty_back
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !prefix
+    !suffix
+    !miss_prefix
+    !long_suffix
+    !prefix_data
+    !suffix_data
+    !miss_prefix_data
+    !long_suffix_data
+    EXPAND VEC_FREE vec0
+    EXPAND VEC_FREE vec1
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

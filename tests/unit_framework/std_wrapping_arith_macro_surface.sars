@@ -1,0 +1,95 @@
+@import "sa_std/num.sal"
+@import "sa_std/num.sars"
+
+@test "sa_std Wrapping/Saturating MIN/MAX constants and arithmetic macros"():
+L_ENTRY:
+    ok_wr_u64_min = eq WRAPPING_U64_MIN, 0
+    ok_wr_u64_max = eq WRAPPING_U64_MAX, NUM_U64_MAX
+    ok_wr_u32_max = eq WRAPPING_U32_MAX, NUM_U32_MAX
+    ok_wr_i64_min = eq WRAPPING_I64_MIN, NUM_I64_MIN
+    ok_wr_i64_max = eq WRAPPING_I64_MAX, NUM_I64_MAX
+
+    ok_sat_u64_min = eq SATURATING_U64_MIN, 0
+    ok_sat_u64_max = eq SATURATING_U64_MAX, NUM_U64_MAX
+    ok_sat_i64_min = eq SATURATING_I64_MIN, NUM_I64_MIN
+    ok_sat_i64_max = eq SATURATING_I64_MAX, NUM_I64_MAX
+
+    buf_lhs = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_NEW buf_lhs, 100
+    buf_rhs = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_NEW buf_rhs, 200
+
+    buf_wr_add = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_ADD buf_wr_add, buf_lhs, buf_rhs
+    EXPAND WRAPPING_U64_GET wr_add_val, buf_wr_add
+    ok_wr_add = eq wr_add_val, 300
+
+    buf_wr_sub = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_SUB buf_wr_sub, buf_lhs, buf_rhs
+    EXPAND WRAPPING_U64_GET wr_sub_val, buf_wr_sub
+    ok_wr_sub = eq wr_sub_val, 18446744073709551516
+
+    buf_wr_mul = alloc WrappingU64_SIZE
+    EXPAND WRAPPING_U64_MUL buf_wr_mul, buf_lhs, buf_rhs
+    EXPAND WRAPPING_U64_GET wr_mul_val, buf_wr_mul
+    ok_wr_mul = eq wr_mul_val, 20000
+
+    buf_sat_lhs = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_NEW buf_sat_lhs, 100
+    buf_sat_rhs = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_NEW buf_sat_rhs, 200
+
+    buf_sat_add = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_ADD buf_sat_add, buf_sat_lhs, buf_sat_rhs
+    EXPAND SATURATING_U64_GET sat_add_val, buf_sat_add
+    ok_sat_add = eq sat_add_val, 300
+
+    buf_sat_sub = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_SUB buf_sat_sub, buf_sat_lhs, buf_sat_rhs
+    EXPAND SATURATING_U64_GET sat_sub_val, buf_sat_sub
+    ok_sat_sub = eq sat_sub_val, 0
+
+    buf_sat_mul = alloc SaturatingU64_SIZE
+    EXPAND SATURATING_U64_MUL buf_sat_mul, buf_sat_lhs, buf_sat_rhs
+    EXPAND SATURATING_U64_GET sat_mul_val, buf_sat_mul
+    ok_sat_mul = eq sat_mul_val, 20000
+
+    c01 = and ok_wr_u64_min, ok_wr_u64_max
+    c02 = and c01, ok_wr_u32_max
+    c03 = and c02, ok_wr_i64_min
+    c04 = and c03, ok_wr_i64_max
+    c05 = and c04, ok_sat_u64_min
+    c06 = and c05, ok_sat_u64_max
+    c07 = and c06, ok_sat_i64_min
+    c08 = and c07, ok_sat_i64_max
+    c09 = and c08, ok_wr_add
+    c10 = and c09, ok_wr_sub
+    c11 = and c10, ok_wr_mul
+    c12 = and c11, ok_sat_add
+    c13 = and c12, ok_sat_sub
+    c14 = and c13, ok_sat_mul
+
+    !buf_lhs
+    !buf_rhs
+    !buf_wr_add
+    !wr_add_val
+    !buf_wr_sub
+    !wr_sub_val
+    !buf_wr_mul
+    !wr_mul_val
+    !buf_sat_lhs
+    !buf_sat_rhs
+    !buf_sat_add
+    !sat_add_val
+    !buf_sat_sub
+    !sat_sub_val
+    !buf_sat_mul
+    !sat_mul_val
+
+    br c14 -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10479)
+
+L_PASS:
+    return 0

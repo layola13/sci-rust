@@ -1,0 +1,22 @@
+@import "sa_std/collections/hashset.sars"
+
+@test "sa_std hashset with_capacity"():
+L_ENTRY:
+    EXPAND SET_WITH_CAPACITY set, 16
+    EXPAND SET_LEN ln, set
+    EXPAND SET_CAPACITY cap, set
+    EXPAND SET_FREE set
+    a = eq ln, 0
+    b = uge cap, 16
+    ok = and a, b
+    !ln
+    !cap
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10966)

@@ -1,0 +1,24 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap contains"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 3
+    EXPAND BINARY_HEAP_PUSH heap, 7
+    EXPAND BINARY_HEAP_CONTAINS c1, heap, 7
+    EXPAND BINARY_HEAP_CONTAINS c0, heap, 1
+    EXPAND BINARY_HEAP_FREE heap
+    a = eq c1, 1
+    b = eq c0, 0
+    ok = and a, b
+    !c1
+    !c0
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11006)

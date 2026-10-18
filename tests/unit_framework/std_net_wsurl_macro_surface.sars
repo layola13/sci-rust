@@ -1,0 +1,83 @@
+@import "sa_std/net.sars"
+
+@const WS_KEY = utf8:"dGhlIHNhbXBsZSBub25jZQ=="
+@const URL_INPUT = utf8:"https://api.anthropic.com:8443/v1/messages"
+
+@test "sa_std net ws accept key macro surface"():
+L_ENTRY:
+    ws_out = stack_alloc 32
+    EXPAND NET_WS_ACCEPT_KEY ws_status, ws_len, WS_KEY, 24, ws_out, 32
+    status_ok = eq ws_status, SA_NET_OK
+    len_ok = eq ws_len, 28
+    b0 = load ws_out+0 as u8
+    b27 = load ws_out+27 as u8
+    b0_ok = eq b0, 115
+    b27_ok = eq b27, 61
+    ws01 = and status_ok, len_ok
+    ws02 = and ws01, b0_ok
+    ws_ok = and ws02, b27_ok
+    !ws_status
+    !ws_len
+    !b0
+    !b27
+    br ws_ok -> L_WS_PASS, L_WS_FAIL
+L_WS_PASS:
+    return 0
+L_WS_FAIL:
+    panic(10157)
+
+@test "sa_std net url parse macro surface"():
+L_ENTRY:
+    scheme_buf = stack_alloc 16
+    host_buf = stack_alloc 64
+    path_buf = stack_alloc 64
+    EXPAND NET_URL_PARSE url_status, url_port, URL_INPUT, 42, scheme_buf, 16, scheme_len, host_buf, 64, host_len, path_buf, 64, path_len
+    url_ok = eq url_status, SA_NET_OK
+    port_ok = eq url_port, 8443
+    scheme_len_ok = eq scheme_len, 5
+    host_len_ok = eq host_len, 17
+    path_len_ok = eq path_len, 12
+    u01 = and url_ok, port_ok
+    u02 = and u01, scheme_len_ok
+    u03 = and u02, host_len_ok
+    u_ok = and u03, path_len_ok
+    !url_status
+    !url_port
+    !scheme_len
+    !host_len
+    !path_len
+    br u_ok -> L_URL_PASS, L_URL_FAIL
+L_URL_PASS:
+    return 0
+L_URL_FAIL:
+    panic(10158)
+
+@test "sa_std net ws frame build macro surface"():
+L_ENTRY:
+    build_payload = stack_alloc 4
+    store build_payload+0, 104 as u8
+    store build_payload+1, 105 as u8
+    build_out = stack_alloc 16
+    EXPAND NET_WS_FRAME_BUILD_UNMASKED bstatus, blen, 1, 1, build_payload, 2, build_out, 16
+    bstatus_ok = eq bstatus, SA_NET_OK
+    blen_ok = eq blen, 4
+    fb0 = load build_out+0 as u8
+    fb1 = load build_out+1 as u8
+    fb2 = load build_out+2 as u8
+    fb0_ok = eq fb0, 129
+    fb1_ok = eq fb1, 2
+    fb2_ok = eq fb2, 104
+    bld01 = and bstatus_ok, blen_ok
+    bld02 = and bld01, fb0_ok
+    bld03 = and bld02, fb1_ok
+    bld_ok = and bld03, fb2_ok
+    !bstatus
+    !blen
+    !fb0
+    !fb1
+    !fb2
+    br bld_ok -> L_BLD_PASS, L_BLD_FAIL
+L_BLD_PASS:
+    return 0
+L_BLD_FAIL:
+    panic(10159)

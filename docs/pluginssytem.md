@@ -124,7 +124,7 @@ effective_permission = sa.mod/sap.json 声明 ∩ CLI --allow-* 授权
   "interfaces": {
     "sa": [
       {
-        "path": "deno.sa",
+        "path": "deno.sars",
         "sha256": "..."
       }
     ],
@@ -396,7 +396,7 @@ $SA_PLUGINS_HOME/
 SA 侧 import 规则：
 
 - 插件安装后，宿主应把已声明插件的 `installed/<plugin-id-path>/current/sa/` 加入 SA import search path。
-- 用户业务代码只 import 插件声明过的 `.sa/.sai/.sal`，例如 `@import "deno.sai"` 或 `@import "deno.sa"`。
+- 用户业务代码只 import 插件声明过的 `.sa/.sai/.sal`，例如 `@import "deno.sai"` 或 `@import "deno.sars"`。
 - `.sa` facade 可以依赖同插件的 `.sai/.sal`，但不能通过相对路径直接引用其他插件源码；跨插件依赖必须写进 `sap.json.dependencies`，调用方必须在 `sa.mod` 中用 `require_plugin <plugin-id>` 声明后，由宿主 resolver 加入对应 import search path。
 
 当前实现状态：`sci` 已能通过 `SA_PLUGINS_PATH` 直接加载 `.so`，也会扫描 `$SA_PLUGINS_HOME/installed/<plugin-id-path>/current` 下的 `.so`。本地 `sa plugin install` 已支持目录或 `sap.json`、拒绝裸 `.so/.dll/.dylib`、要求文本工程、从源码构建、做基础 `sap.json`/权限/URL 校验、校验接口路径与可选 `sha256`、执行 `.sai` 到 `.so` 的 symbol smoke、做 artifact 轻量静态导入扫描、拒绝跨插件重复 extern symbol、生成版本目录、`sap.lock`、`permissions.lock` 和依赖图 hash，并能递归安装带 `path` 的本地插件依赖且检测本地依赖环。远程源方面，GitHub/Git clone 和带 `#sha256:` pin 的 release archive 文本源码安装都已支持。宿主 `sa skills` 也会在 optional 依赖缺失或关键符号不满足时自动隐藏对应插件技能。运行时 sandbox/broker enforcement 仍是需要补齐的 plugin-manager/宿主工作。

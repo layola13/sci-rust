@@ -1,0 +1,105 @@
+@import "sa_std/collections/vec_deque.sars"
+
+@test "sa_std vec_deque truncate_front"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 8
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 40
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 50
+
+    EXPAND VEC_DEQUE_TRUNCATE_FRONT deque, 3
+    EXPAND VEC_DEQUE_LEN len3, deque
+    EXPAND VEC_DEQUE_TRY_FRONT front_ok, front, deque
+    EXPAND VEC_DEQUE_TRY_BACK back_ok, back, deque
+    EXPAND VEC_DEQUE_TRY_GET mid_ok, mid, deque, 1
+
+    EXPAND VEC_DEQUE_TRUNCATE_FRONT deque, 0
+    EXPAND VEC_DEQUE_IS_EMPTY empty_after, deque
+    EXPAND VEC_DEQUE_LEN len0, deque
+
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 7
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 8
+    EXPAND VEC_DEQUE_TRUNCATE_FRONT deque, 10
+    EXPAND VEC_DEQUE_LEN len_noop, deque
+    EXPAND VEC_DEQUE_TRY_FRONT front2_ok, front2, deque
+    EXPAND VEC_DEQUE_TRY_BACK back2_ok, back2, deque
+
+    ok_len3 = eq len3, 3
+    ok_front_flag = eq front_ok, 1
+    ok_front = eq front, 30
+    ok_mid_flag = eq mid_ok, 1
+    ok_mid = eq mid, 40
+    ok_back_flag = eq back_ok, 1
+    ok_back = eq back, 50
+    ok_empty = eq empty_after, 1
+    ok_len0 = eq len0, 0
+    ok_noop = eq len_noop, 2
+    ok_front2_flag = eq front2_ok, 1
+    ok_front2 = eq front2, 7
+    ok_back2_flag = eq back2_ok, 1
+    ok_back2 = eq back2, 8
+
+    ok01 = and ok_len3, ok_front_flag
+    ok02 = and ok01, ok_front
+    ok03 = and ok02, ok_mid_flag
+    ok04 = and ok03, ok_mid
+    ok05 = and ok04, ok_back_flag
+    ok06 = and ok05, ok_back
+    ok07 = and ok06, ok_empty
+    ok08 = and ok07, ok_len0
+    ok09 = and ok08, ok_noop
+    ok10 = and ok09, ok_front2_flag
+    ok11 = and ok10, ok_front2
+    ok12 = and ok11, ok_back2_flag
+    ok = and ok12, ok_back2
+
+    !len3
+    !front_ok
+    !front
+    !back_ok
+    !back
+    !mid_ok
+    !mid
+    !empty_after
+    !len0
+    !len_noop
+    !front2_ok
+    !front2
+    !back2_ok
+    !back2
+    !ok_len3
+    !ok_front_flag
+    !ok_front
+    !ok_mid_flag
+    !ok_mid
+    !ok_back_flag
+    !ok_back
+    !ok_empty
+    !ok_len0
+    !ok_noop
+    !ok_front2_flag
+    !ok_front2
+    !ok_back2_flag
+    !ok_back2
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND VEC_DEQUE_FREE deque
+    return 0
+
+L_FAIL:
+    panic(10846)

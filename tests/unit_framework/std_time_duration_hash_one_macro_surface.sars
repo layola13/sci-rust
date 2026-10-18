@@ -1,0 +1,115 @@
+@import "sa_std/time.sars"
+@import "sa_std/hash.sars"
+
+@test "sa_std Duration hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    EXPAND TIME_DURATION_NEW duration, 2, 345
+    EXPAND TIME_DURATION_NEW same_duration, 2, 345
+    EXPAND TIME_DURATION_NEW diff_nanos_duration, 2, 346
+    EXPAND TIME_DURATION_NEW diff_secs_duration, 3, 345
+    EXPAND TIME_DURATION_NEW boundary_subsec, 0, 999999999
+    EXPAND TIME_DURATION_NEW boundary_next_sec, 1, 0
+
+    duration_secs = udiv duration, Time_NS_PER_S
+    duration_nanos = urem duration, Time_NS_PER_S
+
+    manual_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW manual_hasher
+    EXPAND DEFAULT_HASHER_WRITE_U64 manual_hasher, duration_secs
+    EXPAND DEFAULT_HASHER_WRITE_U32 manual_hasher, duration_nanos
+    EXPAND DEFAULT_HASHER_FINISH manual_hash, manual_hasher
+
+    writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_DURATION writer_hasher, duration
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, writer_hasher
+
+    EXPAND TIME_DURATION_HASH direct_hash, duration
+    EXPAND TIME_DURATION_HASH same_hash, same_duration
+    EXPAND TIME_DURATION_HASH diff_nanos_hash, diff_nanos_duration
+    EXPAND TIME_DURATION_HASH diff_secs_hash, diff_secs_duration
+    EXPAND TIME_DURATION_HASH boundary_subsec_hash, boundary_subsec
+    EXPAND TIME_DURATION_HASH boundary_next_sec_hash, boundary_next_sec
+    EXPAND HASH_U64 raw_ns_hash, duration
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_DURATION build_hash, builder, duration
+
+    state = stack_alloc RandomState_SIZE
+    state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 321, 654
+    EXPAND RANDOM_STATE_HASH_ONE_DURATION state_hash, state, duration
+    EXPAND RANDOM_STATE_BUILD state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_DURATION state_hasher, duration
+    EXPAND DEFAULT_HASHER_FINISH manual_state_hash, state_hasher
+
+    writer_matches = eq writer_hash, direct_hash
+    manual_matches = eq manual_hash, direct_hash
+    same_matches = eq same_hash, direct_hash
+    nanos_matters = ne diff_nanos_hash, direct_hash
+    secs_matters = ne diff_secs_hash, direct_hash
+    boundary_shape_matters = ne boundary_subsec_hash, boundary_next_sec_hash
+    raw_ns_differs = ne raw_ns_hash, direct_hash
+    build_matches = eq build_hash, direct_hash
+    state_matches_manual = eq state_hash, manual_state_hash
+    seeded_differs_default = ne state_hash, direct_hash
+
+    c01 = and writer_matches, manual_matches
+    c02 = and c01, same_matches
+    c03 = and c02, nanos_matters
+    c04 = and c03, secs_matters
+    c05 = and c04, boundary_shape_matters
+    c06 = and c05, raw_ns_differs
+    c07 = and c06, build_matches
+    c08 = and c07, state_matches_manual
+    ok = and c08, seeded_differs_default
+
+    !duration
+    !same_duration
+    !diff_nanos_duration
+    !diff_secs_duration
+    !boundary_subsec
+    !boundary_next_sec
+    !duration_secs
+    !duration_nanos
+    !manual_hash
+    !writer_hash
+    !direct_hash
+    !same_hash
+    !diff_nanos_hash
+    !diff_secs_hash
+    !boundary_subsec_hash
+    !boundary_next_sec_hash
+    !raw_ns_hash
+    !build_hash
+    !state_hash
+    !manual_state_hash
+    !writer_matches
+    !manual_matches
+    !same_matches
+    !nanos_matters
+    !secs_matters
+    !boundary_shape_matters
+    !raw_ns_differs
+    !build_matches
+    !state_matches_manual
+    !seeded_differs_default
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !builder
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10592)
+
+L_PASS:
+    !ok
+    return 0

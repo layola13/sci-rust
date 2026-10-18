@@ -1,0 +1,77 @@
+@import "sa_std/num.sars"
+
+@test "sa_std nonzero unsigned div_ceil macro surface"():
+L_ENTRY:
+    u8_left = stack_alloc NonZeroU8_SIZE
+    u8_right = stack_alloc NonZeroU8_SIZE
+    u8_out = stack_alloc NonZeroU8_SIZE
+    u16_left = stack_alloc NonZeroU16_SIZE
+    u16_right = stack_alloc NonZeroU16_SIZE
+    u16_out = stack_alloc NonZeroU16_SIZE
+    u32_left = stack_alloc NonZeroU32_SIZE
+    u32_right = stack_alloc NonZeroU32_SIZE
+    u32_out = stack_alloc NonZeroU32_SIZE
+    u64_left = stack_alloc NonZeroU64_SIZE
+    u64_right = stack_alloc NonZeroU64_SIZE
+    u64_out = stack_alloc NonZeroU64_SIZE
+    usize_left = stack_alloc NonZeroUsize_SIZE
+    usize_right = stack_alloc NonZeroUsize_SIZE
+    usize_out = stack_alloc NonZeroUsize_SIZE
+
+    u64_large = shl 1, 63
+
+    EXPAND NONZERO_U8_NEW ok_u8_left, u8_left, 7
+    EXPAND NONZERO_U8_NEW ok_u8_right, u8_right, 3
+    EXPAND NONZERO_U16_NEW ok_u16_left, u16_left, NUM_U16_MAX
+    EXPAND NONZERO_U16_NEW ok_u16_right, u16_right, 256
+    EXPAND NONZERO_U32_NEW ok_u32_left, u32_left, NUM_U32_MAX
+    EXPAND NONZERO_U32_NEW ok_u32_right, u32_right, NUM_U16_MAX
+    EXPAND NONZERO_U64_NEW ok_u64_left, u64_left, u64_large
+    EXPAND NONZERO_U64_NEW ok_u64_right, u64_right, 3
+    EXPAND NONZERO_USIZE_NEW ok_usize_left, usize_left, u64_large
+    EXPAND NONZERO_USIZE_NEW ok_usize_right, usize_right, u64_large
+
+    EXPAND NONZERO_U8_DIV_CEIL u8_out, u8_left, u8_right
+    EXPAND NONZERO_U16_DIV_CEIL u16_out, u16_left, u16_right
+    EXPAND NONZERO_U32_DIV_CEIL u32_out, u32_left, u32_right
+    EXPAND NONZERO_U64_DIV_CEIL u64_out, u64_left, u64_right
+    EXPAND NONZERO_USIZE_DIV_CEIL usize_out, usize_left, usize_right
+
+    EXPAND NONZERO_U8_GET u8_value, u8_out
+    EXPAND NONZERO_U16_GET u16_value, u16_out
+    EXPAND NONZERO_U32_GET u32_value, u32_out
+    EXPAND NONZERO_U64_GET u64_value, u64_out
+    EXPAND NONZERO_USIZE_GET usize_value, usize_out
+
+    ok_new_01 = and ok_u8_left, ok_u8_right
+    ok_new_02 = and ok_new_01, ok_u16_left
+    ok_new_03 = and ok_new_02, ok_u16_right
+    ok_new_04 = and ok_new_03, ok_u32_left
+    ok_new_05 = and ok_new_04, ok_u32_right
+    ok_new_06 = and ok_new_05, ok_u64_left
+    ok_new_07 = and ok_new_06, ok_u64_right
+    ok_new_08 = and ok_new_07, ok_usize_left
+    ok_new_all = and ok_new_08, ok_usize_right
+
+    ok_u8_value = eq u8_value, 3
+    ok_u16_value = eq u16_value, 256
+    ok_u32_value = eq u32_value, 65537
+    ok_u64_value = eq u64_value, 3074457345618258603
+    ok_usize_value = eq usize_value, 1
+
+    ok_value_01 = and ok_new_all, ok_u8_value
+    ok_value_02 = and ok_value_01, ok_u16_value
+    ok_value_03 = and ok_value_02, ok_u32_value
+    ok_value_04 = and ok_value_03, ok_u64_value
+    ok = and ok_value_04, ok_usize_value
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u64_large
+    panic(10614)
+
+L_PASS:
+    !ok
+    !u64_large
+    return 0

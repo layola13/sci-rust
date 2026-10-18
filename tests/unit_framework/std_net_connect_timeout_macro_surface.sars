@@ -1,0 +1,25 @@
+@import "sa_std/net.sars"
+
+@const NET_CONNECT_TIMEOUT_HOST = utf8:"127.0.0.1"
+
+@test "sa_std TCP connect timeout rejects zero duration"():
+L_ENTRY:
+    EXPAND NET_TCP_CONNECT_TIMEOUT status, stream, NET_CONNECT_TIMEOUT_HOST, 9, 80, 0
+    status_ok = eq status, SA_NET_STATUS_INVALID_ARGUMENT
+    stream_ok = eq stream, 0
+    ok = and status_ok, stream_ok
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    !stream_ok
+    !status_ok
+    !stream
+    !status
+    panic(10622)
+L_PASS:
+    !ok
+    !stream_ok
+    !status_ok
+    !stream
+    !status
+    return 0

@@ -1,0 +1,326 @@
+@import "sa_std/array.sars"
+
+@array_from_fn_double(index: u64) -> u64:
+L_ENTRY:
+    out = mul index, 2
+    return out
+
+@array_map_plus_ten(value: u64) -> u64:
+L_ENTRY:
+    out = add value, 10
+    return out
+
+@array_try_from_fn_until_three(index: u64, &out_value: ptr) -> u64:
+L_ENTRY:
+    keep = ult index, 3
+    br keep -> L_STORE, L_FAIL
+L_STORE:
+    value = mul index, 5
+    store out_value+0, value as u64
+    !value
+    !out_value
+    !keep
+    return 1
+L_FAIL:
+    !out_value
+    !keep
+    return 0
+
+@array_try_from_fn_all(index: u64, &out_value: ptr) -> u64:
+L_ENTRY:
+    value = add index, 11
+    store out_value+0, value as u64
+    !value
+    !out_value
+    return 1
+
+@array_try_map_below_forty(value: u64, &out_value: ptr) -> u64:
+L_ENTRY:
+    keep = ult value, 40
+    br keep -> L_STORE, L_FAIL
+L_STORE:
+    mapped = add value, 100
+    store out_value+0, mapped as u64
+    !mapped
+    !out_value
+    !keep
+    return 1
+L_FAIL:
+    !out_value
+    !keep
+    return 0
+
+@array_try_map_all(value: u64, &out_value: ptr) -> u64:
+L_ENTRY:
+    mapped = add value, 200
+    store out_value+0, mapped as u64
+    !mapped
+    !out_value
+    return 1
+
+@test "sa_std array primitive u64 macros"():
+L_ENTRY:
+    arr = stack_alloc 32
+    src = stack_alloc 32
+    copy = stack_alloc 32
+    store arr+0, 1 as u64
+    store arr+8, 2 as u64
+    store arr+16, 3 as u64
+    store arr+24, 4 as u64
+    store src+0, 10 as u64
+    store src+8, 20 as u64
+    store src+16, 30 as u64
+    store src+24, 40 as u64
+
+    EXPAND ARRAY_LEN len4, 4
+    EXPAND ARRAY_IS_EMPTY empty0, 0
+    EXPAND ARRAY_IS_EMPTY empty4, 4
+    slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 slice, arr, 4
+    slice_len = load slice+Slice_len as u64
+    slice_ptr = load slice+Slice_ptr as ptr
+    mut_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_MUT_SLICE_U64 mut_slice, arr, 4
+    mut_slice_len = load mut_slice+Slice_len as u64
+    mut_slice_ptr = load mut_slice+Slice_ptr as ptr
+    ref_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_FROM_REF_U64 ref_slice, arr
+    ref_slice_len = load ref_slice+Slice_len as u64
+    ref_slice_ptr = load ref_slice+Slice_ptr as ptr
+    from_mut_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_FROM_MUT_U64 from_mut_slice, arr
+    from_mut_len = load from_mut_slice+Slice_len as u64
+    each_ref = stack_alloc Slice_SIZE
+    EXPAND ARRAY_EACH_REF_U64 each_ref, arr, 4
+    each_ref_len = load each_ref+Slice_len as u64
+    each_mut = stack_alloc Slice_SIZE
+    EXPAND ARRAY_EACH_MUT_U64 each_mut, arr, 4
+    each_mut_ptr = load each_mut+Slice_ptr as ptr
+
+    EXPAND ARRAY_FIRST_U64 first, arr
+    EXPAND ARRAY_LAST_U64 last, arr, 4
+    EXPAND ARRAY_GET_U64 second, arr, 1
+    EXPAND ARRAY_TRY_GET_U64 get_ok, get_value, arr, 4, 2
+    EXPAND ARRAY_TRY_GET_U64 get_miss_ok, get_miss_value, arr, 4, 9
+    EXPAND ARRAY_TRY_GET_MUT_PTR_U64 mut_ok, mut_ptr, arr, 4, 1
+    EXPAND ARRAY_TRY_GET_MUT_PTR_U64 mut_miss_ok, mut_miss_ptr, arr, 4, 9
+    store mut_ptr+0, 55 as u64
+    EXPAND ARRAY_GET_U64 after_mut, arr, 1
+
+    EXPAND ARRAY_FILL_U64 copy, 4, 7
+    copy_fill0 = load copy+0 as u64
+    copy_fill3 = load copy+24 as u64
+    EXPAND ARRAY_COPY_U64 copy, src, 4
+    copy0 = load copy+0 as u64
+    copy3 = load copy+24 as u64
+    EXPAND ARRAY_SWAP_U64 copy, 0, 3
+    copy_swap0 = load copy+0 as u64
+    copy_swap3 = load copy+24 as u64
+    EXPAND ARRAY_REVERSE_U64 copy, 4
+    copy_rev0 = load copy+0 as u64
+    copy_rev3 = load copy+24 as u64
+
+    slice2 = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 slice2, src, 4
+    EXPAND ARRAY_TRY_COPY_FROM_SLICE_U64 copy_from_ok, copy, 4, slice2
+    copy_from2 = load copy+16 as u64
+    short_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 short_slice, src, 3
+    EXPAND ARRAY_TRY_COPY_FROM_SLICE_U64 copy_from_miss, copy, 4, short_slice
+    as_array = stack_alloc Slice_SIZE
+    EXPAND ARRAY_TRY_AS_ARRAY_REF_U64 as_array_ok, as_array, slice2, 4
+    as_array_len = load as_array+Slice_len as u64
+    as_array_ptr = load as_array+Slice_ptr as ptr
+    as_array_miss = stack_alloc Slice_SIZE
+    EXPAND ARRAY_TRY_AS_ARRAY_REF_U64 as_array_miss_ok, as_array_miss, short_slice, 4
+    as_array_miss_len = load as_array_miss+Slice_len as u64
+    as_array_mut = stack_alloc Slice_SIZE
+    EXPAND ARRAY_TRY_AS_ARRAY_MUT_U64 as_array_mut_ok, as_array_mut, slice2, 4
+    as_array_mut_len = load as_array_mut+Slice_len as u64
+    split_prefix = stack_alloc Slice_SIZE
+    split_suffix = stack_alloc Slice_SIZE
+    EXPAND ARRAY_TRY_SPLIT_ARRAY_REF_U64 split_ok, split_prefix, split_suffix, src, 4, 2
+    split_prefix_len = load split_prefix+Slice_len as u64
+    split_suffix_len = load split_suffix+Slice_len as u64
+    split_suffix_ptr = load split_suffix+Slice_ptr as ptr
+    split_suffix_first = load split_suffix_ptr+0 as u64
+    split_bad_prefix = stack_alloc Slice_SIZE
+    split_bad_suffix = stack_alloc Slice_SIZE
+    EXPAND ARRAY_TRY_SPLIT_ARRAY_MUT_U64 split_bad_ok, split_bad_prefix, split_bad_suffix, src, 4, 5
+    split_bad_prefix_len = load split_bad_prefix+Slice_len as u64
+
+    generated = stack_alloc 32
+    EXPAND ARRAY_FROM_FN_U64 generated, 4, @array_from_fn_double
+    generated0 = load generated+0 as u64
+    generated3 = load generated+24 as u64
+    EXPAND ARRAY_REPEAT_U64 generated, 4, 99
+    repeat0 = load generated+0 as u64
+    repeat3 = load generated+24 as u64
+    mapped = stack_alloc 32
+    EXPAND ARRAY_MAP_U64 mapped, src, 4, @array_map_plus_ten
+    mapped0 = load mapped+0 as u64
+    mapped3 = load mapped+24 as u64
+    try_generated = stack_alloc 32
+    EXPAND ARRAY_TRY_FROM_FN_U64 try_gen_ok, try_generated, 4, @array_try_from_fn_all
+    try_gen0 = load try_generated+0 as u64
+    try_gen3 = load try_generated+24 as u64
+    EXPAND ARRAY_TRY_FROM_FN_U64 try_gen_miss, try_generated, 4, @array_try_from_fn_until_three
+    try_gen_after_miss2 = load try_generated+16 as u64
+    try_mapped = stack_alloc 32
+    EXPAND ARRAY_TRY_MAP_U64 try_map_ok, try_mapped, src, 3, @array_try_map_below_forty
+    try_map0 = load try_mapped+0 as u64
+    try_map2 = load try_mapped+16 as u64
+    EXPAND ARRAY_TRY_MAP_U64 try_map_miss, try_mapped, src, 4, @array_try_map_below_forty
+    try_map_after_miss2 = load try_mapped+16 as u64
+    EXPAND ARRAY_TRY_MAP_U64 try_map_all_ok, try_mapped, src, 4, @array_try_map_all
+    try_map_all3 = load try_mapped+24 as u64
+
+    ok_len = eq len4, 4
+    ok_empty0 = eq empty0, 1
+    ok_empty4 = eq empty4, 0
+    ok_slice_len = eq slice_len, 4
+    ok_slice_ptr = eq slice_ptr, arr
+    ok_mut_slice_len = eq mut_slice_len, 4
+    ok_mut_slice_ptr = eq mut_slice_ptr, arr
+    ok_ref_slice_len = eq ref_slice_len, 1
+    ok_ref_slice_ptr = eq ref_slice_ptr, arr
+    ok_from_mut_len = eq from_mut_len, 1
+    ok_each_ref_len = eq each_ref_len, 4
+    ok_each_mut_ptr = eq each_mut_ptr, arr
+    ok_first = eq first, 1
+    ok_last = eq last, 4
+    ok_second = eq second, 2
+    ok_get_flag = eq get_ok, 1
+    ok_get_value = eq get_value, 3
+    ok_get_miss_flag = eq get_miss_ok, 0
+    ok_get_miss_value = eq get_miss_value, 0
+    ok_mut_flag = eq mut_ok, 1
+    ok_mut = eq after_mut, 55
+    ok_mut_miss_flag = eq mut_miss_ok, 0
+    null_ptr = 0 as ptr
+    ok_mut_miss_ptr = eq mut_miss_ptr, null_ptr
+    ok_fill0 = eq copy_fill0, 7
+    ok_fill3 = eq copy_fill3, 7
+    ok_copy0 = eq copy0, 10
+    ok_copy3 = eq copy3, 40
+    ok_swap0 = eq copy_swap0, 40
+    ok_swap3 = eq copy_swap3, 10
+    ok_rev0 = eq copy_rev0, 10
+    ok_rev3 = eq copy_rev3, 40
+    ok_copy_from_flag = eq copy_from_ok, 1
+    ok_copy_from2 = eq copy_from2, 30
+    ok_copy_from_miss = eq copy_from_miss, 0
+    ok_as_array = eq as_array_ok, 1
+    ok_as_array_len = eq as_array_len, 4
+    ok_as_array_ptr = eq as_array_ptr, src
+    ok_as_array_miss = eq as_array_miss_ok, 0
+    ok_as_array_miss_len = eq as_array_miss_len, 0
+    ok_as_array_mut = eq as_array_mut_ok, 1
+    ok_as_array_mut_len = eq as_array_mut_len, 4
+    ok_split = eq split_ok, 1
+    ok_split_prefix_len = eq split_prefix_len, 2
+    ok_split_suffix_len = eq split_suffix_len, 2
+    ok_split_suffix_first = eq split_suffix_first, 30
+    ok_split_bad = eq split_bad_ok, 0
+    ok_split_bad_prefix = eq split_bad_prefix_len, 0
+    ok_generated0 = eq generated0, 0
+    ok_generated3 = eq generated3, 6
+    ok_repeat0 = eq repeat0, 99
+    ok_repeat3 = eq repeat3, 99
+    ok_mapped0 = eq mapped0, 20
+    ok_mapped3 = eq mapped3, 50
+    ok_try_gen = eq try_gen_ok, 1
+    ok_try_gen0 = eq try_gen0, 11
+    ok_try_gen3 = eq try_gen3, 14
+    ok_try_gen_miss = eq try_gen_miss, 0
+    ok_try_gen_after_miss2 = eq try_gen_after_miss2, 10
+    ok_try_map = eq try_map_ok, 1
+    ok_try_map0 = eq try_map0, 110
+    ok_try_map2 = eq try_map2, 130
+    ok_try_map_miss = eq try_map_miss, 0
+    ok_try_map_after_miss2 = eq try_map_after_miss2, 130
+    ok_try_map_all = eq try_map_all_ok, 1
+    ok_try_map_all3 = eq try_map_all3, 240
+
+    ok01 = and ok_len, ok_empty0
+    ok02 = and ok01, ok_empty4
+    ok03 = and ok02, ok_slice_len
+    ok04 = and ok03, ok_slice_ptr
+    ok05 = and ok04, ok_mut_slice_len
+    ok06 = and ok05, ok_mut_slice_ptr
+    ok07 = and ok06, ok_ref_slice_len
+    ok08 = and ok07, ok_ref_slice_ptr
+    ok09 = and ok08, ok_from_mut_len
+    ok10 = and ok09, ok_each_ref_len
+    ok11 = and ok10, ok_each_mut_ptr
+    ok12 = and ok11, ok_first
+    ok13 = and ok12, ok_last
+    ok14 = and ok13, ok_second
+    ok15 = and ok14, ok_get_flag
+    ok16 = and ok15, ok_get_value
+    ok17 = and ok16, ok_get_miss_flag
+    ok18 = and ok17, ok_get_miss_value
+    ok19 = and ok18, ok_mut_flag
+    ok20 = and ok19, ok_mut
+    ok21 = and ok20, ok_mut_miss_flag
+    ok22 = and ok21, ok_mut_miss_ptr
+    ok23 = and ok22, ok_fill0
+    ok24 = and ok23, ok_fill3
+    ok25 = and ok24, ok_copy0
+    ok26 = and ok25, ok_copy3
+    ok27 = and ok26, ok_swap0
+    ok28 = and ok27, ok_swap3
+    ok29 = and ok28, ok_rev0
+    ok30 = and ok29, ok_rev3
+    ok31 = and ok30, ok_copy_from_flag
+    ok32 = and ok31, ok_copy_from2
+    ok33 = and ok32, ok_copy_from_miss
+    ok34 = and ok33, ok_as_array
+    ok35 = and ok34, ok_as_array_len
+    ok36 = and ok35, ok_as_array_ptr
+    ok37 = and ok36, ok_as_array_miss
+    ok38 = and ok37, ok_as_array_miss_len
+    ok39 = and ok38, ok_as_array_mut
+    ok40 = and ok39, ok_as_array_mut_len
+    ok41 = and ok40, ok_split
+    ok42 = and ok41, ok_split_prefix_len
+    ok43 = and ok42, ok_split_suffix_len
+    ok44 = and ok43, ok_split_suffix_first
+    ok45 = and ok44, ok_split_bad
+    ok46 = and ok45, ok_split_bad_prefix
+    ok47 = and ok46, ok_generated0
+    ok48 = and ok47, ok_generated3
+    ok49 = and ok48, ok_repeat0
+    ok50 = and ok49, ok_repeat3
+    ok51 = and ok50, ok_mapped0
+    ok52 = and ok51, ok_mapped3
+    ok53 = and ok52, ok_try_gen
+    ok54 = and ok53, ok_try_gen0
+    ok55 = and ok54, ok_try_gen3
+    ok56 = and ok55, ok_try_gen_miss
+    ok57 = and ok56, ok_try_gen_after_miss2
+    ok58 = and ok57, ok_try_map
+    ok59 = and ok58, ok_try_map0
+    ok60 = and ok59, ok_try_map2
+    ok61 = and ok60, ok_try_map_miss
+    ok62 = and ok61, ok_try_map_after_miss2
+    ok63 = and ok62, ok_try_map_all
+    ok = and ok63, ok_try_map_all3
+
+    !null_ptr
+    !mut_miss_ptr
+    !mut_ptr
+    !split_suffix_ptr
+    !as_array_ptr
+    !each_mut_ptr
+    !ref_slice_ptr
+    !mut_slice_ptr
+    !slice_ptr
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(950)
+
+L_PASS:
+    return 0

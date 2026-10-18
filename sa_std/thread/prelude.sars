@@ -1,0 +1,4 @@
+// Stable thread namespace aggregation.
+@import "join_handle.sars"
+@import "../thread.sars"
+@import "../thread_local.sars"

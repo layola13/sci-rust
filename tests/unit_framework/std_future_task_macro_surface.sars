@@ -1,0 +1,780 @@
+@import "sa_std/future.sars"
+@import "sa_std/task.sars"
+
+@const TEST_READY_VT = vtable { poll = @future_unit_poll_ready }
+@const TEST_PENDING_ONCE_VT = vtable { poll = @future_unit_poll_pending_once }
+@const TEST_WAKER_VT = vtable { clone = @future_unit_waker_clone, wake = @future_unit_waker_wake, wake_by_ref = @future_unit_waker_wake_by_ref, drop = @future_unit_waker_drop }
+@const TEST_READY_STATE_VT = vtable { poll = @future_unit_ready_state_poll }
+@const TEST_PENDING_STATE_VT = vtable { poll = @future_unit_pending_state_poll }
+@const TEST_POLL_FN_VT = vtable { poll = @future_unit_poll_fn_state_poll }
+
+#def TestFuture_SIZE = 16
+#def TestFuture_state = +0
+#def TestFuture_value = +8
+#def TestWaker_SIZE = 8
+#def TestWaker_value = +0
+
+@future_unit_double(value: u64) -> u64:
+L_ENTRY:
+    doubled = add value, value
+    return doubled
+
+@future_unit_waker_clone(&self: ptr, &out_raw: ptr) -> void:
+L_ENTRY:
+    store out_raw+RawWaker_data, self as ptr
+    store out_raw+RawWaker_vtable, &TEST_WAKER_VT as ptr
+    !out_raw
+    !self
+    return
+
+@future_unit_waker_wake(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestWaker_value as i32
+    result = add value, 1
+    !value
+    !self
+    return result
+
+@future_unit_waker_wake_by_ref(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+TestWaker_value as i32
+    result = add value, 2
+    !value
+    !self
+    return result
+
+@future_unit_waker_drop(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 0
+
+@future_unit_ready_state_poll(&self: ptr, &ctx: ptr, &out_poll: ptr) -> void:
+L_ENTRY:
+    EXPAND FUTURE_READY_SET_POLL_STATE out_poll, self
+    !out_poll
+    !ctx
+    !self
+    return
+
+@future_unit_pending_state_poll(&self: ptr, &ctx: ptr, &out_poll: ptr) -> void:
+L_ENTRY:
+    EXPAND FUTURE_PENDING_SET_POLL_STATE out_poll, self
+    !out_poll
+    !ctx
+    !self
+    return
+
+@future_unit_poll_fn_state_poll(&self: ptr, &ctx: ptr, &out_poll: ptr) -> void:
+L_ENTRY:
+    EXPAND FUTURE_POLL_FN_STATE_POLL poll, self, ctx
+    tag = load poll+Poll_tag as u64
+    value = load poll+Poll_value as u64
+    store out_poll+Poll_tag, tag as u64
+    store out_poll+Poll_value, value as u64
+    !value
+    !tag
+    !poll
+    !out_poll
+    !ctx
+    !self
+    return
+
+@future_unit_poll_fn_callback(&data: ptr, &ctx: ptr, &out_poll: ptr) -> void:
+L_ENTRY:
+    value = load data+TestFuture_value as u64
+    EXPAND POLL_SET_READY out_poll, value
+    !value
+    !out_poll
+    !ctx
+    !data
+    return
+
+@future_unit_poll_ready(&self: ptr, &ctx: ptr, &out_poll: ptr) -> void:
+L_ENTRY:
+    value = load self+TestFuture_value as u64
+    EXPAND POLL_SET_READY out_poll, value
+    !value
+    !out_poll
+    !ctx
+    !self
+    return
+
+@future_unit_poll_pending_once(&self: ptr, &ctx: ptr, &out_poll: ptr) -> void:
+L_ENTRY:
+    state = load self+TestFuture_state as u64
+    is_ready = eq state, 1
+    br is_ready -> L_READY, L_PENDING
+
+L_PENDING:
+    store self+TestFuture_state, 1 as u64
+    EXPAND POLL_SET_PENDING out_poll
+    !is_ready
+    !state
+    !out_poll
+    !ctx
+    !self
+    return
+
+L_READY:
+    value = load self+TestFuture_value as u64
+    EXPAND POLL_SET_READY out_poll, value
+    !value
+    !is_ready
+    !state
+    !out_poll
+    !ctx
+    !self
+    return
+
+@test "sa_std waker context poll result macros"():
+L_ENTRY:
+    waker_data = alloc TestWaker_SIZE
+    store waker_data+TestWaker_value, 3 as i32
+    EXPAND RAW_WAKER_NEW raw, waker_data, &TEST_WAKER_VT
+    EXPAND RAW_WAKER_GET_DATA raw_data, raw
+    EXPAND RAW_WAKER_GET_VTABLE raw_vtable, raw
+    EXPAND RAW_WAKER_CLONE raw_clone, raw
+    EXPAND RAW_WAKER_WAKE raw_wake, raw
+    EXPAND RAW_WAKER_WAKE_BY_REF raw_wake_ref, raw
+    EXPAND WAKER_FROM_RAW waker, raw
+    EXPAND WAKER_CLONE waker_clone, waker
+    EXPAND WAKER_GET_DATA waker_data_got, waker
+    EXPAND WAKER_GET_VTABLE waker_vtable_got, waker
+    EXPAND WAKER_WAKE wake_value, waker
+    EXPAND WAKER_WAKE_BY_REF wake_ref_value, waker
+    EXPAND WAKER_WILL_WAKE will_wake_same, waker, waker_clone
+    EXPAND LOCAL_WAKER_FROM_RAW local_waker, raw
+    EXPAND LOCAL_WAKER_CLONE local_clone, local_waker
+    EXPAND LOCAL_WAKER_GET_DATA local_data, local_waker
+    EXPAND LOCAL_WAKER_GET_VTABLE local_vtable, local_waker
+    EXPAND LOCAL_WAKER_WAKE local_wake_value, local_waker
+    EXPAND LOCAL_WAKER_WAKE_BY_REF local_wake_ref_value, local_waker
+    EXPAND LOCAL_WAKER_WILL_WAKE local_same, local_waker, local_clone
+    EXPAND CONTEXT_FROM_WAKER ctx, waker
+    EXPAND CONTEXT_WAKER ctx_waker, ctx
+    EXPAND CONTEXT_LOCAL_WAKER ctx_local, ctx
+    EXPAND CONTEXT_DATA ctx_data, ctx
+    EXPAND CONTEXT_EXT ctx_ext0, ctx
+    ext = alloc 8
+    store ext+0, 77 as u64
+    EXPAND CONTEXT_SET_EXT ctx, ext
+    EXPAND CONTEXT_EXT ctx_ext1, ctx
+    EXPAND CONTEXT_BUILDER_FROM_WAKER builder, waker
+    EXPAND CONTEXT_BUILDER_SET_LOCAL_WAKER builder, local_waker
+    EXPAND CONTEXT_BUILDER_SET_EXT builder, ext
+    EXPAND CONTEXT_BUILDER_SET_DATA builder, waker_data
+    EXPAND CONTEXT_BUILDER_BUILD built_ctx, builder
+    EXPAND CONTEXT_WAKER built_waker, built_ctx
+    EXPAND CONTEXT_LOCAL_WAKER built_local, built_ctx
+    EXPAND CONTEXT_EXT built_ext, built_ctx
+    EXPAND CONTEXT_DATA built_data, built_ctx
+    EXPAND POLL_READY poll_ready, 9
+    EXPAND POLL_MAP mapped_poll, poll_ready, @future_unit_double
+    EXPAND POLL_VALUE mapped_value, mapped_poll
+    EXPAND POLL_PENDING poll_pending
+    EXPAND POLL_MAP mapped_pending, poll_pending, @future_unit_double
+    EXPAND POLL_IS_PENDING mapped_pending_is_pending, mapped_pending
+    EXPAND POLL_RESULT_READY_OK poll_res_ok, 4
+    EXPAND POLL_RESULT_MAP_OK mapped_res_ok, poll_res_ok, @future_unit_double
+    EXPAND POLL_RESULT_IS_READY mapped_res_ready, mapped_res_ok
+    EXPAND POLL_RESULT_IS_OK mapped_res_is_ok, mapped_res_ok
+    EXPAND POLL_RESULT_OK_VALUE mapped_res_value, mapped_res_ok
+    EXPAND POLL_RESULT_READY_ERR poll_res_err, 6
+    EXPAND POLL_RESULT_MAP_ERR mapped_res_err, poll_res_err, @future_unit_double
+    EXPAND POLL_RESULT_IS_ERR mapped_res_is_err, mapped_res_err
+    EXPAND POLL_RESULT_ERR_VALUE mapped_res_err_value, mapped_res_err
+    EXPAND POLL_OPTION_RESULT_READY_SOME_OK poll_opt_ok, 5
+    EXPAND POLL_OPTION_RESULT_MAP_OK mapped_opt_ok, poll_opt_ok, @future_unit_double
+    EXPAND POLL_OPTION_RESULT_IS_READY mapped_opt_ready, mapped_opt_ok
+    EXPAND POLL_OPTION_RESULT_IS_SOME mapped_opt_some, mapped_opt_ok
+    EXPAND POLL_OPTION_RESULT_IS_OK mapped_opt_is_ok, mapped_opt_ok
+    EXPAND POLL_OPTION_RESULT_OK_VALUE mapped_opt_value, mapped_opt_ok
+    EXPAND POLL_OPTION_RESULT_READY_SOME_ERR poll_opt_err, 7
+    EXPAND POLL_OPTION_RESULT_MAP_ERR mapped_opt_err, poll_opt_err, @future_unit_double
+    EXPAND POLL_OPTION_RESULT_ERR_VALUE mapped_opt_err_value, mapped_opt_err
+    expected_vtable = &TEST_WAKER_VT
+    ok_raw_data = eq raw_data, waker_data
+    ok_raw_vtable = eq raw_vtable, expected_vtable
+    ok_raw_wake = eq raw_wake, 4
+    ok_raw_wake_ref = eq raw_wake_ref, 5
+    ok_waker_data = eq waker_data_got, waker_data
+    ok_waker_vtable = eq waker_vtable_got, expected_vtable
+    ok_wake = eq wake_value, 4
+    ok_wake_ref = eq wake_ref_value, 5
+    ok_will_wake = eq will_wake_same, 1
+    ok_local_data = eq local_data, waker_data
+    ok_local_vtable = eq local_vtable, expected_vtable
+    ok_local_wake = eq local_wake_value, 4
+    ok_local_wake_ref = eq local_wake_ref_value, 5
+    ok_local_same = eq local_same, 1
+    ok_ctx_waker = eq ctx_waker, waker
+    ok_ctx_local = eq ctx_local, waker
+    ok_ctx_data = eq ctx_data, 0
+    ok_ctx_ext0 = eq ctx_ext0, 0
+    ok_ctx_ext1 = eq ctx_ext1, ext
+    ok_built_waker = eq built_waker, waker
+    ok_built_local = eq built_local, local_waker
+    ok_built_ext = eq built_ext, ext
+    ok_built_data = eq built_data, waker_data
+    ok_poll_map = eq mapped_value, 18
+    ok_poll_pending = eq mapped_pending_is_pending, 1
+    ok_res_ready = eq mapped_res_ready, 1
+    ok_res_ok = eq mapped_res_is_ok, 1
+    ok_res_value = eq mapped_res_value, 8
+    ok_res_err = eq mapped_res_is_err, 1
+    ok_res_err_value = eq mapped_res_err_value, 12
+    ok_opt_ready = eq mapped_opt_ready, 1
+    ok_opt_some = eq mapped_opt_some, 1
+    ok_opt_is_ok = eq mapped_opt_is_ok, 1
+    ok_opt_value = eq mapped_opt_value, 10
+    ok_opt_err_value = eq mapped_opt_err_value, 14
+    ok01 = and ok_raw_data, ok_raw_vtable
+    ok02 = and ok01, ok_raw_wake
+    ok03 = and ok02, ok_raw_wake_ref
+    ok04 = and ok03, ok_waker_data
+    ok05 = and ok04, ok_waker_vtable
+    ok06 = and ok05, ok_wake
+    ok07 = and ok06, ok_wake_ref
+    ok08 = and ok07, ok_will_wake
+    ok09 = and ok08, ok_local_data
+    ok10 = and ok09, ok_local_vtable
+    ok11 = and ok10, ok_local_wake
+    ok12 = and ok11, ok_local_wake_ref
+    ok13 = and ok12, ok_local_same
+    ok14 = and ok13, ok_ctx_waker
+    ok15 = and ok14, ok_ctx_local
+    ok16 = and ok15, ok_ctx_data
+    ok17 = and ok16, ok_ctx_ext0
+    ok18 = and ok17, ok_ctx_ext1
+    ok19 = and ok18, ok_built_waker
+    ok20 = and ok19, ok_built_local
+    ok21 = and ok20, ok_built_ext
+    ok22 = and ok21, ok_built_data
+    ok23 = and ok22, ok_poll_map
+    ok24 = and ok23, ok_poll_pending
+    ok25 = and ok24, ok_res_ready
+    ok26 = and ok25, ok_res_ok
+    ok27 = and ok26, ok_res_value
+    ok28 = and ok27, ok_res_err
+    ok29 = and ok28, ok_res_err_value
+    ok30 = and ok29, ok_opt_ready
+    ok31 = and ok30, ok_opt_some
+    ok32 = and ok31, ok_opt_is_ok
+    ok33 = and ok32, ok_opt_value
+    ok = and ok33, ok_opt_err_value
+    !raw
+    !raw_clone
+    !waker
+    !waker_clone
+    !local_waker
+    !local_clone
+    !ctx
+    !builder
+    !built_ctx
+    !ext
+    !waker_data
+    !poll_ready
+    !mapped_poll
+    !poll_pending
+    !mapped_pending
+    !poll_res_ok
+    !mapped_res_ok
+    !poll_res_err
+    !mapped_res_err
+    !poll_opt_ok
+    !mapped_opt_ok
+    !poll_opt_err
+    !mapped_opt_err
+    !expected_vtable
+    !raw_data
+    !raw_vtable
+    !raw_wake
+    !raw_wake_ref
+    !waker_data_got
+    !waker_vtable_got
+    !wake_value
+    !wake_ref_value
+    !will_wake_same
+    !local_data
+    !local_vtable
+    !local_wake_value
+    !local_wake_ref_value
+    !local_same
+    !ctx_waker
+    !ctx_local
+    !ctx_data
+    !ctx_ext0
+    !ctx_ext1
+    !built_waker
+    !built_local
+    !built_ext
+    !built_data
+    !mapped_value
+    !mapped_pending_is_pending
+    !mapped_res_ready
+    !mapped_res_is_ok
+    !mapped_res_value
+    !mapped_res_is_err
+    !mapped_res_err_value
+    !mapped_opt_ready
+    !mapped_opt_some
+    !mapped_opt_is_ok
+    !mapped_opt_value
+    !mapped_opt_err_value
+    !ok_raw_data
+    !ok_raw_vtable
+    !ok_raw_wake
+    !ok_raw_wake_ref
+    !ok_waker_data
+    !ok_waker_vtable
+    !ok_wake
+    !ok_wake_ref
+    !ok_will_wake
+    !ok_local_data
+    !ok_local_vtable
+    !ok_local_wake
+    !ok_local_wake_ref
+    !ok_local_same
+    !ok_ctx_waker
+    !ok_ctx_local
+    !ok_ctx_data
+    !ok_ctx_ext0
+    !ok_ctx_ext1
+    !ok_built_waker
+    !ok_built_local
+    !ok_built_ext
+    !ok_built_data
+    !ok_poll_map
+    !ok_poll_pending
+    !ok_res_ready
+    !ok_res_ok
+    !ok_res_value
+    !ok_res_err
+    !ok_res_err_value
+    !ok_opt_ready
+    !ok_opt_some
+    !ok_opt_is_ok
+    !ok_opt_value
+    !ok_opt_err_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10037)
+
+L_OK:
+    !ok
+    return
+
+@test "sa_std future poll macros"():
+L_ENTRY:
+    waker_data = alloc TestWaker_SIZE
+    store waker_data+TestWaker_value, 3 as i32
+    EXPAND WAKER_NEW waker, waker_data, &TEST_WAKER_VT
+    EXPAND CONTEXT_NEW ctx, waker, waker_data
+    future_data = alloc TestFuture_SIZE
+    store future_data+TestFuture_state, 0 as u64
+    store future_data+TestFuture_value, 11 as u64
+    EXPAND FUTURE_NEW future, future_data, &TEST_READY_VT
+    poll_fn_data = alloc TestFuture_SIZE
+    store poll_fn_data+TestFuture_state, 0 as u64
+    store poll_fn_data+TestFuture_value, 21 as u64
+    EXPAND FUTURE_POLL_FN_STATE_NEW poll_fn_state, poll_fn_data, &TEST_READY_VT
+    EXPAND FUTURE_NEW poll_fn_future, poll_fn_state, &TEST_POLL_FN_VT
+    EXPAND FUTURE_GET_DATA got_data, future
+    EXPAND FUTURE_GET_VTABLE got_vtable, future
+    EXPAND CONTEXT_WAKER got_waker, ctx
+    EXPAND CONTEXT_DATA got_ctx_data, ctx
+    EXPAND FUTURE_POLL poll, future, ctx
+    EXPAND FUTURE_POLL poll_fn_poll, poll_fn_future, ctx
+    EXPAND POLL_VALUE poll_fn_value, poll_fn_poll
+    EXPAND POLL_IS_READY is_ready, poll
+    EXPAND POLL_IS_PENDING is_pending, poll
+    EXPAND POLL_VALUE poll_value, poll
+    EXPAND FUTURE_POLL_BRANCH branch_poll, future, ctx, L_FUTURE_POLL_BRANCH_READY, L_FUTURE_POLL_BRANCH_PENDING
+
+L_FUTURE_POLL_BRANCH_READY:
+    EXPAND POLL_VALUE branch_value, branch_poll
+    branch_hit = add 1, 0
+    jmp L_FUTURE_POLL_BRANCH_DONE
+
+L_FUTURE_POLL_BRANCH_PENDING:
+    branch_value = add 0, 0
+    branch_hit = add 0, 0
+
+L_FUTURE_POLL_BRANCH_DONE:
+    ok_ready = eq is_ready, 1
+    ok_pending = eq is_pending, 0
+    ok_value = eq poll_value, 11
+    ok_data = eq got_data, future_data
+    ok_waker = eq got_waker, waker
+    ok_ctx_data = eq got_ctx_data, waker_data
+    ok_poll_fn = eq poll_fn_value, 21
+    ok_branch_value = eq branch_value, 11
+    ok_branch_hit = eq branch_hit, 1
+    ok01 = and ok_ready, ok_pending
+    ok02 = and ok01, ok_value
+    ok03 = and ok02, ok_data
+    ok04 = and ok03, ok_waker
+    ok05 = and ok04, ok_ctx_data
+    ok06 = and ok05, ok_poll_fn
+    ok07 = and ok06, ok_branch_value
+    ok = and ok07, ok_branch_hit
+    !poll
+    !poll_fn_poll
+    !branch_poll
+    !future
+    !poll_fn_future
+    !poll_fn_state
+    !future_data
+    !poll_fn_data
+    !ctx
+    !waker
+    !waker_data
+    !got_data
+    !got_vtable
+    !got_waker
+    !got_ctx_data
+    !is_ready
+    !is_pending
+    !poll_value
+    !poll_fn_value
+    !branch_value
+    !branch_hit
+    !ok_ready
+    !ok_pending
+    !ok_value
+    !ok_data
+    !ok_waker
+    !ok_ctx_data
+    !ok_poll_fn
+    !ok_branch_value
+    !ok_branch_hit
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10038)
+
+L_OK:
+    !ok
+    return
+
+@test "sa_std future join select macros"():
+L_ENTRY:
+    waker_data = alloc TestWaker_SIZE
+    store waker_data+TestWaker_value, 5 as i32
+    EXPAND WAKER_NEW waker, waker_data, &TEST_WAKER_VT
+    EXPAND CONTEXT_NEW ctx, waker, waker_data
+    left_data = alloc TestFuture_SIZE
+    store left_data+TestFuture_state, 0 as u64
+    store left_data+TestFuture_value, 5 as u64
+    right_data = alloc TestFuture_SIZE
+    store right_data+TestFuture_state, 0 as u64
+    store right_data+TestFuture_value, 7 as u64
+    pending_data = alloc TestFuture_SIZE
+    store pending_data+TestFuture_state, 0 as u64
+    store pending_data+TestFuture_value, 13 as u64
+    EXPAND FUTURE_NEW left, left_data, &TEST_READY_VT
+    EXPAND FUTURE_NEW right, right_data, &TEST_READY_VT
+    EXPAND FUTURE_NEW pending_once, pending_data, &TEST_PENDING_ONCE_VT
+    EXPAND FUTURE_JOIN2_POLL join_poll, left, right, ctx
+    EXPAND POLL_IS_READY join_ready, join_poll
+    EXPAND POLL_VALUE join_value, join_poll
+    EXPAND FUTURE_SELECT2_POLL select_right_poll, pending_once, right, ctx, select_right_side
+    EXPAND POLL_IS_READY select_right_ready, select_right_poll
+    EXPAND POLL_VALUE select_right_value, select_right_poll
+    EXPAND FUTURE_SELECT2_POLL select_left_poll, pending_once, right, ctx, select_left_side
+    EXPAND POLL_IS_READY select_left_ready, select_left_poll
+    EXPAND POLL_VALUE select_left_value, select_left_poll
+    EXPAND FUTURE_READY_STATE_NEW join_left_state_data, 17
+    EXPAND FUTURE_READY_STATE_NEW join_right_state_data, 19
+    EXPAND FUTURE_NEW join_left_state_future, join_left_state_data, &TEST_READY_STATE_VT
+    EXPAND FUTURE_NEW join_right_state_future, join_right_state_data, &TEST_READY_STATE_VT
+    EXPAND FUTURE_JOIN2_STATE_NEW join_state, join_left_state_future, join_right_state_future
+    EXPAND FUTURE_JOIN2_STATE_POLL join_state_poll, join_state, ctx
+    EXPAND POLL_IS_READY join_state_ready, join_state_poll
+    EXPAND POLL_VALUE_PTR join_state_pair, join_state_poll
+    EXPAND FUTURE_PAIR_LEFT join_state_left_value, join_state_pair
+    EXPAND FUTURE_PAIR_RIGHT join_state_right_value, join_state_pair
+    EXPAND FUTURE_PENDING_STATE_NEW select_pending_state_data
+    EXPAND FUTURE_READY_STATE_NEW select_right_state_data, 23
+    EXPAND FUTURE_NEW select_pending_future, select_pending_state_data, &TEST_PENDING_STATE_VT
+    EXPAND FUTURE_NEW select_right_state_future, select_right_state_data, &TEST_READY_STATE_VT
+    EXPAND FUTURE_SELECT2_STATE_NEW select_state_right, select_pending_future, select_right_state_future
+    EXPAND FUTURE_SELECT2_STATE_POLL select_state_right_poll, select_state_right, ctx
+    EXPAND POLL_IS_READY select_state_right_ready, select_state_right_poll
+    EXPAND POLL_VALUE_PTR select_state_right_either, select_state_right_poll
+    EXPAND FUTURE_EITHER_SIDE select_state_right_side, select_state_right_either
+    EXPAND FUTURE_EITHER_RIGHT_VALUE select_state_right_value, select_state_right_either
+    EXPAND FUTURE_READY_STATE_NEW select_left_state_data, 29
+    EXPAND FUTURE_READY_STATE_NEW select_other_state_data, 31
+    EXPAND FUTURE_NEW select_left_state_future, select_left_state_data, &TEST_READY_STATE_VT
+    EXPAND FUTURE_NEW select_other_state_future, select_other_state_data, &TEST_READY_STATE_VT
+    EXPAND FUTURE_SELECT2_STATE_NEW select_state_left, select_left_state_future, select_other_state_future
+    EXPAND FUTURE_SELECT2_STATE_POLL select_state_left_poll, select_state_left, ctx
+    EXPAND POLL_IS_READY select_state_left_ready, select_state_left_poll
+    EXPAND POLL_VALUE_PTR select_state_left_either, select_state_left_poll
+    EXPAND FUTURE_EITHER_SIDE select_state_left_side, select_state_left_either
+    EXPAND FUTURE_EITHER_LEFT_VALUE select_state_left_value, select_state_left_either
+    ok_join_ready = eq join_ready, 1
+    ok_join_value = eq join_value, 12
+    ok_select_right_ready = eq select_right_ready, 1
+    ok_select_right_value = eq select_right_value, 7
+    ok_select_right_side = eq select_right_side, FutureSelect_RIGHT
+    ok_select_left_ready = eq select_left_ready, 1
+    ok_select_left_value = eq select_left_value, 13
+    ok_select_left_side = eq select_left_side, FutureSelect_LEFT
+    ok_join_state_ready = eq join_state_ready, 1
+    ok_join_state_left = eq join_state_left_value, 17
+    ok_join_state_right = eq join_state_right_value, 19
+    ok_select_state_right_ready = eq select_state_right_ready, 1
+    ok_select_state_right_side = eq select_state_right_side, FutureSelect_RIGHT
+    ok_select_state_right_value = eq select_state_right_value, 23
+    ok_select_state_left_ready = eq select_state_left_ready, 1
+    ok_select_state_left_side = eq select_state_left_side, FutureSelect_LEFT
+    ok_select_state_left_value = eq select_state_left_value, 29
+    ok01 = and ok_join_ready, ok_join_value
+    ok02 = and ok01, ok_select_right_ready
+    ok03 = and ok02, ok_select_right_value
+    ok04 = and ok03, ok_select_right_side
+    ok05 = and ok04, ok_select_left_ready
+    ok06 = and ok05, ok_select_left_value
+    ok07 = and ok06, ok_select_left_side
+    ok08 = and ok07, ok_join_state_ready
+    ok09 = and ok08, ok_join_state_left
+    ok10 = and ok09, ok_join_state_right
+    ok11 = and ok10, ok_select_state_right_ready
+    ok12 = and ok11, ok_select_state_right_side
+    ok13 = and ok12, ok_select_state_right_value
+    ok14 = and ok13, ok_select_state_left_ready
+    ok15 = and ok14, ok_select_state_left_side
+    ok = and ok15, ok_select_state_left_value
+    !join_poll
+    !select_right_poll
+    !select_left_poll
+    !join_state_poll
+    !join_state_pair
+    !select_state_right_poll
+    !select_state_right_either
+    !select_state_left_poll
+    !select_state_left_either
+    !left
+    !right
+    !pending_once
+    !join_left_state_future
+    !join_right_state_future
+    !join_state
+    !select_pending_future
+    !select_right_state_future
+    !select_state_right
+    !select_left_state_future
+    !select_other_state_future
+    !select_state_left
+    !left_data
+    !right_data
+    !pending_data
+    !join_left_state_data
+    !join_right_state_data
+    !select_pending_state_data
+    !select_right_state_data
+    !select_left_state_data
+    !select_other_state_data
+    !ctx
+    !waker
+    !waker_data
+    !join_ready
+    !join_value
+    !select_right_ready
+    !select_right_value
+    !select_right_side
+    !select_left_ready
+    !select_left_value
+    !select_left_side
+    !join_state_ready
+    !join_state_left_value
+    !join_state_right_value
+    !select_state_right_ready
+    !select_state_right_side
+    !select_state_right_value
+    !select_state_left_ready
+    !select_state_left_side
+    !select_state_left_value
+    !ok_join_ready
+    !ok_join_value
+    !ok_select_right_ready
+    !ok_select_right_value
+    !ok_select_right_side
+    !ok_select_left_ready
+    !ok_select_left_value
+    !ok_select_left_side
+    !ok_join_state_ready
+    !ok_join_state_left
+    !ok_join_state_right
+    !ok_select_state_right_ready
+    !ok_select_state_right_side
+    !ok_select_state_right_value
+    !ok_select_state_left_ready
+    !ok_select_state_left_side
+    !ok_select_state_left_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10039)
+
+L_OK:
+    !ok
+    return
+
+@test "sa_std task poll macros"():
+L_ENTRY:
+    waker_data = alloc TestWaker_SIZE
+    store waker_data+TestWaker_value, 8 as i32
+    EXPAND WAKER_NEW waker, waker_data, &TEST_WAKER_VT
+    EXPAND CONTEXT_NEW ctx, waker, waker_data
+    future_data = alloc TestFuture_SIZE
+    store future_data+TestFuture_state, 0 as u64
+    store future_data+TestFuture_value, 42 as u64
+    ready_data = alloc TestFuture_SIZE
+    store ready_data+TestFuture_state, 0 as u64
+    store ready_data+TestFuture_value, 9 as u64
+    EXPAND FUTURE_NEW future, future_data, &TEST_PENDING_ONCE_VT
+    EXPAND FUTURE_NEW ready_future, ready_data, &TEST_READY_VT
+    EXPAND TASK_NEW task, future, ctx
+    EXPAND TASK_NEW ready_task, ready_future, ctx
+    EXPAND TASK_POLL first_poll, task
+    EXPAND POLL_IS_PENDING first_pending, first_poll
+    EXPAND TASK_IS_READY ready0, task
+    EXPAND TASK_POLL second_poll, task
+    EXPAND POLL_IS_READY second_ready, second_poll
+    EXPAND TASK_IS_READY ready1, task
+    EXPAND TASK_RESULT task_result, task
+    slots = alloc 8
+    store slots+0, task as ptr
+    EXPAND EXECUTOR_NEW executor, slots, 1
+    EXPAND EXECUTOR_POLL_ONE executor_poll, executor, 0
+    EXPAND POLL_IS_READY executor_ready, executor_poll
+    EXPAND POLL_VALUE executor_value, executor_poll
+    batch_slots = alloc 16
+    store batch_slots+0, task as ptr
+    store batch_slots+8, ready_task as ptr
+    EXPAND EXECUTOR_NEW batch_executor, batch_slots, 2
+    EXPAND EXECUTOR_POLL_READY_COUNT batch_ready_count, batch_executor
+    ok_first_pending = eq first_pending, 1
+    ok_ready0 = eq ready0, 0
+    ok_second_ready = eq second_ready, 1
+    ok_ready1 = eq ready1, 1
+    ok_task_result = eq task_result, 42
+    ok_executor_ready = eq executor_ready, 1
+    ok_executor_value = eq executor_value, 42
+    ok_batch_ready_count = eq batch_ready_count, 2
+    ok01 = and ok_first_pending, ok_ready0
+    ok02 = and ok01, ok_second_ready
+    ok03 = and ok02, ok_ready1
+    ok04 = and ok03, ok_task_result
+    ok05 = and ok04, ok_executor_ready
+    ok06 = and ok05, ok_executor_value
+    ok = and ok06, ok_batch_ready_count
+    !first_poll
+    !second_poll
+    !executor_poll
+    !executor
+    !slots
+    !batch_executor
+    !batch_slots
+    !task
+    !ready_task
+    !future
+    !ready_future
+    !future_data
+    !ready_data
+    !ctx
+    !waker
+    !waker_data
+    !first_pending
+    !ready0
+    !second_ready
+    !ready1
+    !task_result
+    !executor_ready
+    !executor_value
+    !batch_ready_count
+    !ok_first_pending
+    !ok_ready0
+    !ok_second_ready
+    !ok_ready1
+    !ok_task_result
+    !ok_executor_ready
+    !ok_executor_value
+    !ok_batch_ready_count
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10040)
+
+L_OK:
+    !ok
+    return

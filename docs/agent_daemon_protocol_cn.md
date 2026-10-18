@@ -63,7 +63,7 @@ Agent 侧解析逻辑与现在完全一致。
   "agent_id": "agent-03",
   "generation": 12,
   "op": "build" | "check" | "test" | "explain" | "cancel" | "ping" | "shutdown",
-  "file": "src/main.sa",
+  "file": "src/main.sars",
   "args": ["--json", "--jobs", "4"],
   "cwd": "/abs/project/root"
 }

@@ -1,0 +1,149 @@
+@import "sa_std/ops.sars"
+
+@add_ten(value: u64) -> u64:
+L_ENTRY:
+    result = add value, 10
+    return result
+
+@times_three(value: u64) -> u64:
+L_ENTRY:
+    doubled = mul value, 2
+    result = add doubled, value
+    return result
+
+@test "sa_std ops ControlFlow value result and map macros"():
+L_ENTRY:
+    cont = stack_alloc ControlFlowU64_SIZE
+    brk = stack_alloc ControlFlowU64_SIZE
+    break_value = stack_alloc Option_SIZE
+    break_value_none = stack_alloc Option_SIZE
+    continue_value = stack_alloc Option_SIZE
+    continue_value_none = stack_alloc Option_SIZE
+    break_ok = stack_alloc Result_SIZE
+    break_ok_err = stack_alloc Result_SIZE
+    continue_ok = stack_alloc Result_SIZE
+    continue_ok_err = stack_alloc Result_SIZE
+    mapped_break = stack_alloc ControlFlowU64_SIZE
+    mapped_break_passthrough = stack_alloc ControlFlowU64_SIZE
+    mapped_continue = stack_alloc ControlFlowU64_SIZE
+    mapped_continue_passthrough = stack_alloc ControlFlowU64_SIZE
+
+    EXPAND CONTROL_FLOW_CONTINUE_U64 cont, 4
+    EXPAND CONTROL_FLOW_BREAK_U64 brk, 9
+
+    EXPAND CONTROL_FLOW_BREAK_VALUE_U64 break_value, brk
+    EXPAND CONTROL_FLOW_BREAK_VALUE_U64 break_value_none, cont
+    EXPAND CONTROL_FLOW_CONTINUE_VALUE_U64 continue_value, cont
+    EXPAND CONTROL_FLOW_CONTINUE_VALUE_U64 continue_value_none, brk
+    EXPAND CONTROL_FLOW_BREAK_OK_U64 break_ok, brk
+    EXPAND CONTROL_FLOW_BREAK_OK_U64 break_ok_err, cont
+    EXPAND CONTROL_FLOW_CONTINUE_OK_U64 continue_ok, cont
+    EXPAND CONTROL_FLOW_CONTINUE_OK_U64 continue_ok_err, brk
+    EXPAND CONTROL_FLOW_MAP_BREAK_U64 mapped_break, brk, add_ten
+    EXPAND CONTROL_FLOW_MAP_BREAK_U64 mapped_break_passthrough, cont, add_ten
+    EXPAND CONTROL_FLOW_MAP_CONTINUE_U64 mapped_continue, cont, times_three
+    EXPAND CONTROL_FLOW_MAP_CONTINUE_U64 mapped_continue_passthrough, brk, times_three
+    EXPAND CONTROL_FLOW_INTO_VALUE_U64 cont_into_value, cont
+    EXPAND CONTROL_FLOW_INTO_VALUE_U64 break_into_value, brk
+
+    break_value_tag = load break_value+Option_tag as u64
+    break_value_payload = load break_value+Option_value as u64
+    break_value_none_tag = load break_value_none+Option_tag as u64
+    break_value_none_payload = load break_value_none+Option_value as u64
+    continue_value_tag = load continue_value+Option_tag as u64
+    continue_value_payload = load continue_value+Option_value as u64
+    continue_value_none_tag = load continue_value_none+Option_tag as u64
+    continue_value_none_payload = load continue_value_none+Option_value as u64
+
+    break_ok_tag = load break_ok+Result_tag as u64
+    break_ok_ok = load break_ok+Result_ok as u64
+    break_ok_err_value = load break_ok+Result_err as u64
+    break_ok_err_tag = load break_ok_err+Result_tag as u64
+    break_ok_err_ok = load break_ok_err+Result_ok as u64
+    break_ok_err_err = load break_ok_err+Result_err as u64
+    continue_ok_tag = load continue_ok+Result_tag as u64
+    continue_ok_ok = load continue_ok+Result_ok as u64
+    continue_ok_err_value = load continue_ok+Result_err as u64
+    continue_ok_err_tag = load continue_ok_err+Result_tag as u64
+    continue_ok_err_ok = load continue_ok_err+Result_ok as u64
+    continue_ok_err_err = load continue_ok_err+Result_err as u64
+
+    EXPAND CONTROL_FLOW_TAG mapped_break_tag, mapped_break
+    EXPAND CONTROL_FLOW_VALUE_U64 mapped_break_value, mapped_break
+    EXPAND CONTROL_FLOW_TAG mapped_break_passthrough_tag, mapped_break_passthrough
+    EXPAND CONTROL_FLOW_VALUE_U64 mapped_break_passthrough_value, mapped_break_passthrough
+    EXPAND CONTROL_FLOW_TAG mapped_continue_tag, mapped_continue
+    EXPAND CONTROL_FLOW_VALUE_U64 mapped_continue_value, mapped_continue
+    EXPAND CONTROL_FLOW_TAG mapped_continue_passthrough_tag, mapped_continue_passthrough
+    EXPAND CONTROL_FLOW_VALUE_U64 mapped_continue_passthrough_value, mapped_continue_passthrough
+
+    ok_break_value_tag = eq break_value_tag, Option_SOME
+    ok_break_value_payload = eq break_value_payload, 9
+    ok_break_value_none_tag = eq break_value_none_tag, Option_NONE
+    ok_break_value_none_payload = eq break_value_none_payload, 0
+    ok_continue_value_tag = eq continue_value_tag, Option_SOME
+    ok_continue_value_payload = eq continue_value_payload, 4
+    ok_continue_value_none_tag = eq continue_value_none_tag, Option_NONE
+    ok_continue_value_none_payload = eq continue_value_none_payload, 0
+
+    ok_break_ok_tag = eq break_ok_tag, Result_OK
+    ok_break_ok_ok = eq break_ok_ok, 9
+    ok_break_ok_err_value = eq break_ok_err_value, 0
+    ok_break_ok_err_tag = eq break_ok_err_tag, Result_ERR
+    ok_break_ok_err_ok = eq break_ok_err_ok, 0
+    ok_break_ok_err_err = eq break_ok_err_err, 4
+    ok_continue_ok_tag = eq continue_ok_tag, Result_OK
+    ok_continue_ok_ok = eq continue_ok_ok, 4
+    ok_continue_ok_err_value = eq continue_ok_err_value, 0
+    ok_continue_ok_err_tag = eq continue_ok_err_tag, Result_ERR
+    ok_continue_ok_err_ok = eq continue_ok_err_ok, 0
+    ok_continue_ok_err_err = eq continue_ok_err_err, 9
+
+    ok_mapped_break_tag = eq mapped_break_tag, CONTROL_FLOW_BREAK
+    ok_mapped_break_value = eq mapped_break_value, 19
+    ok_mapped_break_passthrough_tag = eq mapped_break_passthrough_tag, CONTROL_FLOW_CONTINUE
+    ok_mapped_break_passthrough_value = eq mapped_break_passthrough_value, 4
+    ok_mapped_continue_tag = eq mapped_continue_tag, CONTROL_FLOW_CONTINUE
+    ok_mapped_continue_value = eq mapped_continue_value, 12
+    ok_mapped_continue_passthrough_tag = eq mapped_continue_passthrough_tag, CONTROL_FLOW_BREAK
+    ok_mapped_continue_passthrough_value = eq mapped_continue_passthrough_value, 9
+    ok_cont_into_value = eq cont_into_value, 4
+    ok_break_into_value = eq break_into_value, 9
+
+    c01 = and ok_break_value_tag, ok_break_value_payload
+    c02 = and c01, ok_break_value_none_tag
+    c03 = and c02, ok_break_value_none_payload
+    c04 = and c03, ok_continue_value_tag
+    c05 = and c04, ok_continue_value_payload
+    c06 = and c05, ok_continue_value_none_tag
+    c07 = and c06, ok_continue_value_none_payload
+    c08 = and c07, ok_break_ok_tag
+    c09 = and c08, ok_break_ok_ok
+    c10 = and c09, ok_break_ok_err_value
+    c11 = and c10, ok_break_ok_err_tag
+    c12 = and c11, ok_break_ok_err_ok
+    c13 = and c12, ok_break_ok_err_err
+    c14 = and c13, ok_continue_ok_tag
+    c15 = and c14, ok_continue_ok_ok
+    c16 = and c15, ok_continue_ok_err_value
+    c17 = and c16, ok_continue_ok_err_tag
+    c18 = and c17, ok_continue_ok_err_ok
+    c19 = and c18, ok_continue_ok_err_err
+    c20 = and c19, ok_mapped_break_tag
+    c21 = and c20, ok_mapped_break_value
+    c22 = and c21, ok_mapped_break_passthrough_tag
+    c23 = and c22, ok_mapped_break_passthrough_value
+    c24 = and c23, ok_mapped_continue_tag
+    c25 = and c24, ok_mapped_continue_value
+    c26 = and c25, ok_mapped_continue_passthrough_tag
+    c27 = and c26, ok_mapped_continue_passthrough_value
+    c28 = and c27, ok_cont_into_value
+    ok = and c28, ok_break_into_value
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10516)
+
+L_PASS:
+    return 0

@@ -1,0 +1,1144 @@
+@import "sa_std/net.sars"
+
+@test "sa_std net typed address macro surface"():
+L_ENTRY:
+    ipv4_loop = stack_alloc NetIpv4Addr_SIZE
+    ipv4_unspec = stack_alloc NetIpv4Addr_SIZE
+    ipv4_private = stack_alloc NetIpv4Addr_SIZE
+    ipv4_link = stack_alloc NetIpv4Addr_SIZE
+    ipv4_multi = stack_alloc NetIpv4Addr_SIZE
+    ipv4_bcast = stack_alloc NetIpv4Addr_SIZE
+    ipv4_doc = stack_alloc NetIpv4Addr_SIZE
+    ipv4_copy = stack_alloc NetIpv4Addr_SIZE
+
+    EXPAND NET_IPV4_NEW ipv4_loop, 127, 0, 0, 1
+    EXPAND NET_IPV4_NEW ipv4_unspec, 0, 0, 0, 0
+    EXPAND NET_IPV4_NEW ipv4_private, 192, 168, 1, 7
+    EXPAND NET_IPV4_NEW ipv4_link, 169, 254, 10, 20
+    EXPAND NET_IPV4_NEW ipv4_multi, 224, 0, 0, 251
+    EXPAND NET_IPV4_NEW ipv4_bcast, 255, 255, 255, 255
+    EXPAND NET_IPV4_NEW ipv4_doc, 203, 0, 113, 9
+    EXPAND NET_IPV4_NEW ipv4_copy, 127, 0, 0, 1
+
+    EXPAND NET_IPV4_OCTETS v4a, v4b, v4c, v4d, ipv4_loop
+    EXPAND NET_IPV4_EQ v4_eq, ipv4_loop, ipv4_copy
+    EXPAND NET_IPV4_IS_UNSPECIFIED v4_unspec, ipv4_unspec
+    EXPAND NET_IPV4_IS_LOOPBACK v4_loop, ipv4_loop
+    EXPAND NET_IPV4_IS_PRIVATE v4_priv, ipv4_private
+    EXPAND NET_IPV4_IS_LINK_LOCAL v4_link, ipv4_link
+    EXPAND NET_IPV4_IS_MULTICAST v4_multi, ipv4_multi
+    EXPAND NET_IPV4_IS_BROADCAST v4_bcast, ipv4_bcast
+    EXPAND NET_IPV4_IS_DOCUMENTATION v4_doc, ipv4_doc
+
+    ok_v4a = eq v4a, 127
+    ok_v4b = eq v4b, 0
+    ok_v4c = eq v4c, 0
+    ok_v4d = eq v4d, 1
+    ok_v4_01 = and ok_v4a, ok_v4b
+    ok_v4_02 = and ok_v4c, ok_v4d
+    ok_v4_octets = and ok_v4_01, ok_v4_02
+    ok_v4_03 = and ok_v4_octets, v4_eq
+    ok_v4_04 = and ok_v4_03, v4_unspec
+    ok_v4_05 = and ok_v4_04, v4_loop
+    ok_v4_06 = and ok_v4_05, v4_priv
+    ok_v4_07 = and ok_v4_06, v4_link
+    ok_v4_08 = and ok_v4_07, v4_multi
+    ok_v4_09 = and ok_v4_08, v4_bcast
+    ok_v4 = and ok_v4_09, v4_doc
+
+    ipv6_loop = stack_alloc NetIpv6Addr_SIZE
+    ipv6_unspec = stack_alloc NetIpv6Addr_SIZE
+    ipv6_multi = stack_alloc NetIpv6Addr_SIZE
+    ipv6_unique = stack_alloc NetIpv6Addr_SIZE
+    ipv6_link = stack_alloc NetIpv6Addr_SIZE
+    ipv6_copy = stack_alloc NetIpv6Addr_SIZE
+
+    EXPAND NET_IPV6_NEW ipv6_loop, 0, 0, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW ipv6_unspec, 0, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW ipv6_multi, 65280, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW ipv6_unique, 64768, 0, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW ipv6_link, 65152, 0, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW ipv6_copy, 0, 0, 0, 0, 0, 0, 0, 1
+
+    EXPAND NET_IPV6_SEGMENTS s0, s1, s2, s3, s4, s5, s6, s7, ipv6_loop
+    EXPAND NET_IPV6_EQ v6_eq, ipv6_loop, ipv6_copy
+    EXPAND NET_IPV6_IS_UNSPECIFIED v6_unspec, ipv6_unspec
+    EXPAND NET_IPV6_IS_LOOPBACK v6_loop, ipv6_loop
+    EXPAND NET_IPV6_IS_MULTICAST v6_multi, ipv6_multi
+    EXPAND NET_IPV6_IS_UNIQUE_LOCAL v6_unique, ipv6_unique
+    EXPAND NET_IPV6_IS_UNICAST_LINK_LOCAL v6_link, ipv6_link
+
+    ok_s0 = eq s0, 0
+    ok_s1 = eq s1, 0
+    ok_s2 = eq s2, 0
+    ok_s3 = eq s3, 0
+    ok_s4 = eq s4, 0
+    ok_s5 = eq s5, 0
+    ok_s6 = eq s6, 0
+    ok_s7 = eq s7, 1
+    ok_v6_01 = and ok_s0, ok_s1
+    ok_v6_02 = and ok_s2, ok_s3
+    ok_v6_03 = and ok_s4, ok_s5
+    ok_v6_04 = and ok_s6, ok_s7
+    ok_v6_05 = and ok_v6_01, ok_v6_02
+    ok_v6_06 = and ok_v6_03, ok_v6_04
+    ok_v6_segments = and ok_v6_05, ok_v6_06
+    ok_v6_07 = and ok_v6_segments, v6_eq
+    ok_v6_08 = and ok_v6_07, v6_unspec
+    ok_v6_09 = and ok_v6_08, v6_loop
+    ok_v6_10 = and ok_v6_09, v6_multi
+    ok_v6_11 = and ok_v6_10, v6_unique
+    ok_v6 = and ok_v6_11, v6_link
+
+    ip_v4 = stack_alloc NetIpAddr_SIZE
+    ip_v6 = stack_alloc NetIpAddr_SIZE
+    EXPAND NET_IP_ADDR_V4_NEW ip_v4, ipv4_loop
+    EXPAND NET_IP_ADDR_V6_NEW ip_v6, ipv6_loop
+    EXPAND NET_IP_ADDR_IS_IPV4 ip_v4_is_v4, ip_v4
+    EXPAND NET_IP_ADDR_IS_IPV6 ip_v4_is_v6, ip_v4
+    EXPAND NET_IP_ADDR_IS_IPV6 ip_v6_is_v6, ip_v6
+    EXPAND NET_IP_ADDR_PAYLOAD_PTR ip_v4_payload, ip_v4
+    EXPAND NET_IPV4_EQ ip_v4_payload_eq, ip_v4_payload, ipv4_loop
+    ip_v4_not_v6 = eq ip_v4_is_v6, 0
+    ok_ip_01 = and ip_v4_is_v4, ip_v4_not_v6
+    ok_ip_02 = and ok_ip_01, ip_v6_is_v6
+    ok_ip = and ok_ip_02, ip_v4_payload_eq
+
+    sock4 = stack_alloc NetSocketAddrV4_SIZE
+    sock6 = stack_alloc NetSocketAddrV6_SIZE
+    sock_any4 = stack_alloc NetSocketAddr_SIZE
+    sock_any6 = stack_alloc NetSocketAddr_SIZE
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock4, ipv4_loop, 8080
+    EXPAND NET_SOCKET_ADDR_V4_IP_PTR sock4_ip, sock4
+    EXPAND NET_SOCKET_ADDR_V4_PORT sock4_port0, sock4
+    EXPAND NET_SOCKET_ADDR_V4_SET_PORT sock4, 4242
+    EXPAND NET_SOCKET_ADDR_V4_PORT sock4_port1, sock4
+    EXPAND NET_IPV4_EQ sock4_ip_eq, sock4_ip, ipv4_loop
+
+    EXPAND NET_SOCKET_ADDR_V6_NEW sock6, ipv6_loop, 9000, 55, 7
+    EXPAND NET_SOCKET_ADDR_V6_IP_PTR sock6_ip, sock6
+    EXPAND NET_SOCKET_ADDR_V6_PORT sock6_port, sock6
+    EXPAND NET_SOCKET_ADDR_V6_FLOWINFO sock6_flow, sock6
+    EXPAND NET_SOCKET_ADDR_V6_SCOPE_ID sock6_scope, sock6
+    EXPAND NET_IPV6_EQ sock6_ip_eq, sock6_ip, ipv6_loop
+
+    EXPAND NET_SOCKET_ADDR_FROM_V4 sock_any4, sock4
+    EXPAND NET_SOCKET_ADDR_FROM_V6 sock_any6, sock6
+    EXPAND NET_SOCKET_ADDR_IS_IPV4 sock_any4_is_v4, sock_any4
+    EXPAND NET_SOCKET_ADDR_IS_IPV6 sock_any6_is_v6, sock_any6
+    EXPAND NET_SOCKET_ADDR_PAYLOAD_PTR sock_any4_payload, sock_any4
+    EXPAND NET_SOCKET_ADDR_V4_PORT sock_any4_port, sock_any4_payload
+
+    ok_sock4_port0 = eq sock4_port0, 8080
+    ok_sock4_port1 = eq sock4_port1, 4242
+    ok_sock6_port = eq sock6_port, 9000
+    ok_sock6_flow = eq sock6_flow, 55
+    ok_sock6_scope = eq sock6_scope, 7
+    ok_sock_any4_port = eq sock_any4_port, 4242
+    ok_sock_01 = and sock4_ip_eq, ok_sock4_port0
+    ok_sock_02 = and ok_sock_01, ok_sock4_port1
+    ok_sock_03 = and ok_sock_02, sock6_ip_eq
+    ok_sock_04 = and ok_sock_03, ok_sock6_port
+    ok_sock_05 = and ok_sock_04, ok_sock6_flow
+    ok_sock_06 = and ok_sock_05, ok_sock6_scope
+    ok_sock_07 = and ok_sock_06, sock_any4_is_v4
+    ok_sock_08 = and ok_sock_07, sock_any6_is_v6
+    ok_sock = and ok_sock_08, ok_sock_any4_port
+
+    ok_01 = and ok_v4, ok_v6
+    ok_02 = and ok_01, ok_ip
+    ok = and ok_02, ok_sock
+
+    !v4a
+    !v4b
+    !v4c
+    !v4d
+    !v4_eq
+    !v4_unspec
+    !v4_loop
+    !v4_priv
+    !v4_link
+    !v4_multi
+    !v4_bcast
+    !v4_doc
+    !ok_v4a
+    !ok_v4b
+    !ok_v4c
+    !ok_v4d
+    !ok_v4_01
+    !ok_v4_02
+    !ok_v4_octets
+    !ok_v4_03
+    !ok_v4_04
+    !ok_v4_05
+    !ok_v4_06
+    !ok_v4_07
+    !ok_v4_08
+    !ok_v4_09
+    !ok_v4
+    !s0
+    !s1
+    !s2
+    !s3
+    !s4
+    !s5
+    !s6
+    !s7
+    !v6_eq
+    !v6_unspec
+    !v6_loop
+    !v6_multi
+    !v6_unique
+    !v6_link
+    !ok_s0
+    !ok_s1
+    !ok_s2
+    !ok_s3
+    !ok_s4
+    !ok_s5
+    !ok_s6
+    !ok_s7
+    !ok_v6_01
+    !ok_v6_02
+    !ok_v6_03
+    !ok_v6_04
+    !ok_v6_05
+    !ok_v6_06
+    !ok_v6_segments
+    !ok_v6_07
+    !ok_v6_08
+    !ok_v6_09
+    !ok_v6_10
+    !ok_v6_11
+    !ok_v6
+    !ip_v4_is_v4
+    !ip_v4_is_v6
+    !ip_v6_is_v6
+    !ip_v4_payload
+    !ip_v4_payload_eq
+    !ip_v4_not_v6
+    !ok_ip_01
+    !ok_ip_02
+    !ok_ip
+    !sock4_ip
+    !sock4_port0
+    !sock4_port1
+    !sock4_ip_eq
+    !sock6_ip
+    !sock6_port
+    !sock6_flow
+    !sock6_scope
+    !sock6_ip_eq
+    !sock_any4_is_v4
+    !sock_any6_is_v6
+    !sock_any4_payload
+    !sock_any4_port
+    !ok_sock4_port0
+    !ok_sock4_port1
+    !ok_sock6_port
+    !ok_sock6_flow
+    !ok_sock6_scope
+    !ok_sock_any4_port
+    !ok_sock_01
+    !ok_sock_02
+    !ok_sock_03
+    !ok_sock_04
+    !ok_sock_05
+    !ok_sock_06
+    !ok_sock_07
+    !ok_sock_08
+    !ok_sock
+    !ok_01
+    !ok_02
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10071)
+
+L_PASS:
+    return 0
+
+@test "sa_std net address equality and octet helper macros"():
+L_ENTRY:
+    ipv4_unspec = stack_alloc NetIpv4Addr_SIZE
+    ipv4_local = stack_alloc NetIpv4Addr_SIZE
+    ipv4_local_copy = stack_alloc NetIpv4Addr_SIZE
+    ipv4_bcast = stack_alloc NetIpv4Addr_SIZE
+    ipv4_other = stack_alloc NetIpv4Addr_SIZE
+    ipv6_unspec = stack_alloc NetIpv6Addr_SIZE
+    ipv6_local = stack_alloc NetIpv6Addr_SIZE
+    ipv6_local_copy = stack_alloc NetIpv6Addr_SIZE
+    ipv6_octets = stack_alloc NetIpv6Addr_SIZE
+    ipv6_from_octets = stack_alloc NetIpv6Addr_SIZE
+    ip_v4 = stack_alloc NetIpAddr_SIZE
+    ip_v4_copy = stack_alloc NetIpAddr_SIZE
+    ip_v6 = stack_alloc NetIpAddr_SIZE
+    ip_v6_copy = stack_alloc NetIpAddr_SIZE
+    sock4 = stack_alloc NetSocketAddrV4_SIZE
+    sock4_copy = stack_alloc NetSocketAddrV4_SIZE
+    sock4_other = stack_alloc NetSocketAddrV4_SIZE
+    sock6 = stack_alloc NetSocketAddrV6_SIZE
+    sock6_copy = stack_alloc NetSocketAddrV6_SIZE
+    sock6_other = stack_alloc NetSocketAddrV6_SIZE
+    sock_any4 = stack_alloc NetSocketAddr_SIZE
+    sock_any4_copy = stack_alloc NetSocketAddr_SIZE
+    sock_any6 = stack_alloc NetSocketAddr_SIZE
+
+    EXPAND NET_IPV4_UNSPECIFIED ipv4_unspec
+    EXPAND NET_IPV4_LOCALHOST ipv4_local
+    EXPAND NET_IPV4_LOCALHOST ipv4_local_copy
+    EXPAND NET_IPV4_BROADCAST ipv4_bcast
+    EXPAND NET_IPV4_NEW ipv4_other, 127, 0, 0, 2
+    EXPAND NET_IPV4_IS_UNSPECIFIED v4_unspec, ipv4_unspec
+    EXPAND NET_IPV4_IS_LOOPBACK v4_local_loop, ipv4_local
+    EXPAND NET_IPV4_IS_BROADCAST v4_bcast, ipv4_bcast
+    EXPAND NET_IPV4_EQ v4_local_eq, ipv4_local, ipv4_local_copy
+    EXPAND NET_IPV4_EQ v4_local_diff, ipv4_local, ipv4_other
+
+    EXPAND NET_IPV6_UNSPECIFIED ipv6_unspec
+    EXPAND NET_IPV6_LOCALHOST ipv6_local
+    EXPAND NET_IPV6_LOCALHOST ipv6_local_copy
+    EXPAND NET_IPV6_IS_UNSPECIFIED v6_unspec, ipv6_unspec
+    EXPAND NET_IPV6_IS_LOOPBACK v6_local_loop, ipv6_local
+    EXPAND NET_IPV6_FROM_OCTETS ipv6_octets, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    EXPAND NET_IPV6_OCTETS b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, ipv6_octets
+    EXPAND NET_IPV6_SEGMENTS os0, os1, os2, os3, os4, os5, os6, os7, ipv6_octets
+    EXPAND NET_IPV6_FROM_OCTETS ipv6_from_octets, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15
+    EXPAND NET_IPV6_EQ v6_octets_round, ipv6_octets, ipv6_from_octets
+
+    EXPAND NET_IP_ADDR_V4_NEW ip_v4, ipv4_local
+    EXPAND NET_IP_ADDR_V4_NEW ip_v4_copy, ipv4_local_copy
+    EXPAND NET_IP_ADDR_V6_NEW ip_v6, ipv6_local
+    EXPAND NET_IP_ADDR_V6_NEW ip_v6_copy, ipv6_local_copy
+    EXPAND NET_IP_ADDR_EQ ip_v4_eq, ip_v4, ip_v4_copy
+    EXPAND NET_IP_ADDR_EQ ip_v6_eq, ip_v6, ip_v6_copy
+    EXPAND NET_IP_ADDR_EQ ip_v4_v6_diff, ip_v4, ip_v6
+
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock4, ipv4_local, 8080
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock4_copy, ipv4_local_copy, 8080
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock4_other, ipv4_local_copy, 9090
+    EXPAND NET_SOCKET_ADDR_V4_EQ sock4_eq, sock4, sock4_copy
+    EXPAND NET_SOCKET_ADDR_V4_EQ sock4_diff, sock4, sock4_other
+
+    EXPAND NET_SOCKET_ADDR_V6_NEW sock6, ipv6_local, 8443, 12, 34
+    EXPAND NET_SOCKET_ADDR_V6_NEW sock6_copy, ipv6_local_copy, 8443, 12, 34
+    EXPAND NET_SOCKET_ADDR_V6_NEW sock6_other, ipv6_local_copy, 8443, 12, 35
+    EXPAND NET_SOCKET_ADDR_V6_EQ sock6_eq, sock6, sock6_copy
+    EXPAND NET_SOCKET_ADDR_V6_EQ sock6_diff, sock6, sock6_other
+
+    EXPAND NET_SOCKET_ADDR_FROM_V4 sock_any4, sock4
+    EXPAND NET_SOCKET_ADDR_FROM_V4 sock_any4_copy, sock4_copy
+    EXPAND NET_SOCKET_ADDR_FROM_V6 sock_any6, sock6
+    EXPAND NET_SOCKET_ADDR_EQ sock_any4_eq, sock_any4, sock_any4_copy
+    EXPAND NET_SOCKET_ADDR_EQ sock_any4_v6_diff, sock_any4, sock_any6
+
+    v4_local_not_diff = eq v4_local_diff, 0
+    ip_v4_v6_not_eq = eq ip_v4_v6_diff, 0
+    sock4_not_diff = eq sock4_diff, 0
+    sock6_not_diff = eq sock6_diff, 0
+    sock_any4_v6_not_eq = eq sock_any4_v6_diff, 0
+    ok_b0 = eq b0, 1
+    ok_b7 = eq b7, 8
+    ok_b15 = eq b15, 16
+    ok_os0 = eq os0, 258
+    ok_os7 = eq os7, 3856
+
+    ok01 = and v4_unspec, v4_local_loop
+    ok02 = and ok01, v4_bcast
+    ok03 = and ok02, v4_local_eq
+    ok04 = and ok03, v4_local_not_diff
+    ok05 = and ok04, v6_unspec
+    ok06 = and ok05, v6_local_loop
+    ok07 = and ok06, ok_b0
+    ok08 = and ok07, ok_b7
+    ok09 = and ok08, ok_b15
+    ok10 = and ok09, ok_os0
+    ok11 = and ok10, ok_os7
+    ok12 = and ok11, v6_octets_round
+    ok13 = and ok12, ip_v4_eq
+    ok14 = and ok13, ip_v6_eq
+    ok15 = and ok14, ip_v4_v6_not_eq
+    ok16 = and ok15, sock4_eq
+    ok17 = and ok16, sock4_not_diff
+    ok18 = and ok17, sock6_eq
+    ok19 = and ok18, sock6_not_diff
+    ok20 = and ok19, sock_any4_eq
+    ok = and ok20, sock_any4_v6_not_eq
+
+    !v4_unspec
+    !v4_local_loop
+    !v4_bcast
+    !v4_local_eq
+    !v4_local_diff
+    !v6_unspec
+    !v6_local_loop
+    !b0
+    !b1
+    !b2
+    !b3
+    !b4
+    !b5
+    !b6
+    !b7
+    !b8
+    !b9
+    !b10
+    !b11
+    !b12
+    !b13
+    !b14
+    !b15
+    !os0
+    !os1
+    !os2
+    !os3
+    !os4
+    !os5
+    !os6
+    !os7
+    !v6_octets_round
+    !ip_v4_eq
+    !ip_v6_eq
+    !ip_v4_v6_diff
+    !sock4_eq
+    !sock4_diff
+    !sock6_eq
+    !sock6_diff
+    !sock_any4_eq
+    !sock_any4_v6_diff
+    !v4_local_not_diff
+    !ip_v4_v6_not_eq
+    !sock4_not_diff
+    !sock6_not_diff
+    !sock_any4_v6_not_eq
+    !ok_b0
+    !ok_b7
+    !ok_b15
+    !ok_os0
+    !ok_os7
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10072)
+
+L_PASS:
+    return 0
+
+@test "sa_std net rust parity address macros"():
+L_ENTRY:
+    bits_addr = stack_alloc NetIpv4Addr_SIZE
+    bits_round = stack_alloc NetIpv4Addr_SIZE
+    bits_from_octets = stack_alloc NetIpv4Addr_SIZE
+    shared_addr = stack_alloc NetIpv4Addr_SIZE
+    shared_no = stack_alloc NetIpv4Addr_SIZE
+    bench4_addr = stack_alloc NetIpv4Addr_SIZE
+    reserved4_addr = stack_alloc NetIpv4Addr_SIZE
+    public4_addr = stack_alloc NetIpv4Addr_SIZE
+    private4_addr = stack_alloc NetIpv4Addr_SIZE
+    link4_addr = stack_alloc NetIpv4Addr_SIZE
+    proto4_global_addr = stack_alloc NetIpv4Addr_SIZE
+    proto4_local_addr = stack_alloc NetIpv4Addr_SIZE
+    mapped4_addr = stack_alloc NetIpv4Addr_SIZE
+    compat6_addr = stack_alloc NetIpv6Addr_SIZE
+    mapped6_addr = stack_alloc NetIpv6Addr_SIZE
+    mapped4_round = stack_alloc NetIpv4Addr_SIZE
+    compat4_round = stack_alloc NetIpv4Addr_SIZE
+    copied4_addr = stack_alloc NetIpv4Addr_SIZE
+    doc6_addr = stack_alloc NetIpv6Addr_SIZE
+    doc6_3fff_addr = stack_alloc NetIpv6Addr_SIZE
+    bench6_addr = stack_alloc NetIpv6Addr_SIZE
+    unicast6_addr = stack_alloc NetIpv6Addr_SIZE
+    unique6_addr = stack_alloc NetIpv6Addr_SIZE
+    link6_addr = stack_alloc NetIpv6Addr_SIZE
+    multicast6_addr = stack_alloc NetIpv6Addr_SIZE
+    global_mcast6_addr = stack_alloc NetIpv6Addr_SIZE
+    proto_allowed6_addr = stack_alloc NetIpv6Addr_SIZE
+    proto_block6_addr = stack_alloc NetIpv6Addr_SIZE
+    translate6_addr = stack_alloc NetIpv6Addr_SIZE
+    discard6_addr = stack_alloc NetIpv6Addr_SIZE
+    six_to_four6_addr = stack_alloc NetIpv6Addr_SIZE
+    srv6_addr = stack_alloc NetIpv6Addr_SIZE
+    bits6_addr = stack_alloc NetIpv6Addr_SIZE
+    bits6_round = stack_alloc NetIpv6Addr_SIZE
+    bits6_from_segments = stack_alloc NetIpv6Addr_SIZE
+    copied6_addr = stack_alloc NetIpv6Addr_SIZE
+    sock4_set = stack_alloc NetSocketAddrV4_SIZE
+    sock4_set_ip_copy = stack_alloc NetIpv4Addr_SIZE
+    sock6_set = stack_alloc NetSocketAddrV6_SIZE
+    sock6_set_ip_copy = stack_alloc NetIpv6Addr_SIZE
+    ip_private4 = stack_alloc NetIpAddr_SIZE
+    ip_link4 = stack_alloc NetIpAddr_SIZE
+    ip_shared4 = stack_alloc NetIpAddr_SIZE
+    ip_reserved4 = stack_alloc NetIpAddr_SIZE
+    ip_bench4 = stack_alloc NetIpAddr_SIZE
+    ip_loop6 = stack_alloc NetIpAddr_SIZE
+    ip_unique6 = stack_alloc NetIpAddr_SIZE
+    ip_link6 = stack_alloc NetIpAddr_SIZE
+    ip_bench6 = stack_alloc NetIpAddr_SIZE
+    ip_global_mcast6 = stack_alloc NetIpAddr_SIZE
+    ip_mapped6 = stack_alloc NetIpAddr_SIZE
+    ip_unspec4_const = stack_alloc NetIpAddr_SIZE
+    ip_local4_const = stack_alloc NetIpAddr_SIZE
+    ip_bcast4_const = stack_alloc NetIpAddr_SIZE
+    ip_unspec6_const = stack_alloc NetIpAddr_SIZE
+    ip_local6_const = stack_alloc NetIpAddr_SIZE
+    ip_private4_copy = stack_alloc NetIpAddr_SIZE
+    ip_loop6_copy = stack_alloc NetIpAddr_SIZE
+    ip_canon_from_v6 = stack_alloc NetIpAddr_SIZE
+    ip_canon = stack_alloc NetIpAddr_SIZE
+    ip_private_to4 = stack_alloc NetIpv4Addr_SIZE
+    ip_mapped_to4 = stack_alloc NetIpv4Addr_SIZE
+    sock_any_new = stack_alloc NetSocketAddr_SIZE
+    sock_any_ip = stack_alloc NetIpAddr_SIZE
+    sock_any_switched_ip = stack_alloc NetIpAddr_SIZE
+
+    EXPAND NET_IPV4_NEW bits_addr, 18, 52, 86, 120
+    EXPAND NET_IPV4_BITS ipv4_bits_const
+    EXPAND NET_IPV4_TO_BITS bits_value, bits_addr
+    EXPAND NET_IPV4_FROM_BITS bits_round, 305419896
+    EXPAND NET_IPV4_FROM_OCTETS bits_from_octets, 18, 52, 86, 120
+    EXPAND NET_IPV4_EQ bits_round_eq, bits_addr, bits_round
+    EXPAND NET_IPV4_EQ bits_octets_eq, bits_addr, bits_from_octets
+    EXPAND NET_IPV4_COPY copied4_addr, bits_addr
+    EXPAND NET_IPV4_EQ copied4_eq, copied4_addr, bits_addr
+
+    EXPAND NET_IPV4_NEW shared_addr, 100, 64, 0, 1
+    EXPAND NET_IPV4_NEW shared_no, 100, 128, 0, 1
+    EXPAND NET_IPV4_NEW bench4_addr, 198, 19, 255, 255
+    EXPAND NET_IPV4_NEW reserved4_addr, 250, 10, 20, 30
+    EXPAND NET_IPV4_NEW public4_addr, 80, 9, 12, 3
+    EXPAND NET_IPV4_NEW private4_addr, 10, 0, 0, 1
+    EXPAND NET_IPV4_NEW link4_addr, 169, 254, 1, 9
+    EXPAND NET_IPV4_NEW proto4_global_addr, 192, 0, 0, 9
+    EXPAND NET_IPV4_NEW proto4_local_addr, 192, 0, 0, 8
+    EXPAND NET_IPV4_IS_SHARED shared_yes, shared_addr
+    EXPAND NET_IPV4_IS_SHARED shared_false, shared_no
+    EXPAND NET_IPV4_IS_BENCHMARKING bench4_yes, bench4_addr
+    EXPAND NET_IPV4_IS_RESERVED reserved4_yes, reserved4_addr
+    EXPAND NET_IPV4_IS_GLOBAL public4_global, public4_addr
+    EXPAND NET_IPV4_IS_GLOBAL private4_global, private4_addr
+    EXPAND NET_IPV4_IS_GLOBAL proto4_global, proto4_global_addr
+    EXPAND NET_IPV4_IS_GLOBAL proto4_local_global, proto4_local_addr
+
+    EXPAND NET_IPV4_NEW mapped4_addr, 192, 10, 2, 255
+    EXPAND NET_IPV4_TO_IPV6_COMPATIBLE compat6_addr, mapped4_addr
+    EXPAND NET_IPV4_TO_IPV6_MAPPED mapped6_addr, mapped4_addr
+    EXPAND NET_IPV6_SEGMENTS compat_s0, compat_s1, compat_s2, compat_s3, compat_s4, compat_s5, compat_s6, compat_s7, compat6_addr
+    EXPAND NET_IPV6_SEGMENTS mapped_s0, mapped_s1, mapped_s2, mapped_s3, mapped_s4, mapped_s5, mapped_s6, mapped_s7, mapped6_addr
+    EXPAND NET_IPV6_IS_IPV4_MAPPED mapped6_is_mapped, mapped6_addr
+    EXPAND NET_IPV6_TO_IPV4_MAPPED mapped6_to4_ok, mapped4_round, mapped6_addr
+    EXPAND NET_IPV4_EQ mapped4_round_eq, mapped4_round, mapped4_addr
+    EXPAND NET_IPV6_TO_IPV4 compat6_to4_ok, compat4_round, compat6_addr
+    EXPAND NET_IPV4_EQ compat4_round_eq, compat4_round, mapped4_addr
+
+    EXPAND NET_IPV6_NEW doc6_addr, 8193, 3512, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW doc6_3fff_addr, 16383, 4095, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW bench6_addr, 8193, 2, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW unicast6_addr, 8193, 34952, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW unique6_addr, 64768, 0, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW link6_addr, 65152, 0, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW multicast6_addr, 65294, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW global_mcast6_addr, 65294, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW proto_allowed6_addr, 8193, 1, 0, 0, 0, 0, 0, 1
+    EXPAND NET_IPV6_NEW proto_block6_addr, 8193, 5, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW translate6_addr, 100, 65435, 1, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW discard6_addr, 256, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW six_to_four6_addr, 8194, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW srv6_addr, 24320, 0, 0, 0, 0, 0, 0, 0
+    EXPAND NET_IPV6_NEW bits6_addr, 4128, 12352, 20576, 28800, 258, 772, 1286, 1800
+    EXPAND NET_IPV6_BITS ipv6_bits_const
+    EXPAND NET_IPV6_TO_BITS64 bits6_hi, bits6_lo, bits6_addr
+    EXPAND NET_IPV6_FROM_BITS64 bits6_round, 1161981756646125696, 72623859790382856
+    EXPAND NET_IPV6_FROM_SEGMENTS bits6_from_segments, 4128, 12352, 20576, 28800, 258, 772, 1286, 1800
+    EXPAND NET_IPV6_EQ bits6_round_eq, bits6_addr, bits6_round
+    EXPAND NET_IPV6_EQ bits6_segments_eq, bits6_addr, bits6_from_segments
+    EXPAND NET_IPV6_COPY copied6_addr, bits6_addr
+    EXPAND NET_IPV6_EQ copied6_eq, copied6_addr, bits6_addr
+    EXPAND NET_IPV6_IS_DOCUMENTATION doc6_yes, doc6_addr
+    EXPAND NET_IPV6_IS_DOCUMENTATION doc6_3fff_yes, doc6_3fff_addr
+    EXPAND NET_IPV6_IS_BENCHMARKING bench6_yes, bench6_addr
+    EXPAND NET_IPV6_IS_UNICAST unicast6_yes, unicast6_addr
+    EXPAND NET_IPV6_IS_UNICAST multicast6_unicast, multicast6_addr
+    EXPAND NET_IPV6_IS_UNICAST_GLOBAL unicast6_global, unicast6_addr
+    EXPAND NET_IPV6_IS_UNICAST_GLOBAL doc6_global, doc6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_unicast, unicast6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_mcast, global_mcast6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_mapped, mapped6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_proto_allowed, proto_allowed6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_proto_block, proto_block6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_translate, translate6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_discard, discard6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_6to4, six_to_four6_addr
+    EXPAND NET_IPV6_IS_GLOBAL ipv6_global_srv6, srv6_addr
+    EXPAND NET_IPV6_MULTICAST_SCOPE multicast6_scope_ok, multicast6_scope, multicast6_addr
+
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock4_set, public4_addr, 1111
+    EXPAND NET_SOCKET_ADDR_V4_SET_IP sock4_set, bits_addr
+    EXPAND NET_SOCKET_ADDR_V4_SET_PORT sock4_set, 2222
+    EXPAND NET_SOCKET_ADDR_V4_IP_PTR sock4_set_ip, sock4_set
+    EXPAND NET_SOCKET_ADDR_V4_IP sock4_set_ip_copy, sock4_set
+    EXPAND NET_SOCKET_ADDR_V4_PORT sock4_set_port, sock4_set
+    EXPAND NET_IPV4_EQ sock4_set_ip_eq, sock4_set_ip, bits_addr
+    EXPAND NET_IPV4_EQ sock4_set_ip_copy_eq, sock4_set_ip_copy, bits_addr
+
+    EXPAND NET_SOCKET_ADDR_V6_NEW sock6_set, doc6_addr, 3333, 44, 55
+    EXPAND NET_SOCKET_ADDR_V6_SET_IP sock6_set, bits6_addr
+    EXPAND NET_SOCKET_ADDR_V6_SET_PORT sock6_set, 4444
+    EXPAND NET_SOCKET_ADDR_V6_SET_FLOWINFO sock6_set, 66
+    EXPAND NET_SOCKET_ADDR_V6_SET_SCOPE_ID sock6_set, 77
+    EXPAND NET_SOCKET_ADDR_V6_IP_PTR sock6_set_ip, sock6_set
+    EXPAND NET_SOCKET_ADDR_V6_IP sock6_set_ip_copy, sock6_set
+    EXPAND NET_SOCKET_ADDR_V6_PORT sock6_set_port, sock6_set
+    EXPAND NET_SOCKET_ADDR_V6_FLOWINFO sock6_set_flow, sock6_set
+    EXPAND NET_SOCKET_ADDR_V6_SCOPE_ID sock6_set_scope, sock6_set
+    EXPAND NET_IPV6_EQ sock6_set_ip_eq, sock6_set_ip, bits6_addr
+    EXPAND NET_IPV6_EQ sock6_set_ip_copy_eq, sock6_set_ip_copy, bits6_addr
+
+    EXPAND NET_IP_ADDR_V4_NEW ip_private4, private4_addr
+    EXPAND NET_IP_ADDR_V4_NEW ip_link4, link4_addr
+    EXPAND NET_IP_ADDR_V4_NEW ip_shared4, shared_addr
+    EXPAND NET_IP_ADDR_V4_NEW ip_reserved4, reserved4_addr
+    EXPAND NET_IP_ADDR_V4_NEW ip_bench4, bench4_addr
+    EXPAND NET_IP_ADDR_V6_NEW ip_loop6, compat6_addr
+    EXPAND NET_IP_ADDR_V6_NEW ip_unique6, unique6_addr
+    EXPAND NET_IP_ADDR_V6_NEW ip_link6, link6_addr
+    EXPAND NET_IP_ADDR_V6_NEW ip_bench6, bench6_addr
+    EXPAND NET_IP_ADDR_V6_NEW ip_global_mcast6, global_mcast6_addr
+    EXPAND NET_IP_ADDR_V6_NEW ip_mapped6, mapped6_addr
+    EXPAND NET_IP_ADDR_V4_UNSPECIFIED ip_unspec4_const
+    EXPAND NET_IP_ADDR_V4_LOCALHOST ip_local4_const
+    EXPAND NET_IP_ADDR_V4_BROADCAST ip_bcast4_const
+    EXPAND NET_IP_ADDR_V6_UNSPECIFIED ip_unspec6_const
+    EXPAND NET_IP_ADDR_V6_LOCALHOST ip_local6_const
+    EXPAND NET_IP_ADDR_COPY ip_private4_copy, ip_private4
+    EXPAND NET_IP_ADDR_COPY ip_loop6_copy, ip_loop6
+    EXPAND NET_IP_ADDR_FAMILY ip_private4_family, ip_private4
+    EXPAND NET_IP_ADDR_FAMILY ip_loop6_family, ip_loop6
+    EXPAND NET_IP_ADDR_IS_UNSPECIFIED ip_private_unspec, ip_private4
+    EXPAND NET_IP_ADDR_IS_LOOPBACK ip_loop6_loop, ip_loop6
+    EXPAND NET_IP_ADDR_IS_UNSPECIFIED ip_unspec4_is_unspec, ip_unspec4_const
+    EXPAND NET_IP_ADDR_IS_UNSPECIFIED ip_unspec6_is_unspec, ip_unspec6_const
+    EXPAND NET_IP_ADDR_IS_LOOPBACK ip_local4_is_loop, ip_local4_const
+    EXPAND NET_IP_ADDR_IS_LOOPBACK ip_local6_is_loop, ip_local6_const
+    EXPAND NET_IP_ADDR_PAYLOAD_PTR ip_bcast4_payload, ip_bcast4_const
+    EXPAND NET_IPV4_IS_BROADCAST ip_bcast4_is_bcast, ip_bcast4_payload
+    EXPAND NET_IP_ADDR_EQ ip_private4_copy_eq, ip_private4_copy, ip_private4
+    EXPAND NET_IP_ADDR_EQ ip_loop6_copy_eq, ip_loop6_copy, ip_loop6
+    EXPAND NET_IP_ADDR_IS_MULTICAST ip_private_multi, ip_private4
+    EXPAND NET_IP_ADDR_IS_DOCUMENTATION ip_doc6_doc, ip_loop6
+    EXPAND NET_IP_ADDR_IS_BENCHMARKING ip_bench4_yes, ip_bench4
+    EXPAND NET_IP_ADDR_IS_BENCHMARKING ip_bench6_yes, ip_bench6
+    EXPAND NET_IP_ADDR_IS_BENCHMARKING ip_private_bench, ip_private4
+    EXPAND NET_IP_ADDR_IS_GLOBAL ip_global_mcast6_global, ip_global_mcast6
+    EXPAND NET_IP_ADDR_IS_GLOBAL ip_private_global, ip_private4
+    EXPAND NET_IP_ADDR_IS_PRIVATE ip_private4_private, ip_private4
+    EXPAND NET_IP_ADDR_IS_PRIVATE ip_unique6_private, ip_unique6
+    EXPAND NET_IP_ADDR_IS_LINK_LOCAL ip_link4_link, ip_link4
+    EXPAND NET_IP_ADDR_IS_LINK_LOCAL ip_link6_link, ip_link6
+    EXPAND NET_IP_ADDR_IS_SHARED ip_shared4_shared, ip_shared4
+    EXPAND NET_IP_ADDR_IS_SHARED ip_unique6_shared, ip_unique6
+    EXPAND NET_IP_ADDR_IS_RESERVED ip_reserved4_reserved, ip_reserved4
+    EXPAND NET_IP_ADDR_IS_RESERVED ip_unique6_reserved, ip_unique6
+    EXPAND NET_IP_ADDR_IS_UNICAST ip_private4_unicast, ip_private4
+    EXPAND NET_IP_ADDR_IS_UNICAST ip_global_mcast6_unicast, ip_global_mcast6
+    EXPAND NET_IP_ADDR_IS_UNICAST_LINK_LOCAL ip_link6_unicast_link, ip_link6
+    EXPAND NET_IP_ADDR_IS_UNIQUE_LOCAL ip_unique6_unique, ip_unique6
+    EXPAND NET_IP_ADDR_IS_UNIQUE_LOCAL ip_private4_unique, ip_private4
+    EXPAND NET_IP_ADDR_IS_IPV4_MAPPED ip_mapped6_is_mapped, ip_mapped6
+    EXPAND NET_IP_ADDR_MULTICAST_SCOPE ip_mcast_scope_ok, ip_mcast_scope, ip_global_mcast6
+    EXPAND NET_IP_ADDR_MULTICAST_SCOPE ip_private_scope_ok, ip_private_scope, ip_private4
+    EXPAND NET_IP_ADDR_TO_IPV4 ip_private_to4_ok, ip_private_to4, ip_private4
+    EXPAND NET_IPV4_EQ ip_private_to4_eq, ip_private_to4, private4_addr
+    EXPAND NET_IP_ADDR_TO_IPV4 ip_mapped_to4_ok, ip_mapped_to4, ip_mapped6
+    EXPAND NET_IPV4_EQ ip_mapped_to4_eq, ip_mapped_to4, mapped4_addr
+    EXPAND NET_IPV6_TO_CANONICAL ip_canon_from_v6, mapped6_addr
+    EXPAND NET_IP_ADDR_IS_IPV4 ip_canon_from_v6_is_v4, ip_canon_from_v6
+    EXPAND NET_IP_ADDR_PAYLOAD_PTR ip_canon_from_v6_payload, ip_canon_from_v6
+    EXPAND NET_IPV4_EQ ip_canon_from_v6_eq, ip_canon_from_v6_payload, mapped4_addr
+    EXPAND NET_IP_ADDR_TO_CANONICAL ip_canon, ip_mapped6
+    EXPAND NET_IP_ADDR_IS_IPV4 ip_canon_is_v4, ip_canon
+    EXPAND NET_IP_ADDR_PAYLOAD_PTR ip_canon_payload, ip_canon
+    EXPAND NET_IPV4_EQ ip_canon_eq, ip_canon_payload, mapped4_addr
+
+    EXPAND NET_SOCKET_ADDR_NEW sock_any_new, ip_private4, 5151
+    EXPAND NET_SOCKET_ADDR_IP sock_any_ip, sock_any_new
+    EXPAND NET_SOCKET_ADDR_PORT sock_any_port0, sock_any_new
+    EXPAND NET_SOCKET_ADDR_FAMILY sock_any_family4, sock_any_new
+    EXPAND NET_SOCKET_ADDR_SET_PORT sock_any_new, 6262
+    EXPAND NET_SOCKET_ADDR_PORT sock_any_port1, sock_any_new
+    EXPAND NET_SOCKET_ADDR_SET_IP sock_any_new, ip_loop6
+    EXPAND NET_SOCKET_ADDR_IS_IPV6 sock_any_is_v6, sock_any_new
+    EXPAND NET_SOCKET_ADDR_FAMILY sock_any_family6, sock_any_new
+    EXPAND NET_SOCKET_ADDR_PORT sock_any_port2, sock_any_new
+    EXPAND NET_SOCKET_ADDR_IP sock_any_switched_ip, sock_any_new
+    EXPAND NET_IP_ADDR_IS_IPV6 sock_any_switched_is_v6, sock_any_switched_ip
+    EXPAND NET_IP_ADDR_PAYLOAD_PTR sock_any_ip_payload, sock_any_ip
+    EXPAND NET_IPV4_EQ sock_any_ip_eq, sock_any_ip_payload, private4_addr
+
+    ok_bits = eq bits_value, 305419896
+    ok_ipv4_bits_const = eq ipv4_bits_const, 32
+    ok_ipv6_bits_const = eq ipv6_bits_const, 128
+    ok_bits6_hi = eq bits6_hi, 1161981756646125696
+    ok_bits6_lo = eq bits6_lo, 72623859790382856
+    ok_shared_false = eq shared_false, 0
+    ok_private_global_false = eq private4_global, 0
+    ok_proto_local_false = eq proto4_local_global, 0
+    ok_compat_s0 = eq compat_s0, 0
+    ok_compat_s5 = eq compat_s5, 0
+    ok_compat_s6 = eq compat_s6, 49162
+    ok_compat_s7 = eq compat_s7, 767
+    ok_mapped_s5 = eq mapped_s5, 65535
+    ok_mapped_s6 = eq mapped_s6, 49162
+    ok_mapped_s7 = eq mapped_s7, 767
+    ok_multicast_unicast_false = eq multicast6_unicast, 0
+    ok_doc6_global_false = eq doc6_global, 0
+    ok_ipv6_global_mapped_false = eq ipv6_global_mapped, 0
+    ok_ipv6_global_proto_block_false = eq ipv6_global_proto_block, 0
+    ok_ipv6_global_translate_false = eq ipv6_global_translate, 0
+    ok_ipv6_global_discard_false = eq ipv6_global_discard, 0
+    ok_ipv6_global_6to4_false = eq ipv6_global_6to4, 0
+    ok_ipv6_global_srv6_false = eq ipv6_global_srv6, 0
+    ok_multicast_scope = eq multicast6_scope, 14
+    ok_sock4_set_port = eq sock4_set_port, 2222
+    ok_sock6_set_port = eq sock6_set_port, 4444
+    ok_sock6_set_flow = eq sock6_set_flow, 66
+    ok_sock6_set_scope = eq sock6_set_scope, 77
+    ok_ip_private_unspec = eq ip_private_unspec, 0
+    ok_ip_loop6_loop = eq ip_loop6_loop, 0
+    ok_ip_private4_family = eq ip_private4_family, SA_NET_AF_INET
+    ok_ip_loop6_family = eq ip_loop6_family, SA_NET_AF_INET6
+    ok_ip_private_multi = eq ip_private_multi, 0
+    ok_ip_doc6_doc = eq ip_doc6_doc, 0
+    ok_ip_private_bench = eq ip_private_bench, 0
+    ok_ip_private_global = eq ip_private_global, 0
+    ok_ip_unique6_shared = eq ip_unique6_shared, 0
+    ok_ip_unique6_reserved = eq ip_unique6_reserved, 0
+    ok_ip_global_mcast6_unicast = eq ip_global_mcast6_unicast, 0
+    ok_ip_private4_unique = eq ip_private4_unique, 0
+    ok_ip_mcast_scope = eq ip_mcast_scope, 14
+    ok_ip_private_scope_ok = eq ip_private_scope_ok, 0
+    ok_ip_private_scope = eq ip_private_scope, 0
+    ok_sock_any_port0 = eq sock_any_port0, 5151
+    ok_sock_any_port1 = eq sock_any_port1, 6262
+    ok_sock_any_port2 = eq sock_any_port2, 6262
+    ok_sock_any_family4 = eq sock_any_family4, SA_NET_AF_INET
+    ok_sock_any_family6 = eq sock_any_family6, SA_NET_AF_INET6
+
+    ok00a = and ok_bits, ok_ipv4_bits_const
+    ok00b = and ok00a, ok_ipv6_bits_const
+    ok01 = and ok00b, bits_round_eq
+    ok02 = and ok01, bits_octets_eq
+    ok03 = and ok02, copied4_eq
+    ok04 = and ok03, ok_bits6_hi
+    ok05 = and ok04, ok_bits6_lo
+    ok06 = and ok05, bits6_round_eq
+    ok06a = and ok06, bits6_segments_eq
+    ok06b = and ok06a, copied6_eq
+    ok07 = and ok06b, shared_yes
+    ok08 = and ok07, ok_shared_false
+    ok09 = and ok08, bench4_yes
+    ok10 = and ok09, reserved4_yes
+    ok11 = and ok10, public4_global
+    ok12 = and ok11, ok_private_global_false
+    ok13 = and ok12, proto4_global
+    ok14 = and ok13, ok_proto_local_false
+    ok15 = and ok14, ok_compat_s0
+    ok16 = and ok15, ok_compat_s5
+    ok17 = and ok16, ok_compat_s6
+    ok18 = and ok17, ok_compat_s7
+    ok19 = and ok18, ok_mapped_s5
+    ok20 = and ok19, ok_mapped_s6
+    ok21 = and ok20, ok_mapped_s7
+    ok22 = and ok21, mapped6_is_mapped
+    ok23 = and ok22, mapped6_to4_ok
+    ok24 = and ok23, mapped4_round_eq
+    ok25 = and ok24, compat6_to4_ok
+    ok26 = and ok25, compat4_round_eq
+    ok27 = and ok26, doc6_yes
+    ok28 = and ok27, doc6_3fff_yes
+    ok29 = and ok28, bench6_yes
+    ok30 = and ok29, unicast6_yes
+    ok31 = and ok30, ok_multicast_unicast_false
+    ok32 = and ok31, unicast6_global
+    ok33 = and ok32, ok_doc6_global_false
+    ok33a = and ok33, ipv6_global_unicast
+    ok33b = and ok33a, ipv6_global_mcast
+    ok33c = and ok33b, ok_ipv6_global_mapped_false
+    ok33d = and ok33c, ipv6_global_proto_allowed
+    ok33e = and ok33d, ok_ipv6_global_proto_block_false
+    ok33f = and ok33e, ok_ipv6_global_translate_false
+    ok33g = and ok33f, ok_ipv6_global_discard_false
+    ok33h = and ok33g, ok_ipv6_global_6to4_false
+    ok33i = and ok33h, ok_ipv6_global_srv6_false
+    ok34 = and ok33i, multicast6_scope_ok
+    ok35 = and ok34, ok_multicast_scope
+    ok36 = and ok35, sock4_set_ip_eq
+    ok37 = and ok36, sock4_set_ip_copy_eq
+    ok38 = and ok37, ok_sock4_set_port
+    ok39 = and ok38, sock6_set_ip_eq
+    ok40 = and ok39, sock6_set_ip_copy_eq
+    ok41 = and ok40, ok_sock6_set_port
+    ok42 = and ok41, ok_sock6_set_flow
+    ok42a = and ok42, ok_sock6_set_scope
+    ok42b = and ok42a, ok_ip_private_unspec
+    ok42c = and ok42b, ok_ip_loop6_loop
+    ok42d = and ok42c, ip_unspec4_is_unspec
+    ok42e = and ok42d, ip_unspec6_is_unspec
+    ok42f = and ok42e, ip_local4_is_loop
+    ok42g = and ok42f, ip_local6_is_loop
+    ok42h = and ok42g, ip_bcast4_is_bcast
+    ok42i = and ok42h, ip_private4_copy_eq
+    ok42j = and ok42i, ip_loop6_copy_eq
+    ok42k = and ok42j, ok_ip_private4_family
+    ok42l = and ok42k, ok_ip_loop6_family
+    ok44 = and ok42l, ok_ip_private_multi
+    ok45 = and ok44, ok_ip_doc6_doc
+    ok45a = and ok45, ip_bench4_yes
+    ok45b = and ok45a, ip_bench6_yes
+    ok45c = and ok45b, ok_ip_private_bench
+    ok45d = and ok45c, ip_global_mcast6_global
+    ok45e = and ok45d, ok_ip_private_global
+    ok45f = and ok45e, ip_private4_private
+    ok45g = and ok45f, ip_unique6_private
+    ok45h = and ok45g, ip_link4_link
+    ok45i = and ok45h, ip_link6_link
+    ok45j = and ok45i, ip_shared4_shared
+    ok45k = and ok45j, ok_ip_unique6_shared
+    ok45l = and ok45k, ip_reserved4_reserved
+    ok45m = and ok45l, ok_ip_unique6_reserved
+    ok45n = and ok45m, ip_private4_unicast
+    ok45o = and ok45n, ok_ip_global_mcast6_unicast
+    ok45p = and ok45o, ip_link6_unicast_link
+    ok45q = and ok45p, ip_unique6_unique
+    ok45r = and ok45q, ok_ip_private4_unique
+    ok45s = and ok45r, ip_mapped6_is_mapped
+    ok45t = and ok45s, ip_mcast_scope_ok
+    ok45u = and ok45t, ok_ip_mcast_scope
+    ok45v = and ok45u, ok_ip_private_scope_ok
+    ok45w = and ok45v, ok_ip_private_scope
+    ok45x = and ok45w, ip_private_to4_ok
+    ok45y = and ok45x, ip_private_to4_eq
+    ok45z = and ok45y, ip_mapped_to4_ok
+    ok46 = and ok45z, ip_mapped_to4_eq
+    ok47 = and ok46, ip_canon_from_v6_is_v4
+    ok47a = and ok47, ip_canon_from_v6_eq
+    ok47b = and ok47a, ip_canon_is_v4
+    ok48 = and ok47b, ip_canon_eq
+    ok49 = and ok48, sock_any_ip_eq
+    ok50 = and ok49, ok_sock_any_port0
+    ok50a = and ok50, ok_sock_any_family4
+    ok51 = and ok50a, ok_sock_any_port1
+    ok52 = and ok51, sock_any_is_v6
+    ok52a = and ok52, ok_sock_any_family6
+    ok53 = and ok52a, ok_sock_any_port2
+    ok = and ok53, sock_any_switched_is_v6
+
+    !bits_value
+    !ipv4_bits_const
+    !ipv6_bits_const
+    !bits_round_eq
+    !bits_octets_eq
+    !copied4_eq
+    !bits6_hi
+    !bits6_lo
+    !bits6_round_eq
+    !bits6_segments_eq
+    !copied6_eq
+    !shared_yes
+    !shared_false
+    !bench4_yes
+    !reserved4_yes
+    !public4_global
+    !private4_global
+    !proto4_global
+    !proto4_local_global
+    !compat_s0
+    !compat_s1
+    !compat_s2
+    !compat_s3
+    !compat_s4
+    !compat_s5
+    !compat_s6
+    !compat_s7
+    !mapped_s0
+    !mapped_s1
+    !mapped_s2
+    !mapped_s3
+    !mapped_s4
+    !mapped_s5
+    !mapped_s6
+    !mapped_s7
+    !mapped6_is_mapped
+    !mapped6_to4_ok
+    !mapped4_round_eq
+    !compat6_to4_ok
+    !compat4_round_eq
+    !doc6_yes
+    !doc6_3fff_yes
+    !bench6_yes
+    !unicast6_yes
+    !multicast6_unicast
+    !unicast6_global
+    !doc6_global
+    !ipv6_global_unicast
+    !ipv6_global_mcast
+    !ipv6_global_mapped
+    !ipv6_global_proto_allowed
+    !ipv6_global_proto_block
+    !ipv6_global_translate
+    !ipv6_global_discard
+    !ipv6_global_6to4
+    !ipv6_global_srv6
+    !multicast6_scope_ok
+    !multicast6_scope
+    !sock4_set_ip
+    !sock4_set_ip_copy_eq
+    !sock4_set_port
+    !sock4_set_ip_eq
+    !sock6_set_ip
+    !sock6_set_ip_copy_eq
+    !sock6_set_port
+    !sock6_set_flow
+    !sock6_set_scope
+    !sock6_set_ip_eq
+    !ip_private_unspec
+    !ip_loop6_loop
+    !ip_unspec4_is_unspec
+    !ip_unspec6_is_unspec
+    !ip_local4_is_loop
+    !ip_local6_is_loop
+    !ip_bcast4_payload
+    !ip_bcast4_is_bcast
+    !ip_private4_copy_eq
+    !ip_loop6_copy_eq
+    !ip_private4_family
+    !ip_loop6_family
+    !ip_private_multi
+    !ip_doc6_doc
+    !ip_bench4_yes
+    !ip_bench6_yes
+    !ip_private_bench
+    !ip_global_mcast6_global
+    !ip_private_global
+    !ip_private4_private
+    !ip_unique6_private
+    !ip_link4_link
+    !ip_link6_link
+    !ip_shared4_shared
+    !ip_unique6_shared
+    !ip_reserved4_reserved
+    !ip_unique6_reserved
+    !ip_private4_unicast
+    !ip_global_mcast6_unicast
+    !ip_link6_unicast_link
+    !ip_unique6_unique
+    !ip_private4_unique
+    !ip_mapped6_is_mapped
+    !ip_mcast_scope_ok
+    !ip_mcast_scope
+    !ip_private_scope_ok
+    !ip_private_scope
+    !ip_private_to4_ok
+    !ip_private_to4_eq
+    !ip_mapped_to4_ok
+    !ip_mapped_to4_eq
+    !ip_canon_from_v6_is_v4
+    !ip_canon_from_v6_payload
+    !ip_canon_from_v6_eq
+    !ip_canon_is_v4
+    !ip_canon_payload
+    !ip_canon_eq
+    !sock_any_port0
+    !sock_any_family4
+    !sock_any_port1
+    !sock_any_is_v6
+    !sock_any_family6
+    !sock_any_port2
+    !sock_any_switched_is_v6
+    !sock_any_ip_payload
+    !sock_any_ip_eq
+    !ok_bits
+    !ok_ipv4_bits_const
+    !ok_ipv6_bits_const
+    !ok_bits6_hi
+    !ok_bits6_lo
+    !ok_shared_false
+    !ok_private_global_false
+    !ok_proto_local_false
+    !ok_compat_s0
+    !ok_compat_s5
+    !ok_compat_s6
+    !ok_compat_s7
+    !ok_mapped_s5
+    !ok_mapped_s6
+    !ok_mapped_s7
+    !ok_multicast_unicast_false
+    !ok_doc6_global_false
+    !ok_ipv6_global_mapped_false
+    !ok_ipv6_global_proto_block_false
+    !ok_ipv6_global_translate_false
+    !ok_ipv6_global_discard_false
+    !ok_ipv6_global_6to4_false
+    !ok_ipv6_global_srv6_false
+    !ok_multicast_scope
+    !ok_sock4_set_port
+    !ok_sock6_set_port
+    !ok_sock6_set_flow
+    !ok_sock6_set_scope
+    !ok_ip_private_unspec
+    !ok_ip_loop6_loop
+    !ok_ip_private4_family
+    !ok_ip_loop6_family
+    !ok_ip_private_multi
+    !ok_ip_doc6_doc
+    !ok_ip_private_bench
+    !ok_ip_private_global
+    !ok_ip_unique6_shared
+    !ok_ip_unique6_reserved
+    !ok_ip_global_mcast6_unicast
+    !ok_ip_private4_unique
+    !ok_ip_mcast_scope
+    !ok_ip_private_scope_ok
+    !ok_ip_private_scope
+    !ok_sock_any_port0
+    !ok_sock_any_port1
+    !ok_sock_any_port2
+    !ok_sock_any_family4
+    !ok_sock_any_family6
+    !ok00a
+    !ok00b
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok06a
+    !ok06b
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok33a
+    !ok33b
+    !ok33c
+    !ok33d
+    !ok33e
+    !ok33f
+    !ok33g
+    !ok33h
+    !ok33i
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok42a
+    !ok42b
+    !ok42c
+    !ok42d
+    !ok42e
+    !ok42f
+    !ok42g
+    !ok42h
+    !ok42i
+    !ok42j
+    !ok42k
+    !ok42l
+    !ok44
+    !ok45
+    !ok45a
+    !ok45b
+    !ok45c
+    !ok45d
+    !ok45e
+    !ok45f
+    !ok45g
+    !ok45h
+    !ok45i
+    !ok45j
+    !ok45k
+    !ok45l
+    !ok45m
+    !ok45n
+    !ok45o
+    !ok45p
+    !ok45q
+    !ok45r
+    !ok45s
+    !ok45t
+    !ok45u
+    !ok45v
+    !ok45w
+    !ok45x
+    !ok45y
+    !ok45z
+    !ok46
+    !ok47
+    !ok47a
+    !ok47b
+    !ok48
+    !ok49
+    !ok50
+    !ok50a
+    !ok51
+    !ok52
+    !ok52a
+    !ok53
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10073)
+
+L_PASS:
+    return 0

@@ -1,0 +1,133 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec into_iter clone macro surface"():
+L_ENTRY:
+    EXPAND VEC_NEW vec
+    EXPAND VEC_PUSH_U64 vec, 5
+    EXPAND VEC_PUSH_U64 vec, 6
+    EXPAND VEC_PUSH_U64 vec, 7
+    EXPAND VEC_PUSH_U64 vec, 8
+
+    EXPAND VEC_INTO_ITER_U64 iter, backing_vec, vec
+    EXPAND ITER_NEXT_U64 first_ok, first, iter
+    EXPAND VEC_INTO_ITER_CLONE_U64 clone_iter, clone_backing, iter
+
+    EXPAND VEC_LEN clone_len, clone_backing
+    EXPAND ITER_LEN original_len_after_clone, iter
+    EXPAND VEC_GET_MUT_U64 clone_mut_ok, clone_mut_ptr, clone_backing, 1
+    store clone_mut_ptr+0, 70 as u64
+
+    EXPAND ITER_NEXT_U64 clone_first_ok, clone_first, clone_iter
+    EXPAND ITER_NEXT_BACK_U64 clone_back_ok, clone_back, clone_iter
+    EXPAND ITER_NEXT_U64 clone_second_ok, clone_second, clone_iter
+    EXPAND ITER_NEXT_U64 clone_done_ok, clone_done, clone_iter
+
+    EXPAND ITER_LEN original_len_after_clone_consumed, iter
+    EXPAND ITER_NEXT_U64 original_next_ok, original_next, iter
+    EXPAND VEC_GET_U64 original_third, backing_vec, 2
+
+    EXPAND VEC_INTO_ITER_DEFAULT_U64 empty_iter, empty_backing
+    EXPAND VEC_INTO_ITER_CLONE_U64 empty_clone_iter, empty_clone_backing, empty_iter
+    EXPAND VEC_LEN empty_clone_len, empty_clone_backing
+    EXPAND ITER_NEXT_U64 empty_clone_ok, empty_clone_value, empty_clone_iter
+
+    EXPAND VEC_FREE backing_vec
+    EXPAND VEC_FREE clone_backing
+    EXPAND VEC_FREE empty_backing
+    EXPAND VEC_FREE empty_clone_backing
+
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 5
+    ok_clone_len = eq clone_len, 3
+    ok_original_len_after_clone = eq original_len_after_clone, 3
+    ok_clone_mut_flag = eq clone_mut_ok, 1
+    ok_clone_first_flag = eq clone_first_ok, 1
+    ok_clone_first = eq clone_first, 6
+    ok_clone_back_flag = eq clone_back_ok, 1
+    ok_clone_back = eq clone_back, 8
+    ok_clone_second_flag = eq clone_second_ok, 1
+    ok_clone_second = eq clone_second, 70
+    ok_clone_done_flag = eq clone_done_ok, 0
+    ok_clone_done = eq clone_done, 0
+    ok_original_len_after_clone_consumed = eq original_len_after_clone_consumed, 3
+    ok_original_next_flag = eq original_next_ok, 1
+    ok_original_next = eq original_next, 6
+    ok_original_third = eq original_third, 7
+    ok_empty_clone_len = eq empty_clone_len, 0
+    ok_empty_clone_flag = eq empty_clone_ok, 0
+    ok_empty_clone_value = eq empty_clone_value, 0
+
+    ok = and ok_first_flag, ok_first
+    ok = and ok, ok_clone_len
+    ok = and ok, ok_original_len_after_clone
+    ok = and ok, ok_clone_mut_flag
+    ok = and ok, ok_clone_first_flag
+    ok = and ok, ok_clone_first
+    ok = and ok, ok_clone_back_flag
+    ok = and ok, ok_clone_back
+    ok = and ok, ok_clone_second_flag
+    ok = and ok, ok_clone_second
+    ok = and ok, ok_clone_done_flag
+    ok = and ok, ok_clone_done
+    ok = and ok, ok_original_len_after_clone_consumed
+    ok = and ok, ok_original_next_flag
+    ok = and ok, ok_original_next
+    ok = and ok, ok_original_third
+    ok = and ok, ok_empty_clone_len
+    ok = and ok, ok_empty_clone_flag
+    ok = and ok, ok_empty_clone_value
+
+    !first_ok
+    !first
+    !clone_len
+    !original_len_after_clone
+    !clone_mut_ok
+    !clone_mut_ptr
+    !clone_first_ok
+    !clone_first
+    !clone_back_ok
+    !clone_back
+    !clone_second_ok
+    !clone_second
+    !clone_done_ok
+    !clone_done
+    !original_len_after_clone_consumed
+    !original_next_ok
+    !original_next
+    !original_third
+    !empty_clone_len
+    !empty_clone_ok
+    !empty_clone_value
+    !ok_first_flag
+    !ok_first
+    !ok_clone_len
+    !ok_original_len_after_clone
+    !ok_clone_mut_flag
+    !ok_clone_first_flag
+    !ok_clone_first
+    !ok_clone_back_flag
+    !ok_clone_back
+    !ok_clone_second_flag
+    !ok_clone_second
+    !ok_clone_done_flag
+    !ok_clone_done
+    !ok_original_len_after_clone_consumed
+    !ok_original_next_flag
+    !ok_original_next
+    !ok_original_third
+    !ok_empty_clone_len
+    !ok_empty_clone_flag
+    !ok_empty_clone_value
+    !iter
+    !clone_iter
+    !empty_iter
+    !empty_clone_iter
+    br ok -> L_VEC_INTO_ITER_CLONE_OK, L_VEC_INTO_ITER_CLONE_FAIL
+
+L_VEC_INTO_ITER_CLONE_FAIL:
+    !ok
+    panic(10710)
+
+L_VEC_INTO_ITER_CLONE_OK:
+    !ok
+    return

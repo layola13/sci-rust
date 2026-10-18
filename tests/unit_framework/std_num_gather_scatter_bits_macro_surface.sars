@@ -1,0 +1,84 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_GATHER_SCATTER_EQ %out_acc, %prev_acc, %value, %expected
+    __test_gather_scatter_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_gather_scatter_eq_%out_acc
+    !__test_gather_scatter_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std unsigned primitive extract_bits and deposit_bits macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_EXTRACT_BITS extract_u8, 188, 36
+    EXPAND NUM_U16_EXTRACT_BITS extract_u16, 188, 36
+    EXPAND NUM_U32_EXTRACT_BITS extract_u32, 188, 36
+    EXPAND NUM_U64_EXTRACT_BITS extract_u64, 188, 36
+    EXPAND NUM_USIZE_EXTRACT_BITS extract_usize, 188, 36
+
+    EXPAND NUM_U8_DEPOSIT_BITS deposit_u8, 173, 85
+    EXPAND NUM_U16_DEPOSIT_BITS deposit_u16, 173, 85
+    EXPAND NUM_U32_DEPOSIT_BITS deposit_u32, 173, 85
+    EXPAND NUM_U64_DEPOSIT_BITS deposit_u64, 173, 85
+    EXPAND NUM_USIZE_DEPOSIT_BITS deposit_usize, 173, 85
+
+    EXPAND NUM_U64_EXTRACT_BITS extract_high_nibble, 188, 240
+    EXPAND NUM_U64_DEPOSIT_BITS deposit_high_nibble, 173, 240
+    EXPAND NUM_U64_EXTRACT_BITS extract_empty, 12345, 0
+    EXPAND NUM_U64_DEPOSIT_BITS deposit_empty, 12345, 0
+    EXPAND NUM_U8_EXTRACT_BITS extract_truncated, 511, 511
+    EXPAND NUM_U8_DEPOSIT_BITS deposit_truncated, 511, 511
+    EXPAND NUM_U64_DEPOSIT_BITS deposit_extra_source, 255, 1
+
+    EXPAND NUM_U8_EXTRACT_BITS extract_high_u8, 128, 128
+    EXPAND NUM_U16_EXTRACT_BITS extract_high_u16, 32768, 32768
+    EXPAND NUM_U32_EXTRACT_BITS extract_high_u32, 2147483648, 2147483648
+    EXPAND NUM_U64_EXTRACT_BITS extract_high_u64, NUM_I64_MIN, NUM_I64_MIN
+    EXPAND NUM_USIZE_EXTRACT_BITS extract_high_usize, NUM_I64_MIN, NUM_I64_MIN
+
+    EXPAND NUM_U8_DEPOSIT_BITS deposit_high_u8, 1, 128
+    EXPAND NUM_U16_DEPOSIT_BITS deposit_high_u16, 1, 32768
+    EXPAND NUM_U32_DEPOSIT_BITS deposit_high_u32, 1, 2147483648
+    EXPAND NUM_U64_DEPOSIT_BITS deposit_high_u64, 1, NUM_I64_MIN
+    EXPAND NUM_USIZE_DEPOSIT_BITS deposit_high_usize, 1, NUM_I64_MIN
+
+    EXPAND NUM_U64_EXTRACT_BITS inverse_extract, 188, 85
+    EXPAND NUM_U64_DEPOSIT_BITS inverse_deposit, inverse_extract, 85
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_GATHER_SCATTER_EQ acc_01, acc_00, extract_u8, 3
+    EXPAND TEST_GATHER_SCATTER_EQ acc_02, acc_01, extract_u16, 3
+    EXPAND TEST_GATHER_SCATTER_EQ acc_03, acc_02, extract_u32, 3
+    EXPAND TEST_GATHER_SCATTER_EQ acc_04, acc_03, extract_u64, 3
+    EXPAND TEST_GATHER_SCATTER_EQ acc_05, acc_04, extract_usize, 3
+    EXPAND TEST_GATHER_SCATTER_EQ acc_06, acc_05, deposit_u8, 81
+    EXPAND TEST_GATHER_SCATTER_EQ acc_07, acc_06, deposit_u16, 81
+    EXPAND TEST_GATHER_SCATTER_EQ acc_08, acc_07, deposit_u32, 81
+    EXPAND TEST_GATHER_SCATTER_EQ acc_09, acc_08, deposit_u64, 81
+    EXPAND TEST_GATHER_SCATTER_EQ acc_10, acc_09, deposit_usize, 81
+    EXPAND TEST_GATHER_SCATTER_EQ acc_11, acc_10, extract_high_nibble, 11
+    EXPAND TEST_GATHER_SCATTER_EQ acc_12, acc_11, deposit_high_nibble, 208
+    EXPAND TEST_GATHER_SCATTER_EQ acc_13, acc_12, extract_empty, 0
+    EXPAND TEST_GATHER_SCATTER_EQ acc_14, acc_13, deposit_empty, 0
+    EXPAND TEST_GATHER_SCATTER_EQ acc_15, acc_14, extract_truncated, 255
+    EXPAND TEST_GATHER_SCATTER_EQ acc_16, acc_15, deposit_truncated, 255
+    EXPAND TEST_GATHER_SCATTER_EQ acc_17, acc_16, deposit_extra_source, 1
+    EXPAND TEST_GATHER_SCATTER_EQ acc_18, acc_17, extract_high_u8, 1
+    EXPAND TEST_GATHER_SCATTER_EQ acc_19, acc_18, extract_high_u16, 1
+    EXPAND TEST_GATHER_SCATTER_EQ acc_20, acc_19, extract_high_u32, 1
+    EXPAND TEST_GATHER_SCATTER_EQ acc_21, acc_20, extract_high_u64, 1
+    EXPAND TEST_GATHER_SCATTER_EQ acc_22, acc_21, extract_high_usize, 1
+    EXPAND TEST_GATHER_SCATTER_EQ acc_23, acc_22, deposit_high_u8, 128
+    EXPAND TEST_GATHER_SCATTER_EQ acc_24, acc_23, deposit_high_u16, 32768
+    EXPAND TEST_GATHER_SCATTER_EQ acc_25, acc_24, deposit_high_u32, 2147483648
+    EXPAND TEST_GATHER_SCATTER_EQ acc_26, acc_25, deposit_high_u64, NUM_I64_MIN
+    EXPAND TEST_GATHER_SCATTER_EQ acc_27, acc_26, deposit_high_usize, NUM_I64_MIN
+    EXPAND TEST_GATHER_SCATTER_EQ acc_28, acc_27, inverse_extract, 6
+    EXPAND TEST_GATHER_SCATTER_EQ acc_29, acc_28, inverse_deposit, 20
+    br acc_29 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_29
+    panic(10648)
+
+L_PASS:
+    !acc_29
+    return 0

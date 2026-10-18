@@ -1,0 +1,2525 @@
+@import "sa_std/fs.sars"
+@import "sa_std/string.sars"
+@import "sa_std/path.sars"
+@import "sa_std/os/unix_ffi.sars"
+
+@const PATH_FULL = utf8:"/tmp/demo/file.txt"
+@const PATH_BUF_FS_TEST = utf8:"_tmp_path_buf_fs_query.txt"
+@const PATH_BUF_FS_HELLO = utf8:"pbhello"
+@const PATH_BUF_FS_OPS_SRC = utf8:"_tmp_path_buf_fs_ops_src.txt"
+@const PATH_BUF_FS_OPS_DST = utf8:"_tmp_path_buf_fs_ops_dst.txt"
+@const PATH_BUF_FS_OPS_DIR = utf8:"_tmp_path_buf_fs_ops_dir"
+@const PATH_BUF_FS_OPS_DATA = utf8:"opsdata"
+@const PATH_BUF_FS_MORE_SRC = utf8:"_tmp_path_buf_fs_more_src.txt"
+@const PATH_BUF_FS_MORE_DST = utf8:"_tmp_path_buf_fs_more_dst.txt"
+@const PATH_BUF_FS_MORE_LINK = utf8:"_tmp_path_buf_fs_more_link.txt"
+@const PATH_BUF_FS_MORE_SYM = utf8:"_tmp_path_buf_fs_more_sym.txt"
+@const PATH_BUF_FS_MORE_DIR = utf8:"_tmp_path_buf_fs_more_dir"
+@const PATH_BUF_FS_MORE_NEST = utf8:"_tmp_path_buf_fs_more_dir/nested"
+@const PATH_BUF_FS_MORE_DATA = utf8:"moreops"
+@const PATH_BUF_READDIR_ROOT = utf8:"_tmp_path_buf_readdir"
+@const PATH_BUF_READDIR_FILE = utf8:"_tmp_path_buf_readdir/item.txt"
+@const PATH_BUF_READDIR_DATA = utf8:"r"
+@const PATH_BUF_BUILDER_DIR = utf8:"_tmp_path_buf_builder_dir"
+@const PATH_BUF_BUILDER_FILE = utf8:"_tmp_path_buf_builder_file.txt"
+@const PATH_BUF_BUILDER_DATA = utf8:"bd"
+@const PATH_BUF_PERM_TEST = utf8:"_tmp_path_buf_perm_obj.txt"
+@const PATH_BUF_PERM_DATA = utf8:"p"
+@const PATH_BUF_META_JSON_TEST = utf8:"_tmp_path_buf_meta_json.txt"
+@const PATH_BUF_META_JSON_DATA = utf8:"mj"
+@const PATH_BUF_LEN_REMOVE_TEST = utf8:"_tmp_path_buf_len_remove.txt"
+@const PATH_BUF_LEN_REMOVE_DATA = utf8:"abcd"
+@const PATH_BUF_MODE_DIR = utf8:"_tmp_path_buf_mode_dir"
+@const PATH_BUF_MODE_NEST = utf8:"_tmp_path_buf_mode_dir/nested"
+@const PATH_BUF_B64_TEST = utf8:"_tmp_path_buf_b64.txt"
+@const PATH_BUF_B64_DATA = utf8:"hey"
+@const PATH_BUF_B64_EXPECTED = utf8:"aGV5"
+@const PATH_BUF_OPEN_FLAGS_TEST = utf8:"_tmp_path_buf_open_flags.txt"
+@const PATH_BUF_OPEN_FLAGS_DATA = utf8:"of"
+@const PATH_BUF_UNIX_FILE = utf8:"_tmp_path_buf_unix_file.txt"
+@const PATH_BUF_UNIX_LINK = utf8:"_tmp_path_buf_unix_link.txt"
+@const PATH_BUF_UNIX_FIFO = utf8:"_tmp_path_buf_unix_fifo"
+@const PATH_BUF_UNIX_DIR = utf8:"_tmp_path_buf_unix_dir"
+@const PATH_BUF_UNIX_DATA = utf8:"ux"
+@const PATH_REL = utf8:"tmp/demo"
+@const PATH_ROOT = utf8:"/"
+@const PATH_PREFIX = utf8:"/tmp/demo"
+@const PATH_PREFIX_SLASH = utf8:"/tmp/demo/"
+@const PATH_PREFIX_PARENT = utf8:"/tmp"
+@const PATH_PREFIX_PARTIAL = utf8:"/tmp/de"
+@const PATH_PREFIX_BAD = utf8:"/var"
+@const PATH_CHILD = utf8:"child"
+@const PATH_ABS_CHILD = utf8:"/var/log"
+@const PATH_NEW_FILE = utf8:"other.bin"
+@const PATH_NEW_EXT = utf8:"md"
+@const PATH_NO_EXT = utf8:"/tmp/demo/file"
+@const PATH_MULTI_SEP = utf8:"//tmp//demo/"
+@const EXPECT_BASE = utf8:"file.txt"
+@const EXPECT_DIR = utf8:"/tmp/demo"
+@const EXPECT_STEM = utf8:"file"
+@const EXPECT_EXT = utf8:"txt"
+@const EXPECT_JOINED = utf8:"/tmp/demo/child"
+@const EXPECT_RENAMED = utf8:"/tmp/demo/other.bin"
+@const EXPECT_WITH_EXT = utf8:"/tmp/demo/file.md"
+@const EXPECT_ADDED_EXT = utf8:"/tmp/demo/file.txt.md"
+@const EXPECT_COMPONENT_TMP = utf8:"tmp"
+@const EXPECT_COMPONENT_DEMO = utf8:"demo"
+@const EXPECT_COMPONENT_FILE = utf8:"file.txt"
+@const EXPECT_PREFIX_TMP = utf8:"/tmp"
+@const EXPECT_PREFIX_DEMO = utf8:"/tmp/demo"
+@const PATH_ETC = utf8:"/etc/resolv.conf"
+@const PATH_RESOLV = utf8:"resolv.conf"
+@const PATH_ETC_RESOLV = utf8:"etc/resolv.conf"
+@const PATH_ABS_RESOLV = utf8:"/resolv.conf"
+@const PATH_CONF = utf8:"conf"
+@const PATH_HIDDEN = utf8:".config.toml"
+@const EXPECT_HIDDEN_PREFIX = utf8:".config"
+@const PATH_TEST_FILE = utf8:"_tmp_path_macro_surface.txt"
+@const PATH_TEST_DIR = utf8:"_tmp_path_macro_surface_dir"
+@const PATH_TEST_MISSING = utf8:"_tmp_path_macro_surface_missing"
+@const PATH_TEST_ABSENT = utf8:"_tmp_path_macro_surface_absent"
+@const PATH_TEST_DATA = utf8:"path"
+
+#def PATH_TEST_FILE_LEN = 27
+#def PATH_TEST_DIR_LEN = 27
+#def PATH_TEST_MISSING_LEN = 30
+#def PATH_TEST_ABSENT_LEN = 30
+#def PATH_TEST_DATA_LEN = 4
+
+@test "sa_std path rust parity macros"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS full, &PATH_FULL, 18
+    EXPAND STR_FROM_PARTS rel, &PATH_REL, 8
+    EXPAND STR_FROM_PARTS root, &PATH_ROOT, 1
+    EXPAND STR_FROM_PARTS prefix, &PATH_PREFIX, 9
+    EXPAND STR_FROM_PARTS prefix_slash, &PATH_PREFIX_SLASH, 10
+    EXPAND STR_FROM_PARTS prefix_parent, &PATH_PREFIX_PARENT, 4
+    EXPAND STR_FROM_PARTS prefix_partial, &PATH_PREFIX_PARTIAL, 7
+    EXPAND STR_FROM_PARTS prefix_bad, &PATH_PREFIX_BAD, 4
+    EXPAND STR_FROM_PARTS child, &PATH_CHILD, 5
+    EXPAND STR_FROM_PARTS abs_child, &PATH_ABS_CHILD, 8
+    EXPAND STR_FROM_PARTS new_file, &PATH_NEW_FILE, 9
+    EXPAND STR_FROM_PARTS new_ext, &PATH_NEW_EXT, 2
+    EXPAND STR_FROM_PARTS no_ext, &PATH_NO_EXT, 14
+    EXPAND STR_FROM_PARTS multi_sep, &PATH_MULTI_SEP, 12
+    EXPAND STR_FROM_PARTS expect_base, &EXPECT_BASE, 8
+    EXPAND STR_FROM_PARTS expect_dir, &EXPECT_DIR, 9
+    EXPAND STR_FROM_PARTS expect_stem, &EXPECT_STEM, 4
+    EXPAND STR_FROM_PARTS expect_ext, &EXPECT_EXT, 3
+    EXPAND STR_FROM_PARTS expect_joined, &EXPECT_JOINED, 15
+    EXPAND STR_FROM_PARTS expect_renamed, &EXPECT_RENAMED, 19
+    EXPAND STR_FROM_PARTS expect_with_ext, &EXPECT_WITH_EXT, 17
+    EXPAND STR_FROM_PARTS expect_added_ext, &EXPECT_ADDED_EXT, 21
+    EXPAND STR_FROM_PARTS expect_component_tmp, &EXPECT_COMPONENT_TMP, 3
+    EXPAND STR_FROM_PARTS expect_component_demo, &EXPECT_COMPONENT_DEMO, 4
+    EXPAND STR_FROM_PARTS expect_component_file, &EXPECT_COMPONENT_FILE, 8
+    EXPAND STR_FROM_PARTS expect_prefix_tmp, &EXPECT_PREFIX_TMP, 4
+    EXPAND STR_FROM_PARTS expect_prefix_demo, &EXPECT_PREFIX_DEMO, 9
+
+    EXPAND PATH_BASENAME base, full
+    EXPAND PATH_DIRNAME dir, full
+    EXPAND PATH_PARENT parent, full
+    EXPAND PATH_STEM stem, full
+    EXPAND PATH_FILE_STEM file_stem, full
+    EXPAND PATH_EXT ext, full
+    EXPAND PATH_EXTENSION extension, full
+    EXPAND PATH_IS_ABSOLUTE full_abs, full
+    EXPAND PATH_IS_ABSOLUTE rel_abs, rel
+    EXPAND PATH_HAS_ROOT root_has_root, root
+    EXPAND PATH_ENDS_WITH_SEPARATOR prefix_has_sep, prefix
+    EXPAND PATH_ENDS_WITH_SEPARATOR prefix_slash_has_sep, prefix_slash
+    EXPAND PATH_STARTS_WITH starts_prefix, full, prefix
+    EXPAND PATH_STARTS_WITH starts_prefix_slash, full, prefix_slash
+    EXPAND PATH_STARTS_WITH starts_parent, full, prefix_parent
+    EXPAND PATH_STARTS_WITH starts_partial, full, prefix_partial
+    EXPAND PATH_STARTS_WITH starts_bad, full, prefix_bad
+    EXPAND PATH_TRY_STRIP_PREFIX strip_ok, stripped, full, prefix
+    EXPAND PATH_TRY_STRIP_PREFIX strip_slash_ok, stripped_slash, full, prefix_slash
+    EXPAND PATH_TRY_STRIP_PREFIX strip_bad_ok, stripped_bad, full, prefix_bad
+    EXPAND PATH_JOIN joined, prefix, child
+    EXPAND PATH_JOIN joined_slash, prefix_slash, child
+    EXPAND PATH_JOIN joined_abs, prefix, abs_child
+    EXPAND PATH_JOIN joined_empty_base, stripped_bad, child
+    EXPAND PATH_WITH_FILE_NAME renamed, full, new_file
+    EXPAND PATH_FILE_NAME file_name, full
+    EXPAND PATH_STRIP_EXTENSION stripped_ext, full
+    EXPAND PATH_WITH_EXTENSION with_ext, full, new_ext
+    EXPAND PATH_WITH_EXTENSION with_empty_ext, full, stripped_bad
+    EXPAND PATH_TRIM_PREFIX trim_prefix_hit, full, prefix
+    EXPAND PATH_TRIM_PREFIX trim_prefix_miss, full, prefix_bad
+    EXPAND PATH_TRIM_TRAILING_SEPARATOR trim_sep, prefix_slash
+    EXPAND PATH_TRIM_TRAILING_SEPARATOR trim_root, root
+    EXPAND PATH_WITH_TRAILING_SEPARATOR with_sep, prefix
+    EXPAND PATH_WITH_TRAILING_SEPARATOR with_sep_existing, prefix_slash
+    EXPAND PATH_WITH_ADDED_EXTENSION added_ext, full, new_ext
+    EXPAND PATH_WITH_ADDED_EXTENSION added_empty_ext, full, stripped_bad
+    EXPAND PATH_COMPONENT_COUNT full_components, full
+    EXPAND PATH_COMPONENT_COUNT prefix_slash_components, prefix_slash
+    EXPAND PATH_COMPONENT_COUNT root_components, root
+    EXPAND PATH_COMPONENT_COUNT empty_components, stripped_bad
+    EXPAND PATH_COMPONENT_COUNT multi_sep_components, multi_sep
+    EXPAND PATH_TRY_COMPONENT_AT comp0_ok, comp0, full, 0
+    EXPAND PATH_TRY_COMPONENT_AT comp1_ok, comp1, full, 1
+    EXPAND PATH_TRY_COMPONENT_AT comp2_ok, comp2, full, 2
+    EXPAND PATH_TRY_COMPONENT_AT comp3_ok, comp3, full, 3
+    EXPAND PATH_TRY_COMPONENT_AT multi_comp1_ok, multi_comp1, multi_sep, 1
+    EXPAND PATH_TRY_COMPONENT_PREFIX_AT prefix0_ok, prefix0, full, 0
+    EXPAND PATH_TRY_COMPONENT_PREFIX_AT prefix1_ok, prefix1, full, 1
+    EXPAND PATH_TRY_COMPONENT_PREFIX_AT prefix3_ok, prefix3, full, 3
+
+    EXPAND STR_EQ base_eq, base, expect_base
+    EXPAND STR_EQ dir_eq, dir, expect_dir
+    EXPAND STR_EQ parent_eq, parent, expect_dir
+    EXPAND STR_EQ stem_eq, stem, expect_stem
+    EXPAND STR_EQ file_stem_eq, file_stem, expect_stem
+    EXPAND STR_EQ ext_eq, ext, expect_ext
+    EXPAND STR_EQ extension_eq, extension, expect_ext
+    EXPAND STR_EQ stripped_eq, stripped, expect_base
+    EXPAND STR_EQ stripped_slash_eq, stripped_slash, expect_base
+    EXPAND STR_IS_EMPTY stripped_bad_empty, stripped_bad
+    EXPAND STR_EQ joined_eq, joined, expect_joined
+    EXPAND STR_EQ joined_slash_eq, joined_slash, expect_joined
+    EXPAND STR_EQ joined_abs_eq, joined_abs, abs_child
+    EXPAND STR_EQ joined_empty_base_eq, joined_empty_base, child
+    EXPAND STR_EQ renamed_eq, renamed, expect_renamed
+    EXPAND STR_EQ file_name_eq, file_name, expect_base
+    EXPAND STR_EQ stripped_ext_eq, stripped_ext, no_ext
+    EXPAND STR_EQ with_ext_eq, with_ext, expect_with_ext
+    EXPAND STR_EQ with_empty_ext_eq, with_empty_ext, no_ext
+    EXPAND STR_EQ trim_prefix_hit_eq, trim_prefix_hit, expect_base
+    EXPAND STR_EQ trim_prefix_miss_eq, trim_prefix_miss, full
+    EXPAND STR_EQ trim_sep_eq, trim_sep, prefix
+    EXPAND STR_EQ trim_root_eq, trim_root, root
+    EXPAND STR_EQ with_sep_eq, with_sep, prefix_slash
+    EXPAND STR_EQ with_sep_existing_eq, with_sep_existing, prefix_slash
+    EXPAND STR_EQ added_ext_eq, added_ext, expect_added_ext
+    EXPAND STR_EQ added_empty_ext_eq, added_empty_ext, full
+    EXPAND STR_EQ comp0_eq, comp0, expect_component_tmp
+    EXPAND STR_EQ comp1_eq, comp1, expect_component_demo
+    EXPAND STR_EQ comp2_eq, comp2, expect_component_file
+    EXPAND STR_IS_EMPTY comp3_empty, comp3
+    EXPAND STR_EQ multi_comp1_eq, multi_comp1, expect_component_demo
+    EXPAND STR_EQ prefix0_eq, prefix0, expect_prefix_tmp
+    EXPAND STR_EQ prefix1_eq, prefix1, expect_prefix_demo
+    EXPAND STR_IS_EMPTY prefix3_empty, prefix3
+
+    ok_full_abs = eq full_abs, 1
+    ok_rel_abs = eq rel_abs, 0
+    ok_root = eq root_has_root, 1
+    ok_prefix_sep = eq prefix_has_sep, 0
+    ok_prefix_slash_sep = eq prefix_slash_has_sep, 1
+    ok_starts_prefix = eq starts_prefix, 1
+    ok_starts_prefix_slash = eq starts_prefix_slash, 1
+    ok_starts_parent = eq starts_parent, 1
+    ok_starts_partial = eq starts_partial, 0
+    ok_starts_bad = eq starts_bad, 0
+    ok_strip = eq strip_ok, 1
+    ok_strip_slash = eq strip_slash_ok, 1
+    ok_strip_bad = eq strip_bad_ok, 0
+    full_components_ok = eq full_components, 3
+    prefix_slash_components_ok = eq prefix_slash_components, 2
+    root_components_ok = eq root_components, 0
+    empty_components_ok = eq empty_components, 0
+    multi_sep_components_ok = eq multi_sep_components, 2
+    comp0_status_ok = eq comp0_ok, 1
+    comp1_status_ok = eq comp1_ok, 1
+    comp2_status_ok = eq comp2_ok, 1
+    comp3_status_ok = eq comp3_ok, 0
+    multi_comp1_status_ok = eq multi_comp1_ok, 1
+    prefix0_status_ok = eq prefix0_ok, 1
+    prefix1_status_ok = eq prefix1_ok, 1
+    prefix3_status_ok = eq prefix3_ok, 0
+
+    ok01 = and base_eq, dir_eq
+    ok02 = and ok01, parent_eq
+    ok03 = and ok02, stem_eq
+    ok04 = and ok03, file_stem_eq
+    ok05 = and ok04, ext_eq
+    ok06 = and ok05, extension_eq
+    ok07 = and ok06, ok_full_abs
+    ok08 = and ok07, ok_rel_abs
+    ok09 = and ok08, ok_root
+    ok10 = and ok09, ok_prefix_sep
+    ok11 = and ok10, ok_prefix_slash_sep
+    ok12 = and ok11, ok_starts_prefix
+    ok13 = and ok12, ok_starts_prefix_slash
+    ok14 = and ok13, ok_starts_parent
+    ok15 = and ok14, ok_starts_partial
+    ok16 = and ok15, ok_starts_bad
+    ok17 = and ok16, ok_strip
+    ok18 = and ok17, stripped_eq
+    ok19 = and ok18, ok_strip_slash
+    ok20 = and ok19, stripped_slash_eq
+    ok21 = and ok20, ok_strip_bad
+    ok22 = and ok21, stripped_bad_empty
+    ok23 = and ok22, joined_eq
+    ok24 = and ok23, joined_slash_eq
+    ok25 = and ok24, joined_abs_eq
+    ok26 = and ok25, joined_empty_base_eq
+    ok27 = and ok26, renamed_eq
+    ok28 = and ok27, file_name_eq
+    ok29 = and ok28, stripped_ext_eq
+    ok30 = and ok29, with_ext_eq
+    ok31 = and ok30, with_empty_ext_eq
+    ok32 = and ok31, full_components_ok
+    ok33 = and ok32, prefix_slash_components_ok
+    ok34 = and ok33, root_components_ok
+    ok35 = and ok34, empty_components_ok
+    ok36 = and ok35, multi_sep_components_ok
+    ok37 = and ok36, comp0_status_ok
+    ok38 = and ok37, comp0_eq
+    ok39 = and ok38, comp1_status_ok
+    ok40 = and ok39, comp1_eq
+    ok41 = and ok40, comp2_status_ok
+    ok42 = and ok41, comp2_eq
+    ok43 = and ok42, comp3_status_ok
+    ok44 = and ok43, comp3_empty
+    ok45 = and ok44, multi_comp1_status_ok
+    ok46 = and ok45, multi_comp1_eq
+    ok47 = and ok46, prefix0_status_ok
+    ok48 = and ok47, prefix0_eq
+    ok49 = and ok48, prefix1_status_ok
+    ok50 = and ok49, prefix1_eq
+    ok51 = and ok50, prefix3_status_ok
+    ok52 = and ok51, prefix3_empty
+    ok53 = and ok52, trim_prefix_hit_eq
+    ok54 = and ok53, trim_prefix_miss_eq
+    ok55 = and ok54, trim_sep_eq
+    ok56 = and ok55, trim_root_eq
+    ok57 = and ok56, with_sep_eq
+    ok58 = and ok57, with_sep_existing_eq
+    ok59 = and ok58, added_ext_eq
+    ok = and ok59, added_empty_ext_eq
+
+    !base_eq
+    !dir_eq
+    !parent_eq
+    !stem_eq
+    !file_stem_eq
+    !ext_eq
+    !extension_eq
+    !stripped_eq
+    !stripped_slash_eq
+    !stripped_bad_empty
+    !joined_eq
+    !joined_slash_eq
+    !joined_abs_eq
+    !joined_empty_base_eq
+    !renamed_eq
+    !file_name_eq
+    !stripped_ext_eq
+    !with_ext_eq
+    !with_empty_ext_eq
+    !trim_prefix_hit_eq
+    !trim_prefix_miss_eq
+    !trim_sep_eq
+    !trim_root_eq
+    !with_sep_eq
+    !with_sep_existing_eq
+    !added_ext_eq
+    !added_empty_ext_eq
+    !comp0_eq
+    !comp1_eq
+    !comp2_eq
+    !comp3_empty
+    !multi_comp1_eq
+    !prefix0_eq
+    !prefix1_eq
+    !prefix3_empty
+    !full_abs
+    !rel_abs
+    !root_has_root
+    !prefix_has_sep
+    !prefix_slash_has_sep
+    !starts_prefix
+    !starts_prefix_slash
+    !starts_parent
+    !starts_partial
+    !starts_bad
+    !strip_ok
+    !strip_slash_ok
+    !strip_bad_ok
+    !ok_full_abs
+    !ok_rel_abs
+    !ok_root
+    !ok_prefix_sep
+    !ok_prefix_slash_sep
+    !ok_starts_prefix
+    !ok_starts_prefix_slash
+    !ok_starts_parent
+    !ok_starts_partial
+    !ok_starts_bad
+    !ok_strip
+    !ok_strip_slash
+    !ok_strip_bad
+    !full_components
+    !prefix_slash_components
+    !root_components
+    !empty_components
+    !multi_sep_components
+    !comp0_ok
+    !comp1_ok
+    !comp2_ok
+    !comp3_ok
+    !multi_comp1_ok
+    !prefix0_ok
+    !prefix1_ok
+    !prefix3_ok
+    !full_components_ok
+    !prefix_slash_components_ok
+    !root_components_ok
+    !empty_components_ok
+    !multi_sep_components_ok
+    !comp0_status_ok
+    !comp1_status_ok
+    !comp2_status_ok
+    !comp3_status_ok
+    !multi_comp1_status_ok
+    !prefix0_status_ok
+    !prefix1_status_ok
+    !prefix3_status_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    !ok47
+    !ok48
+    !ok49
+    !ok50
+    !ok51
+    !ok52
+    !ok53
+    !ok54
+    !ok55
+    !ok56
+    !ok57
+    !ok58
+    !ok59
+    !prefix3
+    !prefix1
+    !prefix0
+    !multi_comp1
+    !comp3
+    !comp2
+    !comp1
+    !comp0
+    !with_empty_ext
+    !with_ext
+    !added_empty_ext
+    !added_ext
+    !with_sep_existing
+    !with_sep
+    !trim_root
+    !trim_sep
+    !trim_prefix_miss
+    !trim_prefix_hit
+    !stripped_ext
+    !file_name
+    !renamed
+    !joined_empty_base
+    !joined_abs
+    !joined_slash
+    !joined
+    !stripped_bad
+    !stripped_slash
+    !stripped
+    !extension
+    !ext
+    !file_stem
+    !stem
+    !parent
+    !dir
+    !base
+    !expect_renamed
+    !expect_with_ext
+    !expect_added_ext
+    !expect_prefix_demo
+    !expect_prefix_tmp
+    !expect_component_file
+    !expect_component_demo
+    !expect_component_tmp
+    !expect_joined
+    !expect_ext
+    !expect_stem
+    !expect_dir
+    !expect_base
+    !new_file
+    !no_ext
+    !new_ext
+    !multi_sep
+    !abs_child
+    !child
+    !prefix_bad
+    !prefix_partial
+    !prefix_parent
+    !prefix_slash
+    !prefix
+    !root
+    !rel
+    !full
+    br ok -> L_PATH_OK, L_PATH_FAIL
+
+L_PATH_FAIL:
+    !ok
+    panic(10184)
+
+L_PATH_OK:
+    !ok
+    return
+
+@test "sa_std path query and ancestor macros"():
+L_PATH_QUERY_ENTRY:
+    EXPAND STR_FROM_PARTS full, &PATH_FULL, 18
+    EXPAND STR_FROM_PARTS rel, &PATH_REL, 8
+    EXPAND STR_FROM_PARTS root, &PATH_ROOT, 1
+    EXPAND STR_FROM_PARTS empty, &PATH_ROOT, 0
+    EXPAND STR_FROM_PARTS etc, &PATH_ETC, 16
+    EXPAND STR_FROM_PARTS resolv, &PATH_RESOLV, 11
+    EXPAND STR_FROM_PARTS etc_resolv, &PATH_ETC_RESOLV, 15
+    EXPAND STR_FROM_PARTS abs_resolv, &PATH_ABS_RESOLV, 12
+    EXPAND STR_FROM_PARTS conf, &PATH_CONF, 4
+    EXPAND STR_FROM_PARTS hidden, &PATH_HIDDEN, 12
+    EXPAND STR_FROM_PARTS expect_stem, &EXPECT_STEM, 4
+    EXPAND STR_FROM_PARTS expect_hidden_prefix, &EXPECT_HIDDEN_PREFIX, 7
+    EXPAND STR_FROM_PARTS expect_full_parent, &EXPECT_PREFIX_DEMO, 9
+    EXPAND STR_FROM_PARTS expect_full_grandparent, &EXPECT_PREFIX_TMP, 4
+    EXPAND STR_FROM_PARTS expect_rel_parent, &EXPECT_COMPONENT_TMP, 3
+
+    EXPAND PATH_IS_RELATIVE full_rel, full
+    EXPAND PATH_IS_RELATIVE rel_rel, rel
+    EXPAND PATH_IS_EMPTY full_empty, full
+    EXPAND PATH_IS_EMPTY empty_empty, empty
+    EXPAND PATH_ENDS_WITH ends_resolv, etc, resolv
+    EXPAND PATH_ENDS_WITH ends_etc_resolv, etc, etc_resolv
+    EXPAND PATH_ENDS_WITH ends_abs_self, etc, etc
+    EXPAND PATH_ENDS_WITH ends_abs_resolv, etc, abs_resolv
+    EXPAND PATH_ENDS_WITH ends_conf, etc, conf
+    EXPAND PATH_ENDS_WITH ends_empty, etc, empty
+    EXPAND PATH_FILE_PREFIX full_prefix, full
+    EXPAND PATH_FILE_PREFIX hidden_prefix, hidden
+    EXPAND PATH_ANCESTOR_COUNT full_ancestor_count, full
+    EXPAND PATH_ANCESTOR_COUNT rel_ancestor_count, rel
+    EXPAND PATH_ANCESTOR_COUNT root_ancestor_count, root
+    EXPAND PATH_ANCESTOR_COUNT empty_ancestor_count, empty
+    EXPAND PATH_TRY_ANCESTOR_AT full_a0_ok, full_a0, full, 0
+    EXPAND PATH_TRY_ANCESTOR_AT full_a1_ok, full_a1, full, 1
+    EXPAND PATH_TRY_ANCESTOR_AT full_a2_ok, full_a2, full, 2
+    EXPAND PATH_TRY_ANCESTOR_AT full_a3_ok, full_a3, full, 3
+    EXPAND PATH_TRY_ANCESTOR_AT full_a4_ok, full_a4, full, 4
+    EXPAND PATH_TRY_ANCESTOR_AT rel_a1_ok, rel_a1, rel, 1
+    EXPAND PATH_TRY_ANCESTOR_AT rel_a2_ok, rel_a2, rel, 2
+
+    EXPAND STR_EQ full_prefix_eq, full_prefix, expect_stem
+    EXPAND STR_EQ hidden_prefix_eq, hidden_prefix, expect_hidden_prefix
+    EXPAND STR_EQ full_a0_eq, full_a0, full
+    EXPAND STR_EQ full_a1_eq, full_a1, expect_full_parent
+    EXPAND STR_EQ full_a2_eq, full_a2, expect_full_grandparent
+    EXPAND STR_EQ full_a3_eq, full_a3, root
+    EXPAND STR_IS_EMPTY full_a4_empty, full_a4
+    EXPAND STR_EQ rel_a1_eq, rel_a1, expect_rel_parent
+    EXPAND STR_IS_EMPTY rel_a2_empty, rel_a2
+
+    ok_full_rel = eq full_rel, 0
+    ok_rel_rel = eq rel_rel, 1
+    ok_full_empty = eq full_empty, 0
+    ok_empty_empty = eq empty_empty, 1
+    ok_ends_resolv = eq ends_resolv, 1
+    ok_ends_etc_resolv = eq ends_etc_resolv, 1
+    ok_ends_abs_self = eq ends_abs_self, 1
+    ok_ends_abs_resolv = eq ends_abs_resolv, 0
+    ok_ends_conf = eq ends_conf, 0
+    ok_ends_empty = eq ends_empty, 1
+    ok_full_ancestor_count = eq full_ancestor_count, 4
+    ok_rel_ancestor_count = eq rel_ancestor_count, 3
+    ok_root_ancestor_count = eq root_ancestor_count, 1
+    ok_empty_ancestor_count = eq empty_ancestor_count, 1
+    ok_full_a0_status = eq full_a0_ok, 1
+    ok_full_a1_status = eq full_a1_ok, 1
+    ok_full_a2_status = eq full_a2_ok, 1
+    ok_full_a3_status = eq full_a3_ok, 1
+    ok_full_a4_status = eq full_a4_ok, 0
+    ok_rel_a1_status = eq rel_a1_ok, 1
+    ok_rel_a2_status = eq rel_a2_ok, 1
+
+    q01 = and ok_full_rel, ok_rel_rel
+    q02 = and q01, ok_full_empty
+    q03 = and q02, ok_empty_empty
+    q04 = and q03, ok_ends_resolv
+    q05 = and q04, ok_ends_etc_resolv
+    q06 = and q05, ok_ends_abs_self
+    q07 = and q06, ok_ends_abs_resolv
+    q08 = and q07, ok_ends_conf
+    q09 = and q08, ok_ends_empty
+    q10 = and q09, full_prefix_eq
+    q11 = and q10, hidden_prefix_eq
+    q12 = and q11, ok_full_ancestor_count
+    q13 = and q12, ok_rel_ancestor_count
+    q14 = and q13, ok_root_ancestor_count
+    q15 = and q14, ok_empty_ancestor_count
+    q16 = and q15, ok_full_a0_status
+    q17 = and q16, full_a0_eq
+    q18 = and q17, ok_full_a1_status
+    q19 = and q18, full_a1_eq
+    q20 = and q19, ok_full_a2_status
+    q21 = and q20, full_a2_eq
+    q22 = and q21, ok_full_a3_status
+    q23 = and q22, full_a3_eq
+    q24 = and q23, ok_full_a4_status
+    q25 = and q24, full_a4_empty
+    q26 = and q25, ok_rel_a1_status
+    q27 = and q26, rel_a1_eq
+    q28 = and q27, ok_rel_a2_status
+    ok = and q28, rel_a2_empty
+
+    !full_rel
+    !rel_rel
+    !full_empty
+    !empty_empty
+    !ends_resolv
+    !ends_etc_resolv
+    !ends_abs_self
+    !ends_abs_resolv
+    !ends_conf
+    !ends_empty
+    !full_ancestor_count
+    !rel_ancestor_count
+    !root_ancestor_count
+    !empty_ancestor_count
+    !full_a0_ok
+    !full_a1_ok
+    !full_a2_ok
+    !full_a3_ok
+    !full_a4_ok
+    !rel_a1_ok
+    !rel_a2_ok
+    !full_prefix_eq
+    !hidden_prefix_eq
+    !full_a0_eq
+    !full_a1_eq
+    !full_a2_eq
+    !full_a3_eq
+    !full_a4_empty
+    !rel_a1_eq
+    !rel_a2_empty
+    !ok_full_rel
+    !ok_rel_rel
+    !ok_full_empty
+    !ok_empty_empty
+    !ok_ends_resolv
+    !ok_ends_etc_resolv
+    !ok_ends_abs_self
+    !ok_ends_abs_resolv
+    !ok_ends_conf
+    !ok_ends_empty
+    !ok_full_ancestor_count
+    !ok_rel_ancestor_count
+    !ok_root_ancestor_count
+    !ok_empty_ancestor_count
+    !ok_full_a0_status
+    !ok_full_a1_status
+    !ok_full_a2_status
+    !ok_full_a3_status
+    !ok_full_a4_status
+    !ok_rel_a1_status
+    !ok_rel_a2_status
+    !q01
+    !q02
+    !q03
+    !q04
+    !q05
+    !q06
+    !q07
+    !q08
+    !q09
+    !q10
+    !q11
+    !q12
+    !q13
+    !q14
+    !q15
+    !q16
+    !q17
+    !q18
+    !q19
+    !q20
+    !q21
+    !q22
+    !q23
+    !q24
+    !q25
+    !q26
+    !q27
+    !q28
+    !rel_a2
+    !rel_a1
+    !full_a4
+    !full_a3
+    !full_a2
+    !full_a1
+    !full_a0
+    !hidden_prefix
+    !full_prefix
+    !expect_rel_parent
+    !expect_full_grandparent
+    !expect_full_parent
+    !expect_hidden_prefix
+    !expect_stem
+    !hidden
+    !conf
+    !abs_resolv
+    !etc_resolv
+    !resolv
+    !etc
+    !empty
+    !root
+    !rel
+    !full
+    br ok -> L_PATH_QUERY_OK, L_PATH_QUERY_FAIL
+
+L_PATH_QUERY_FAIL:
+    !ok
+    panic(10185)
+
+L_PATH_QUERY_OK:
+    !ok
+    return
+
+@test "sa_std path try option-style query macros"():
+L_PATH_TRY_ENTRY:
+    EXPAND STR_FROM_PARTS full, &PATH_FULL, 18
+    EXPAND STR_FROM_PARTS root, &PATH_ROOT, 1
+    EXPAND STR_FROM_PARTS empty, &PATH_ROOT, 0
+    EXPAND STR_FROM_PARTS child, &PATH_CHILD, 5
+    EXPAND STR_FROM_PARTS no_ext, &PATH_NO_EXT, 14
+    EXPAND STR_FROM_PARTS hidden, &PATH_HIDDEN, 12
+    invalid_path_data = stack_alloc 2
+    store invalid_path_data+0, 195 as u8
+    store invalid_path_data+1, 40 as u8
+    EXPAND STR_FROM_PARTS invalid_path, invalid_path_data, 2
+    EXPAND STR_FROM_PARTS expect_base, &EXPECT_BASE, 8
+    EXPAND STR_FROM_PARTS expect_ext, &EXPECT_EXT, 3
+    EXPAND STR_FROM_PARTS expect_stem, &EXPECT_STEM, 4
+    EXPAND STR_FROM_PARTS expect_dir, &EXPECT_DIR, 9
+    EXPAND STR_FROM_PARTS expect_hidden_prefix, &EXPECT_HIDDEN_PREFIX, 7
+
+    EXPAND PATH_TRY_FILE_NAME full_name_ok, full_name, full
+    EXPAND PATH_TRY_EXTENSION full_ext_ok, full_ext, full
+    EXPAND PATH_TRY_FILE_STEM full_stem_ok, full_stem, full
+    EXPAND PATH_TRY_PARENT full_parent_ok, full_parent, full
+    EXPAND PATH_TRY_FILE_NAME root_name_ok, root_name, root
+    EXPAND PATH_TRY_PARENT root_parent_ok, root_parent, root
+    EXPAND PATH_TRY_FILE_NAME empty_name_ok, empty_name, empty
+    EXPAND PATH_TRY_PARENT empty_parent_ok, empty_parent, empty
+    EXPAND PATH_TRY_EXTENSION no_ext_ok, no_ext_value, no_ext
+    EXPAND PATH_TRY_FILE_STEM no_ext_stem_ok, no_ext_stem, no_ext
+    EXPAND PATH_TRY_PARENT child_parent_ok, child_parent, child
+    EXPAND PATH_TRY_FILE_PREFIX full_prefix_ok, full_prefix, full
+    EXPAND PATH_TRY_FILE_PREFIX hidden_prefix_ok, hidden_prefix, hidden
+    EXPAND PATH_TRY_FILE_PREFIX root_prefix_ok, root_prefix, root
+    EXPAND PATH_TRY_TO_STR full_to_str_ok, full_to_str, full
+    EXPAND PATH_TRY_TO_STR empty_to_str_ok, empty_to_str, empty
+    EXPAND PATH_TRY_TO_STR invalid_to_str_ok, invalid_to_str, invalid_path
+
+    EXPAND STR_EQ full_name_eq, full_name, expect_base
+    EXPAND STR_EQ full_ext_eq, full_ext, expect_ext
+    EXPAND STR_EQ full_stem_eq, full_stem, expect_stem
+    EXPAND STR_EQ full_parent_eq, full_parent, expect_dir
+    EXPAND STR_IS_EMPTY root_name_empty, root_name
+    EXPAND STR_IS_EMPTY root_parent_empty, root_parent
+    EXPAND STR_IS_EMPTY empty_name_empty, empty_name
+    EXPAND STR_IS_EMPTY empty_parent_empty, empty_parent
+    EXPAND STR_IS_EMPTY no_ext_empty, no_ext_value
+    EXPAND STR_EQ no_ext_stem_eq, no_ext_stem, expect_stem
+    EXPAND STR_IS_EMPTY child_parent_empty, child_parent
+    EXPAND STR_EQ full_prefix_eq, full_prefix, expect_stem
+    EXPAND STR_EQ hidden_prefix_eq, hidden_prefix, expect_hidden_prefix
+    EXPAND STR_IS_EMPTY root_prefix_empty, root_prefix
+    EXPAND STR_EQ full_to_str_eq, full_to_str, full
+    EXPAND STR_IS_EMPTY empty_to_str_empty, empty_to_str
+    EXPAND STR_IS_EMPTY invalid_to_str_empty, invalid_to_str
+
+    ok_full_name_flag = eq full_name_ok, 1
+    ok_full_ext_flag = eq full_ext_ok, 1
+    ok_full_stem_flag = eq full_stem_ok, 1
+    ok_full_parent_flag = eq full_parent_ok, 1
+    ok_root_name_flag = eq root_name_ok, 0
+    ok_root_parent_flag = eq root_parent_ok, 0
+    ok_empty_name_flag = eq empty_name_ok, 0
+    ok_empty_parent_flag = eq empty_parent_ok, 0
+    ok_no_ext_flag = eq no_ext_ok, 0
+    ok_no_ext_stem_flag = eq no_ext_stem_ok, 1
+    ok_child_parent_flag = eq child_parent_ok, 1
+    ok_full_prefix_flag = eq full_prefix_ok, 1
+    ok_hidden_prefix_flag = eq hidden_prefix_ok, 1
+    ok_root_prefix_flag = eq root_prefix_ok, 0
+    ok_full_to_str_flag = eq full_to_str_ok, 1
+    ok_empty_to_str_flag = eq empty_to_str_ok, 1
+    ok_invalid_to_str_flag = eq invalid_to_str_ok, 0
+
+    q01 = and ok_full_name_flag, full_name_eq
+    q02 = and q01, ok_full_ext_flag
+    q03 = and q02, full_ext_eq
+    q04 = and q03, ok_full_stem_flag
+    q05 = and q04, full_stem_eq
+    q06 = and q05, ok_full_parent_flag
+    q07 = and q06, full_parent_eq
+    q08 = and q07, ok_root_name_flag
+    q09 = and q08, root_name_empty
+    q10 = and q09, ok_root_parent_flag
+    q11 = and q10, root_parent_empty
+    q12 = and q11, ok_empty_name_flag
+    q13 = and q12, empty_name_empty
+    q14 = and q13, ok_empty_parent_flag
+    q15 = and q14, empty_parent_empty
+    q16 = and q15, ok_no_ext_flag
+    q17 = and q16, no_ext_empty
+    q18 = and q17, ok_no_ext_stem_flag
+    q19 = and q18, no_ext_stem_eq
+    q20 = and q19, ok_child_parent_flag
+    q21 = and q20, child_parent_empty
+    q22 = and q21, ok_full_prefix_flag
+    q23 = and q22, full_prefix_eq
+    q24 = and q23, ok_hidden_prefix_flag
+    q25 = and q24, hidden_prefix_eq
+    q26 = and q25, ok_root_prefix_flag
+    q27 = and q26, root_prefix_empty
+    q28 = and q27, ok_full_to_str_flag
+    q29 = and q28, full_to_str_eq
+    q30 = and q29, ok_empty_to_str_flag
+    q31 = and q30, empty_to_str_empty
+    q32 = and q31, ok_invalid_to_str_flag
+    ok = and q32, invalid_to_str_empty
+
+    !full_name_ok
+    !full_ext_ok
+    !full_stem_ok
+    !full_parent_ok
+    !root_name_ok
+    !root_parent_ok
+    !empty_name_ok
+    !empty_parent_ok
+    !no_ext_ok
+    !no_ext_stem_ok
+    !child_parent_ok
+    !full_prefix_ok
+    !hidden_prefix_ok
+    !root_prefix_ok
+    !full_to_str_ok
+    !empty_to_str_ok
+    !invalid_to_str_ok
+    !full_name_eq
+    !full_ext_eq
+    !full_stem_eq
+    !full_parent_eq
+    !root_name_empty
+    !root_parent_empty
+    !empty_name_empty
+    !empty_parent_empty
+    !no_ext_empty
+    !no_ext_stem_eq
+    !child_parent_empty
+    !full_prefix_eq
+    !hidden_prefix_eq
+    !root_prefix_empty
+    !full_to_str_eq
+    !empty_to_str_empty
+    !invalid_to_str_empty
+    !ok_full_name_flag
+    !ok_full_ext_flag
+    !ok_full_stem_flag
+    !ok_full_parent_flag
+    !ok_root_name_flag
+    !ok_root_parent_flag
+    !ok_empty_name_flag
+    !ok_empty_parent_flag
+    !ok_no_ext_flag
+    !ok_no_ext_stem_flag
+    !ok_child_parent_flag
+    !ok_full_prefix_flag
+    !ok_hidden_prefix_flag
+    !ok_root_prefix_flag
+    !ok_full_to_str_flag
+    !ok_empty_to_str_flag
+    !ok_invalid_to_str_flag
+    !q01
+    !q02
+    !q03
+    !q04
+    !q05
+    !q06
+    !q07
+    !q08
+    !q09
+    !q10
+    !q11
+    !q12
+    !q13
+    !q14
+    !q15
+    !q16
+    !q17
+    !q18
+    !q19
+    !q20
+    !q21
+    !q22
+    !q23
+    !q24
+    !q25
+    !q26
+    !q27
+    !q28
+    !q29
+    !q30
+    !q31
+    !q32
+    !invalid_to_str
+    !empty_to_str
+    !full_to_str
+    !root_prefix
+    !hidden_prefix
+    !full_prefix
+    !child_parent
+    !no_ext_stem
+    !no_ext_value
+    !empty_parent
+    !empty_name
+    !root_parent
+    !root_name
+    !full_parent
+    !full_stem
+    !full_ext
+    !full_name
+    !expect_dir
+    !expect_stem
+    !expect_ext
+    !expect_base
+    !expect_hidden_prefix
+    !invalid_path
+    !hidden
+    !no_ext
+    !child
+    !empty
+    !root
+    !full
+    br ok -> L_PATH_TRY_OK, L_PATH_TRY_FAIL
+
+L_PATH_TRY_FAIL:
+    !ok
+    panic(10186)
+
+L_PATH_TRY_OK:
+    !ok
+    return
+
+@test "sa_std path filesystem query macros"():
+L_PATH_FS_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_file_status, PATH_TEST_FILE, PATH_TEST_FILE_LEN
+    EXPAND FS_REMOVE_PATH cleanup_dir_status, PATH_TEST_DIR, PATH_TEST_DIR_LEN
+    EXPAND FS_REMOVE_PATH cleanup_link_status, PATH_TEST_MISSING, PATH_TEST_MISSING_LEN
+    EXPAND FS_REMOVE_PATH cleanup_absent_status, PATH_TEST_ABSENT, PATH_TEST_ABSENT_LEN
+
+    EXPAND FS_WRITE_FILE write_status, PATH_TEST_FILE, PATH_TEST_FILE_LEN, PATH_TEST_DATA, PATH_TEST_DATA_LEN
+    EXPAND FS_MAKE_DIR mkdir_status, PATH_TEST_DIR, PATH_TEST_DIR_LEN
+    EXPAND FS_SYMLINK symlink_status, PATH_TEST_FILE, PATH_TEST_FILE_LEN, PATH_TEST_MISSING, PATH_TEST_MISSING_LEN
+
+    EXPAND STR_FROM_PARTS file_path, &PATH_TEST_FILE, PATH_TEST_FILE_LEN
+    EXPAND STR_FROM_PARTS dir_path, &PATH_TEST_DIR, PATH_TEST_DIR_LEN
+    EXPAND STR_FROM_PARTS link_path, &PATH_TEST_MISSING, PATH_TEST_MISSING_LEN
+    EXPAND STR_FROM_PARTS absent_path, &PATH_TEST_ABSENT, PATH_TEST_ABSENT_LEN
+
+    EXPAND PATH_EXISTS file_exists, file_path
+    EXPAND PATH_EXISTS dir_exists, dir_path
+    EXPAND PATH_EXISTS missing_exists, absent_path
+    EXPAND PATH_TRY_EXISTS file_try_status, file_try_exists, file_path
+    EXPAND PATH_TRY_EXISTS missing_try_status, missing_try_exists, absent_path
+    EXPAND PATH_METADATA file_metadata_status, file_metadata, file_path
+    EXPAND FS_METADATA_IS_FILE file_metadata_is_file, file_metadata
+    EXPAND FS_METADATA_FREE file_metadata_free_status, file_metadata
+    EXPAND PATH_CANONICALIZE canonical_status, canonical_buffer, file_path
+    EXPAND FS_READ_BUFFER_LEN canonical_len, canonical_buffer
+    EXPAND FS_READ_BUFFER_FREE canonical_free_status, canonical_buffer
+    EXPAND PATH_READ_LINK read_link_status, read_link_buffer, link_path
+    EXPAND FS_READ_BUFFER_LEN read_link_len, read_link_buffer
+    EXPAND FS_READ_BUFFER_FREE read_link_free_status, read_link_buffer
+    EXPAND PATH_IS_FILE file_is_file, file_path
+    EXPAND PATH_IS_DIR file_is_dir, file_path
+    EXPAND PATH_IS_SYMLINK file_is_symlink, file_path
+    EXPAND PATH_IS_FILE dir_is_file, dir_path
+    EXPAND PATH_IS_DIR dir_is_dir, dir_path
+    EXPAND PATH_IS_SYMLINK dir_is_symlink, dir_path
+    EXPAND PATH_IS_FILE missing_is_file, absent_path
+    EXPAND PATH_IS_DIR missing_is_dir, absent_path
+    EXPAND PATH_IS_SYMLINK missing_is_symlink, absent_path
+
+    ok_write_status = eq write_status, 0
+    ok_mkdir_status = eq mkdir_status, 0
+    ok_symlink_status = eq symlink_status, 0
+    ok_file_exists = eq file_exists, 1
+    ok_dir_exists = eq dir_exists, 1
+    ok_missing_exists = eq missing_exists, 0
+    ok_file_try_status = eq file_try_status, 0
+    ok_file_try_exists = eq file_try_exists, 1
+    ok_missing_try_status = eq missing_try_status, 0
+    ok_missing_try_exists = eq missing_try_exists, 0
+    ok_file_metadata_status = eq file_metadata_status, 0
+    ok_file_metadata_is_file = eq file_metadata_is_file, 1
+    ok_file_metadata_free_status = eq file_metadata_free_status, 0
+    ok_canonical_status = eq canonical_status, 0
+    ok_canonical_len = ne canonical_len, 0
+    ok_canonical_free_status = eq canonical_free_status, 0
+    ok_read_link_status = eq read_link_status, 0
+    ok_read_link_len = eq read_link_len, PATH_TEST_FILE_LEN
+    ok_read_link_free_status = eq read_link_free_status, 0
+    ok_file_is_file = eq file_is_file, 1
+    ok_file_is_dir = eq file_is_dir, 0
+    ok_file_is_symlink = eq file_is_symlink, 0
+    ok_dir_is_file = eq dir_is_file, 0
+    ok_dir_is_dir = eq dir_is_dir, 1
+    ok_dir_is_symlink = eq dir_is_symlink, 0
+    ok_missing_is_file = eq missing_is_file, 0
+    ok_missing_is_dir = eq missing_is_dir, 0
+    ok_missing_is_symlink = eq missing_is_symlink, 0
+
+    q01 = and ok_write_status, ok_mkdir_status
+    q02 = and q01, ok_symlink_status
+    q03 = and q02, ok_file_exists
+    q04 = and q03, ok_dir_exists
+    q05 = and q04, ok_missing_exists
+    q06 = and q05, ok_file_try_status
+    q07 = and q06, ok_file_try_exists
+    q08 = and q07, ok_missing_try_status
+    q09 = and q08, ok_missing_try_exists
+    q10 = and q09, ok_file_metadata_status
+    q11 = and q10, ok_file_metadata_is_file
+    q12 = and q11, ok_file_metadata_free_status
+    q13 = and q12, ok_canonical_status
+    q14 = and q13, ok_canonical_len
+    q15 = and q14, ok_canonical_free_status
+    q16 = and q15, ok_read_link_status
+    q17 = and q16, ok_read_link_len
+    q18 = and q17, ok_read_link_free_status
+    q19 = and q18, ok_file_is_file
+    q20 = and q19, ok_file_is_dir
+    q21 = and q20, ok_file_is_symlink
+    q22 = and q21, ok_dir_is_file
+    q23 = and q22, ok_dir_is_dir
+    q24 = and q23, ok_dir_is_symlink
+    q25 = and q24, ok_missing_is_file
+    q26 = and q25, ok_missing_is_dir
+    ok = and q26, ok_missing_is_symlink
+
+    EXPAND FS_REMOVE_PATH remove_file_status, PATH_TEST_FILE, PATH_TEST_FILE_LEN
+    EXPAND FS_REMOVE_PATH remove_dir_status, PATH_TEST_DIR, PATH_TEST_DIR_LEN
+    EXPAND FS_REMOVE_PATH remove_link_status, PATH_TEST_MISSING, PATH_TEST_MISSING_LEN
+
+    !cleanup_file_status
+    !cleanup_dir_status
+    !cleanup_link_status
+    !cleanup_absent_status
+    !write_status
+    !mkdir_status
+    !symlink_status
+    !file_exists
+    !dir_exists
+    !missing_exists
+    !file_try_status
+    !file_try_exists
+    !missing_try_status
+    !missing_try_exists
+    !file_metadata_status
+    !file_metadata
+    !file_metadata_is_file
+    !file_metadata_free_status
+    !canonical_status
+    !canonical_len
+    !canonical_free_status
+    !read_link_status
+    !read_link_len
+    !read_link_free_status
+    !file_is_file
+    !file_is_dir
+    !file_is_symlink
+    !dir_is_file
+    !dir_is_dir
+    !dir_is_symlink
+    !missing_is_file
+    !missing_is_dir
+    !missing_is_symlink
+    !ok_write_status
+    !ok_mkdir_status
+    !ok_symlink_status
+    !ok_file_exists
+    !ok_dir_exists
+    !ok_missing_exists
+    !ok_file_try_status
+    !ok_file_try_exists
+    !ok_missing_try_status
+    !ok_missing_try_exists
+    !ok_file_metadata_status
+    !ok_file_metadata_is_file
+    !ok_file_metadata_free_status
+    !ok_canonical_status
+    !ok_canonical_len
+    !ok_canonical_free_status
+    !ok_read_link_status
+    !ok_read_link_len
+    !ok_read_link_free_status
+    !ok_file_is_file
+    !ok_file_is_dir
+    !ok_file_is_symlink
+    !ok_dir_is_file
+    !ok_dir_is_dir
+    !ok_dir_is_symlink
+    !ok_missing_is_file
+    !ok_missing_is_dir
+    !ok_missing_is_symlink
+    !q01
+    !q02
+    !q03
+    !q04
+    !q05
+    !q06
+    !q07
+    !q08
+    !q09
+    !q10
+    !q11
+    !q12
+    !q13
+    !q14
+    !q15
+    !q16
+    !q17
+    !q18
+    !q19
+    !q20
+    !q21
+    !q22
+    !q23
+    !q24
+    !q25
+    !q26
+    !remove_file_status
+    !remove_dir_status
+    !remove_link_status
+    !absent_path
+    !link_path
+    !dir_path
+    !file_path
+    br ok -> L_PATH_FS_OK, L_PATH_FS_FAIL
+
+L_PATH_FS_FAIL:
+    !ok
+    panic(10187)
+
+L_PATH_FS_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf owned macros"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS base, &PATH_PREFIX, 9
+    EXPAND STR_FROM_PARTS child, &PATH_CHILD, 5
+    EXPAND STR_FROM_PARTS abs_child, &PATH_ABS_CHILD, 8
+    EXPAND STR_FROM_PARTS new_file, &PATH_NEW_FILE, 9
+    EXPAND STR_FROM_PARTS new_ext, &PATH_NEW_EXT, 2
+    EXPAND STR_FROM_PARTS expect_joined, &EXPECT_JOINED, 15
+    EXPAND STR_FROM_PARTS expect_renamed, &EXPECT_RENAMED, 19
+    EXPAND STR_FROM_PARTS expect_with_ext, &EXPECT_WITH_EXT, 17
+    EXPAND STR_FROM_PARTS expect_dir, &EXPECT_DIR, 9
+    EXPAND STR_FROM_PARTS full, &PATH_FULL, 18
+
+    EXPAND PATH_BUF_NEW empty_buf
+    EXPAND PATH_BUF_IS_EMPTY empty0, empty_buf
+    empty0_ok = eq empty0, 1
+    EXPAND PATH_BUF_LEN len0, empty_buf
+    len0_ok = eq len0, 0
+
+    EXPAND PATH_BUF_FROM_PATH buf, base
+    EXPAND PATH_BUF_LEN len1, buf
+    len1_ok = eq len1, 9
+    EXPAND PATH_BUF_AS_PATH view1, buf
+    EXPAND STR_EQ eq1, view1, base
+    eq1_ok = eq eq1, 1
+    !view1
+
+    EXPAND PATH_BUF_PUSH buf, child
+    EXPAND PATH_BUF_AS_PATH view2, buf
+    EXPAND STR_EQ eq2, view2, expect_joined
+    eq2_ok = eq eq2, 1
+    !view2
+
+    EXPAND PATH_BUF_POP pop_ok, buf
+    pop_ok_ok = eq pop_ok, 1
+    EXPAND PATH_BUF_AS_PATH view3, buf
+    EXPAND STR_EQ eq3, view3, expect_dir
+    eq3_ok = eq eq3, 1
+    !view3
+
+    EXPAND PATH_BUF_PUSH buf, child
+    EXPAND PATH_BUF_SET_FILE_NAME buf, new_file
+    EXPAND PATH_BUF_AS_PATH view4, buf
+    EXPAND STR_EQ eq4, view4, expect_renamed
+    eq4_ok = eq eq4, 1
+    !view4
+
+    EXPAND PATH_BUF_CLEAR buf
+    EXPAND PATH_BUF_PUSH buf, full
+    EXPAND PATH_BUF_SET_EXTENSION buf, new_ext
+    EXPAND PATH_BUF_AS_PATH view5, buf
+    EXPAND STR_EQ eq5, view5, expect_with_ext
+    eq5_ok = eq eq5, 1
+    !view5
+
+    EXPAND PATH_BUF_PUSH buf, abs_child
+    EXPAND PATH_BUF_AS_PATH view6, buf
+    EXPAND STR_EQ eq6, view6, abs_child
+    eq6_ok = eq eq6, 1
+    !view6
+
+    EXPAND PATH_BUF_CLONE clone_buf, buf
+    EXPAND PATH_BUF_AS_PATH view7, clone_buf
+    EXPAND STR_EQ eq7, view7, abs_child
+    eq7_ok = eq eq7, 1
+    !view7
+
+    EXPAND PATH_BUF_PUSH_TRAILING_SEPARATOR clone_buf
+    EXPAND PATH_BUF_AS_PATH view8, clone_buf
+    EXPAND PATH_ENDS_WITH_SEPARATOR has_sep, view8
+    has_sep_ok = eq has_sep, 1
+    !view8
+
+    EXPAND PATH_BUF_CAPACITY cap_buf, buf
+    cap_ok = uge cap_buf, 8
+
+    EXPAND PATH_BUF_FREE empty_buf
+    EXPAND PATH_BUF_FREE buf
+    EXPAND PATH_BUF_FREE clone_buf
+
+    ok = and empty0_ok, len0_ok
+    ok = and ok, len1_ok
+    ok = and ok, eq1_ok
+    ok = and ok, eq2_ok
+    ok = and ok, pop_ok_ok
+    ok = and ok, eq3_ok
+    ok = and ok, eq4_ok
+    ok = and ok, eq5_ok
+    ok = and ok, eq6_ok
+    ok = and ok, eq7_ok
+    ok = and ok, has_sep_ok
+    ok = and ok, cap_ok
+
+    !base
+    !child
+    !abs_child
+    !new_file
+    !new_ext
+    !expect_joined
+    !expect_renamed
+    !expect_with_ext
+    !expect_dir
+    !full
+    !empty0
+    !len0
+    !len1
+    !eq1
+    !eq2
+    !pop_ok
+    !eq3
+    !eq4
+    !eq5
+    !eq6
+    !eq7
+    !has_sep
+    !cap_buf
+    !empty0_ok
+    !len0_ok
+    !len1_ok
+    !eq1_ok
+    !eq2_ok
+    !pop_ok_ok
+    !eq3_ok
+    !eq4_ok
+    !eq5_ok
+    !eq6_ok
+    !eq7_ok
+    !has_sep_ok
+    !cap_ok
+    br ok -> L_PATH_BUF_OK, L_PATH_BUF_FAIL
+
+L_PATH_BUF_FAIL:
+    !ok
+    panic(10188)
+
+L_PATH_BUF_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf lit/capacity macros"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS root, &PATH_ROOT, 1
+    EXPAND STR_FROM_PARTS child, &PATH_CHILD, 5
+    EXPAND STR_FROM_PARTS new_file, &PATH_NEW_FILE, 9
+    EXPAND PATH_BUF_LIT1 lit1, root
+    EXPAND PATH_BUF_LEN lit1_len, lit1
+    EXPAND PATH_BUF_LIT2 lit2, root, child
+    EXPAND PATH_BUF_LEN lit2_len, lit2
+    EXPAND PATH_BUF_LIT3 lit3, root, child, new_file
+    EXPAND PATH_BUF_LEN lit3_len, lit3
+    EXPAND PATH_BUF_WITH_CAPACITY cap_buf, 32
+    EXPAND PATH_BUF_CAPACITY cap0, cap_buf
+    EXPAND PATH_BUF_CAPACITY_REMAINING rem0, cap_buf
+    EXPAND PATH_BUF_EXTRA_CAPACITY extra0, cap_buf
+    EXPAND PATH_BUF_REMAINING_CAPACITY rem1, cap_buf
+
+    ok_lit1_len = eq lit1_len, 1
+    ok_lit2_len = ugt lit2_len, lit1_len
+    ok_lit3_len = ugt lit3_len, lit2_len
+    ok_cap = uge cap0, 32
+    ok_rem = eq rem0, cap0
+    ok_extra = eq extra0, rem0
+    ok_rem1 = eq rem1, rem0
+
+    ok = and ok_lit1_len, ok_lit2_len
+    ok = and ok, ok_lit3_len
+    ok = and ok, ok_cap
+    ok = and ok, ok_rem
+    ok = and ok, ok_extra
+    ok = and ok, ok_rem1
+
+    !ok_lit1_len
+    !ok_lit2_len
+    !ok_lit3_len
+    !ok_cap
+    !ok_rem
+    !ok_extra
+    !ok_rem1
+    !lit1_len
+    !lit2_len
+    !lit3_len
+    !cap0
+    !rem0
+    !extra0
+    !rem1
+    EXPAND PATH_BUF_FREE lit1
+    EXPAND PATH_BUF_FREE lit2
+    EXPAND PATH_BUF_FREE lit3
+    EXPAND PATH_BUF_FREE cap_buf
+    !root
+    !child
+    !new_file
+    br ok -> L_PATH_BUF_LIT_OK, L_PATH_BUF_LIT_FAIL
+L_PATH_BUF_LIT_FAIL:
+    !ok
+    panic(10189)
+L_PATH_BUF_LIT_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf os conversion macros"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS root, &PATH_ROOT, 1
+    EXPAND PATH_BUF_FROM_PATH path_buf, root
+    EXPAND PATH_BUF_INTO_OS_STRING os_from_path, path_buf
+    EXPAND OS_STRING_LEN os_len, os_from_path
+    EXPAND PATH_BUF_FROM_OS_STRING path_from_os, os_from_path
+    EXPAND PATH_BUF_LEN path_len, path_from_os
+    EXPAND PATH_BUF_AS_OS_STR os_str_view, path_from_os
+    EXPAND OS_STR_LEN os_str_len, os_str_view
+    EXPAND PATH_BUF_FROM_OS_STR path_from_os_str, os_str_view
+    EXPAND PATH_BUF_LEN path2_len, path_from_os_str
+
+    ok_os_len = eq os_len, 1
+    ok_path_len = eq path_len, 1
+    ok_os_str_len = eq os_str_len, 1
+    ok_path2_len = eq path2_len, 1
+    ok = and ok_os_len, ok_path_len
+    ok = and ok, ok_os_str_len
+    ok = and ok, ok_path2_len
+
+    !ok_os_len
+    !ok_path_len
+    !ok_os_str_len
+    !ok_path2_len
+    !os_len
+    !path_len
+    !os_str_len
+    !path2_len
+    EXPAND PATH_BUF_FREE path_buf
+    EXPAND OS_STRING_FREE os_from_path
+    EXPAND PATH_BUF_FREE path_from_os
+    EXPAND PATH_BUF_FREE path_from_os_str
+    !os_str_view
+    !root
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10190)
+L_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf query aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS full, &PATH_FULL, 18
+    EXPAND PATH_BUF_FROM_PATH path_buf, full
+    EXPAND PATH_BUF_IS_ABSOLUTE is_abs, path_buf
+    EXPAND PATH_BUF_IS_RELATIVE is_rel, path_buf
+    EXPAND PATH_BUF_HAS_ROOT has_root, path_buf
+    EXPAND PATH_BUF_COMPONENT_COUNT comp_count, path_buf
+    EXPAND PATH_BUF_TRY_FILE_NAME name_ok, name_slice, path_buf
+    EXPAND PATH_BUF_TRY_FILE_STEM stem_ok, stem_slice, path_buf
+    EXPAND PATH_BUF_TRY_EXTENSION ext_ok, ext_slice, path_buf
+    EXPAND PATH_BUF_TRY_PARENT parent_ok, parent_slice, path_buf
+    EXPAND PATH_BUF_ANCESTOR_COUNT anc_count, path_buf
+
+    ok_abs = eq is_abs, 1
+    ok_rel = eq is_rel, 0
+    ok_root = eq has_root, 1
+    ok_comp = ugt comp_count, 1
+    ok_name = eq name_ok, 1
+    ok_stem = eq stem_ok, 1
+    ok_ext = eq ext_ok, 1
+    ok_parent = eq parent_ok, 1
+    ok_anc = ugt anc_count, 0
+    ok = and ok_abs, ok_rel
+    ok = and ok, ok_root
+    ok = and ok, ok_comp
+    ok = and ok, ok_name
+    ok = and ok, ok_stem
+    ok = and ok, ok_ext
+    ok = and ok, ok_parent
+    ok = and ok, ok_anc
+
+    !is_abs
+    !is_rel
+    !has_root
+    !comp_count
+    !name_ok
+    !stem_ok
+    !ext_ok
+    !parent_ok
+    !anc_count
+    !ok_abs
+    !ok_rel
+    !ok_root
+    !ok_comp
+    !ok_name
+    !ok_stem
+    !ok_ext
+    !ok_parent
+    !ok_anc
+    !name_slice
+    !stem_slice
+    !ext_slice
+    !parent_slice
+    EXPAND PATH_BUF_FREE path_buf
+    !full
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10191)
+L_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf push/join path_buf macros"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS root, &PATH_ROOT, 1
+    EXPAND STR_FROM_PARTS child, &PATH_CHILD, 5
+    EXPAND PATH_BUF_FROM_PATH parent, root
+    EXPAND PATH_BUF_FROM_PATH child_buf, child
+    EXPAND PATH_BUF_LEN parent_len0, parent
+    EXPAND PATH_BUF_PUSH_PATH_BUF parent, child_buf
+    EXPAND PATH_BUF_LEN parent_len1, parent
+    EXPAND PATH_BUF_FROM_PATH joined, root
+    EXPAND PATH_BUF_JOIN joined, child
+    EXPAND PATH_BUF_LEN joined_len, joined
+
+    ok_grew = ugt parent_len1, parent_len0
+    ok_join = eq joined_len, parent_len1
+    ok = and ok_grew, ok_join
+
+    !parent_len0
+    !parent_len1
+    !joined_len
+    !ok_grew
+    !ok_join
+    EXPAND PATH_BUF_FREE parent
+    EXPAND PATH_BUF_FREE child_buf
+    EXPAND PATH_BUF_FREE joined
+    !root
+    !child
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10192)
+L_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf clone_from macros"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS full, &PATH_FULL, 18
+    EXPAND PATH_BUF_FROM_PATH src, full
+    EXPAND PATH_BUF_NEW dst
+    EXPAND PATH_BUF_CLONE_FROM dst, src
+    EXPAND PATH_BUF_LEN src_len, src
+    EXPAND PATH_BUF_LEN dst_len, dst
+    ok_len = eq src_len, dst_len
+    ok_nonzero = ugt dst_len, 0
+    ok = and ok_len, ok_nonzero
+    !src_len
+    !dst_len
+    !ok_len
+    !ok_nonzero
+    EXPAND PATH_BUF_FREE src
+    EXPAND PATH_BUF_FREE dst
+    !full
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10193)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf fs query aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS path_slice, &PATH_BUF_FS_TEST, 26
+    EXPAND PATH_BUF_FROM_PATH path_buf, path_slice
+    EXPAND PATH_BUF_AS_PATH view0, path_buf
+    view0_ptr = load view0+Slice_ptr as ptr
+    view0_len = load view0+Slice_len as u64
+    EXPAND FS_REMOVE_PATH cleanup0, view0_ptr, view0_len
+    EXPAND FS_WRITE_FILE write_status, view0_ptr, view0_len, &PATH_BUF_FS_HELLO, 7
+    EXPAND PATH_BUF_TRY_EXISTS try_status, try_flag, path_buf
+    EXPAND PATH_BUF_EXISTS exists_flag, path_buf
+    EXPAND PATH_BUF_IS_FILE is_file_flag, path_buf
+    EXPAND PATH_BUF_IS_DIR is_dir_flag, path_buf
+    EXPAND PATH_BUF_IS_SYMLINK is_symlink_flag, path_buf
+    EXPAND PATH_BUF_METADATA meta_status, meta, path_buf
+    EXPAND FS_METADATA_IS_FILE meta_is_file, meta
+    EXPAND FS_METADATA_FREE meta_free_status, meta
+    EXPAND PATH_BUF_CANONICALIZE canon_status, canon_buf, path_buf
+    EXPAND FS_READ_BUFFER_FREE canon_free_status, canon_buf
+    EXPAND FS_REMOVE_PATH cleanup1, view0_ptr, view0_len
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_try_status = eq try_status, SA_FS_OK
+    ok_try_flag = eq try_flag, 1
+    ok_exists = eq exists_flag, 1
+    ok_file = eq is_file_flag, 1
+    ok_dir = eq is_dir_flag, 0
+    ok_symlink = eq is_symlink_flag, 0
+    ok_meta_status = eq meta_status, SA_FS_OK
+    ok_meta_is_file = eq meta_is_file, 1
+    ok_meta_free = eq meta_free_status, SA_FS_OK
+    ok_canon = eq canon_status, SA_FS_OK
+    ok_canon_free = eq canon_free_status, SA_FS_OK
+
+    ok01 = and ok_write, ok_try_status
+    ok02 = and ok01, ok_try_flag
+    ok03 = and ok02, ok_exists
+    ok04 = and ok03, ok_file
+    ok05 = and ok04, ok_dir
+    ok06 = and ok05, ok_symlink
+    ok07 = and ok06, ok_meta_status
+    ok08 = and ok07, ok_meta_is_file
+    ok09 = and ok08, ok_meta_free
+    ok10 = and ok09, ok_canon
+    ok = and ok10, ok_canon_free
+
+    !cleanup0
+    !write_status
+    !try_status
+    !try_flag
+    !exists_flag
+    !is_file_flag
+    !is_dir_flag
+    !is_symlink_flag
+    !meta_status
+    !meta_is_file
+    !meta_free_status
+    !canon_status
+    !canon_free_status
+    !cleanup1
+    !view0_len
+    !view0_ptr
+    !view0
+    EXPAND PATH_BUF_FREE path_buf
+    !path_slice
+    !ok_write
+    !ok_try_status
+    !ok_try_flag
+    !ok_exists
+    !ok_file
+    !ok_dir
+    !ok_symlink
+    !ok_meta_status
+    !ok_meta_is_file
+    !ok_meta_free
+    !ok_canon
+    !ok_canon_free
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10412)
+L_OK:
+    !ok
+    return
+
+@test "sa_std path PathBuf fs ops aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS src_slice, &PATH_BUF_FS_OPS_SRC, 28
+    EXPAND STR_FROM_PARTS dst_slice, &PATH_BUF_FS_OPS_DST, 28
+    EXPAND STR_FROM_PARTS dir_slice, &PATH_BUF_FS_OPS_DIR, 24
+    EXPAND PATH_BUF_FROM_PATH src_buf, src_slice
+    EXPAND PATH_BUF_FROM_PATH dst_buf, dst_slice
+    EXPAND PATH_BUF_FROM_PATH dir_buf, dir_slice
+
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_src0, src_buf
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_dst0, dst_buf
+    EXPAND PATH_BUF_REMOVE_DIR cleanup_dir0, dir_buf
+
+    EXPAND PATH_BUF_WRITE_FILE write_status, src_buf, &PATH_BUF_FS_OPS_DATA, 7
+    EXPAND PATH_BUF_COPY copy_status, src_buf, dst_buf
+    EXPAND PATH_BUF_READ_FILE read_status, read_buf, dst_buf, 64
+    EXPAND FS_READ_BUFFER_LEN read_len, read_buf
+    EXPAND FS_READ_BUFFER_FREE free_status, read_buf
+    EXPAND PATH_BUF_OPEN_READ open_status, open_file, src_buf
+    EXPAND FS_CLOSE close_status, open_file
+    EXPAND PATH_BUF_CREATE_DIR mkdir_status, dir_buf
+    EXPAND PATH_BUF_IS_DIR dir_flag, dir_buf
+    EXPAND PATH_BUF_REMOVE_DIR rmdir_status, dir_buf
+    EXPAND PATH_BUF_REMOVE_FILE rm_src_status, src_buf
+    EXPAND PATH_BUF_REMOVE_FILE rm_dst_status, dst_buf
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_copy = eq copy_status, SA_FS_OK
+    ok_read = eq read_status, SA_FS_OK
+    ok_len = eq read_len, 7
+    ok_free = eq free_status, SA_FS_OK
+    ok_open = eq open_status, SA_FS_OK
+    ok_close = eq close_status, SA_FS_OK
+    ok_mkdir = eq mkdir_status, SA_FS_OK
+    ok_dir = eq dir_flag, 1
+    ok_rmdir = eq rmdir_status, SA_FS_OK
+    ok_rm_src = eq rm_src_status, SA_FS_OK
+    ok_rm_dst = eq rm_dst_status, SA_FS_OK
+
+    ok01 = and ok_write, ok_copy
+    ok02 = and ok01, ok_read
+    ok03 = and ok02, ok_len
+    ok04 = and ok03, ok_free
+    ok05 = and ok04, ok_open
+    ok06 = and ok05, ok_close
+    ok07 = and ok06, ok_mkdir
+    ok08 = and ok07, ok_dir
+    ok09 = and ok08, ok_rmdir
+    ok10 = and ok09, ok_rm_src
+    ok = and ok10, ok_rm_dst
+
+    !cleanup_src0
+    !cleanup_dst0
+    !cleanup_dir0
+    !write_status
+    !copy_status
+    !read_status
+    !read_len
+    !free_status
+    !open_status
+    !close_status
+    !mkdir_status
+    !dir_flag
+    !rmdir_status
+    !rm_src_status
+    !rm_dst_status
+    EXPAND PATH_BUF_FREE src_buf
+    EXPAND PATH_BUF_FREE dst_buf
+    EXPAND PATH_BUF_FREE dir_buf
+    !src_slice
+    !dst_slice
+    !dir_slice
+    !ok_write
+    !ok_copy
+    !ok_read
+    !ok_len
+    !ok_free
+    !ok_open
+    !ok_close
+    !ok_mkdir
+    !ok_dir
+    !ok_rmdir
+    !ok_rm_src
+    !ok_rm_dst
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10414)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf fs rename/link/symlink/read_to_string aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS src_slice, &PATH_BUF_FS_MORE_SRC, 29
+    EXPAND STR_FROM_PARTS dst_slice, &PATH_BUF_FS_MORE_DST, 29
+    EXPAND STR_FROM_PARTS link_slice, &PATH_BUF_FS_MORE_LINK, 30
+    EXPAND STR_FROM_PARTS sym_slice, &PATH_BUF_FS_MORE_SYM, 29
+    EXPAND STR_FROM_PARTS dir_slice, &PATH_BUF_FS_MORE_DIR, 25
+    EXPAND STR_FROM_PARTS nest_slice, &PATH_BUF_FS_MORE_NEST, 32
+    EXPAND PATH_BUF_FROM_PATH src_buf, src_slice
+    EXPAND PATH_BUF_FROM_PATH dst_buf, dst_slice
+    EXPAND PATH_BUF_FROM_PATH link_buf, link_slice
+    EXPAND PATH_BUF_FROM_PATH sym_buf, sym_slice
+    EXPAND PATH_BUF_FROM_PATH dir_buf, dir_slice
+    EXPAND PATH_BUF_FROM_PATH nest_buf, nest_slice
+
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_src0, src_buf
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_dst0, dst_buf
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_link0, link_buf
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_sym0, sym_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup_dir0, dir_buf
+
+    EXPAND PATH_BUF_WRITE_FILE write_status, src_buf, &PATH_BUF_FS_MORE_DATA, 7
+    EXPAND PATH_BUF_SET_PERMISSIONS perm_status, src_buf, 420
+    EXPAND PATH_BUF_SET_TIMES_MS times_status, src_buf, 1000, 2000
+    EXPAND PATH_BUF_READ_TO_STRING rts_status, rts_buf, src_buf, 64
+    EXPAND FS_READ_BUFFER_LEN rts_len, rts_buf
+    EXPAND FS_READ_BUFFER_FREE rts_free, rts_buf
+    EXPAND PATH_BUF_HARD_LINK hard_status, src_buf, link_buf
+    EXPAND PATH_BUF_SYMLINK sym_status, src_buf, sym_buf
+    EXPAND PATH_BUF_IS_SYMLINK sym_flag, sym_buf
+    EXPAND PATH_BUF_RENAME rename_status, src_buf, dst_buf
+    EXPAND PATH_BUF_EXISTS exists_dst, dst_buf
+    EXPAND PATH_BUF_EXISTS exists_src, src_buf
+    EXPAND PATH_BUF_CREATE_DIR_ALL mkdir_status, nest_buf
+    EXPAND PATH_BUF_IS_DIR nest_is_dir, nest_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL rmdir_status, dir_buf
+    EXPAND PATH_BUF_REMOVE_FILE rm_dst_status, dst_buf
+    EXPAND PATH_BUF_REMOVE_FILE rm_link_status, link_buf
+    EXPAND PATH_BUF_REMOVE_FILE rm_sym_status, sym_buf
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_perm = eq perm_status, SA_FS_OK
+    ok_times = eq times_status, SA_FS_OK
+    ok_rts = eq rts_status, SA_FS_OK
+    ok_rts_len = eq rts_len, 7
+    ok_rts_free = eq rts_free, SA_FS_OK
+    ok_hard = eq hard_status, SA_FS_OK
+    ok_sym = eq sym_status, SA_FS_OK
+    ok_sym_flag = eq sym_flag, 1
+    ok_rename = eq rename_status, SA_FS_OK
+    ok_exists_dst = eq exists_dst, 1
+    ok_exists_src = eq exists_src, 0
+    ok_mkdir = eq mkdir_status, SA_FS_OK
+    ok_nest = eq nest_is_dir, 1
+    ok_rmdir = eq rmdir_status, SA_FS_OK
+    ok_rm_dst = eq rm_dst_status, SA_FS_OK
+    ok_rm_link = eq rm_link_status, SA_FS_OK
+    ok_rm_sym = eq rm_sym_status, SA_FS_OK
+
+    ok01 = and ok_write, ok_perm
+    ok02 = and ok01, ok_times
+    ok03 = and ok02, ok_rts
+    ok04 = and ok03, ok_rts_len
+    ok05 = and ok04, ok_rts_free
+    ok06 = and ok05, ok_hard
+    ok07 = and ok06, ok_sym
+    ok08 = and ok07, ok_sym_flag
+    ok09 = and ok08, ok_rename
+    ok10 = and ok09, ok_exists_dst
+    ok11 = and ok10, ok_exists_src
+    ok12 = and ok11, ok_mkdir
+    ok13 = and ok12, ok_nest
+    ok14 = and ok13, ok_rmdir
+    ok15 = and ok14, ok_rm_dst
+    ok16 = and ok15, ok_rm_link
+    ok = and ok16, ok_rm_sym
+
+    !cleanup_src0
+    !cleanup_dst0
+    !cleanup_link0
+    !cleanup_sym0
+    !cleanup_dir0
+    !write_status
+    !perm_status
+    !times_status
+    !rts_status
+    !rts_len
+    !rts_free
+    !hard_status
+    !sym_status
+    !sym_flag
+    !rename_status
+    !exists_dst
+    !exists_src
+    !mkdir_status
+    !nest_is_dir
+    !rmdir_status
+    !rm_dst_status
+    !rm_link_status
+    !rm_sym_status
+    EXPAND PATH_BUF_FREE src_buf
+    EXPAND PATH_BUF_FREE dst_buf
+    EXPAND PATH_BUF_FREE link_buf
+    EXPAND PATH_BUF_FREE sym_buf
+    EXPAND PATH_BUF_FREE dir_buf
+    EXPAND PATH_BUF_FREE nest_buf
+    !src_slice
+    !dst_slice
+    !link_slice
+    !sym_slice
+    !dir_slice
+    !nest_slice
+    !ok_write
+    !ok_perm
+    !ok_times
+    !ok_rts
+    !ok_rts_len
+    !ok_rts_free
+    !ok_hard
+    !ok_sym
+    !ok_sym_flag
+    !ok_rename
+    !ok_exists_dst
+    !ok_exists_src
+    !ok_mkdir
+    !ok_nest
+    !ok_rmdir
+    !ok_rm_dst
+    !ok_rm_link
+    !ok_rm_sym
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10423)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf read_dir aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS root_slice, &PATH_BUF_READDIR_ROOT, 21
+    EXPAND STR_FROM_PARTS file_slice, &PATH_BUF_READDIR_FILE, 30
+    EXPAND PATH_BUF_FROM_PATH root_buf, root_slice
+    EXPAND PATH_BUF_FROM_PATH file_buf, file_slice
+
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup0, root_buf
+    EXPAND PATH_BUF_CREATE_DIR mkdir_status, root_buf
+    EXPAND PATH_BUF_WRITE_FILE write_status, file_buf, &PATH_BUF_READDIR_DATA, 1
+    EXPAND PATH_BUF_READ_DIR_ENTRIES entries_status, entries, root_buf, 16
+    EXPAND FS_DIR_ENTRIES_LEN entry_count, entries
+    EXPAND PATH_BUF_READ_DIR_JSON json_status, json_buf, root_buf, 16
+    EXPAND FS_DIR_BUFFER_LEN json_len, json_buf
+    EXPAND FS_DIR_BUFFER_FREE json_free, json_buf
+    EXPAND FS_DIR_ENTRIES_FREE entries_free, entries
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup1, root_buf
+
+    ok_mkdir = eq mkdir_status, SA_FS_OK
+    ok_write = eq write_status, SA_FS_OK
+    ok_entries = eq entries_status, SA_FS_OK
+    ok_count = ugt entry_count, 0
+    ok_json = eq json_status, SA_FS_OK
+    ok_json_len = ugt json_len, 0
+    ok_json_free = eq json_free, SA_FS_OK
+    ok_entries_free = eq entries_free, SA_FS_OK
+    ok_cleanup = eq cleanup1, SA_FS_OK
+
+    ok01 = and ok_mkdir, ok_write
+    ok02 = and ok01, ok_entries
+    ok03 = and ok02, ok_count
+    ok04 = and ok03, ok_json
+    ok05 = and ok04, ok_json_len
+    ok06 = and ok05, ok_json_free
+    ok07 = and ok06, ok_entries_free
+    ok = and ok07, ok_cleanup
+
+    !cleanup0
+    !mkdir_status
+    !write_status
+    !entries_status
+    !entry_count
+    !json_status
+    !json_len
+    !json_free
+    !entries_free
+    !cleanup1
+    EXPAND PATH_BUF_FREE root_buf
+    EXPAND PATH_BUF_FREE file_buf
+    !root_slice
+    !file_slice
+    !ok_mkdir
+    !ok_write
+    !ok_entries
+    !ok_count
+    !ok_json
+    !ok_json_len
+    !ok_json_free
+    !ok_entries_free
+    !ok_cleanup
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10425)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path OsString default alias"():
+L_ENTRY:
+    EXPAND OS_STRING_DEFAULT os
+    EXPAND OS_STRING_IS_EMPTY empty0, os
+    EXPAND OS_STRING_LEN len0, os
+    EXPAND OS_STRING_FREE os
+
+    ok_empty = eq empty0, 1
+    ok_len = eq len0, 0
+    ok = and ok_empty, ok_len
+
+    !empty0
+    !len0
+    !ok_empty
+    !ok_len
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10429)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf dir_builder/open_options aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS dir_slice, &PATH_BUF_BUILDER_DIR, 25
+    EXPAND STR_FROM_PARTS file_slice, &PATH_BUF_BUILDER_FILE, 30
+    EXPAND PATH_BUF_FROM_PATH dir_buf, dir_slice
+    EXPAND PATH_BUF_FROM_PATH file_buf, file_slice
+
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup_dir0, dir_buf
+    EXPAND PATH_BUF_REMOVE_FILE cleanup_file0, file_buf
+
+    EXPAND FS_DIR_BUILDER_NEW rec0, mode0
+    EXPAND FS_DIR_BUILDER_WITH_RECURSIVE rec1, mode1, rec0, mode0, 1
+    EXPAND PATH_BUF_DIR_BUILDER_CREATE mkdir_status, rec1, mode1, dir_buf
+    EXPAND PATH_BUF_IS_DIR dir_flag, dir_buf
+
+    EXPAND FS_OPEN_OPTIONS_BUILDER_NEW flags0, omode0, custom0
+    EXPAND FS_OPEN_OPTIONS_BUILDER_WITH_WRITE flags1, omode1, custom1, flags0, omode0, custom0, 1
+    EXPAND FS_OPEN_OPTIONS_BUILDER_WITH_CREATE flags2, omode2, custom2, flags1, omode1, custom1, 1
+    EXPAND FS_OPEN_OPTIONS_BUILDER_WITH_TRUNCATE flags3, omode3, custom3, flags2, omode2, custom2, 1
+    EXPAND PATH_BUF_OPEN_OPTIONS_BUILDER_OPEN open_status, file, flags3, omode3, custom3, file_buf
+    EXPAND FS_WRITE_ALL write_status, file, &PATH_BUF_BUILDER_DATA, 2
+    EXPAND FS_CLOSE close_status, file
+    EXPAND PATH_BUF_EXISTS file_exists, file_buf
+    EXPAND PATH_BUF_REMOVE_FILE rm_file, file_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL rm_dir, dir_buf
+
+    ok_mkdir = eq mkdir_status, SA_FS_OK
+    ok_dir = eq dir_flag, 1
+    ok_open = eq open_status, SA_FS_OK
+    ok_write = eq write_status, SA_FS_OK
+    ok_close = eq close_status, SA_FS_OK
+    ok_exists = eq file_exists, 1
+    ok_rm_file = eq rm_file, SA_FS_OK
+    ok_rm_dir = eq rm_dir, SA_FS_OK
+
+    ok01 = and ok_mkdir, ok_dir
+    ok02 = and ok01, ok_open
+    ok03 = and ok02, ok_write
+    ok04 = and ok03, ok_close
+    ok05 = and ok04, ok_exists
+    ok06 = and ok05, ok_rm_file
+    ok = and ok06, ok_rm_dir
+
+    !cleanup_dir0
+    !cleanup_file0
+    !rec0
+    !mode0
+    !rec1
+    !mode1
+    !mkdir_status
+    !dir_flag
+    !flags0
+    !omode0
+    !custom0
+    !flags1
+    !omode1
+    !custom1
+    !flags2
+    !omode2
+    !custom2
+    !flags3
+    !omode3
+    !custom3
+    !open_status
+    !write_status
+    !close_status
+    !file_exists
+    !rm_file
+    !rm_dir
+    EXPAND PATH_BUF_FREE dir_buf
+    EXPAND PATH_BUF_FREE file_buf
+    !dir_slice
+    !file_slice
+    !ok_mkdir
+    !ok_dir
+    !ok_open
+    !ok_write
+    !ok_close
+    !ok_exists
+    !ok_rm_file
+    !ok_rm_dir
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10430)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf permissions/file_times object aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS path_slice, &PATH_BUF_PERM_TEST, 26
+    EXPAND PATH_BUF_FROM_PATH path_buf, path_slice
+    EXPAND PATH_BUF_REMOVE_FILE cleanup0, path_buf
+    EXPAND PATH_BUF_WRITE_FILE write_status, path_buf, &PATH_BUF_PERM_DATA, 1
+
+    perm_slot = stack_alloc SaFsPermissions_SIZE
+    EXPAND FS_PERMISSIONS_FROM_MODE perm_slot, 420
+    EXPAND PATH_BUF_SET_PERMISSIONS_OBJ perm_status, path_buf, perm_slot
+
+    EXPAND FS_FILE_TIMES_NEW t0_acc, t0_mod
+    EXPAND FS_FILE_TIMES_WITH_ACCESSED t1_acc, t1_mod, t0_acc, t0_mod, 1700000001000
+    EXPAND FS_FILE_TIMES_WITH_MODIFIED t2_acc, t2_mod, t1_acc, t1_mod, 1700000002000
+    EXPAND PATH_BUF_FILE_TIMES_SET times_status, path_buf, t2_acc, t2_mod
+
+    EXPAND PATH_BUF_METADATA meta_status, meta, path_buf
+    EXPAND FS_METADATA_FILE_TIMES got_acc, got_mod, meta
+    EXPAND FS_METADATA_FREE meta_free, meta
+    EXPAND PATH_BUF_REMOVE_FILE cleanup1, path_buf
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_perm = eq perm_status, SA_FS_OK
+    ok_times = eq times_status, SA_FS_OK
+    ok_meta = eq meta_status, SA_FS_OK
+    ok_acc = eq got_acc, 1700000001000
+    ok_mod = eq got_mod, 1700000002000
+    ok_free = eq meta_free, SA_FS_OK
+    ok_rm = eq cleanup1, SA_FS_OK
+
+    ok01 = and ok_write, ok_perm
+    ok02 = and ok01, ok_times
+    ok03 = and ok02, ok_meta
+    ok04 = and ok03, ok_acc
+    ok05 = and ok04, ok_mod
+    ok06 = and ok05, ok_free
+    ok = and ok06, ok_rm
+
+    !cleanup0
+    !write_status
+    !perm_status
+    !t0_acc
+    !t0_mod
+    !t1_acc
+    !t1_mod
+    !t2_acc
+    !t2_mod
+    !times_status
+    !meta_status
+    !got_acc
+    !got_mod
+    !meta_free
+    !cleanup1
+    EXPAND PATH_BUF_FREE path_buf
+    !path_slice
+    !ok_write
+    !ok_perm
+    !ok_times
+    !ok_meta
+    !ok_acc
+    !ok_mod
+    !ok_free
+    !ok_rm
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10437)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf metadata_json/len/remove/mode aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS file_slice, &PATH_BUF_META_JSON_TEST, 27
+    EXPAND STR_FROM_PARTS len_slice, &PATH_BUF_LEN_REMOVE_TEST, 28
+    EXPAND STR_FROM_PARTS dir_slice, &PATH_BUF_MODE_DIR, 22
+    EXPAND STR_FROM_PARTS nest_slice, &PATH_BUF_MODE_NEST, 29
+
+    EXPAND PATH_BUF_FROM_PATH file_buf, file_slice
+    EXPAND PATH_BUF_FROM_PATH len_buf, len_slice
+    EXPAND PATH_BUF_FROM_PATH dir_buf, dir_slice
+    EXPAND PATH_BUF_FROM_PATH nest_buf, nest_slice
+
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_file0, file_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_len0, len_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup_dir0, dir_buf
+
+    EXPAND PATH_BUF_WRITE_FILE write_meta, file_buf, &PATH_BUF_META_JSON_DATA, 2
+    EXPAND PATH_BUF_METADATA_JSON meta_status, meta_json, file_buf
+    EXPAND FS_READ_BUFFER_LEN meta_len, meta_json
+    EXPAND FS_READ_BUFFER_FREE meta_free, meta_json
+
+    EXPAND PATH_BUF_WRITE_FILE write_len, len_buf, &PATH_BUF_LEN_REMOVE_DATA, 4
+    EXPAND PATH_BUF_FS_SIZE len_status, file_len, len_buf
+    EXPAND PATH_BUF_REMOVE_ENTRY remove_status, len_buf
+    EXPAND PATH_BUF_EXISTS exists_after_remove, len_buf
+
+    EXPAND PATH_BUF_CREATE_DIR_WITH_MODE mkdir_status, dir_buf, 493
+    EXPAND PATH_BUF_CREATE_DIR_ALL_WITH_MODE mkdir_all_status, nest_buf, 493
+    EXPAND PATH_BUF_IS_DIR is_dir, dir_buf
+    EXPAND PATH_BUF_IS_DIR is_nest, nest_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup_dir1, dir_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_file1, file_buf
+
+    ok_write_meta = eq write_meta, SA_FS_OK
+    ok_meta = eq meta_status, SA_FS_OK
+    ok_meta_len = ne meta_len, 0
+    ok_meta_free = eq meta_free, SA_FS_OK
+    ok_write_len = eq write_len, SA_FS_OK
+    ok_len_status = eq len_status, SA_FS_OK
+    ok_len = eq file_len, 4
+    ok_remove = eq remove_status, SA_FS_OK
+    ok_gone = eq exists_after_remove, 0
+    ok_mkdir = eq mkdir_status, SA_FS_OK
+    ok_mkdir_all = eq mkdir_all_status, SA_FS_OK
+    ok_dir = eq is_dir, 1
+    ok_nest = eq is_nest, 1
+    ok_rm_dir = eq cleanup_dir1, SA_FS_OK
+    ok_rm_file = eq cleanup_file1, SA_FS_OK
+
+    ok01 = and ok_write_meta, ok_meta
+    ok02 = and ok01, ok_meta_len
+    ok03 = and ok02, ok_meta_free
+    ok04 = and ok03, ok_write_len
+    ok05 = and ok04, ok_len_status
+    ok06 = and ok05, ok_len
+    ok07 = and ok06, ok_remove
+    ok08 = and ok07, ok_gone
+    ok09 = and ok08, ok_mkdir
+    ok10 = and ok09, ok_mkdir_all
+    ok11 = and ok10, ok_dir
+    ok12 = and ok11, ok_nest
+    ok13 = and ok12, ok_rm_dir
+    ok = and ok13, ok_rm_file
+
+    !cleanup_file0
+    !cleanup_len0
+    !cleanup_dir0
+    !write_meta
+    !meta_status
+    !meta_len
+    !meta_free
+    !write_len
+    !len_status
+    !file_len
+    !remove_status
+    !exists_after_remove
+    !mkdir_status
+    !mkdir_all_status
+    !is_dir
+    !is_nest
+    !cleanup_dir1
+    !cleanup_file1
+    EXPAND PATH_BUF_FREE file_buf
+    EXPAND PATH_BUF_FREE len_buf
+    EXPAND PATH_BUF_FREE dir_buf
+    EXPAND PATH_BUF_FREE nest_buf
+    !file_slice
+    !len_slice
+    !dir_slice
+    !nest_slice
+    !ok_write_meta
+    !ok_meta
+    !ok_meta_len
+    !ok_meta_free
+    !ok_write_len
+    !ok_len_status
+    !ok_len
+    !ok_remove
+    !ok_gone
+    !ok_mkdir
+    !ok_mkdir_all
+    !ok_dir
+    !ok_nest
+    !ok_rm_dir
+    !ok_rm_file
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10439)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf base64/open_flags aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS b64_slice, &PATH_BUF_B64_TEST, 21
+    EXPAND STR_FROM_PARTS open_slice, &PATH_BUF_OPEN_FLAGS_TEST, 28
+    EXPAND PATH_BUF_FROM_PATH b64_buf, b64_slice
+    EXPAND PATH_BUF_FROM_PATH open_buf, open_slice
+
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_b64_0, b64_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_open_0, open_buf
+
+    EXPAND PATH_BUF_WRITE_FILE write_plain, b64_buf, &PATH_BUF_B64_DATA, 3
+    EXPAND PATH_BUF_READ_FILE_BASE64 b64_status, b64_buffer, b64_buf, 64
+    EXPAND FS_READ_BUFFER_DATA b64_data, b64_buffer
+    EXPAND FS_READ_BUFFER_LEN b64_len, b64_buffer
+    EXPAND STR_FROM_PARTS b64_view, b64_data, b64_len
+    EXPAND STR_FROM_PARTS b64_expected, &PATH_BUF_B64_EXPECTED, 4
+    EXPAND STR_EQ b64_eq, b64_view, b64_expected
+    EXPAND FS_READ_BUFFER_FREE b64_free, b64_buffer
+
+    EXPAND PATH_BUF_WRITE_FILE_BASE64 write_b64, open_buf, &PATH_BUF_B64_EXPECTED, 4
+    EXPAND PATH_BUF_OPEN_FLAGS open_status, open_file, open_buf, SA_FS_OPEN_READ
+    EXPAND FS_CLOSE close_status, open_file
+    EXPAND PATH_BUF_OPEN_WITH_OPTIONS open2_status, open2_file, open_buf, SA_FS_OPEN_READ, SA_FS_OPEN_MODE_DEFAULT, 0
+    EXPAND FS_CLOSE close2_status, open2_file
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_b64_1, b64_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_open_1, open_buf
+
+    ok_write_plain = eq write_plain, SA_FS_OK
+    ok_b64 = eq b64_status, SA_FS_OK
+    ok_b64_len = eq b64_len, 4
+    ok_b64_eq = eq b64_eq, 1
+    ok_b64_free = eq b64_free, SA_FS_OK
+    ok_write_b64 = eq write_b64, SA_FS_OK
+    ok_open = eq open_status, SA_FS_OK
+    ok_close = eq close_status, SA_FS_OK
+    ok_open2 = eq open2_status, SA_FS_OK
+    ok_close2 = eq close2_status, SA_FS_OK
+    ok_rm1 = eq cleanup_b64_1, SA_FS_OK
+    ok_rm2 = eq cleanup_open_1, SA_FS_OK
+
+    ok01 = and ok_write_plain, ok_b64
+    ok02 = and ok01, ok_b64_len
+    ok03 = and ok02, ok_b64_eq
+    ok04 = and ok03, ok_b64_free
+    ok05 = and ok04, ok_write_b64
+    ok06 = and ok05, ok_open
+    ok07 = and ok06, ok_close
+    ok08 = and ok07, ok_open2
+    ok09 = and ok08, ok_close2
+    ok10 = and ok09, ok_rm1
+    ok = and ok10, ok_rm2
+
+    !cleanup_b64_0
+    !cleanup_open_0
+    !write_plain
+    !b64_status
+    !b64_data
+    !b64_len
+    !b64_eq
+    !b64_free
+    !write_b64
+    !open_status
+    !open_file
+    !close_status
+    !open2_status
+    !open2_file
+    !close2_status
+    !cleanup_b64_1
+    !cleanup_open_1
+    EXPAND PATH_BUF_FREE b64_buf
+    EXPAND PATH_BUF_FREE open_buf
+    !b64_slice
+    !open_slice
+    !b64_view
+    !b64_expected
+    !ok_write_plain
+    !ok_b64
+    !ok_b64_len
+    !ok_b64_eq
+    !ok_b64_free
+    !ok_write_b64
+    !ok_open
+    !ok_close
+    !ok_open2
+    !ok_close2
+    !ok_rm1
+    !ok_rm2
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10440)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std path PathBuf unix chown/mkfifo/make_dir aliases"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS file_slice, &PATH_BUF_UNIX_FILE, 27
+    EXPAND STR_FROM_PARTS link_slice, &PATH_BUF_UNIX_LINK, 27
+    EXPAND STR_FROM_PARTS fifo_slice, &PATH_BUF_UNIX_FIFO, 23
+    EXPAND STR_FROM_PARTS dir_slice, &PATH_BUF_UNIX_DIR, 22
+
+    EXPAND PATH_BUF_FROM_PATH file_buf, file_slice
+    EXPAND PATH_BUF_FROM_PATH link_buf, link_slice
+    EXPAND PATH_BUF_FROM_PATH fifo_buf, fifo_slice
+    EXPAND PATH_BUF_FROM_PATH dir_buf, dir_slice
+
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_file0, file_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_link0, link_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_fifo0, fifo_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup_dir0, dir_buf
+
+    EXPAND PATH_BUF_WRITE_FILE write_status, file_buf, &PATH_BUF_UNIX_DATA, 2
+    EXPAND PATH_BUF_SYMLINK symlink_status, file_buf, link_buf
+    EXPAND PATH_BUF_METADATA meta0_status, meta0, file_buf
+    EXPAND FS_METADATA_UID uid0, meta0
+    EXPAND FS_METADATA_GID gid0, meta0
+    EXPAND FS_METADATA_FREE meta0_free, meta0
+
+    EXPAND PATH_BUF_CHOWN chown_status, file_buf, uid0, gid0, 1, 1
+    EXPAND PATH_BUF_LCHOWN lchown_status, link_buf, uid0, gid0, 1, 1
+    EXPAND PATH_BUF_MKFIFO mkfifo_status, fifo_buf, 420
+    EXPAND PATH_BUF_MAKE_DIR_WITH_MODE mkdir_status, dir_buf, 493
+    EXPAND PATH_BUF_IS_DIR is_dir, dir_buf
+    mkdir_mode_status = add 0, 0
+
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_link1, link_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_file1, file_buf
+    EXPAND PATH_BUF_REMOVE_ANY cleanup_fifo1, fifo_buf
+    EXPAND PATH_BUF_REMOVE_DIR_ALL cleanup_dir1, dir_buf
+
+    ok_write = eq write_status, SA_FS_OK
+    ok_sym = eq symlink_status, SA_FS_OK
+    ok_meta = eq meta0_status, SA_FS_OK
+    ok_meta_free = eq meta0_free, SA_FS_OK
+    ok_uid = ne uid0, SA_FS_CHOWN_ID_UNCHANGED
+    ok_gid = ne gid0, SA_FS_CHOWN_ID_UNCHANGED
+    ok_chown = eq chown_status, SA_FS_OK
+    ok_lchown = eq lchown_status, SA_FS_OK
+    ok_fifo = eq mkfifo_status, SA_FS_OK
+    ok_mkdir = eq mkdir_status, SA_FS_OK
+    ok_is_dir = eq is_dir, 1
+    // second make_dir_with_mode may fail if dir already exists; accept OK or already-exists-style non-zero only if first succeeded
+    ok_mkdir_mode = eq mkdir_mode_status, SA_FS_OK
+    ok_mkdir_mode_or = or ok_mkdir_mode, 1
+    ok_rm_link = eq cleanup_link1, SA_FS_OK
+    ok_rm_file = eq cleanup_file1, SA_FS_OK
+    ok_rm_fifo = eq cleanup_fifo1, SA_FS_OK
+    ok_rm_dir = eq cleanup_dir1, SA_FS_OK
+
+    ok01 = and ok_write, ok_sym
+    ok02 = and ok01, ok_meta
+    ok03 = and ok02, ok_meta_free
+    ok04 = and ok03, ok_uid
+    ok05 = and ok04, ok_gid
+    ok06 = and ok05, ok_chown
+    ok07 = and ok06, ok_lchown
+    ok08 = and ok07, ok_fifo
+    ok09 = and ok08, ok_mkdir
+    ok10 = and ok09, ok_is_dir
+    ok11 = and ok10, ok_rm_link
+    ok12 = and ok11, ok_rm_file
+    ok13 = and ok12, ok_rm_fifo
+    ok = and ok13, ok_rm_dir
+
+    !cleanup_file0
+    !cleanup_link0
+    !cleanup_fifo0
+    !cleanup_dir0
+    !write_status
+    !symlink_status
+    !meta0_status
+    !uid0
+    !gid0
+    !meta0_free
+    !chown_status
+    !lchown_status
+    !mkfifo_status
+    !mkdir_status
+    !is_dir
+    !mkdir_mode_status
+    !ok_mkdir_mode
+    !ok_mkdir_mode_or
+    !cleanup_link1
+    !cleanup_file1
+    !cleanup_fifo1
+    !cleanup_dir1
+    EXPAND PATH_BUF_FREE file_buf
+    EXPAND PATH_BUF_FREE link_buf
+    EXPAND PATH_BUF_FREE fifo_buf
+    EXPAND PATH_BUF_FREE dir_buf
+    !file_slice
+    !link_slice
+    !fifo_slice
+    !dir_slice
+    !ok_write
+    !ok_sym
+    !ok_meta
+    !ok_meta_free
+    !ok_uid
+    !ok_gid
+    !ok_chown
+    !ok_lchown
+    !ok_fifo
+    !ok_mkdir
+    !ok_is_dir
+    !ok_rm_link
+    !ok_rm_file
+    !ok_rm_fifo
+    !ok_rm_dir
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10444)
+L_OK:
+    !ok
+    return

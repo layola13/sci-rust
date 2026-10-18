@@ -1,0 +1,11 @@
+@import "sa_std/io.sars"
+
+@test "sa_std io byte aliases expand"():
+L_ENTRY:
+    [IF 0]
+    EXPAND IO_READ_BYTES read_status, read_len, 0, read_buf, 8
+    EXPAND IO_READ_EXACT_BYTES exact_status, 0, read_buf, 8
+    EXPAND IO_WRITE_BYTES write_status, write_len, 0, write_buf, 8
+    EXPAND IO_WRITE_ALL_BYTES write_all_status, 0, write_buf, 8
+    [END_IF]
+    return 0

@@ -1,0 +1,20 @@
+@import "sa_std/mem.sars"
+
+@test "sa_std mem size_of align_of"():
+L_ENTRY:
+    EXPAND MEM_SIZE_OF_U64 sz
+    EXPAND MEM_ALIGN_OF_U64 al
+    a = eq sz, 8
+    b = eq al, 8
+    ok = and a, b
+    !sz
+    !al
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10937)

@@ -1,0 +1,39 @@
+@import "../sa_std/collections/hashmap.sars"
+
+@const KEY_A = utf8:"alpha"
+@const KEY_B = utf8:"bravo"
+@const VALUE_A = utf8:"A"
+@const VALUE_B = utf8:"B"
+
+@test "map literal macro inserts two entries"():
+L_ENTRY:
+    key_a = &KEY_A
+    key_b = &KEY_B
+    value_a = &VALUE_A
+    value_b = &VALUE_B
+    EXPAND MAP_LIT2 map, key_a, value_a, key_b, value_b
+    EXPAND MAP_LEN len0, map
+    EXPAND MAP_CONTAINS_KEY has_a, map, key_a
+    EXPAND MAP_CONTAINS_KEY has_b, map, key_b
+    EXPAND MAP_GET got_a, map, key_a
+    EXPAND MAP_GET got_b, map, key_b
+    ok_len = eq len0, 2
+    ok_has_a = eq has_a, 1
+    ok_has_b = eq has_b, 1
+    ok_got_a = eq got_a, value_a
+    ok_got_b = eq got_b, value_b
+    ok01 = and ok_len, ok_has_a
+    ok02 = and ok01, ok_has_b
+    ok03 = and ok02, ok_got_a
+    ok = and ok03, ok_got_b
+    !got_b
+    !got_a
+    !has_b
+    !has_a
+    !len0
+    !value_b
+    !value_a
+    !key_b
+    !key_a
+    EXPAND MAP_FREE map
+    return

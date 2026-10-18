@@ -1465,7 +1465,7 @@ sa/
     - 其中前者覆盖状态机骨架与恢复入口，后者覆盖最终收尾与非法状态处理
     - _Requirements: R26.1, R26.3_
 
-  - [x] 29.2 Flattener 文件拼接机制（`@import "libsa_async.sa"`）
+  - [x] 29.2 Flattener 文件拼接机制（`@import "libsa_async.sars"`）
     - 在预处理阶段把外部 `.sa` 文件内容原样插入当前源码
     - _Requirements: R26.4_
 

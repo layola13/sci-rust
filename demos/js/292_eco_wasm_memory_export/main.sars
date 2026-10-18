@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "guest/memory_export.sars"
+
+@const RESULT_OK = utf8:"292\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 292 - Eco Wasm Memory Export
+// The exported memory story is modeled as a guest module plus host-side memory notes.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @wasm_memory_export()
+    ok = eq value, 292
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

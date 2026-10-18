@@ -1,0 +1,63 @@
+@import "sa_std/string_format.sars"
+
+@test "sa_std concrete scalar formatting aliases"():
+L_ENTRY:
+    EXPAND FORMAT_U64_TO_STRING u64_buf, 12345
+    EXPAND FORMAT_I64_TO_STRING i64_buf, -42
+    EXPAND FORMAT_F64_TO_STRING f64_buf, 3.14, 2
+    EXPAND FORMAT_BOOL_TO_STRING bool_buf, 1
+    EXPAND STRFMT_LEN u64_len, u64_buf
+    EXPAND STRFMT_LEN i64_len, i64_buf
+    EXPAND STRFMT_LEN f64_len, f64_buf
+    EXPAND STRFMT_LEN bool_len, bool_buf
+    u64_ok = ne u64_len, 0
+    i64_ok = ne i64_len, 0
+    f64_ok = ne f64_len, 0
+    bool_ok = ne bool_len, 0
+    EXPAND STRFMT_FREE u64_free_status, u64_buf
+    EXPAND STRFMT_FREE i64_free_status, i64_buf
+    EXPAND STRFMT_FREE f64_free_status, f64_buf
+    EXPAND STRFMT_FREE bool_free_status, bool_buf
+    u64_free_ok = eq u64_free_status, 0
+    i64_free_ok = eq i64_free_status, 0
+    f64_free_ok = eq f64_free_status, 0
+    bool_free_ok = eq bool_free_status, 0
+    ok01 = and u64_ok, i64_ok
+    ok02 = and ok01, f64_ok
+    ok03 = and ok02, bool_ok
+    ok04 = and ok03, u64_free_ok
+    ok05 = and ok04, i64_free_ok
+    ok06 = and ok05, f64_free_ok
+    ok = and ok06, bool_free_ok
+
+    !u64_len
+    !i64_len
+    !f64_len
+    !bool_len
+    !u64_ok
+    !i64_ok
+    !f64_ok
+    !bool_ok
+    !u64_free_status
+    !i64_free_status
+    !f64_free_status
+    !bool_free_status
+    !u64_free_ok
+    !i64_free_ok
+    !f64_free_ok
+    !bool_free_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1401)
+
+L_PASS:
+    !ok
+    return 0

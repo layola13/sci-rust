@@ -1,0 +1,149 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap into_iter_sorted trait macro surface"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 1
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 5
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 3
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 4
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 iter, backing_vec, heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_SIZE_HINT_U64 hint_lower_initial, hint_upper_initial, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_LEN_U64 exact_len_initial, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_IS_EMPTY_U64 empty_initial, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 first_has, first, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_SIZE_HINT_U64 hint_lower_after_first, hint_upper_after_first, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_LEN_U64 exact_len_after_first, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 second_has, second, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 third_has, third, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 fourth_has, fourth, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_IS_EMPTY_U64 empty_done, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 done_has, done, iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 done_again_has, done_again, iter
+
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 empty_iter, empty_backing, empty_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_SIZE_HINT_U64 empty_hint_lower, empty_hint_upper, empty_iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_LEN_U64 empty_exact_len, empty_iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_EXACT_SIZE_IS_EMPTY_U64 empty_exact_bool, empty_iter
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_NEXT_U64 empty_next_has, empty_next, empty_iter
+
+    EXPAND VEC_FREE backing_vec
+    EXPAND VEC_FREE empty_backing
+
+    ok_hint_lower_initial = eq hint_lower_initial, 4
+    ok_hint_upper_initial = eq hint_upper_initial, 4
+    ok_exact_len_initial = eq exact_len_initial, 4
+    ok_empty_initial = eq empty_initial, 0
+    ok_first_has = eq first_has, 1
+    ok_first = eq first, 5
+    ok_hint_lower_after_first = eq hint_lower_after_first, 3
+    ok_hint_upper_after_first = eq hint_upper_after_first, 3
+    ok_exact_len_after_first = eq exact_len_after_first, 3
+    ok_second_has = eq second_has, 1
+    ok_second = eq second, 4
+    ok_third_has = eq third_has, 1
+    ok_third = eq third, 3
+    ok_fourth_has = eq fourth_has, 1
+    ok_fourth = eq fourth, 1
+    ok_empty_done = eq empty_done, 1
+    ok_done_has = eq done_has, 0
+    ok_done = eq done, 0
+    ok_done_again_has = eq done_again_has, 0
+    ok_done_again = eq done_again, 0
+    ok_empty_hint_lower = eq empty_hint_lower, 0
+    ok_empty_hint_upper = eq empty_hint_upper, 0
+    ok_empty_exact_len = eq empty_exact_len, 0
+    ok_empty_exact_bool = eq empty_exact_bool, 1
+    ok_empty_next_has = eq empty_next_has, 0
+    ok_empty_next = eq empty_next, 0
+
+    ok = and ok_hint_lower_initial, ok_hint_upper_initial
+    ok = and ok, ok_exact_len_initial
+    ok = and ok, ok_empty_initial
+    ok = and ok, ok_first_has
+    ok = and ok, ok_first
+    ok = and ok, ok_hint_lower_after_first
+    ok = and ok, ok_hint_upper_after_first
+    ok = and ok, ok_exact_len_after_first
+    ok = and ok, ok_second_has
+    ok = and ok, ok_second
+    ok = and ok, ok_third_has
+    ok = and ok, ok_third
+    ok = and ok, ok_fourth_has
+    ok = and ok, ok_fourth
+    ok = and ok, ok_empty_done
+    ok = and ok, ok_done_has
+    ok = and ok, ok_done
+    ok = and ok, ok_done_again_has
+    ok = and ok, ok_done_again
+    ok = and ok, ok_empty_hint_lower
+    ok = and ok, ok_empty_hint_upper
+    ok = and ok, ok_empty_exact_len
+    ok = and ok, ok_empty_exact_bool
+    ok = and ok, ok_empty_next_has
+    ok = and ok, ok_empty_next
+
+    !hint_lower_initial
+    !hint_upper_initial
+    !exact_len_initial
+    !empty_initial
+    !first_has
+    !first
+    !hint_lower_after_first
+    !hint_upper_after_first
+    !exact_len_after_first
+    !second_has
+    !second
+    !third_has
+    !third
+    !fourth_has
+    !fourth
+    !empty_done
+    !done_has
+    !done
+    !done_again_has
+    !done_again
+    !empty_hint_lower
+    !empty_hint_upper
+    !empty_exact_len
+    !empty_exact_bool
+    !empty_next_has
+    !empty_next
+    !ok_hint_lower_initial
+    !ok_hint_upper_initial
+    !ok_exact_len_initial
+    !ok_empty_initial
+    !ok_first_has
+    !ok_first
+    !ok_hint_lower_after_first
+    !ok_hint_upper_after_first
+    !ok_exact_len_after_first
+    !ok_second_has
+    !ok_second
+    !ok_third_has
+    !ok_third
+    !ok_fourth_has
+    !ok_fourth
+    !ok_empty_done
+    !ok_done_has
+    !ok_done
+    !ok_done_again_has
+    !ok_done_again
+    !ok_empty_hint_lower
+    !ok_empty_hint_upper
+    !ok_empty_exact_len
+    !ok_empty_exact_bool
+    !ok_empty_next_has
+    !ok_empty_next
+    !iter
+    !empty_iter
+    br ok -> L_BINARY_HEAP_INTO_ITER_SORTED_TRAIT_OK, L_BINARY_HEAP_INTO_ITER_SORTED_TRAIT_FAIL
+
+L_BINARY_HEAP_INTO_ITER_SORTED_TRAIT_FAIL:
+    !ok
+    panic(10731)
+
+L_BINARY_HEAP_INTO_ITER_SORTED_TRAIT_OK:
+    !ok
+    return

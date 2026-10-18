@@ -1,0 +1,108 @@
+@import "sa_std/hash.sars"
+
+@test "sa_std hash ref u64 macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    value_slot = stack_alloc 8
+    other_slot = stack_alloc 8
+    manual_hasher = stack_alloc DefaultHasher_SIZE
+    state = stack_alloc RandomState_SIZE
+    state_manual_hasher = stack_alloc DefaultHasher_SIZE
+
+    store value_slot+0, 44 as u64
+    store other_slot+0, 45 as u64
+
+    EXPAND DEFAULT_HASHER_NEW manual_hasher
+    EXPAND DEFAULT_HASHER_WRITE_U64 manual_hasher, 44
+    EXPAND DEFAULT_HASHER_FINISH manual_hash, manual_hasher
+
+    EXPAND HASH_U64 value_hash, 44
+    EXPAND HASH_REF_U64 ref_hash, value_slot
+    EXPAND HASH_REF_MUT_U64 ref_mut_hash, value_slot
+    EXPAND HASH_REF_U64 other_ref_hash, other_slot
+    EXPAND HASH_PTR_VALUE ptr_hash, value_slot
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_REF_U64 build_ref_hash, builder, value_slot
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_REF_MUT_U64 build_ref_mut_hash, builder, value_slot
+
+    store value_slot+0, 46 as u64
+    EXPAND HASH_REF_U64 changed_ref_hash, value_slot
+    EXPAND HASH_U64 changed_value_hash, 46
+
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+    EXPAND RANDOM_STATE_HASH_ONE_REF_U64 state_ref_hash, state, value_slot
+    EXPAND RANDOM_STATE_HASH_ONE_REF_MUT_U64 state_ref_mut_hash, state, value_slot
+    EXPAND RANDOM_STATE_BUILD state_manual_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_U64 state_manual_hasher, 46
+    EXPAND DEFAULT_HASHER_FINISH state_manual_hash, state_manual_hasher
+
+    manual_matches_value = eq manual_hash, value_hash
+    ref_forwards_value = eq ref_hash, value_hash
+    ref_mut_forwards_value = eq ref_mut_hash, value_hash
+    build_ref_matches = eq build_ref_hash, value_hash
+    build_ref_mut_matches = eq build_ref_mut_hash, value_hash
+    different_value_matters = ne ref_hash, other_ref_hash
+    pointer_not_ref_value = ne ref_hash, ptr_hash
+    changed_matches_new_value = eq changed_ref_hash, changed_value_hash
+    changed_differs_old_value = ne changed_ref_hash, value_hash
+    state_matches_manual = eq state_ref_hash, state_manual_hash
+    state_ref_mut_matches = eq state_ref_mut_hash, state_manual_hash
+    seeded_differs_default = ne state_ref_hash, changed_ref_hash
+
+    c01 = and manual_matches_value, ref_forwards_value
+    c02 = and c01, ref_mut_forwards_value
+    c03 = and c02, build_ref_matches
+    c04 = and c03, build_ref_mut_matches
+    c05 = and c04, different_value_matters
+    c06 = and c05, pointer_not_ref_value
+    c07 = and c06, changed_matches_new_value
+    c08 = and c07, changed_differs_old_value
+    c09 = and c08, state_matches_manual
+    c10 = and c09, state_ref_mut_matches
+    ok = and c10, seeded_differs_default
+
+    !builder
+    !manual_hash
+    !value_hash
+    !ref_hash
+    !ref_mut_hash
+    !other_ref_hash
+    !ptr_hash
+    !build_ref_hash
+    !build_ref_mut_hash
+    !changed_ref_hash
+    !changed_value_hash
+    !state_ref_hash
+    !state_ref_mut_hash
+    !state_manual_hash
+    !manual_matches_value
+    !ref_forwards_value
+    !ref_mut_forwards_value
+    !build_ref_matches
+    !build_ref_mut_matches
+    !different_value_matters
+    !pointer_not_ref_value
+    !changed_matches_new_value
+    !changed_differs_old_value
+    !state_matches_manual
+    !state_ref_mut_matches
+    !seeded_differs_default
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10576)
+
+L_PASS:
+    !ok
+    return 0

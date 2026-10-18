@@ -1,0 +1,30 @@
+@import "sa_std/io/print.sai"
+@import "versions/index.sars"
+
+@const OUT = utf8:"494\n"
+
+// 494 - Versioned float iface: v1 and v2 keep isolated symbols;
+// the index selects v2 (2.5).
+@main() -> i32:
+L_ENTRY:
+    value = call @versioned_float_value()
+    five = 5 as i32
+    two_i = 2 as i32
+    five_f = sitofp five as f64
+    two_f = sitofp two_i as f64
+    expect = fdiv five_f, two_f
+    ok = fcmp_eq value, expect
+    !value
+    !five
+    !two_i
+    !five_f
+    !two_f
+    !expect
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

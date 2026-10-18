@@ -1,0 +1,154 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/vec.sars"
+@import "sa_std/collections/btree_map.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+
+@test "sa_std btree_map iter_mut alias"():
+L_ENTRY:
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+
+    EXPAND BTREE_MAP_NEW map
+    EXPAND BTREE_MAP_INSERT map, charlie, 30
+    EXPAND BTREE_MAP_INSERT map, alpha, 10
+    EXPAND BTREE_MAP_INSERT map, bravo, 20
+
+    EXPAND BTREE_MAP_ITER_MUT triples, map
+    EXPAND VEC_LEN triples_len, triples
+    EXPAND VEC_GET_U64 alpha_key_bits, triples, 0
+    EXPAND VEC_GET_U64 alpha_key_len, triples, 1
+    EXPAND VEC_GET_U64 alpha_value_bits, triples, 2
+    EXPAND VEC_GET_U64 bravo_key_bits, triples, 3
+    EXPAND VEC_GET_U64 bravo_key_len, triples, 4
+    EXPAND VEC_GET_U64 bravo_value_bits, triples, 5
+    EXPAND VEC_GET_U64 charlie_key_bits, triples, 6
+    EXPAND VEC_GET_U64 charlie_key_len, triples, 7
+    EXPAND VEC_GET_U64 charlie_value_bits, triples, 8
+
+    expected_alpha_ptr = load alpha+Slice_ptr as ptr
+    expected_bravo_ptr = load bravo+Slice_ptr as ptr
+    expected_charlie_ptr = load charlie+Slice_ptr as ptr
+    expected_alpha_bits = bitcast expected_alpha_ptr as u64
+    expected_bravo_bits = bitcast expected_bravo_ptr as u64
+    expected_charlie_bits = bitcast expected_charlie_ptr as u64
+    alpha_value_ptr = bitcast alpha_value_bits as ptr
+    bravo_value_ptr = bitcast bravo_value_bits as ptr
+    charlie_value_ptr = bitcast charlie_value_bits as ptr
+    store alpha_value_ptr+0, 11 as u64
+    store bravo_value_ptr+0, 22 as u64
+    store charlie_value_ptr+0, 33 as u64
+
+    EXPAND BTREE_MAP_GET alpha_value, map, alpha
+    EXPAND BTREE_MAP_GET bravo_value, map, bravo
+    EXPAND BTREE_MAP_GET charlie_value, map, charlie
+    EXPAND BTREE_MAP_LEN map_len, map
+
+    EXPAND BTREE_MAP_NEW empty_map
+    EXPAND BTREE_MAP_ITER_MUT empty_triples, empty_map
+    EXPAND VEC_LEN empty_triples_len, empty_triples
+
+    ok_len = eq triples_len, 9
+    ok_alpha_key = eq alpha_key_bits, expected_alpha_bits
+    ok_alpha_len = eq alpha_key_len, 5
+    ok_alpha_ptr = ne alpha_value_bits, 0
+    ok_bravo_key = eq bravo_key_bits, expected_bravo_bits
+    ok_bravo_len = eq bravo_key_len, 5
+    ok_bravo_ptr = ne bravo_value_bits, 0
+    ok_charlie_key = eq charlie_key_bits, expected_charlie_bits
+    ok_charlie_len = eq charlie_key_len, 7
+    ok_charlie_ptr = ne charlie_value_bits, 0
+    ok_alpha_value = eq alpha_value, 11
+    ok_bravo_value = eq bravo_value, 22
+    ok_charlie_value = eq charlie_value, 33
+    ok_map_len = eq map_len, 3
+    ok_empty = eq empty_triples_len, 0
+
+    ok01 = and ok_len, ok_alpha_key
+    ok02 = and ok01, ok_alpha_len
+    ok03 = and ok02, ok_alpha_ptr
+    ok04 = and ok03, ok_bravo_key
+    ok05 = and ok04, ok_bravo_len
+    ok06 = and ok05, ok_bravo_ptr
+    ok07 = and ok06, ok_charlie_key
+    ok08 = and ok07, ok_charlie_len
+    ok09 = and ok08, ok_charlie_ptr
+    ok10 = and ok09, ok_alpha_value
+    ok11 = and ok10, ok_bravo_value
+    ok12 = and ok11, ok_charlie_value
+    ok13 = and ok12, ok_map_len
+    ok = and ok13, ok_empty
+
+    !triples
+    !triples_len
+    !alpha_key_bits
+    !alpha_key_len
+    !alpha_value_bits
+    !bravo_key_bits
+    !bravo_key_len
+    !bravo_value_bits
+    !charlie_key_bits
+    !charlie_key_len
+    !charlie_value_bits
+    !expected_alpha_ptr
+    !expected_bravo_ptr
+    !expected_charlie_ptr
+    !expected_alpha_bits
+    !expected_bravo_bits
+    !expected_charlie_bits
+    !alpha_value_ptr
+    !bravo_value_ptr
+    !charlie_value_ptr
+    !alpha_value
+    !bravo_value
+    !charlie_value
+    !map_len
+    !empty_triples
+    !empty_triples_len
+    !ok_len
+    !ok_alpha_key
+    !ok_alpha_len
+    !ok_alpha_ptr
+    !ok_bravo_key
+    !ok_bravo_len
+    !ok_bravo_ptr
+    !ok_charlie_key
+    !ok_charlie_len
+    !ok_charlie_ptr
+    !ok_alpha_value
+    !ok_bravo_value
+    !ok_charlie_value
+    !ok_map_len
+    !ok_empty
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !charlie
+    !bravo
+    !alpha
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND BTREE_MAP_FREE empty_map
+    EXPAND BTREE_MAP_FREE map
+    return 0
+
+L_FAIL:
+    panic(10837)

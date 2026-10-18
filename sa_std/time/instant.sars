@@ -1,0 +1,3 @@
+// Instant namespace facade.
+@import "../time.sal"
+@import "../time.sars"

@@ -1,0 +1,195 @@
+@import "sa_std/net.sars"
+
+@const TC_HOST = utf8:"127.0.0.1"
+#def TC_HOST_LEN = 9
+#def TC_MSG_LEN = 5
+
+@test "sa_std tcp stream try_clone survives original close"():
+L_ENTRY:
+    EXPAND NET_TCP_LISTENER_BIND_PORT listen_status, listener, bound_port, TC_HOST, TC_HOST_LEN, 0
+    listen_ok = eq listen_status, SA_NET_OK
+    listener_ok = ne listener, 0
+    port_ok = ne bound_port, 0
+    listen_all = and listen_ok, listener_ok
+    listen_all2 = and listen_all, port_ok
+    br listen_all2 -> L_CONNECT, L_FAIL_LISTEN
+L_FAIL_LISTEN:
+    !listen_all2
+    !listen_all
+    !port_ok
+    !listener_ok
+    !listen_ok
+    !bound_port
+    !listener
+    !listen_status
+    panic(10910)
+L_CONNECT:
+    EXPAND NET_TCP_CONNECT connect_status, client, TC_HOST, TC_HOST_LEN, bound_port
+    connect_ok = eq connect_status, SA_NET_OK
+    client_ok = ne client, 0
+    connect_all = and connect_ok, client_ok
+    br connect_all -> L_ACCEPT, L_FAIL_CONNECT
+L_FAIL_CONNECT:
+    !connect_all
+    !client_ok
+    !connect_ok
+    !client
+    !connect_status
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed, listener
+    !listener_close_failed
+    !listener
+    panic(10911)
+L_ACCEPT:
+    EXPAND NET_TCP_LISTENER_ACCEPT accept_status, server, listener
+    accept_ok = eq accept_status, SA_NET_OK
+    server_ok = ne server, 0
+    accept_all = and accept_ok, server_ok
+    br accept_all -> L_CLONE, L_FAIL_ACCEPT
+L_FAIL_ACCEPT:
+    !accept_all
+    !server_ok
+    !accept_ok
+    !server
+    !accept_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed, client
+    !client_close_failed
+    !client
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed2, listener
+    !listener_close_failed2
+    !listener
+    panic(10912)
+L_CLONE:
+    EXPAND NET_TCP_STREAM_TRY_CLONE clone_status, client_clone, client
+    clone_ok = eq clone_status, SA_NET_OK
+    clone_handle_ok = ne client_clone, 0
+    clone_all = and clone_ok, clone_handle_ok
+    br clone_all -> L_CLOSE_ORIGINAL, L_FAIL_CLONE
+L_FAIL_CLONE:
+    !clone_all
+    !clone_handle_ok
+    !clone_ok
+    !client_clone
+    !clone_status
+    EXPAND NET_TCP_STREAM_CLOSE client_close_failed2, client
+    !client_close_failed2
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed, server
+    !server_close_failed
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed3, listener
+    !listener_close_failed3
+    !listener
+    panic(10913)
+L_CLOSE_ORIGINAL:
+    EXPAND NET_TCP_STREAM_CLOSE client_close_status, client
+    client_close_ok = eq client_close_status, SA_NET_OK
+    br client_close_ok -> L_WRITE_CLONE, L_FAIL_CLIENT_CLOSE
+L_FAIL_CLIENT_CLOSE:
+    !client_close_ok
+    !client_close_status
+    !client
+    EXPAND NET_TCP_STREAM_CLOSE clone_close_failed, client_clone
+    !clone_close_failed
+    !client_clone
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed2, server
+    !server_close_failed2
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed4, listener
+    !listener_close_failed4
+    !listener
+    panic(10914)
+L_WRITE_CLONE:
+    write_buf = stack_alloc 8
+    store write_buf+0, 99 as u8
+    store write_buf+1, 108 as u8
+    store write_buf+2, 111 as u8
+    store write_buf+3, 110 as u8
+    store write_buf+4, 101 as u8
+    EXPAND NET_TCP_STREAM_WRITE_ALL write_status, client_clone, write_buf, TC_MSG_LEN
+    write_ok = eq write_status, SA_NET_OK
+    br write_ok -> L_READ_SERVER, L_FAIL_WRITE
+L_FAIL_WRITE:
+    !write_ok
+    !write_status
+    EXPAND NET_TCP_STREAM_CLOSE clone_close_failed2, client_clone
+    !clone_close_failed2
+    !client_clone
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed3, server
+    !server_close_failed3
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed5, listener
+    !listener_close_failed5
+    !listener
+    panic(10915)
+L_READ_SERVER:
+    read_buf = stack_alloc 8
+    EXPAND NET_TCP_STREAM_READ_EXACT read_status, server, read_buf, TC_MSG_LEN
+    read_ok = eq read_status, SA_NET_OK
+    read_b0 = load read_buf+0 as u8
+    read_b1 = load read_buf+1 as u8
+    read_b2 = load read_buf+2 as u8
+    read_b3 = load read_buf+3 as u8
+    read_b4 = load read_buf+4 as u8
+    match0 = eq read_b0, 99
+    match1 = eq read_b1, 108
+    match2 = eq read_b2, 111
+    match3 = eq read_b3, 110
+    match4 = eq read_b4, 101
+    match01 = and match0, match1
+    match012 = and match01, match2
+    match0123 = and match012, match3
+    payload_ok = and match0123, match4
+    read_all = and read_ok, payload_ok
+    br read_all -> L_CLEANUP, L_FAIL_READ
+L_FAIL_READ:
+    !read_all
+    !payload_ok
+    !match0123
+    !match012
+    !match01
+    !match0
+    !match1
+    !match2
+    !match3
+    !match4
+    !read_b0
+    !read_b1
+    !read_b2
+    !read_b3
+    !read_b4
+    !read_ok
+    !read_status
+    EXPAND NET_TCP_STREAM_CLOSE clone_close_failed3, client_clone
+    !clone_close_failed3
+    !client_clone
+    EXPAND NET_TCP_STREAM_CLOSE server_close_failed4, server
+    !server_close_failed4
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed6, listener
+    !listener_close_failed6
+    !listener
+    panic(10916)
+L_CLEANUP:
+    EXPAND NET_TCP_STREAM_CLOSE clone_close_status, client_clone
+    clone_close_ok = eq clone_close_status, SA_NET_OK
+    !clone_close_ok
+    !clone_close_status
+    !client_clone
+    EXPAND NET_TCP_STREAM_CLOSE server_close_status, server
+    server_close_ok = eq server_close_status, SA_NET_OK
+    br server_close_ok -> L_LISTENER, L_FAIL_SERVER_CLOSE
+L_FAIL_SERVER_CLOSE:
+    !server_close_ok
+    !server_close_status
+    !server
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_failed7, listener
+    !listener_close_failed7
+    !listener
+    panic(10917)
+L_LISTENER:
+    EXPAND NET_TCP_LISTENER_CLOSE listener_close_status, listener
+    listener_close_ok = eq listener_close_status, SA_NET_OK
+    !listener_close_ok
+    !listener_close_status
+    !listener
+    return

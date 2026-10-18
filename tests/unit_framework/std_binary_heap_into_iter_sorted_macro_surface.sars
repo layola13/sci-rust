@@ -1,0 +1,93 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap into_iter_sorted helper"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 1
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 5
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 3
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 4
+
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 iter, backing_vec, heap
+    EXPAND VEC_LEN backing_len, backing_vec
+    EXPAND ITER_NEXT_U64 first_ok, first, iter
+    EXPAND ITER_NEXT_U64 second_ok, second, iter
+    EXPAND ITER_NEXT_BACK_U64 last_ok, last, iter
+    EXPAND ITER_NEXT_U64 third_ok, third, iter
+    EXPAND ITER_NEXT_U64 done_ok, done_value, iter
+    EXPAND VEC_FREE backing_vec
+
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_INTO_ITER_SORTED_U64 empty_iter, empty_vec, empty_heap
+    EXPAND VEC_LEN empty_backing_len, empty_vec
+    EXPAND ITER_NEXT_U64 empty_next_ok, empty_next, empty_iter
+    EXPAND VEC_FREE empty_vec
+
+    ok_backing_len = eq backing_len, 4
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 5
+    ok_second_flag = eq second_ok, 1
+    ok_second = eq second, 4
+    ok_last_flag = eq last_ok, 1
+    ok_last = eq last, 1
+    ok_third_flag = eq third_ok, 1
+    ok_third = eq third, 3
+    ok_done_flag = eq done_ok, 0
+    ok_done_value = eq done_value, 0
+    ok_empty_backing_len = eq empty_backing_len, 0
+    ok_empty_next_flag = eq empty_next_ok, 0
+    ok_empty_next = eq empty_next, 0
+
+    ok = and ok_backing_len, ok_first_flag
+    ok = and ok, ok_first
+    ok = and ok, ok_second_flag
+    ok = and ok, ok_second
+    ok = and ok, ok_last_flag
+    ok = and ok, ok_last
+    ok = and ok, ok_third_flag
+    ok = and ok, ok_third
+    ok = and ok, ok_done_flag
+    ok = and ok, ok_done_value
+    ok = and ok, ok_empty_backing_len
+    ok = and ok, ok_empty_next_flag
+    ok = and ok, ok_empty_next
+
+    !backing_len
+    !first_ok
+    !first
+    !second_ok
+    !second
+    !last_ok
+    !last
+    !third_ok
+    !third
+    !done_ok
+    !done_value
+    !empty_backing_len
+    !empty_next_ok
+    !empty_next
+    !ok_backing_len
+    !ok_first_flag
+    !ok_first
+    !ok_second_flag
+    !ok_second
+    !ok_last_flag
+    !ok_last
+    !ok_third_flag
+    !ok_third
+    !ok_done_flag
+    !ok_done_value
+    !ok_empty_backing_len
+    !ok_empty_next_flag
+    !ok_empty_next
+    !iter
+    !empty_iter
+    br ok -> L_BINARY_HEAP_INTO_ITER_SORTED_OK, L_BINARY_HEAP_INTO_ITER_SORTED_FAIL
+
+L_BINARY_HEAP_INTO_ITER_SORTED_FAIL:
+    !ok
+    panic(10705)
+
+L_BINARY_HEAP_INTO_ITER_SORTED_OK:
+    !ok
+    return

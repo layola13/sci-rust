@@ -1,0 +1,70 @@
+@import "sa_std/array.sars"
+
+@test "sa_std array try_from slice macro surface"():
+L_ENTRY:
+    src = stack_alloc 32
+    dst = stack_alloc 32
+    dst_mut = stack_alloc 32
+    store src+0, 10 as u64
+    store src+8, 20 as u64
+    store src+16, 30 as u64
+    store src+24, 40 as u64
+    store dst+0, 0 as u64
+    store dst+8, 0 as u64
+    store dst+16, 0 as u64
+    store dst+24, 0 as u64
+    store dst_mut+0, 0 as u64
+    store dst_mut+8, 0 as u64
+    store dst_mut+16, 0 as u64
+    store dst_mut+24, 0 as u64
+
+    src_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 src_slice, src, 4
+    EXPAND ARRAY_TRY_FROM_SLICE_U64 from_ok, dst, 4, src_slice
+    dst0 = load dst+0 as u64
+    dst3 = load dst+24 as u64
+
+    short_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_SLICE_U64 short_slice, src, 3
+    EXPAND ARRAY_TRY_FROM_SLICE_U64 from_short_ok, dst, 4, short_slice
+    dst_after_short = load dst+24 as u64
+
+    mut_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_MUT_SLICE_U64 mut_slice, src, 4
+    EXPAND ARRAY_TRY_FROM_MUT_SLICE_U64 from_mut_ok, dst_mut, 4, mut_slice
+    dst_mut1 = load dst_mut+8 as u64
+    dst_mut2 = load dst_mut+16 as u64
+
+    long_slice = stack_alloc Slice_SIZE
+    EXPAND ARRAY_AS_MUT_SLICE_U64 long_slice, src, 4
+    EXPAND ARRAY_TRY_FROM_MUT_SLICE_U64 from_mut_long_ok, dst_mut, 3, long_slice
+    dst_mut_after_long = load dst_mut+16 as u64
+
+    ok_from = eq from_ok, 1
+    ok_dst0 = eq dst0, 10
+    ok_dst3 = eq dst3, 40
+    ok_short = eq from_short_ok, 0
+    ok_dst_after_short = eq dst_after_short, 40
+    ok_from_mut = eq from_mut_ok, 1
+    ok_dst_mut1 = eq dst_mut1, 20
+    ok_dst_mut2 = eq dst_mut2, 30
+    ok_from_mut_long = eq from_mut_long_ok, 0
+    ok_dst_mut_after_long = eq dst_mut_after_long, 30
+
+    c01 = and ok_from, ok_dst0
+    c02 = and c01, ok_dst3
+    c03 = and c02, ok_short
+    c04 = and c03, ok_dst_after_short
+    c05 = and c04, ok_from_mut
+    c06 = and c05, ok_dst_mut1
+    c07 = and c06, ok_dst_mut2
+    c08 = and c07, ok_from_mut_long
+    ok = and c08, ok_dst_mut_after_long
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10520)
+
+L_PASS:
+    return 0

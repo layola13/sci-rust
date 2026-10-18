@@ -1,0 +1,15 @@
+@import "sa_std/net.sars"
+
+@test "sa_std last error accessor"():
+L_ENTRY:
+    EXPAND NET_LAST_ERROR last_error
+    ok = eq last_error, SA_NET_OK
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !last_error
+    !ok
+    panic(10620)
+L_PASS:
+    !last_error
+    !ok
+    return 0

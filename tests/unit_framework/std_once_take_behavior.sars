@@ -1,0 +1,49 @@
+@import "sa_std/sync/once.sars"
+
+@test "sa_std once take empty set and repeat"():
+L_ENTRY:
+    EXPAND ONCE_NEW once
+    EXPAND ONCE_TAKE empty_ok, empty_value, once
+    EXPAND ONCE_SET set_ok, once, 1234
+    EXPAND ONCE_TAKE first_ok, first_value, once
+    EXPAND ONCE_TAKE second_ok, second_value, once
+
+    c0 = eq empty_ok, 0
+    c1 = eq empty_value, 0
+    c2 = eq set_ok, 1
+    c3 = eq first_ok, 1
+    c4 = eq first_value, 1234
+    c5 = eq second_ok, 0
+    c6 = eq second_value, 0
+    a0 = and c0, c1
+    a1 = and a0, c2
+    a2 = and a1, c3
+    a3 = and a2, c4
+    a4 = and a3, c5
+    ok = and a4, c6
+    !empty_ok
+    !empty_value
+    !set_ok
+    !first_ok
+    !first_value
+    !second_ok
+    !second_value
+    !c0
+    !c1
+    !c2
+    !c3
+    !c4
+    !c5
+    !c6
+    !a0
+    !a1
+    !a2
+    !a3
+    !a4
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11001)

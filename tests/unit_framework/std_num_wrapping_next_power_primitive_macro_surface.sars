@@ -1,0 +1,107 @@
+@import "sa_std/num.sars"
+
+@test "sa_std unsigned primitive wrapping_next_power_of_two macro surface"():
+L_ENTRY:
+    u32_high = shl 1, 31
+    u32_over = add u32_high, 1
+    u64_high = shl 1, 63
+    u64_over = add u64_high, 1
+
+    EXPAND NUM_U8_WRAPPING_NEXT_POWER_OF_TWO u8_zero, 0
+    EXPAND NUM_U8_WRAPPING_NEXT_POWER_OF_TWO u8_three, 3
+    EXPAND NUM_U8_WRAPPING_NEXT_POWER_OF_TWO u8_high, 128
+    EXPAND NUM_U8_WRAPPING_NEXT_POWER_OF_TWO u8_over, 129
+    EXPAND NUM_U8_WRAPPING_NEXT_POWER_OF_TWO u8_max, 255
+
+    EXPAND NUM_U16_WRAPPING_NEXT_POWER_OF_TWO u16_zero, 0
+    EXPAND NUM_U16_WRAPPING_NEXT_POWER_OF_TWO u16_three, 3
+    EXPAND NUM_U16_WRAPPING_NEXT_POWER_OF_TWO u16_high, 32768
+    EXPAND NUM_U16_WRAPPING_NEXT_POWER_OF_TWO u16_over, 32769
+    EXPAND NUM_U16_WRAPPING_NEXT_POWER_OF_TWO u16_max, 65535
+
+    EXPAND NUM_U32_WRAPPING_NEXT_POWER_OF_TWO u32_zero, 0
+    EXPAND NUM_U32_WRAPPING_NEXT_POWER_OF_TWO u32_three, 3
+    EXPAND NUM_U32_WRAPPING_NEXT_POWER_OF_TWO u32_high_value, u32_high
+    EXPAND NUM_U32_WRAPPING_NEXT_POWER_OF_TWO u32_over_value, u32_over
+    EXPAND NUM_U32_WRAPPING_NEXT_POWER_OF_TWO u32_max, 4294967295
+
+    EXPAND NUM_U64_WRAPPING_NEXT_POWER_OF_TWO u64_zero, 0
+    EXPAND NUM_U64_WRAPPING_NEXT_POWER_OF_TWO u64_three, 3
+    EXPAND NUM_U64_WRAPPING_NEXT_POWER_OF_TWO u64_high_value, u64_high
+    EXPAND NUM_U64_WRAPPING_NEXT_POWER_OF_TWO u64_over_value, u64_over
+    EXPAND NUM_U64_WRAPPING_NEXT_POWER_OF_TWO u64_max, NUM_U64_MAX
+
+    EXPAND NUM_USIZE_WRAPPING_NEXT_POWER_OF_TWO usize_zero, 0
+    EXPAND NUM_USIZE_WRAPPING_NEXT_POWER_OF_TWO usize_three, 3
+    EXPAND NUM_USIZE_WRAPPING_NEXT_POWER_OF_TWO usize_high, u64_high
+    EXPAND NUM_USIZE_WRAPPING_NEXT_POWER_OF_TWO usize_over, u64_over
+    EXPAND NUM_USIZE_WRAPPING_NEXT_POWER_OF_TWO usize_max, NUM_U64_MAX
+
+    ok01 = eq u8_zero, 1
+    ok02 = eq u8_three, 4
+    ok03 = eq u8_high, 128
+    ok04 = eq u8_over, 0
+    ok05 = eq u8_max, 0
+    ok06 = eq u16_zero, 1
+    ok07 = eq u16_three, 4
+    ok08 = eq u16_high, 32768
+    ok09 = eq u16_over, 0
+    ok10 = eq u16_max, 0
+    ok11 = eq u32_zero, 1
+    ok12 = eq u32_three, 4
+    ok13 = eq u32_high_value, u32_high
+    ok14 = eq u32_over_value, 0
+    ok15 = eq u32_max, 0
+    ok16 = eq u64_zero, 1
+    ok17 = eq u64_three, 4
+    ok18 = eq u64_high_value, u64_high
+    ok19 = eq u64_over_value, 0
+    ok20 = eq u64_max, 0
+    ok21 = eq usize_zero, 1
+    ok22 = eq usize_three, 4
+    ok23 = eq usize_high, u64_high
+    ok24 = eq usize_over, 0
+    ok25 = eq usize_max, 0
+
+    chain01 = and ok01, ok02
+    chain02 = and chain01, ok03
+    chain03 = and chain02, ok04
+    chain04 = and chain03, ok05
+    chain05 = and chain04, ok06
+    chain06 = and chain05, ok07
+    chain07 = and chain06, ok08
+    chain08 = and chain07, ok09
+    chain09 = and chain08, ok10
+    chain10 = and chain09, ok11
+    chain11 = and chain10, ok12
+    chain12 = and chain11, ok13
+    chain13 = and chain12, ok14
+    chain14 = and chain13, ok15
+    chain15 = and chain14, ok16
+    chain16 = and chain15, ok17
+    chain17 = and chain16, ok18
+    chain18 = and chain17, ok19
+    chain19 = and chain18, ok20
+    chain20 = and chain19, ok21
+    chain21 = and chain20, ok22
+    chain22 = and chain21, ok23
+    chain23 = and chain22, ok24
+    ok = and chain23, ok25
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u32_high
+    !u32_over
+    !u64_high
+    !u64_over
+    panic(10660)
+
+L_PASS:
+    !ok
+    !u32_high
+    !u32_over
+    !u64_high
+    !u64_over
+    return 0

@@ -103,7 +103,7 @@ test "formatter lists selected tests with flags and locations" {
             .desc = .{
                 .id = 1,
                 .name = "simple pass",
-                .source_file = "tests/basic.sa",
+                .source_file = "tests/basic.sars",
                 .line = 3,
                 .col = 1,
                 .ignored = false,
@@ -115,7 +115,7 @@ test "formatter lists selected tests with flags and locations" {
             .desc = .{
                 .id = 2,
                 .name = "ignored panic",
-                .source_file = "tests/basic.sa",
+                .source_file = "tests/basic.sars",
                 .line = 9,
                 .col = 1,
                 .ignored = true,

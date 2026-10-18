@@ -46,9 +46,9 @@ function Test-StdPayload {
     param([string]$StdRoot)
     $required = @(
         "io\print.sai",
-        "core\sa_core.sa",
-        "core\result.sa",
-        "core\option.sa",
+        "core\sa_core.sars",
+        "core\result.sars",
+        "core\option.sars",
         "sa_std.h",
         "sa_std.lib"
     )
@@ -119,7 +119,7 @@ $arch = switch ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
 Write-Info "Detected platform: windows-$arch"
 
 # Installation directories
-$saDir    = if ($Dir -ne "") { $Dir } else { Join-Path $HOME ".sa" }
+$saDir    = if ($Dir -ne "") { $Dir } else { Join-Path $HOME ".sars" }
 $saBinDir = Join-Path $saDir "bin"
 $saStdDir = Join-Path $saDir "std"
 

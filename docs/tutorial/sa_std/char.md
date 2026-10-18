@@ -4,8 +4,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/char.sa"
-@import "sa_std/ascii.sa"
+@import "sa_std/char.sars"
+@import "sa_std/ascii.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -13,7 +13,7 @@
 下面的完整 SA 程序展示了如何对一个字符进行大小写判断、数字字符判定，并将其强转为对应小写的过程：
 
 ```sa
-@import "sa_std/ascii.sa"
+@import "sa_std/ascii.sars"
 
 @main() -> i32:
 L_ENTRY:

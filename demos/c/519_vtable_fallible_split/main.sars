@@ -1,0 +1,23 @@
+@import "sa_std/io/print.sai"
+@import "consumer/consume.sars"
+
+@const OUT = utf8:"519\n"
+
+// 519 - Vtable plus fallible split across files: the bridge vtable
+// method returns a plain value, the consumer wraps the indirect call
+// in a fallible boundary (519).
+@main() -> i32:
+L_ENTRY:
+    r = call @consume_value()
+    v = ?r
+    ok = eq v, 519
+    !r
+    !v
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

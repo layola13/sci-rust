@@ -1,0 +1,825 @@
+@import "option.sal"
+@import "result.sal"
+@import "slice.sal"
+@import "panic.sars"
+
+@const OPTION_UNWRAP_PANIC = utf8:"called Option::unwrap() on a None value"
+
+[MACRO] OPTION_NEW_NONE %out_opt
+    %out_opt = alloc Option_SIZE
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+[END_MACRO]
+
+[MACRO] OPTION_NEW_SOME %out_opt, %value
+    %out_opt = alloc Option_SIZE
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, %value as u64
+[END_MACRO]
+
+// Rust constructor-name bare alias over OPTION_NEW_SOME.
+[MACRO] OPTION_SOME %out_opt, %value
+    EXPAND OPTION_NEW_SOME %out_opt, %value
+[END_MACRO]
+
+// Rust constructor-name bare alias over OPTION_NEW_NONE.
+[MACRO] OPTION_NONE %out_opt
+    EXPAND OPTION_NEW_NONE %out_opt
+[END_MACRO]
+
+[MACRO] OPTION_IS_SOME %out_bool, %opt_reg
+    __option_tag_%out_bool = load %opt_reg+Option_tag as u64
+    %out_bool = eq __option_tag_%out_bool, Option_SOME
+    !__option_tag_%out_bool
+[END_MACRO]
+
+[MACRO] OPTION_IS_NONE %out_bool, %opt_reg
+    __option_tag_%out_bool = load %opt_reg+Option_tag as u64
+    %out_bool = eq __option_tag_%out_bool, Option_NONE
+    !__option_tag_%out_bool
+[END_MACRO]
+
+[MACRO] OPTION_GET %out_value, %opt_reg
+    %out_value = load %opt_reg+Option_value as u64
+[END_MACRO]
+
+[MACRO] OPTION_AS_REF %out_opt, %opt_reg
+    %out_opt = alloc Option_SIZE
+    __option_as_ref_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_as_ref_some_%out_opt = eq __option_as_ref_tag_%out_opt, Option_SOME
+    br __option_as_ref_some_%out_opt -> L_OPTION_AS_REF_SOME_%out_opt, L_OPTION_AS_REF_NONE_%out_opt
+L_OPTION_AS_REF_SOME_%out_opt:
+    __option_as_ref_ptr_%out_opt = ptr_add %opt_reg, Option_value
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, __option_as_ref_ptr_%out_opt as ptr
+    !__option_as_ref_ptr_%out_opt
+    !__option_as_ref_some_%out_opt
+    !__option_as_ref_tag_%out_opt
+    jmp L_OPTION_AS_REF_END_%out_opt
+L_OPTION_AS_REF_NONE_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+    !__option_as_ref_some_%out_opt
+    !__option_as_ref_tag_%out_opt
+L_OPTION_AS_REF_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_AS_MUT %out_opt, %opt_reg
+    EXPAND OPTION_AS_REF %out_opt, %opt_reg
+[END_MACRO]
+
+[MACRO] OPTION_COPIED_U64 %out_opt, %opt_reg
+    %out_opt = alloc Option_SIZE
+    __option_copied_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_copied_some_%out_opt = eq __option_copied_tag_%out_opt, Option_SOME
+    br __option_copied_some_%out_opt -> L_OPTION_COPIED_SOME_%out_opt, L_OPTION_COPIED_NONE_%out_opt
+L_OPTION_COPIED_SOME_%out_opt:
+    __option_copied_ptr_%out_opt = load %opt_reg+Option_value as ptr
+    __option_copied_value_%out_opt = load __option_copied_ptr_%out_opt+0 as u64
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, __option_copied_value_%out_opt as u64
+    !__option_copied_value_%out_opt
+    !__option_copied_ptr_%out_opt
+    !__option_copied_some_%out_opt
+    !__option_copied_tag_%out_opt
+    jmp L_OPTION_COPIED_END_%out_opt
+L_OPTION_COPIED_NONE_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+    !__option_copied_some_%out_opt
+    !__option_copied_tag_%out_opt
+L_OPTION_COPIED_END_%out_opt:
+[END_MACRO]
+
+// Rust method-name alias over OPTION_COPIED_U64.
+[MACRO] OPTION_COPIED %out_opt, %opt_reg
+    EXPAND OPTION_COPIED_U64 %out_opt, %opt_reg
+[END_MACRO]
+
+[MACRO] OPTION_CLONED_U64 %out_opt, %opt_reg
+    EXPAND OPTION_COPIED_U64 %out_opt, %opt_reg
+[END_MACRO]
+
+// Rust method-name alias over OPTION_CLONED_U64.
+[MACRO] OPTION_CLONED %out_opt, %opt_reg
+    EXPAND OPTION_CLONED_U64 %out_opt, %opt_reg
+[END_MACRO]
+
+[MACRO] OPTION_AS_SLICE %out_slice, %opt_reg
+    %out_slice = alloc Slice_SIZE
+    __option_slice_tag_%out_slice = load %opt_reg+Option_tag as u64
+    __option_slice_len_%out_slice = eq __option_slice_tag_%out_slice, Option_SOME
+    __option_slice_ptr_%out_slice = ptr_add %opt_reg, Option_value
+    store %out_slice+Slice_ptr, __option_slice_ptr_%out_slice as ptr
+    store %out_slice+Slice_len, __option_slice_len_%out_slice as u64
+    !__option_slice_ptr_%out_slice
+    !__option_slice_len_%out_slice
+    !__option_slice_tag_%out_slice
+[END_MACRO]
+
+[MACRO] OPTION_AS_MUT_SLICE %out_slice, %opt_reg
+    EXPAND OPTION_AS_SLICE %out_slice, %opt_reg
+[END_MACRO]
+
+[MACRO] OPTION_COPY %out_opt, %opt_reg
+    %out_opt = alloc Option_SIZE
+    __option_copy_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_copy_value_%out_opt = load %opt_reg+Option_value as u64
+    store %out_opt+Option_tag, __option_copy_tag_%out_opt as u64
+    store %out_opt+Option_value, __option_copy_value_%out_opt as u64
+    !__option_copy_value_%out_opt
+    !__option_copy_tag_%out_opt
+[END_MACRO]
+
+[MACRO] OPTION_CONTAINS_U64 %out_bool, %opt_reg, %value
+    __option_contains_tag_%out_bool = load %opt_reg+Option_tag as u64
+    __option_contains_some_%out_bool = eq __option_contains_tag_%out_bool, Option_SOME
+    br __option_contains_some_%out_bool -> L_OPTION_CONTAINS_SOME_%out_bool, L_OPTION_CONTAINS_NONE_%out_bool
+L_OPTION_CONTAINS_SOME_%out_bool:
+    __option_contains_value_%out_bool = load %opt_reg+Option_value as u64
+    %out_bool = eq __option_contains_value_%out_bool, %value
+    !__option_contains_value_%out_bool
+    !__option_contains_some_%out_bool
+    !__option_contains_tag_%out_bool
+    jmp L_OPTION_CONTAINS_END_%out_bool
+L_OPTION_CONTAINS_NONE_%out_bool:
+    %out_bool = add 0, 0
+    !__option_contains_some_%out_bool
+    !__option_contains_tag_%out_bool
+L_OPTION_CONTAINS_END_%out_bool:
+[END_MACRO]
+
+// Rust method-name alias over OPTION_CONTAINS_U64.
+[MACRO] OPTION_CONTAINS %out_bool, %opt_reg, %value
+    EXPAND OPTION_CONTAINS_U64 %out_bool, %opt_reg, %value
+[END_MACRO]
+
+[MACRO] OPTION_IS_SOME_AND %out_bool, %opt_reg, %pred_fn
+    __option_some_and_tag_%out_bool = load %opt_reg+Option_tag as u64
+    __option_some_and_some_%out_bool = eq __option_some_and_tag_%out_bool, Option_SOME
+    br __option_some_and_some_%out_bool -> L_OPTION_SOME_AND_SOME_%out_bool, L_OPTION_SOME_AND_NONE_%out_bool
+L_OPTION_SOME_AND_SOME_%out_bool:
+    __option_some_and_value_%out_bool = load %opt_reg+Option_value as u64
+    __option_some_and_pred_%out_bool = call %pred_fn(__option_some_and_value_%out_bool)
+    %out_bool = ne __option_some_and_pred_%out_bool, 0
+    !__option_some_and_pred_%out_bool
+    !__option_some_and_value_%out_bool
+    !__option_some_and_some_%out_bool
+    !__option_some_and_tag_%out_bool
+    jmp L_OPTION_SOME_AND_END_%out_bool
+L_OPTION_SOME_AND_NONE_%out_bool:
+    %out_bool = add 0, 0
+    !__option_some_and_some_%out_bool
+    !__option_some_and_tag_%out_bool
+L_OPTION_SOME_AND_END_%out_bool:
+[END_MACRO]
+
+[MACRO] OPTION_IS_NONE_OR %out_bool, %opt_reg, %pred_fn
+    __option_none_or_tag_%out_bool = load %opt_reg+Option_tag as u64
+    __option_none_or_some_%out_bool = eq __option_none_or_tag_%out_bool, Option_SOME
+    br __option_none_or_some_%out_bool -> L_OPTION_NONE_OR_SOME_%out_bool, L_OPTION_NONE_OR_NONE_%out_bool
+L_OPTION_NONE_OR_SOME_%out_bool:
+    __option_none_or_value_%out_bool = load %opt_reg+Option_value as u64
+    __option_none_or_pred_%out_bool = call %pred_fn(__option_none_or_value_%out_bool)
+    %out_bool = ne __option_none_or_pred_%out_bool, 0
+    !__option_none_or_pred_%out_bool
+    !__option_none_or_value_%out_bool
+    !__option_none_or_some_%out_bool
+    !__option_none_or_tag_%out_bool
+    jmp L_OPTION_NONE_OR_END_%out_bool
+L_OPTION_NONE_OR_NONE_%out_bool:
+    %out_bool = add 0, 1
+    !__option_none_or_some_%out_bool
+    !__option_none_or_tag_%out_bool
+L_OPTION_NONE_OR_END_%out_bool:
+[END_MACRO]
+
+[MACRO] OPTION_MAP %out_opt, %opt_reg, %map_fn
+    %out_opt = alloc Option_SIZE
+    __option_map_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_map_some_%out_opt = eq __option_map_tag_%out_opt, Option_SOME
+    br __option_map_some_%out_opt -> L_OPTION_MAP_SOME_%out_opt, L_OPTION_MAP_NONE_%out_opt
+L_OPTION_MAP_SOME_%out_opt:
+    __option_map_value_%out_opt = load %opt_reg+Option_value as u64
+    __option_map_mapped_%out_opt = call %map_fn(__option_map_value_%out_opt)
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, __option_map_mapped_%out_opt as u64
+    !__option_map_mapped_%out_opt
+    !__option_map_value_%out_opt
+    !__option_map_some_%out_opt
+    !__option_map_tag_%out_opt
+    jmp L_OPTION_MAP_END_%out_opt
+L_OPTION_MAP_NONE_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+    !__option_map_some_%out_opt
+    !__option_map_tag_%out_opt
+L_OPTION_MAP_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_INSPECT %out_opt, %opt_reg, %inspect_fn
+    __option_inspect_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_inspect_some_%out_opt = eq __option_inspect_tag_%out_opt, Option_SOME
+    br __option_inspect_some_%out_opt -> L_OPTION_INSPECT_SOME_%out_opt, L_OPTION_INSPECT_NONE_%out_opt
+L_OPTION_INSPECT_SOME_%out_opt:
+    __option_inspect_value_%out_opt = load %opt_reg+Option_value as u64
+    __option_inspect_ignored_%out_opt = call %inspect_fn(__option_inspect_value_%out_opt)
+    !__option_inspect_ignored_%out_opt
+    !__option_inspect_value_%out_opt
+    jmp L_OPTION_INSPECT_COPY_%out_opt
+L_OPTION_INSPECT_NONE_%out_opt:
+    jmp L_OPTION_INSPECT_COPY_%out_opt
+L_OPTION_INSPECT_COPY_%out_opt:
+    EXPAND OPTION_COPY %out_opt, %opt_reg
+    !__option_inspect_some_%out_opt
+    !__option_inspect_tag_%out_opt
+[END_MACRO]
+
+[MACRO] OPTION_FILTER %out_opt, %opt_reg, %pred_fn
+    %out_opt = alloc Option_SIZE
+    __option_filter_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_filter_some_%out_opt = eq __option_filter_tag_%out_opt, Option_SOME
+    br __option_filter_some_%out_opt -> L_OPTION_FILTER_CHECK_%out_opt, L_OPTION_FILTER_NONE_%out_opt
+L_OPTION_FILTER_CHECK_%out_opt:
+    __option_filter_value_%out_opt = load %opt_reg+Option_value as u64
+    __option_filter_pred_%out_opt = call %pred_fn(__option_filter_value_%out_opt)
+    __option_filter_keep_%out_opt = ne __option_filter_pred_%out_opt, 0
+    br __option_filter_keep_%out_opt -> L_OPTION_FILTER_KEEP_%out_opt, L_OPTION_FILTER_DROP_%out_opt
+L_OPTION_FILTER_KEEP_%out_opt:
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, __option_filter_value_%out_opt as u64
+    jmp L_OPTION_FILTER_CHECK_DONE_%out_opt
+L_OPTION_FILTER_DROP_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+    jmp L_OPTION_FILTER_CHECK_DONE_%out_opt
+L_OPTION_FILTER_CHECK_DONE_%out_opt:
+    !__option_filter_keep_%out_opt
+    !__option_filter_pred_%out_opt
+    !__option_filter_value_%out_opt
+    !__option_filter_some_%out_opt
+    !__option_filter_tag_%out_opt
+    jmp L_OPTION_FILTER_END_%out_opt
+L_OPTION_FILTER_NONE_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+    !__option_filter_some_%out_opt
+    !__option_filter_tag_%out_opt
+L_OPTION_FILTER_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_AND %out_opt, %opt_reg, %other_opt
+    __option_and_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_and_some_%out_opt = eq __option_and_tag_%out_opt, Option_SOME
+    br __option_and_some_%out_opt -> L_OPTION_AND_OTHER_%out_opt, L_OPTION_AND_NONE_%out_opt
+L_OPTION_AND_OTHER_%out_opt:
+    EXPAND OPTION_COPY %out_opt, %other_opt
+    !__option_and_some_%out_opt
+    !__option_and_tag_%out_opt
+    jmp L_OPTION_AND_END_%out_opt
+L_OPTION_AND_NONE_%out_opt:
+    EXPAND OPTION_NEW_NONE %out_opt
+    !__option_and_some_%out_opt
+    !__option_and_tag_%out_opt
+L_OPTION_AND_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_OR %out_opt, %opt_reg, %other_opt
+    __option_or_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_or_some_%out_opt = eq __option_or_tag_%out_opt, Option_SOME
+    br __option_or_some_%out_opt -> L_OPTION_OR_SELF_%out_opt, L_OPTION_OR_OTHER_%out_opt
+L_OPTION_OR_SELF_%out_opt:
+    EXPAND OPTION_COPY %out_opt, %opt_reg
+    !__option_or_some_%out_opt
+    !__option_or_tag_%out_opt
+    jmp L_OPTION_OR_END_%out_opt
+L_OPTION_OR_OTHER_%out_opt:
+    EXPAND OPTION_COPY %out_opt, %other_opt
+    !__option_or_some_%out_opt
+    !__option_or_tag_%out_opt
+L_OPTION_OR_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_XOR %out_opt, %left_opt, %right_opt
+    %out_opt = alloc Option_SIZE
+    __option_xor_left_tag_%out_opt = load %left_opt+Option_tag as u64
+    __option_xor_right_tag_%out_opt = load %right_opt+Option_tag as u64
+    __option_xor_left_some_%out_opt = eq __option_xor_left_tag_%out_opt, Option_SOME
+    __option_xor_right_some_%out_opt = eq __option_xor_right_tag_%out_opt, Option_SOME
+    __option_xor_one_%out_opt = xor __option_xor_left_some_%out_opt, __option_xor_right_some_%out_opt
+    br __option_xor_one_%out_opt -> L_OPTION_XOR_SOME_%out_opt, L_OPTION_XOR_NONE_%out_opt
+L_OPTION_XOR_SOME_%out_opt:
+    br __option_xor_left_some_%out_opt -> L_OPTION_XOR_LEFT_%out_opt, L_OPTION_XOR_RIGHT_%out_opt
+L_OPTION_XOR_LEFT_%out_opt:
+    __option_xor_left_value_%out_opt = load %left_opt+Option_value as u64
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, __option_xor_left_value_%out_opt as u64
+    !__option_xor_left_value_%out_opt
+    jmp L_OPTION_XOR_SOME_DONE_%out_opt
+L_OPTION_XOR_RIGHT_%out_opt:
+    __option_xor_right_value_%out_opt = load %right_opt+Option_value as u64
+    store %out_opt+Option_tag, Option_SOME as u64
+    store %out_opt+Option_value, __option_xor_right_value_%out_opt as u64
+    !__option_xor_right_value_%out_opt
+L_OPTION_XOR_SOME_DONE_%out_opt:
+    jmp L_OPTION_XOR_DONE_%out_opt
+L_OPTION_XOR_NONE_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+L_OPTION_XOR_DONE_%out_opt:
+    !__option_xor_one_%out_opt
+    !__option_xor_right_some_%out_opt
+    !__option_xor_left_some_%out_opt
+    !__option_xor_right_tag_%out_opt
+    !__option_xor_left_tag_%out_opt
+[END_MACRO]
+
+[MACRO] OPTION_AND_THEN %out_opt, %opt_reg, %then_fn
+    __option_then_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_then_some_%out_opt = eq __option_then_tag_%out_opt, Option_SOME
+    br __option_then_some_%out_opt -> L_OPTION_AND_THEN_SOME_%out_opt, L_OPTION_AND_THEN_NONE_%out_opt
+L_OPTION_AND_THEN_SOME_%out_opt:
+    __option_then_value_%out_opt = load %opt_reg+Option_value as u64
+    %out_opt = call %then_fn(__option_then_value_%out_opt)
+    !__option_then_value_%out_opt
+    !__option_then_some_%out_opt
+    !__option_then_tag_%out_opt
+    jmp L_OPTION_AND_THEN_END_%out_opt
+L_OPTION_AND_THEN_NONE_%out_opt:
+    EXPAND OPTION_NEW_NONE %out_opt
+    !__option_then_some_%out_opt
+    !__option_then_tag_%out_opt
+L_OPTION_AND_THEN_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_OR_ELSE %out_opt, %opt_reg, %else_fn
+    __option_or_else_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_or_else_some_%out_opt = eq __option_or_else_tag_%out_opt, Option_SOME
+    br __option_or_else_some_%out_opt -> L_OPTION_OR_ELSE_SELF_%out_opt, L_OPTION_OR_ELSE_DEFAULT_%out_opt
+L_OPTION_OR_ELSE_SELF_%out_opt:
+    EXPAND OPTION_COPY %out_opt, %opt_reg
+    !__option_or_else_some_%out_opt
+    !__option_or_else_tag_%out_opt
+    jmp L_OPTION_OR_ELSE_END_%out_opt
+L_OPTION_OR_ELSE_DEFAULT_%out_opt:
+    %out_opt = call %else_fn()
+    !__option_or_else_some_%out_opt
+    !__option_or_else_tag_%out_opt
+L_OPTION_OR_ELSE_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_OK_OR %out_res, %opt_reg, %err_value
+    %out_res = alloc Result_SIZE
+    __option_ok_or_tag_%out_res = load %opt_reg+Option_tag as u64
+    __option_ok_or_some_%out_res = eq __option_ok_or_tag_%out_res, Option_SOME
+    br __option_ok_or_some_%out_res -> L_OPTION_OK_OR_SOME_%out_res, L_OPTION_OK_OR_NONE_%out_res
+L_OPTION_OK_OR_SOME_%out_res:
+    __option_ok_or_value_%out_res = load %opt_reg+Option_value as u64
+    store %out_res+Result_tag, Result_OK as u64
+    store %out_res+Result_ok, __option_ok_or_value_%out_res as u64
+    store %out_res+Result_err, 0 as u64
+    !__option_ok_or_value_%out_res
+    !__option_ok_or_some_%out_res
+    !__option_ok_or_tag_%out_res
+    jmp L_OPTION_OK_OR_END_%out_res
+L_OPTION_OK_OR_NONE_%out_res:
+    store %out_res+Result_tag, Result_ERR as u64
+    store %out_res+Result_ok, 0 as u64
+    store %out_res+Result_err, %err_value as u64
+    !__option_ok_or_some_%out_res
+    !__option_ok_or_tag_%out_res
+L_OPTION_OK_OR_END_%out_res:
+[END_MACRO]
+
+[MACRO] OPTION_OK_OR_ELSE %out_res, %opt_reg, %err_fn
+    %out_res = alloc Result_SIZE
+    __option_ok_or_else_tag_%out_res = load %opt_reg+Option_tag as u64
+    __option_ok_or_else_some_%out_res = eq __option_ok_or_else_tag_%out_res, Option_SOME
+    br __option_ok_or_else_some_%out_res -> L_OPTION_OK_OR_ELSE_SOME_%out_res, L_OPTION_OK_OR_ELSE_NONE_%out_res
+L_OPTION_OK_OR_ELSE_SOME_%out_res:
+    __option_ok_or_else_value_%out_res = load %opt_reg+Option_value as u64
+    store %out_res+Result_tag, Result_OK as u64
+    store %out_res+Result_ok, __option_ok_or_else_value_%out_res as u64
+    store %out_res+Result_err, 0 as u64
+    !__option_ok_or_else_value_%out_res
+    !__option_ok_or_else_some_%out_res
+    !__option_ok_or_else_tag_%out_res
+    jmp L_OPTION_OK_OR_ELSE_END_%out_res
+L_OPTION_OK_OR_ELSE_NONE_%out_res:
+    __option_ok_or_else_err_%out_res = call %err_fn()
+    store %out_res+Result_tag, Result_ERR as u64
+    store %out_res+Result_ok, 0 as u64
+    store %out_res+Result_err, __option_ok_or_else_err_%out_res as u64
+    !__option_ok_or_else_err_%out_res
+    !__option_ok_or_else_some_%out_res
+    !__option_ok_or_else_tag_%out_res
+L_OPTION_OK_OR_ELSE_END_%out_res:
+[END_MACRO]
+
+[MACRO] OPTION_UNWRAP_OR %out_value, %opt_reg, %default_value
+    __option_tag_%out_value = load %opt_reg+Option_tag as u64
+    br __option_tag_%out_value -> L_OPTION_UNWRAP_OR_SOME_%out_value, L_OPTION_UNWRAP_OR_NONE_%out_value
+L_OPTION_UNWRAP_OR_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__option_tag_%out_value
+    jmp L_OPTION_UNWRAP_OR_END_%out_value
+L_OPTION_UNWRAP_OR_NONE_%out_value:
+    %out_value = add %default_value, 0
+    !__option_tag_%out_value
+L_OPTION_UNWRAP_OR_END_%out_value:
+[END_MACRO]
+
+[MACRO] OPTION_UNWRAP_OR_ELSE %out_value, %opt_reg, %default_fn
+    __option_unwrap_else_tag_%out_value = load %opt_reg+Option_tag as u64
+    __option_unwrap_else_some_%out_value = eq __option_unwrap_else_tag_%out_value, Option_SOME
+    br __option_unwrap_else_some_%out_value -> L_OPTION_UNWRAP_ELSE_SOME_%out_value, L_OPTION_UNWRAP_ELSE_NONE_%out_value
+L_OPTION_UNWRAP_ELSE_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__option_unwrap_else_some_%out_value
+    !__option_unwrap_else_tag_%out_value
+    jmp L_OPTION_UNWRAP_ELSE_END_%out_value
+L_OPTION_UNWRAP_ELSE_NONE_%out_value:
+    %out_value = call %default_fn()
+    !__option_unwrap_else_some_%out_value
+    !__option_unwrap_else_tag_%out_value
+L_OPTION_UNWRAP_ELSE_END_%out_value:
+[END_MACRO]
+
+[MACRO] OPTION_UNWRAP_OR_DEFAULT %out_value, %opt_reg
+    EXPAND OPTION_UNWRAP_OR %out_value, %opt_reg, 0
+[END_MACRO]
+
+[MACRO] OPTION_UNWRAP_OR_RETURN %out_value, %opt_reg, %default_value
+    __option_tag_%out_value = load %opt_reg+Option_tag as u64
+    __option_is_some_%out_value = eq __option_tag_%out_value, Option_SOME
+    br __option_is_some_%out_value -> L_OPTION_UNWRAP_OR_RETURN_SOME_%out_value, L_OPTION_UNWRAP_OR_RETURN_NONE_%out_value
+L_OPTION_UNWRAP_OR_RETURN_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__option_tag_%out_value
+    jmp L_OPTION_UNWRAP_OR_RETURN_END_%out_value
+L_OPTION_UNWRAP_OR_RETURN_NONE_%out_value:
+    !__option_tag_%out_value
+    return %default_value
+L_OPTION_UNWRAP_OR_RETURN_END_%out_value:
+[END_MACRO]
+
+[MACRO] TRY_OPTION %out_value, %opt_reg
+    __try_option_tag_%out_value = load %opt_reg+Option_tag as u64
+    __try_option_is_some_%out_value = eq __try_option_tag_%out_value, Option_SOME
+    br __try_option_is_some_%out_value -> L_TRY_OPTION_SOME_%out_value, L_TRY_OPTION_NONE_%out_value
+L_TRY_OPTION_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__try_option_is_some_%out_value
+    !__try_option_tag_%out_value
+    jmp L_TRY_OPTION_END_%out_value
+L_TRY_OPTION_NONE_%out_value:
+    !__try_option_is_some_%out_value
+    !__try_option_tag_%out_value
+    return %opt_reg
+L_TRY_OPTION_END_%out_value:
+[END_MACRO]
+
+[MACRO] TRY_OPTION_RETURN %out_value, %opt_reg
+    EXPAND TRY_OPTION %out_value, %opt_reg
+[END_MACRO]
+
+[MACRO] OPTION_UNWRAP %out_value, %opt_reg
+    __option_tag_%out_value = load %opt_reg+Option_tag as u64
+    br __option_tag_%out_value -> L_OPTION_UNWRAP_SOME_%out_value, L_OPTION_UNWRAP_NONE_%out_value
+L_OPTION_UNWRAP_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__option_tag_%out_value
+    jmp L_OPTION_UNWRAP_END_%out_value
+L_OPTION_UNWRAP_NONE_%out_value:
+    EXPAND PANIC_MSG 17, *OPTION_UNWRAP_PANIC, 39
+    %out_value = add 0, 0
+L_OPTION_UNWRAP_END_%out_value:
+[END_MACRO]
+
+[MACRO] OPTION_EXPECT %out_value, %opt_reg, %msg_ptr, %msg_len
+    __option_expect_tag_%out_value = load %opt_reg+Option_tag as u64
+    __option_expect_some_%out_value = eq __option_expect_tag_%out_value, Option_SOME
+    br __option_expect_some_%out_value -> L_OPTION_EXPECT_SOME_%out_value, L_OPTION_EXPECT_NONE_%out_value
+L_OPTION_EXPECT_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__option_expect_some_%out_value
+    !__option_expect_tag_%out_value
+    jmp L_OPTION_EXPECT_END_%out_value
+L_OPTION_EXPECT_NONE_%out_value:
+    EXPAND PANIC_MSG 17, %msg_ptr, %msg_len
+    %out_value = add 0, 0
+L_OPTION_EXPECT_END_%out_value:
+[END_MACRO]
+
+[MACRO] OPTION_UNWRAP_UNCHECKED %out_value, %opt_reg
+    %out_value = load %opt_reg+Option_value as u64
+[END_MACRO]
+
+[MACRO] OPTION_MAP_OR %out_value, %opt_reg, %map_fn, %default_value
+    __option_tag_%out_value = load %opt_reg+Option_tag as u64
+    br __option_tag_%out_value -> L_OPTION_MAP_OR_SOME_%out_value, L_OPTION_MAP_OR_NONE_%out_value
+L_OPTION_MAP_OR_SOME_%out_value:
+    __option_value_%out_value = load %opt_reg+Option_value as u64
+    %out_value = call %map_fn(__option_value_%out_value)
+    !__option_value_%out_value
+    !__option_tag_%out_value
+    jmp L_OPTION_MAP_OR_END_%out_value
+L_OPTION_MAP_OR_NONE_%out_value:
+    %out_value = add %default_value, 0
+    !__option_tag_%out_value
+L_OPTION_MAP_OR_END_%out_value:
+[END_MACRO]
+
+[MACRO] OPTION_MAP_OR_ELSE %out_value, %opt_reg, %map_fn, %default_fn
+    __option_tag_%out_value = load %opt_reg+Option_tag as u64
+    br __option_tag_%out_value -> L_OPTION_MAP_OR_ELSE_SOME_%out_value, L_OPTION_MAP_OR_ELSE_NONE_%out_value
+L_OPTION_MAP_OR_ELSE_SOME_%out_value:
+    __option_value_%out_value = load %opt_reg+Option_value as u64
+    %out_value = call %map_fn(__option_value_%out_value)
+    !__option_value_%out_value
+    !__option_tag_%out_value
+    jmp L_OPTION_MAP_OR_ELSE_END_%out_value
+L_OPTION_MAP_OR_ELSE_NONE_%out_value:
+    %out_value = call %default_fn()
+    !__option_tag_%out_value
+L_OPTION_MAP_OR_ELSE_END_%out_value:
+[END_MACRO]
+
+[MACRO] OPTION_MAP_OR_DEFAULT %out_value, %opt_reg, %map_fn
+    EXPAND OPTION_MAP_OR %out_value, %opt_reg, %map_fn, 0
+[END_MACRO]
+
+[MACRO] OPTION_SET_NONE %opt_reg
+    store %opt_reg+Option_tag, Option_NONE as u64
+    store %opt_reg+Option_value, 0 as u64
+[END_MACRO]
+
+[MACRO] OPTION_SET_SOME %opt_reg, %value
+    store %opt_reg+Option_tag, Option_SOME as u64
+    store %opt_reg+Option_value, %value as u64
+[END_MACRO]
+
+[MACRO] OPTION_TAKE %out_opt, %opt_reg
+    EXPAND OPTION_COPY %out_opt, %opt_reg
+    EXPAND OPTION_SET_NONE %opt_reg
+[END_MACRO]
+
+[MACRO] OPTION_TAKE_IF %out_opt, %opt_reg, %pred_fn
+    __option_take_if_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_take_if_some_%out_opt = eq __option_take_if_tag_%out_opt, Option_SOME
+    br __option_take_if_some_%out_opt -> L_OPTION_TAKE_IF_CHECK_%out_opt, L_OPTION_TAKE_IF_NONE_%out_opt
+L_OPTION_TAKE_IF_CHECK_%out_opt:
+    __option_take_if_value_%out_opt = load %opt_reg+Option_value as u64
+    __option_take_if_pred_%out_opt = call %pred_fn(__option_take_if_value_%out_opt)
+    __option_take_if_take_%out_opt = ne __option_take_if_pred_%out_opt, 0
+    br __option_take_if_take_%out_opt -> L_OPTION_TAKE_IF_TAKE_%out_opt, L_OPTION_TAKE_IF_KEEP_%out_opt
+L_OPTION_TAKE_IF_TAKE_%out_opt:
+    EXPAND OPTION_NEW_SOME %out_opt, __option_take_if_value_%out_opt
+    EXPAND OPTION_SET_NONE %opt_reg
+    jmp L_OPTION_TAKE_IF_CHECK_DONE_%out_opt
+L_OPTION_TAKE_IF_KEEP_%out_opt:
+    EXPAND OPTION_NEW_NONE %out_opt
+    jmp L_OPTION_TAKE_IF_CHECK_DONE_%out_opt
+L_OPTION_TAKE_IF_CHECK_DONE_%out_opt:
+    !__option_take_if_take_%out_opt
+    !__option_take_if_pred_%out_opt
+    !__option_take_if_value_%out_opt
+    !__option_take_if_some_%out_opt
+    !__option_take_if_tag_%out_opt
+    jmp L_OPTION_TAKE_IF_END_%out_opt
+L_OPTION_TAKE_IF_NONE_%out_opt:
+    EXPAND OPTION_NEW_NONE %out_opt
+    !__option_take_if_some_%out_opt
+    !__option_take_if_tag_%out_opt
+L_OPTION_TAKE_IF_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_REPLACE %out_opt, %opt_reg, %value
+    EXPAND OPTION_COPY %out_opt, %opt_reg
+    EXPAND OPTION_SET_SOME %opt_reg, %value
+[END_MACRO]
+
+[MACRO] OPTION_INSERT %out_ptr, %opt_reg, %value
+    EXPAND OPTION_SET_SOME %opt_reg, %value
+    %out_ptr = ptr_add %opt_reg, Option_value
+[END_MACRO]
+
+[MACRO] OPTION_GET_OR_INSERT %out_ptr, %opt_reg, %value
+    __option_get_or_insert_tag_%out_ptr = load %opt_reg+Option_tag as u64
+    __option_get_or_insert_some_%out_ptr = eq __option_get_or_insert_tag_%out_ptr, Option_SOME
+    br __option_get_or_insert_some_%out_ptr -> L_OPTION_GET_OR_INSERT_DONE_%out_ptr, L_OPTION_GET_OR_INSERT_SET_%out_ptr
+L_OPTION_GET_OR_INSERT_SET_%out_ptr:
+    EXPAND OPTION_SET_SOME %opt_reg, %value
+    jmp L_OPTION_GET_OR_INSERT_DONE_%out_ptr
+L_OPTION_GET_OR_INSERT_DONE_%out_ptr:
+    %out_ptr = ptr_add %opt_reg, Option_value
+    !__option_get_or_insert_some_%out_ptr
+    !__option_get_or_insert_tag_%out_ptr
+[END_MACRO]
+
+[MACRO] OPTION_GET_OR_INSERT_WITH %out_ptr, %opt_reg, %default_fn
+    __option_get_or_with_tag_%out_ptr = load %opt_reg+Option_tag as u64
+    __option_get_or_with_some_%out_ptr = eq __option_get_or_with_tag_%out_ptr, Option_SOME
+    br __option_get_or_with_some_%out_ptr -> L_OPTION_GET_OR_WITH_DONE_%out_ptr, L_OPTION_GET_OR_WITH_SET_%out_ptr
+L_OPTION_GET_OR_WITH_SET_%out_ptr:
+    __option_get_or_with_value_%out_ptr = call %default_fn()
+    EXPAND OPTION_SET_SOME %opt_reg, __option_get_or_with_value_%out_ptr
+    !__option_get_or_with_value_%out_ptr
+    jmp L_OPTION_GET_OR_WITH_DONE_%out_ptr
+L_OPTION_GET_OR_WITH_DONE_%out_ptr:
+    %out_ptr = ptr_add %opt_reg, Option_value
+    !__option_get_or_with_some_%out_ptr
+    !__option_get_or_with_tag_%out_ptr
+[END_MACRO]
+
+[MACRO] OPTION_GET_OR_INSERT_DEFAULT %out_ptr, %opt_reg
+    EXPAND OPTION_GET_OR_INSERT %out_ptr, %opt_reg, 0
+[END_MACRO]
+
+[MACRO] OPTION_FLATTEN %out_opt, %opt_reg
+    %out_opt = alloc Option_SIZE
+    __option_flatten_tag_%out_opt = load %opt_reg+Option_tag as u64
+    __option_flatten_some_%out_opt = eq __option_flatten_tag_%out_opt, Option_SOME
+    br __option_flatten_some_%out_opt -> L_OPTION_FLATTEN_SOME_%out_opt, L_OPTION_FLATTEN_NONE_%out_opt
+L_OPTION_FLATTEN_SOME_%out_opt:
+    __option_flatten_inner_%out_opt = load %opt_reg+Option_value as ptr
+    __option_flatten_inner_tag_%out_opt = load __option_flatten_inner_%out_opt+Option_tag as u64
+    __option_flatten_inner_value_%out_opt = load __option_flatten_inner_%out_opt+Option_value as u64
+    store %out_opt+Option_tag, __option_flatten_inner_tag_%out_opt as u64
+    store %out_opt+Option_value, __option_flatten_inner_value_%out_opt as u64
+    !__option_flatten_inner_value_%out_opt
+    !__option_flatten_inner_tag_%out_opt
+    !__option_flatten_inner_%out_opt
+    !__option_flatten_some_%out_opt
+    !__option_flatten_tag_%out_opt
+    jmp L_OPTION_FLATTEN_END_%out_opt
+L_OPTION_FLATTEN_NONE_%out_opt:
+    store %out_opt+Option_tag, Option_NONE as u64
+    store %out_opt+Option_value, 0 as u64
+    !__option_flatten_some_%out_opt
+    !__option_flatten_tag_%out_opt
+L_OPTION_FLATTEN_END_%out_opt:
+[END_MACRO]
+
+[MACRO] OPTION_TRANSPOSE %out_res, %opt_reg
+    %out_res = alloc Result_SIZE
+    __option_transpose_tag_%out_res = load %opt_reg+Option_tag as u64
+    __option_transpose_some_%out_res = eq __option_transpose_tag_%out_res, Option_SOME
+    br __option_transpose_some_%out_res -> L_OPTION_TRANSPOSE_SOME_%out_res, L_OPTION_TRANSPOSE_NONE_%out_res
+L_OPTION_TRANSPOSE_SOME_%out_res:
+    __option_transpose_inner_res_%out_res = load %opt_reg+Option_value as ptr
+    __option_transpose_inner_tag_%out_res = load __option_transpose_inner_res_%out_res+Result_tag as u64
+    __option_transpose_inner_ok_%out_res = eq __option_transpose_inner_tag_%out_res, Result_OK
+    br __option_transpose_inner_ok_%out_res -> L_OPTION_TRANSPOSE_OK_%out_res, L_OPTION_TRANSPOSE_ERR_%out_res
+L_OPTION_TRANSPOSE_OK_%out_res:
+    __option_transpose_ok_value_%out_res = load __option_transpose_inner_res_%out_res+Result_ok as u64
+    __option_transpose_ok_opt_%out_res = alloc Option_SIZE
+    store __option_transpose_ok_opt_%out_res+Option_tag, Option_SOME as u64
+    store __option_transpose_ok_opt_%out_res+Option_value, __option_transpose_ok_value_%out_res as u64
+    store %out_res+Result_tag, Result_OK as u64
+    store %out_res+Result_ok, __option_transpose_ok_opt_%out_res as ptr
+    store %out_res+Result_err, 0 as u64
+    !__option_transpose_ok_opt_%out_res
+    !__option_transpose_ok_value_%out_res
+    !__option_transpose_inner_ok_%out_res
+    !__option_transpose_inner_tag_%out_res
+    !__option_transpose_inner_res_%out_res
+    !__option_transpose_some_%out_res
+    !__option_transpose_tag_%out_res
+    jmp L_OPTION_TRANSPOSE_END_%out_res
+L_OPTION_TRANSPOSE_ERR_%out_res:
+    __option_transpose_err_value_%out_res = load __option_transpose_inner_res_%out_res+Result_err as u64
+    store %out_res+Result_tag, Result_ERR as u64
+    store %out_res+Result_ok, 0 as u64
+    store %out_res+Result_err, __option_transpose_err_value_%out_res as u64
+    !__option_transpose_err_value_%out_res
+    !__option_transpose_inner_ok_%out_res
+    !__option_transpose_inner_tag_%out_res
+    !__option_transpose_inner_res_%out_res
+    !__option_transpose_some_%out_res
+    !__option_transpose_tag_%out_res
+    jmp L_OPTION_TRANSPOSE_END_%out_res
+L_OPTION_TRANSPOSE_NONE_%out_res:
+    __option_transpose_none_opt_%out_res = alloc Option_SIZE
+    store __option_transpose_none_opt_%out_res+Option_tag, Option_NONE as u64
+    store __option_transpose_none_opt_%out_res+Option_value, 0 as u64
+    store %out_res+Result_tag, Result_OK as u64
+    store %out_res+Result_ok, __option_transpose_none_opt_%out_res as ptr
+    store %out_res+Result_err, 0 as u64
+    !__option_transpose_none_opt_%out_res
+    !__option_transpose_some_%out_res
+    !__option_transpose_tag_%out_res
+L_OPTION_TRANSPOSE_END_%out_res:
+[END_MACRO]
+
+[MACRO] OPTION_BRANCH %opt_reg, %some_label, %none_label
+    __option_tag_%opt_reg = load %opt_reg+Option_tag as u64
+    br __option_tag_%opt_reg -> %some_label, %none_label
+    !__option_tag_%opt_reg
+[END_MACRO]
+
+[MACRO] MATCH_OPTION %out_value, %opt_reg, %some_label, %none_label
+    __match_option_tag_%out_value = load %opt_reg+Option_tag as u64
+    __match_option_is_some_%out_value = eq __match_option_tag_%out_value, Option_SOME
+    br __match_option_is_some_%out_value -> L_MATCH_OPTION_SOME_%out_value, L_MATCH_OPTION_NONE_%out_value
+L_MATCH_OPTION_SOME_%out_value:
+    %out_value = load %opt_reg+Option_value as u64
+    !__match_option_tag_%out_value
+    jmp %some_label
+L_MATCH_OPTION_NONE_%out_value:
+    %out_value = add 0, 0
+    !__match_option_tag_%out_value
+    jmp %none_label
+[END_MACRO]
+
+[MACRO] OPTION_MATCH_SOME_NONE %out_value, %opt_reg, %some_label, %none_label
+    EXPAND MATCH_OPTION %out_value, %opt_reg, %some_label, %none_label
+[END_MACRO]
+
+[MACRO] MATCHES_OPTION %out_bool, %opt_reg, %expected_tag
+    __matches_option_tag_%out_bool = load %opt_reg+Option_tag as u64
+    %out_bool = eq __matches_option_tag_%out_bool, %expected_tag
+    !__matches_option_tag_%out_bool
+[END_MACRO]
+
+[MACRO] OPTION_DEFAULT %out_opt
+    EXPAND OPTION_NEW_NONE %out_opt
+[END_MACRO]
+
+[MACRO] OPTION_ZIP_U64 %out_opt, %opt_a, %opt_b
+    %out_opt = alloc OptionPairU64_SIZE
+    __zip_tag_a_%out_opt = load %opt_a+Option_tag as u64
+    __zip_some_a_%out_opt = eq __zip_tag_a_%out_opt, Option_SOME
+    br __zip_some_a_%out_opt -> L_ZIP_CHECK_B_%out_opt, L_ZIP_NONE_A_%out_opt
+L_ZIP_CHECK_B_%out_opt:
+    __zip_tag_b_%out_opt = load %opt_b+Option_tag as u64
+    __zip_some_b_%out_opt = eq __zip_tag_b_%out_opt, Option_SOME
+    br __zip_some_b_%out_opt -> L_ZIP_SOME_%out_opt, L_ZIP_NONE_B_%out_opt
+L_ZIP_SOME_%out_opt:
+    __zip_val_a_%out_opt = load %opt_a+Option_value as u64
+    __zip_val_b_%out_opt = load %opt_b+Option_value as u64
+    store %out_opt+OptionPairU64_tag, Option_SOME as u64
+    store %out_opt+OptionPairU64_value1, __zip_val_a_%out_opt as u64
+    store %out_opt+OptionPairU64_value2, __zip_val_b_%out_opt as u64
+    !__zip_val_b_%out_opt
+    !__zip_val_a_%out_opt
+    !__zip_some_b_%out_opt
+    !__zip_tag_b_%out_opt
+    !__zip_some_a_%out_opt
+    !__zip_tag_a_%out_opt
+    jmp L_ZIP_END_%out_opt
+L_ZIP_NONE_A_%out_opt:
+    store %out_opt+OptionPairU64_tag, Option_NONE as u64
+    store %out_opt+OptionPairU64_value1, 0 as u64
+    store %out_opt+OptionPairU64_value2, 0 as u64
+    !__zip_some_a_%out_opt
+    !__zip_tag_a_%out_opt
+    jmp L_ZIP_END_%out_opt
+L_ZIP_NONE_B_%out_opt:
+    store %out_opt+OptionPairU64_tag, Option_NONE as u64
+    store %out_opt+OptionPairU64_value1, 0 as u64
+    store %out_opt+OptionPairU64_value2, 0 as u64
+    !__zip_some_b_%out_opt
+    !__zip_tag_b_%out_opt
+    !__zip_some_a_%out_opt
+    !__zip_tag_a_%out_opt
+L_ZIP_END_%out_opt:
+[END_MACRO]
+
+// Rust method-name alias over OPTION_ZIP_U64.
+[MACRO] OPTION_ZIP %out_opt, %opt_a, %opt_b
+    EXPAND OPTION_ZIP_U64 %out_opt, %opt_a, %opt_b
+[END_MACRO]
+
+[MACRO] OPTION_UNZIP_TO_U64 %out_opt_a, %out_opt_b, %pair_opt
+    %out_opt_a = alloc Option_SIZE
+    %out_opt_b = alloc Option_SIZE
+    __unzip_tag_%out_opt_a = load %pair_opt+OptionPairU64_tag as u64
+    __unzip_some_%out_opt_a = eq __unzip_tag_%out_opt_a, Option_SOME
+    br __unzip_some_%out_opt_a -> L_UNZIP_SOME_%out_opt_a, L_UNZIP_NONE_%out_opt_a
+L_UNZIP_SOME_%out_opt_a:
+    __unzip_v1_%out_opt_a = load %pair_opt+OptionPairU64_value1 as u64
+    __unzip_v2_%out_opt_a = load %pair_opt+OptionPairU64_value2 as u64
+    store %out_opt_a+Option_tag, Option_SOME as u64
+    store %out_opt_a+Option_value, __unzip_v1_%out_opt_a as u64
+    store %out_opt_b+Option_tag, Option_SOME as u64
+    store %out_opt_b+Option_value, __unzip_v2_%out_opt_a as u64
+    !__unzip_v2_%out_opt_a
+    !__unzip_v1_%out_opt_a
+    !__unzip_some_%out_opt_a
+    !__unzip_tag_%out_opt_a
+    jmp L_UNZIP_END_%out_opt_a
+L_UNZIP_NONE_%out_opt_a:
+    store %out_opt_a+Option_tag, Option_NONE as u64
+    store %out_opt_a+Option_value, 0 as u64
+    store %out_opt_b+Option_tag, Option_NONE as u64
+    store %out_opt_b+Option_value, 0 as u64
+    !__unzip_some_%out_opt_a
+    !__unzip_tag_%out_opt_a
+L_UNZIP_END_%out_opt_a:
+[END_MACRO]
+
+// Rust method-name alias over OPTION_UNZIP_TO_U64.
+[MACRO] OPTION_UNZIP_TO %out_opt_a, %out_opt_b, %pair_opt
+    EXPAND OPTION_UNZIP_TO_U64 %out_opt_a, %out_opt_b, %pair_opt
+[END_MACRO]

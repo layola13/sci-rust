@@ -1,0 +1,38 @@
+@import "sa_std/io.sars"
+@import "sa_std/io.sal"
+
+@test "sa_std io copy_slice"():
+L_ENTRY:
+    src_buf = alloc 16
+    store src_buf+0, 1 as u8
+    store src_buf+1, 2 as u8
+    store src_buf+2, 3 as u8
+    store src_buf+3, 4 as u8
+    dst = alloc 16
+    ios = stack_alloc IoSlice_SIZE
+    store ios+IoSlice_ptr, src_buf as ptr
+    store ios+IoSlice_len, 4 as u64
+    EXPAND IO_COPY_SLICE n, dst, ios
+    b0 = load dst+0 as u8
+    b3 = load dst+3 as u8
+    a = eq n, 4
+    b = eq b0, 1
+    c = eq b3, 4
+    ok01 = and a, b
+    ok = and ok01, c
+    !n
+    !b0
+    !b3
+    !a
+    !b
+    !c
+    !ok01
+    !src_buf
+    !dst
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10957)

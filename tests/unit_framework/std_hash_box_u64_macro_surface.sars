@@ -1,0 +1,101 @@
+@import "sa_std/rust_core.sars"
+@import "sa_std/hash.sars"
+
+@test "sa_std hash box u64 macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    EXPAND BOX_NEW box_a, 64
+    EXPAND BOX_NEW box_same, 64
+    EXPAND BOX_NEW box_other, 65
+
+    write_hasher = stack_alloc DefaultHasher_SIZE
+    state = stack_alloc RandomState_SIZE
+    state_manual_hasher = stack_alloc DefaultHasher_SIZE
+
+    EXPAND DEFAULT_HASHER_NEW write_hasher
+    EXPAND DEFAULT_HASHER_WRITE_BOX_U64 write_hasher, box_a
+    EXPAND DEFAULT_HASHER_FINISH write_hash, write_hasher
+
+    EXPAND HASH_U64 value_hash, 64
+    EXPAND HASH_BOX_U64 box_hash, box_a
+    EXPAND HASH_BOX_U64 same_value_box_hash, box_same
+    EXPAND HASH_BOX_U64 other_value_box_hash, box_other
+    EXPAND HASH_PTR_VALUE ptr_hash, box_a
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_BOX_U64 build_box_hash, builder, box_a
+
+    EXPAND BOX_SET_U64 box_a, 66
+    EXPAND HASH_BOX_U64 changed_box_hash, box_a
+    EXPAND HASH_U64 changed_value_hash, 66
+
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+    EXPAND RANDOM_STATE_HASH_ONE_BOX_U64 state_box_hash, state, box_a
+    EXPAND RANDOM_STATE_BUILD state_manual_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_U64 state_manual_hasher, 66
+    EXPAND DEFAULT_HASHER_FINISH state_manual_hash, state_manual_hasher
+
+    write_matches_value = eq write_hash, value_hash
+    box_forwards_value = eq box_hash, value_hash
+    same_value_matches = eq same_value_box_hash, box_hash
+    different_value_matters = ne other_value_box_hash, box_hash
+    pointer_not_box_value = ne ptr_hash, box_hash
+    build_matches_value = eq build_box_hash, value_hash
+    changed_matches_value = eq changed_box_hash, changed_value_hash
+    changed_differs_old = ne changed_box_hash, box_hash
+    state_matches_manual = eq state_box_hash, state_manual_hash
+    seeded_differs_default = ne state_box_hash, changed_box_hash
+
+    c01 = and write_matches_value, box_forwards_value
+    c02 = and c01, same_value_matches
+    c03 = and c02, different_value_matters
+    c04 = and c03, pointer_not_box_value
+    c05 = and c04, build_matches_value
+    c06 = and c05, changed_matches_value
+    c07 = and c06, changed_differs_old
+    c08 = and c07, state_matches_manual
+    ok = and c08, seeded_differs_default
+
+    !builder
+    !write_hash
+    !value_hash
+    !box_hash
+    !same_value_box_hash
+    !other_value_box_hash
+    !ptr_hash
+    !build_box_hash
+    !changed_box_hash
+    !changed_value_hash
+    !state_box_hash
+    !state_manual_hash
+    !write_matches_value
+    !box_forwards_value
+    !same_value_matches
+    !different_value_matters
+    !pointer_not_box_value
+    !build_matches_value
+    !changed_matches_value
+    !changed_differs_old
+    !state_matches_manual
+    !seeded_differs_default
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+
+    EXPAND BOX_FREE box_a
+    EXPAND BOX_FREE box_same
+    EXPAND BOX_FREE box_other
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10580)
+
+L_PASS:
+    !ok
+    return 0

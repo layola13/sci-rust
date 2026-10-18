@@ -1,0 +1,27 @@
+@import "sa_std/path.sars"
+@import "sa_std/core/slice.sars"
+@import "sa_std/string.sars"
+
+@const FULL = utf8:"/tmp/foo/bar"
+@const PRE = utf8:"/tmp"
+
+@test "sa_std path strip_prefix alias"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS full, &FULL, 12
+    EXPAND STR_FROM_PARTS pre, &PRE, 4
+    EXPAND PATH_STRIP_PREFIX ok, out, full, pre
+    EXPAND SLICE_GET_LEN ln, out
+    a = eq ok, 1
+    b = ugt ln, 0
+    ok_all = and a, b
+    !ok
+    !ln
+    !a
+    !b
+    br ok_all -> L_OK, L_FAIL
+L_OK:
+    !ok_all
+    return 0
+L_FAIL:
+    !ok_all
+    panic(10911)

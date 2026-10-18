@@ -1,0 +1,29 @@
+@import "sa_std/io/print.sai"
+@import "bridge/handle_gate.sars"
+
+@const RESULT_OK = utf8:"289\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 289 - Ffi Opaque Handle Passing
+// The opaque handle is modeled as an unchecked pointer-shaped slot and a bridge wrapper.
+
+@main() -> i32:
+L_ENTRY:
+    handle = alloc 8
+    store handle+0, 280 as i32
+    store handle+4, 9 as i32
+    value = call @handle_gate(*handle)
+    ok = eq value, 289
+    !value
+    !handle
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

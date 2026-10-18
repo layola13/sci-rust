@@ -1,0 +1,171 @@
+@import "sa_std/num.sars"
+
+@test "sa_std Wrapping and Saturating operator macro surface"():
+L_ENTRY:
+    wrap_u64_lhs = stack_alloc WrappingU64_SIZE
+    wrap_u64_rhs = stack_alloc WrappingU64_SIZE
+    wrap_u64_out = stack_alloc WrappingU64_SIZE
+    wrap_u32_lhs = stack_alloc WrappingU32_SIZE
+    wrap_u32_rhs = stack_alloc WrappingU32_SIZE
+    wrap_u32_out = stack_alloc WrappingU32_SIZE
+    wrap_i64_lhs = stack_alloc WrappingI64_SIZE
+    wrap_i64_rhs = stack_alloc WrappingI64_SIZE
+    wrap_i64_out = stack_alloc WrappingI64_SIZE
+    sat_i64_min = stack_alloc SaturatingI64_SIZE
+    sat_i64_neg = stack_alloc SaturatingI64_SIZE
+    sat_i64_out = stack_alloc SaturatingI64_SIZE
+
+    EXPAND WRAPPING_U64_NEW wrap_u64_lhs, 10
+    EXPAND WRAPPING_U64_NEW wrap_u64_rhs, 3
+    EXPAND WRAPPING_U64_DIV wrap_u64_out, wrap_u64_lhs, wrap_u64_rhs
+    EXPAND WRAPPING_U64_GET wrap_u64_div_value, wrap_u64_out
+    EXPAND WRAPPING_U64_REM wrap_u64_out, wrap_u64_lhs, wrap_u64_rhs
+    EXPAND WRAPPING_U64_GET wrap_u64_rem_value, wrap_u64_out
+    EXPAND WRAPPING_U64_SHL wrap_u64_out, wrap_u64_lhs, 65
+    EXPAND WRAPPING_U64_GET wrap_u64_shl_value, wrap_u64_out
+    EXPAND WRAPPING_U64_SHR wrap_u64_out, wrap_u64_lhs, 65
+    EXPAND WRAPPING_U64_GET wrap_u64_shr_value, wrap_u64_out
+    EXPAND WRAPPING_U64_NOT wrap_u64_out, wrap_u64_lhs
+    EXPAND WRAPPING_U64_GET wrap_u64_not_value, wrap_u64_out
+    EXPAND WRAPPING_U64_BITAND wrap_u64_out, wrap_u64_lhs, wrap_u64_rhs
+    EXPAND WRAPPING_U64_GET wrap_u64_and_value, wrap_u64_out
+    EXPAND WRAPPING_U64_BITOR wrap_u64_out, wrap_u64_lhs, wrap_u64_rhs
+    EXPAND WRAPPING_U64_GET wrap_u64_or_value, wrap_u64_out
+    EXPAND WRAPPING_U64_BITXOR wrap_u64_out, wrap_u64_lhs, wrap_u64_rhs
+    EXPAND WRAPPING_U64_GET wrap_u64_xor_value, wrap_u64_out
+
+    EXPAND WRAPPING_U32_NEW wrap_u32_lhs, 4294967306
+    EXPAND WRAPPING_U32_NEW wrap_u32_rhs, 3
+    EXPAND WRAPPING_U32_DIV wrap_u32_out, wrap_u32_lhs, wrap_u32_rhs
+    EXPAND WRAPPING_U32_GET wrap_u32_div_value, wrap_u32_out
+    EXPAND WRAPPING_U32_REM wrap_u32_out, wrap_u32_lhs, wrap_u32_rhs
+    EXPAND WRAPPING_U32_GET wrap_u32_rem_value, wrap_u32_out
+    EXPAND WRAPPING_U32_SHL wrap_u32_out, wrap_u32_lhs, 33
+    EXPAND WRAPPING_U32_GET wrap_u32_shl_value, wrap_u32_out
+    EXPAND WRAPPING_U32_SHR wrap_u32_out, wrap_u32_lhs, 33
+    EXPAND WRAPPING_U32_GET wrap_u32_shr_value, wrap_u32_out
+    EXPAND WRAPPING_U32_NOT wrap_u32_out, wrap_u32_lhs
+    EXPAND WRAPPING_U32_GET wrap_u32_not_value, wrap_u32_out
+    EXPAND WRAPPING_U32_BITAND wrap_u32_out, wrap_u32_lhs, wrap_u32_rhs
+    EXPAND WRAPPING_U32_GET wrap_u32_and_value, wrap_u32_out
+    EXPAND WRAPPING_U32_BITOR wrap_u32_out, wrap_u32_lhs, wrap_u32_rhs
+    EXPAND WRAPPING_U32_GET wrap_u32_or_value, wrap_u32_out
+    EXPAND WRAPPING_U32_BITXOR wrap_u32_out, wrap_u32_lhs, wrap_u32_rhs
+    EXPAND WRAPPING_U32_GET wrap_u32_xor_value, wrap_u32_out
+
+    EXPAND WRAPPING_I64_NEW wrap_i64_lhs, -9
+    EXPAND WRAPPING_I64_NEW wrap_i64_rhs, 2
+    EXPAND WRAPPING_I64_DIV wrap_i64_out, wrap_i64_lhs, wrap_i64_rhs
+    EXPAND WRAPPING_I64_GET wrap_i64_div_value, wrap_i64_out
+    EXPAND WRAPPING_I64_REM wrap_i64_out, wrap_i64_lhs, wrap_i64_rhs
+    EXPAND WRAPPING_I64_GET wrap_i64_rem_value, wrap_i64_out
+    EXPAND WRAPPING_I64_SHL wrap_i64_out, wrap_i64_lhs, 65
+    EXPAND WRAPPING_I64_GET wrap_i64_shl_value, wrap_i64_out
+    EXPAND WRAPPING_I64_SHR wrap_i64_out, wrap_i64_lhs, 65
+    EXPAND WRAPPING_I64_GET wrap_i64_shr_value, wrap_i64_out
+    EXPAND WRAPPING_I64_NOT wrap_i64_out, wrap_i64_lhs
+    EXPAND WRAPPING_I64_GET wrap_i64_not_value, wrap_i64_out
+    EXPAND WRAPPING_I64_BITAND wrap_i64_out, wrap_i64_lhs, wrap_i64_rhs
+    EXPAND WRAPPING_I64_GET wrap_i64_and_value, wrap_i64_out
+    EXPAND WRAPPING_I64_BITOR wrap_i64_out, wrap_i64_lhs, wrap_i64_rhs
+    EXPAND WRAPPING_I64_GET wrap_i64_or_value, wrap_i64_out
+    EXPAND WRAPPING_I64_BITXOR wrap_i64_out, wrap_i64_lhs, wrap_i64_rhs
+    EXPAND WRAPPING_I64_GET wrap_i64_xor_value, wrap_i64_out
+    EXPAND WRAPPING_I64_NEG wrap_i64_out, wrap_i64_lhs
+    EXPAND WRAPPING_I64_GET wrap_i64_neg_value, wrap_i64_out
+    EXPAND WRAPPING_I64_ABS wrap_i64_out, wrap_i64_lhs
+    EXPAND WRAPPING_I64_GET wrap_i64_abs_value, wrap_i64_out
+    EXPAND WRAPPING_I64_SIGNUM wrap_i64_out, wrap_i64_lhs
+    EXPAND WRAPPING_I64_GET wrap_i64_signum_value, wrap_i64_out
+    EXPAND WRAPPING_I64_IS_POSITIVE wrap_i64_pos_value, wrap_i64_lhs
+    EXPAND WRAPPING_I64_IS_NEGATIVE wrap_i64_neg_bool_value, wrap_i64_lhs
+
+    EXPAND SATURATING_I64_NEW sat_i64_min, NUM_I64_MIN
+    EXPAND SATURATING_I64_NEW sat_i64_neg, -9
+    EXPAND SATURATING_I64_NEG sat_i64_out, sat_i64_min
+    EXPAND SATURATING_I64_GET sat_i64_neg_value, sat_i64_out
+    EXPAND SATURATING_I64_ABS sat_i64_out, sat_i64_min
+    EXPAND SATURATING_I64_GET sat_i64_abs_value, sat_i64_out
+    EXPAND SATURATING_I64_SIGNUM sat_i64_out, sat_i64_neg
+    EXPAND SATURATING_I64_GET sat_i64_signum_value, sat_i64_out
+    EXPAND SATURATING_I64_IS_POSITIVE sat_i64_pos_value, sat_i64_neg
+    EXPAND SATURATING_I64_IS_NEGATIVE sat_i64_neg_bool_value, sat_i64_neg
+
+    ok01 = eq wrap_u64_div_value, 3
+    ok02 = eq wrap_u64_rem_value, 1
+    ok03 = eq wrap_u64_shl_value, 20
+    ok04 = eq wrap_u64_shr_value, 5
+    ok05 = eq wrap_u64_not_value, 18446744073709551605
+    ok06 = eq wrap_u64_and_value, 2
+    ok07 = eq wrap_u64_or_value, 11
+    ok08 = eq wrap_u64_xor_value, 9
+    ok09 = eq wrap_u32_div_value, 3
+    ok10 = eq wrap_u32_rem_value, 1
+    ok11 = eq wrap_u32_shl_value, 20
+    ok12 = eq wrap_u32_shr_value, 5
+    ok13 = eq wrap_u32_not_value, 4294967285
+    ok14 = eq wrap_u32_and_value, 2
+    ok15 = eq wrap_u32_or_value, 11
+    ok16 = eq wrap_u32_xor_value, 9
+    ok17 = eq wrap_i64_div_value, -4
+    ok18 = eq wrap_i64_rem_value, -1
+    ok19 = eq wrap_i64_shl_value, -18
+    ok20 = eq wrap_i64_shr_value, -5
+    ok21 = eq wrap_i64_not_value, 8
+    ok22 = eq wrap_i64_and_value, 2
+    ok23 = eq wrap_i64_or_value, -9
+    ok24 = eq wrap_i64_xor_value, -11
+    ok25 = eq wrap_i64_neg_value, 9
+    ok26 = eq wrap_i64_abs_value, 9
+    ok27 = eq wrap_i64_signum_value, -1
+    ok28 = eq wrap_i64_pos_value, 0
+    ok29 = eq wrap_i64_neg_bool_value, 1
+    ok30 = eq sat_i64_neg_value, NUM_I64_MAX
+    ok31 = eq sat_i64_abs_value, NUM_I64_MAX
+    ok32 = eq sat_i64_signum_value, -1
+    ok33 = eq sat_i64_pos_value, 0
+    ok34 = eq sat_i64_neg_bool_value, 1
+
+    c01 = and ok01, ok02
+    c02 = and c01, ok03
+    c03 = and c02, ok04
+    c04 = and c03, ok05
+    c05 = and c04, ok06
+    c06 = and c05, ok07
+    c07 = and c06, ok08
+    c08 = and c07, ok09
+    c09 = and c08, ok10
+    c10 = and c09, ok11
+    c11 = and c10, ok12
+    c12 = and c11, ok13
+    c13 = and c12, ok14
+    c14 = and c13, ok15
+    c15 = and c14, ok16
+    c16 = and c15, ok17
+    c17 = and c16, ok18
+    c18 = and c17, ok19
+    c19 = and c18, ok20
+    c20 = and c19, ok21
+    c21 = and c20, ok22
+    c22 = and c21, ok23
+    c23 = and c22, ok24
+    c24 = and c23, ok25
+    c25 = and c24, ok26
+    c26 = and c25, ok27
+    c27 = and c26, ok28
+    c28 = and c27, ok29
+    c29 = and c28, ok30
+    c30 = and c29, ok31
+    c31 = and c30, ok32
+    c32 = and c31, ok33
+    ok = and c32, ok34
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10620)
+
+L_PASS:
+    !ok
+    return 0

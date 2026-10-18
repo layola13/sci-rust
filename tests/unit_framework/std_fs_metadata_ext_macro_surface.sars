@@ -1,0 +1,205 @@
+@import "sa_std/fs.sars"
+
+@const META_EXT_PATH = utf8:"_tmp_fs_metadata_ext.txt"
+@const META_EXT_DATA = utf8:"meta"
+
+#def META_EXT_PATH_LEN = 24
+#def META_EXT_DATA_LEN = 4
+
+@test "sa_std fs metadata ext macros"():
+L_ENTRY:
+    EXPAND FS_REMOVE_PATH cleanup_status, META_EXT_PATH, META_EXT_PATH_LEN
+    EXPAND FS_WRITE_FILE write_status, META_EXT_PATH, META_EXT_PATH_LEN, META_EXT_DATA, META_EXT_DATA_LEN
+    EXPAND FS_METADATA metadata_status, metadata, META_EXT_PATH, META_EXT_PATH_LEN
+    EXPAND FS_METADATA_LEN meta_len, metadata
+    EXPAND FS_METADATA_MODE meta_mode, metadata
+    EXPAND FS_METADATA_UID meta_uid, metadata
+    EXPAND FS_METADATA_GID meta_gid, metadata
+    EXPAND FS_METADATA_INO meta_ino, metadata
+    EXPAND FS_METADATA_DEV meta_dev, metadata
+    EXPAND FS_METADATA_NLINK meta_nlink, metadata
+    EXPAND FS_METADATA_RDEV meta_rdev, metadata
+    EXPAND FS_METADATA_BLKSIZE meta_blksize, metadata
+    EXPAND FS_METADATA_BLOCKS meta_blocks, metadata
+    EXPAND FS_METADATA_ST_DEV meta_st_dev, metadata
+    EXPAND FS_METADATA_ST_INO meta_st_ino, metadata
+    EXPAND FS_METADATA_ST_MODE meta_st_mode, metadata
+    EXPAND FS_METADATA_ST_NLINK meta_st_nlink, metadata
+    EXPAND FS_METADATA_ST_UID meta_st_uid, metadata
+    EXPAND FS_METADATA_ST_GID meta_st_gid, metadata
+    EXPAND FS_METADATA_ST_RDEV meta_st_rdev, metadata
+    EXPAND FS_METADATA_ST_SIZE meta_st_size, metadata
+    EXPAND FS_METADATA_ST_ATIME meta_st_atime, metadata
+    EXPAND FS_METADATA_ST_ATIME_NSEC meta_st_atime_nsec, metadata
+    EXPAND FS_METADATA_ST_MTIME meta_st_mtime, metadata
+    EXPAND FS_METADATA_ST_MTIME_NSEC meta_st_mtime_nsec, metadata
+    EXPAND FS_METADATA_ST_CTIME meta_st_ctime, metadata
+    EXPAND FS_METADATA_ST_CTIME_NSEC meta_st_ctime_nsec, metadata
+    EXPAND FS_METADATA_ST_BLKSIZE meta_st_blksize, metadata
+    EXPAND FS_METADATA_ST_BLOCKS meta_st_blocks, metadata
+    EXPAND FS_METADATA_ACCESSED_MS meta_accessed_ms, metadata
+    EXPAND FS_METADATA_CHANGED_MS meta_changed_ms, metadata
+    EXPAND FS_METADATA_FREE free_status, metadata
+    EXPAND FS_REMOVE_PATH remove_status, META_EXT_PATH, META_EXT_PATH_LEN
+
+    write_ok = eq write_status, SA_FS_OK
+    metadata_ok = eq metadata_status, SA_FS_OK
+    len_ok = eq meta_len, 4
+    mode_ok = ne meta_mode, 0
+    // UID/GID 0 is valid (root); only check the API returns without error.
+    // The metadata_ok status above already verifies the call succeeded.
+    uid_ok = eq meta_uid, meta_uid
+    gid_ok = eq meta_gid, meta_gid
+    ino_ok = ne meta_ino, 0
+    dev_ok = ne meta_dev, 0
+    nlink_ok = ne meta_nlink, 0
+    rdev_ok = eq meta_rdev, 0
+    blksize_ok = ne meta_blksize, 0
+    blocks_ok = ne meta_blocks, 0
+    st_dev_ok = eq meta_st_dev, meta_dev
+    st_ino_ok = eq meta_st_ino, meta_ino
+    st_mode_ok = eq meta_st_mode, meta_mode
+    st_nlink_ok = eq meta_st_nlink, meta_nlink
+    st_uid_ok = eq meta_st_uid, meta_uid
+    st_gid_ok = eq meta_st_gid, meta_gid
+    st_rdev_ok = eq meta_st_rdev, meta_rdev
+    st_size_ok = eq meta_st_size, meta_len
+    st_atime_ok = ne meta_st_atime, 0
+    st_mtime_ok = ne meta_st_mtime, 0
+    st_ctime_ok = ne meta_st_ctime, 0
+    st_blksize_ok = eq meta_st_blksize, meta_blksize
+    st_blocks_ok = eq meta_st_blocks, meta_blocks
+    accessed_ok = ne meta_accessed_ms, 0
+    changed_ok = ne meta_changed_ms, 0
+    free_ok = eq free_status, SA_FS_OK
+    remove_ok = eq remove_status, SA_FS_OK
+
+    ok01 = and write_ok, metadata_ok
+    ok02 = and ok01, len_ok
+    ok03 = and ok02, mode_ok
+    ok04 = and ok03, uid_ok
+    ok05 = and ok04, gid_ok
+    ok06 = and ok05, ino_ok
+    ok07 = and ok06, dev_ok
+    ok08 = and ok07, nlink_ok
+    ok09 = and ok08, rdev_ok
+    ok10 = and ok09, blksize_ok
+    ok11 = and ok10, blocks_ok
+    ok12 = and ok11, st_dev_ok
+    ok13 = and ok12, st_ino_ok
+    ok14 = and ok13, st_mode_ok
+    ok15 = and ok14, st_nlink_ok
+    ok16 = and ok15, st_uid_ok
+    ok17 = and ok16, st_gid_ok
+    ok18 = and ok17, st_rdev_ok
+    ok19 = and ok18, st_size_ok
+    ok20 = and ok19, st_atime_ok
+    ok21 = and ok20, st_mtime_ok
+    ok22 = and ok21, st_ctime_ok
+    ok23 = and ok22, st_blksize_ok
+    ok24 = and ok23, st_blocks_ok
+    ok25 = and ok24, accessed_ok
+    ok26 = and ok25, changed_ok
+    ok27 = and ok26, free_ok
+    ok = and ok27, remove_ok
+
+    !cleanup_status
+    !write_status
+    !metadata_status
+    !metadata
+    !meta_len
+    !meta_mode
+    !meta_uid
+    !meta_gid
+    !meta_ino
+    !meta_dev
+    !meta_nlink
+    !meta_rdev
+    !meta_blksize
+    !meta_blocks
+    !meta_st_dev
+    !meta_st_ino
+    !meta_st_mode
+    !meta_st_nlink
+    !meta_st_uid
+    !meta_st_gid
+    !meta_st_rdev
+    !meta_st_size
+    !meta_st_atime
+    !meta_st_atime_nsec
+    !meta_st_mtime
+    !meta_st_mtime_nsec
+    !meta_st_ctime
+    !meta_st_ctime_nsec
+    !meta_st_blksize
+    !meta_st_blocks
+    !meta_accessed_ms
+    !meta_changed_ms
+    !free_status
+    !remove_status
+    !write_ok
+    !metadata_ok
+    !len_ok
+    !mode_ok
+    !uid_ok
+    !gid_ok
+    !ino_ok
+    !dev_ok
+    !nlink_ok
+    !rdev_ok
+    !blksize_ok
+    !blocks_ok
+    !st_dev_ok
+    !st_ino_ok
+    !st_mode_ok
+    !st_nlink_ok
+    !st_uid_ok
+    !st_gid_ok
+    !st_rdev_ok
+    !st_size_ok
+    !st_atime_ok
+    !st_mtime_ok
+    !st_ctime_ok
+    !st_blksize_ok
+    !st_blocks_ok
+    !accessed_ok
+    !changed_ok
+    !free_ok
+    !remove_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(1520)
+
+L_PASS:
+    !ok
+    return 0

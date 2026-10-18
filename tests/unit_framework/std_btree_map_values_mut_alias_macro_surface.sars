@@ -1,0 +1,104 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/vec.sars"
+@import "sa_std/collections/btree_map.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+
+@test "sa_std btree_map values_mut alias"():
+L_ENTRY:
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+
+    EXPAND BTREE_MAP_NEW map
+    EXPAND BTREE_MAP_INSERT map, charlie, 30
+    EXPAND BTREE_MAP_INSERT map, alpha, 10
+    EXPAND BTREE_MAP_INSERT map, bravo, 20
+    EXPAND BTREE_MAP_VALUES_MUT value_ptrs, map
+    EXPAND VEC_LEN value_ptrs_len, value_ptrs
+    EXPAND VEC_GET_U64 alpha_ptr_bits, value_ptrs, 0
+    EXPAND VEC_GET_U64 bravo_ptr_bits, value_ptrs, 1
+    EXPAND VEC_GET_U64 charlie_ptr_bits, value_ptrs, 2
+    alpha_value_ptr = bitcast alpha_ptr_bits as ptr
+    bravo_value_ptr = bitcast bravo_ptr_bits as ptr
+    charlie_value_ptr = bitcast charlie_ptr_bits as ptr
+    store alpha_value_ptr+0, 11 as u64
+    store bravo_value_ptr+0, 22 as u64
+    store charlie_value_ptr+0, 33 as u64
+
+    EXPAND BTREE_MAP_GET alpha_value, map, alpha
+    EXPAND BTREE_MAP_GET bravo_value, map, bravo
+    EXPAND BTREE_MAP_GET charlie_value, map, charlie
+    EXPAND BTREE_MAP_LEN map_len, map
+
+    EXPAND BTREE_MAP_NEW empty_map
+    EXPAND BTREE_MAP_VALUES_MUT empty_ptrs, empty_map
+    EXPAND VEC_LEN empty_ptrs_len, empty_ptrs
+
+    ok_ptrs_len = eq value_ptrs_len, 3
+    ok_alpha_ptr = ne alpha_ptr_bits, 0
+    ok_bravo_ptr = ne bravo_ptr_bits, 0
+    ok_charlie_ptr = ne charlie_ptr_bits, 0
+    ok_alpha_value = eq alpha_value, 11
+    ok_bravo_value = eq bravo_value, 22
+    ok_charlie_value = eq charlie_value, 33
+    ok_map_len = eq map_len, 3
+    ok_empty = eq empty_ptrs_len, 0
+
+    ok01 = and ok_ptrs_len, ok_alpha_ptr
+    ok02 = and ok01, ok_bravo_ptr
+    ok03 = and ok02, ok_charlie_ptr
+    ok04 = and ok03, ok_alpha_value
+    ok05 = and ok04, ok_bravo_value
+    ok06 = and ok05, ok_charlie_value
+    ok07 = and ok06, ok_map_len
+    ok = and ok07, ok_empty
+
+    !value_ptrs
+    !value_ptrs_len
+    !alpha_ptr_bits
+    !bravo_ptr_bits
+    !charlie_ptr_bits
+    !alpha_value_ptr
+    !bravo_value_ptr
+    !charlie_value_ptr
+    !alpha_value
+    !bravo_value
+    !charlie_value
+    !map_len
+    !empty_ptrs
+    !empty_ptrs_len
+    !ok_ptrs_len
+    !ok_alpha_ptr
+    !ok_bravo_ptr
+    !ok_charlie_ptr
+    !ok_alpha_value
+    !ok_bravo_value
+    !ok_charlie_value
+    !ok_map_len
+    !ok_empty
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !charlie
+    !bravo
+    !alpha
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND BTREE_MAP_FREE empty_map
+    EXPAND BTREE_MAP_FREE map
+    return 0
+
+L_FAIL:
+    panic(10821)

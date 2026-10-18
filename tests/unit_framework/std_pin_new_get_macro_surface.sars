@@ -1,0 +1,19 @@
+@import "sa_std/pin.sars"
+
+@test "sa_std pin new get ref"():
+L_ENTRY:
+    val = stack_alloc 8
+    store val+0, 55 as u64
+    pin = stack_alloc 8
+    EXPAND PIN_NEW pin, val
+    EXPAND PIN_GET_REF p, pin
+    loaded = load p+0 as u64
+    ok = eq loaded, 55
+    !loaded
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10935)

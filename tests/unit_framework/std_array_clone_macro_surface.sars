@@ -1,0 +1,57 @@
+@import "sa_std/array.sars"
+
+@test "sa_std array clone macro surface"():
+L_ENTRY:
+    src = stack_alloc 32
+    clone_dst = stack_alloc 32
+    clone_from_dst = stack_alloc 32
+    copy_from_dst = stack_alloc 32
+
+    store src+0, 101 as u64
+    store src+8, 202 as u64
+    store src+16, 303 as u64
+    store src+24, 404 as u64
+    store clone_dst+0, 0 as u64
+    store clone_dst+8, 0 as u64
+    store clone_dst+16, 0 as u64
+    store clone_dst+24, 0 as u64
+    store clone_from_dst+0, 11 as u64
+    store clone_from_dst+8, 22 as u64
+    store clone_from_dst+16, 33 as u64
+    store clone_from_dst+24, 44 as u64
+    store copy_from_dst+0, 55 as u64
+    store copy_from_dst+8, 66 as u64
+    store copy_from_dst+16, 77 as u64
+    store copy_from_dst+24, 88 as u64
+
+    EXPAND ARRAY_CLONE_U64 clone_dst, src, 4
+    EXPAND ARRAY_CLONE_FROM_U64 clone_from_dst, src, 4
+    EXPAND ARRAY_COPY_FROM_U64 copy_from_dst, src, 4
+
+    clone0 = load clone_dst+0 as u64
+    clone3 = load clone_dst+24 as u64
+    clone_from1 = load clone_from_dst+8 as u64
+    clone_from2 = load clone_from_dst+16 as u64
+    copy_from0 = load copy_from_dst+0 as u64
+    copy_from3 = load copy_from_dst+24 as u64
+
+    ok_clone0 = eq clone0, 101
+    ok_clone3 = eq clone3, 404
+    ok_clone_from1 = eq clone_from1, 202
+    ok_clone_from2 = eq clone_from2, 303
+    ok_copy_from0 = eq copy_from0, 101
+    ok_copy_from3 = eq copy_from3, 404
+
+    c01 = and ok_clone0, ok_clone3
+    c02 = and c01, ok_clone_from1
+    c03 = and c02, ok_clone_from2
+    c04 = and c03, ok_copy_from0
+    ok = and c04, ok_copy_from3
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10523)
+
+L_PASS:
+    return 0

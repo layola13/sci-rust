@@ -1,0 +1,136 @@
+@import "sa_std/num.sars"
+
+@test "sa_std narrow unsigned primitive bit count macro surface"():
+L_ENTRY:
+    u64_top1 = shl 1, 63
+    u64_top2 = shl 1, 62
+    u64_top3 = shl 1, 61
+    u64_top4 = shl 1, 60
+    u64_top12 = add u64_top1, u64_top2
+    u64_top34 = add u64_top3, u64_top4
+    u64_top_nibble = add u64_top12, u64_top34
+
+    EXPAND NUM_U8_COUNT_ONES u8_ones, 44
+    EXPAND NUM_U8_COUNT_ZEROS u8_zeros, 44
+    EXPAND NUM_U8_LEADING_ZEROS u8_lz, 44
+    EXPAND NUM_U8_TRAILING_ZEROS u8_tz, 44
+    EXPAND NUM_U8_LEADING_ZEROS u8_zero_lz, 0
+    EXPAND NUM_U8_TRAILING_ZEROS u8_zero_tz, 0
+    EXPAND NUM_U8_LEADING_ONES u8_lo, 240
+    EXPAND NUM_U8_TRAILING_ONES u8_to, 15
+    EXPAND NUM_U8_COUNT_ONES u8_mask_ones, 300
+
+    EXPAND NUM_U16_COUNT_ONES u16_ones, 44
+    EXPAND NUM_U16_COUNT_ZEROS u16_zeros, 44
+    EXPAND NUM_U16_LEADING_ZEROS u16_lz, 44
+    EXPAND NUM_U16_TRAILING_ZEROS u16_tz, 44
+    EXPAND NUM_U16_LEADING_ZEROS u16_zero_lz, 0
+    EXPAND NUM_U16_TRAILING_ZEROS u16_zero_tz, 0
+    EXPAND NUM_U16_LEADING_ONES u16_lo, 61440
+    EXPAND NUM_U16_TRAILING_ONES u16_to, 15
+    EXPAND NUM_U16_COUNT_ONES u16_mask_ones, 65580
+
+    EXPAND NUM_U32_COUNT_ONES u32_ones, 44
+    EXPAND NUM_U32_COUNT_ZEROS u32_zeros, 44
+    EXPAND NUM_U32_LEADING_ZEROS u32_lz, 44
+    EXPAND NUM_U32_TRAILING_ZEROS u32_tz, 44
+    EXPAND NUM_U32_LEADING_ZEROS u32_zero_lz, 0
+    EXPAND NUM_U32_TRAILING_ZEROS u32_zero_tz, 0
+    EXPAND NUM_U32_LEADING_ONES u32_lo, 4026531840
+    EXPAND NUM_U32_TRAILING_ONES u32_to, 15
+    EXPAND NUM_U32_COUNT_ONES u32_mask_ones, 4294967340
+
+    EXPAND NUM_USIZE_COUNT_ONES usize_ones, 44
+    EXPAND NUM_USIZE_COUNT_ZEROS usize_zeros, 44
+    EXPAND NUM_USIZE_LEADING_ZEROS usize_lz, 44
+    EXPAND NUM_USIZE_TRAILING_ZEROS usize_tz, 44
+    EXPAND NUM_USIZE_LEADING_ZEROS usize_zero_lz, 0
+    EXPAND NUM_USIZE_TRAILING_ZEROS usize_zero_tz, 0
+    EXPAND NUM_USIZE_LEADING_ONES usize_lo, u64_top_nibble
+    EXPAND NUM_USIZE_TRAILING_ONES usize_to, 15
+
+    ok01 = eq u8_ones, 3
+    ok02 = eq u8_zeros, 5
+    ok03 = eq u8_lz, 2
+    ok04 = eq u8_tz, 2
+    ok05 = eq u8_zero_lz, 8
+    ok06 = eq u8_zero_tz, 8
+    ok07 = eq u8_lo, 4
+    ok08 = eq u8_to, 4
+    ok09 = eq u8_mask_ones, 3
+
+    ok10 = eq u16_ones, 3
+    ok11 = eq u16_zeros, 13
+    ok12 = eq u16_lz, 10
+    ok13 = eq u16_tz, 2
+    ok14 = eq u16_zero_lz, 16
+    ok15 = eq u16_zero_tz, 16
+    ok16 = eq u16_lo, 4
+    ok17 = eq u16_to, 4
+    ok18 = eq u16_mask_ones, 3
+
+    ok19 = eq u32_ones, 3
+    ok20 = eq u32_zeros, 29
+    ok21 = eq u32_lz, 26
+    ok22 = eq u32_tz, 2
+    ok23 = eq u32_zero_lz, 32
+    ok24 = eq u32_zero_tz, 32
+    ok25 = eq u32_lo, 4
+    ok26 = eq u32_to, 4
+    ok27 = eq u32_mask_ones, 3
+
+    ok28 = eq usize_ones, 3
+    ok29 = eq usize_zeros, 61
+    ok30 = eq usize_lz, 58
+    ok31 = eq usize_tz, 2
+    ok32 = eq usize_zero_lz, 64
+    ok33 = eq usize_zero_tz, 64
+    ok34 = eq usize_lo, 4
+    ok35 = eq usize_to, 4
+
+    chain01 = and ok01, ok02
+    chain02 = and chain01, ok03
+    chain03 = and chain02, ok04
+    chain04 = and chain03, ok05
+    chain05 = and chain04, ok06
+    chain06 = and chain05, ok07
+    chain07 = and chain06, ok08
+    chain08 = and chain07, ok09
+    chain09 = and chain08, ok10
+    chain10 = and chain09, ok11
+    chain11 = and chain10, ok12
+    chain12 = and chain11, ok13
+    chain13 = and chain12, ok14
+    chain14 = and chain13, ok15
+    chain15 = and chain14, ok16
+    chain16 = and chain15, ok17
+    chain17 = and chain16, ok18
+    chain18 = and chain17, ok19
+    chain19 = and chain18, ok20
+    chain20 = and chain19, ok21
+    chain21 = and chain20, ok22
+    chain22 = and chain21, ok23
+    chain23 = and chain22, ok24
+    chain24 = and chain23, ok25
+    chain25 = and chain24, ok26
+    chain26 = and chain25, ok27
+    chain27 = and chain26, ok28
+    chain28 = and chain27, ok29
+    chain29 = and chain28, ok30
+    chain30 = and chain29, ok31
+    chain31 = and chain30, ok32
+    chain32 = and chain31, ok33
+    chain33 = and chain32, ok34
+    ok = and chain33, ok35
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u64_top_nibble
+    panic(10662)
+
+L_PASS:
+    !ok
+    !u64_top_nibble
+    return 0

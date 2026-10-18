@@ -6,7 +6,7 @@ SA 的 `Arc` 包含底层溢出检查保护（强、弱引用计数防止下溢�
 
 ## 导入
 ```sa
-@import "sa_std/core/arc.sa"
+@import "sa_std/core/arc.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@ SA 的 `Arc` 包含底层溢出检查保护（强、弱引用计数防止下溢�
 下面的完整 SA 程序演示了如何初始化 `Arc`、在分支/克隆中复制强引用计数、安全读取数据，最后在不产生泄露的前提下完整递减释放整个堆结构：
 
 ```sa
-@import "sa_std/core/arc.sa"
+@import "sa_std/core/arc.sars"
 
 @main() -> i32:
 L_ENTRY:

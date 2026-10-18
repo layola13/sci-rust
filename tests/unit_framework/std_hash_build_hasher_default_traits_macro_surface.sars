@@ -1,0 +1,67 @@
+@import "sa_std/hash.sars"
+
+@test "sa_std build hasher default trait macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+    EXPAND BUILD_HASHER_DEFAULT_CLONE cloned, builder
+    EXPAND BUILD_HASHER_DEFAULT_COPY copied, builder
+    EXPAND BUILD_HASHER_DEFAULT_DEFAULT defaulted
+
+    EXPAND BUILD_HASHER_DEFAULT_EQ eq_clone, builder, cloned
+    EXPAND BUILD_HASHER_DEFAULT_EQ eq_default, copied, defaulted
+    EXPAND BUILD_HASHER_DEFAULT_NE ne_clone, builder, cloned
+
+    cloned_hasher = stack_alloc DefaultHasher_SIZE
+    copied_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND BUILD_HASHER_DEFAULT_BUILD cloned_hasher, cloned
+    EXPAND BUILD_HASHER_DEFAULT_BUILD copied_hasher, copied
+    EXPAND DEFAULT_HASHER_WRITE_U64 cloned_hasher, 21
+    EXPAND DEFAULT_HASHER_WRITE_U64 copied_hasher, 21
+    EXPAND DEFAULT_HASHER_FINISH cloned_hash, cloned_hasher
+    EXPAND DEFAULT_HASHER_FINISH copied_hash, copied_hasher
+
+    ok_clone_zero = eq cloned, 0
+    ok_copy_zero = eq copied, 0
+    ok_default_zero = eq defaulted, 0
+    ok_eq_clone = eq eq_clone, 1
+    ok_eq_default = eq eq_default, 1
+    ok_ne_clone = eq ne_clone, 0
+    ok_hash = eq cloned_hash, copied_hash
+
+    c01 = and ok_clone_zero, ok_copy_zero
+    c02 = and c01, ok_default_zero
+    c03 = and c02, ok_eq_clone
+    c04 = and c03, ok_eq_default
+    c05 = and c04, ok_ne_clone
+    ok = and c05, ok_hash
+
+    !builder
+    !cloned
+    !copied
+    !defaulted
+    !eq_clone
+    !eq_default
+    !ne_clone
+    !cloned_hash
+    !copied_hash
+    !ok_clone_zero
+    !ok_copy_zero
+    !ok_default_zero
+    !ok_eq_clone
+    !ok_eq_default
+    !ok_ne_clone
+    !ok_hash
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10531)
+
+L_PASS:
+    !ok
+    return 0

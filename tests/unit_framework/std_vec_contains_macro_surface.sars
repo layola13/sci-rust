@@ -1,0 +1,24 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec contains"():
+L_ENTRY:
+    EXPAND VEC_NEW v
+    EXPAND VEC_PUSH_U64 v, 1
+    EXPAND VEC_PUSH_U64 v, 2
+    EXPAND VEC_CONTAINS_U64 c1, v, 2
+    EXPAND VEC_CONTAINS_U64 c0, v, 9
+    EXPAND VEC_FREE v
+    a = eq c1, 1
+    b = eq c0, 0
+    ok = and a, b
+    !c1
+    !c0
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11004)

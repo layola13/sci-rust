@@ -466,7 +466,7 @@ test "trap json serialization is stable" {
     const report = TrapReport{
         .trap = .memory_leak,
         .trap_code = 11,
-        .file = "main.sa",
+        .file = "main.sars",
         .line = 12,
         .source_line = 9,
         .column = 18,

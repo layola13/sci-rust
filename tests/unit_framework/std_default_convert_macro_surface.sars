@@ -1,0 +1,426 @@
+@import "sa_std/default.sars"
+@import "sa_std/convert.sars"
+
+@test "sa_std default primitive macros"():
+L_ENTRY:
+    EXPAND DEFAULT_BOOL bool_default
+    EXPAND DEFAULT_U8 u8_default
+    EXPAND DEFAULT_U16 u16_default
+    EXPAND DEFAULT_U32 u32_default
+    EXPAND DEFAULT_U64 u64_default
+    EXPAND DEFAULT_I8 i8_default
+    EXPAND DEFAULT_I16 i16_default
+    EXPAND DEFAULT_I32 i32_default
+    EXPAND DEFAULT_I64 i64_default
+    EXPAND DEFAULT_USIZE usize_default
+    EXPAND DEFAULT_ISIZE isize_default
+
+    ok_bool = eq bool_default, 0
+    ok_u8 = eq u8_default, 0
+    ok_u16 = eq u16_default, 0
+    ok_u32 = eq u32_default, 0
+    ok_u64 = eq u64_default, 0
+    ok_i8 = eq i8_default, 0
+    ok_i16 = eq i16_default, 0
+    ok_i32 = eq i32_default, 0
+    ok_i64 = eq i64_default, 0
+    ok_usize = eq usize_default, 0
+    ok_isize = eq isize_default, 0
+
+    ok01 = and ok_bool, ok_u8
+    ok02 = and ok01, ok_u16
+    ok03 = and ok02, ok_u32
+    ok04 = and ok03, ok_u64
+    ok05 = and ok04, ok_i8
+    ok06 = and ok05, ok_i16
+    ok07 = and ok06, ok_i32
+    ok08 = and ok07, ok_i64
+    ok09 = and ok08, ok_usize
+    ok = and ok09, ok_isize
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10029)
+
+L_PASS:
+    return 0
+
+@test "sa_std convert extended primitive macros"():
+L_ENTRY:
+    EXPAND CONVERT_U8_TO_U16 u8_u16, 250
+    EXPAND CONVERT_U8_TO_U32 u8_u32, 250
+    EXPAND CONVERT_U8_TO_USIZE u8_usize, 250
+    EXPAND CONVERT_U16_TO_U32 u16_u32, 65535
+    EXPAND CONVERT_U16_TO_USIZE u16_usize, 65535
+    EXPAND CONVERT_U32_TO_USIZE u32_usize, CONVERT_U32_MAX
+    EXPAND CONVERT_U64_TO_USIZE u64_usize, CONVERT_I64_MAX
+    EXPAND CONVERT_USIZE_TO_U64 usize_u64, 4096
+
+    neg_small = sub 0, 7
+    EXPAND CONVERT_I8_TO_I16 i8_i16, neg_small
+    EXPAND CONVERT_I8_TO_I32 i8_i32, neg_small
+    EXPAND CONVERT_I8_TO_I64 i8_i64, neg_small
+    EXPAND CONVERT_I8_TO_ISIZE i8_isize, neg_small
+    EXPAND CONVERT_I16_TO_I32 i16_i32, neg_small
+    EXPAND CONVERT_I16_TO_I64 i16_i64, neg_small
+    EXPAND CONVERT_I16_TO_ISIZE i16_isize, neg_small
+    EXPAND CONVERT_I32_TO_ISIZE i32_isize, neg_small
+    EXPAND CONVERT_I64_TO_ISIZE i64_isize, neg_small
+    EXPAND CONVERT_ISIZE_TO_I64 isize_i64, neg_small
+
+    EXPAND CONVERT_TRY_U64_TO_I8 u_i8_ok, u_i8_value, CONVERT_I8_MAX
+    u_i8_big = add CONVERT_I8_MAX, 1
+    EXPAND CONVERT_TRY_U64_TO_I8 u_i8_big_ok, u_i8_big_value, u_i8_big
+    EXPAND CONVERT_TRY_U64_TO_I16 u_i16_ok, u_i16_value, CONVERT_I16_MAX
+    u_i16_big = add CONVERT_I16_MAX, 1
+    EXPAND CONVERT_TRY_U64_TO_I16 u_i16_big_ok, u_i16_big_value, u_i16_big
+    EXPAND CONVERT_TRY_U64_TO_I32 u_i32_ok, u_i32_value, CONVERT_I32_MAX
+    u_i32_big = add CONVERT_I32_MAX, 1
+    EXPAND CONVERT_TRY_U64_TO_I32 u_i32_big_ok, u_i32_big_value, u_i32_big
+    EXPAND CONVERT_TRY_U64_TO_USIZE u_usize_ok, u_usize_value, CONVERT_I64_MAX
+    too_big_isize = add CONVERT_I64_MAX, 1
+    EXPAND CONVERT_TRY_U64_TO_ISIZE u_isize_ok, u_isize_value, CONVERT_I64_MAX
+    EXPAND CONVERT_TRY_U64_TO_ISIZE u_isize_big_ok, u_isize_big_value, too_big_isize
+
+    EXPAND CONVERT_TRY_I64_TO_USIZE i_usize_ok, i_usize_value, 88
+    neg_one = sub 0, 1
+    EXPAND CONVERT_TRY_I64_TO_USIZE i_usize_neg_ok, i_usize_neg_value, neg_one
+    EXPAND CONVERT_TRY_I64_TO_U16 i_u16_ok, i_u16_value, CONVERT_U16_MAX
+    i_u16_big = add CONVERT_U16_MAX, 1
+    EXPAND CONVERT_TRY_I64_TO_U16 i_u16_big_ok, i_u16_big_value, i_u16_big
+    EXPAND CONVERT_TRY_I64_TO_U32 i_u32_ok, i_u32_value, CONVERT_U32_MAX
+    i_u32_big = add CONVERT_U32_MAX, 1
+    EXPAND CONVERT_TRY_I64_TO_U32 i_u32_big_ok, i_u32_big_value, i_u32_big
+    EXPAND CONVERT_TRY_I64_TO_I8 i_i8_min_ok, i_i8_min_value, CONVERT_I8_MIN
+    i_i8_low = sub CONVERT_I8_MIN, 1
+    EXPAND CONVERT_TRY_I64_TO_I8 i_i8_low_ok, i_i8_low_value, i_i8_low
+    EXPAND CONVERT_TRY_I64_TO_I16 i_i16_max_ok, i_i16_max_value, CONVERT_I16_MAX
+    i_i16_high = add CONVERT_I16_MAX, 1
+    i_i16_low = sub CONVERT_I16_MIN, 1
+    EXPAND CONVERT_TRY_I64_TO_I16 i_i16_high_ok, i_i16_high_value, i_i16_high
+    EXPAND CONVERT_TRY_I64_TO_I32 i_i32_min_ok, i_i32_min_value, CONVERT_I32_MIN
+    i_i32_low = sub CONVERT_I32_MIN, 1
+    EXPAND CONVERT_TRY_I64_TO_I32 i_i32_low_ok, i_i32_low_value, i_i32_low
+    EXPAND CONVERT_TRY_I64_TO_ISIZE i_isize_ok, i_isize_value, neg_small
+
+    EXPAND CONVERT_SAT_U64_TO_I8 sat_u_i8_mid, 12
+    EXPAND CONVERT_SAT_U64_TO_I8 sat_u_i8_high, 999
+    EXPAND CONVERT_SAT_U64_TO_I16 sat_u_i16_mid, 12
+    EXPAND CONVERT_SAT_U64_TO_I16 sat_u_i16_high, 99999
+    EXPAND CONVERT_SAT_U64_TO_I32 sat_u_i32_mid, 12
+    sat_u_i32_big_in = add CONVERT_I32_MAX, 1
+    EXPAND CONVERT_SAT_U64_TO_I32 sat_u_i32_high, sat_u_i32_big_in
+    EXPAND CONVERT_SAT_I64_TO_U8 sat_i_u8_low, neg_one
+    EXPAND CONVERT_SAT_I64_TO_U8 sat_i_u8_high, 999
+    EXPAND CONVERT_SAT_I64_TO_U16 sat_i_u16_low, neg_one
+    EXPAND CONVERT_SAT_I64_TO_U16 sat_i_u16_high, 99999
+    EXPAND CONVERT_SAT_I64_TO_U32 sat_i_u32_low, neg_one
+    sat_i_u32_big_in = add CONVERT_U32_MAX, 1
+    EXPAND CONVERT_SAT_I64_TO_U32 sat_i_u32_high, sat_i_u32_big_in
+    EXPAND CONVERT_SAT_I64_TO_I8 sat_i_i8_low, i_i8_low
+    EXPAND CONVERT_SAT_I64_TO_I8 sat_i_i8_high, u_i8_big
+    EXPAND CONVERT_SAT_I64_TO_I16 sat_i_i16_low, i_i16_low
+    EXPAND CONVERT_SAT_I64_TO_I16 sat_i_i16_high, i_i16_high
+    EXPAND CONVERT_SAT_I64_TO_I32 sat_i_i32_low, i_i32_low
+    EXPAND CONVERT_SAT_I64_TO_I32 sat_i_i32_high, u_i32_big
+
+    ok01 = eq u8_u16, 250
+    ok02 = eq u8_u32, 250
+    ok03 = eq u8_usize, 250
+    ok04 = eq u16_u32, 65535
+    ok05 = eq u16_usize, 65535
+    ok06 = eq u32_usize, CONVERT_U32_MAX
+    ok07 = eq u64_usize, CONVERT_I64_MAX
+    ok08 = eq usize_u64, 4096
+    ok09 = eq i8_i16, neg_small
+    ok10 = eq i8_i32, neg_small
+    ok11 = eq i8_i64, neg_small
+    ok12 = eq i8_isize, neg_small
+    ok13 = eq i16_i32, neg_small
+    ok14 = eq i16_i64, neg_small
+    ok15 = eq i16_isize, neg_small
+    ok16 = eq i32_isize, neg_small
+    ok17 = eq i64_isize, neg_small
+    ok18 = eq isize_i64, neg_small
+    ok19 = eq u_i8_ok, 1
+    ok20 = eq u_i8_value, CONVERT_I8_MAX
+    ok21 = eq u_i8_big_ok, 0
+    ok22 = eq u_i8_big_value, 0
+    ok23 = eq u_i16_ok, 1
+    ok24 = eq u_i16_value, CONVERT_I16_MAX
+    ok25 = eq u_i16_big_ok, 0
+    ok26 = eq u_i16_big_value, 0
+    ok27 = eq u_i32_ok, 1
+    ok28 = eq u_i32_value, CONVERT_I32_MAX
+    ok29 = eq u_i32_big_ok, 0
+    ok30 = eq u_i32_big_value, 0
+    ok31 = eq u_usize_ok, 1
+    ok32 = eq u_usize_value, CONVERT_I64_MAX
+    ok33 = eq u_isize_ok, 1
+    ok34 = eq u_isize_value, CONVERT_I64_MAX
+    ok35 = eq u_isize_big_ok, 0
+    ok36 = eq u_isize_big_value, 0
+    ok37 = eq i_usize_ok, 1
+    ok38 = eq i_usize_value, 88
+    ok39 = eq i_usize_neg_ok, 0
+    ok40 = eq i_usize_neg_value, 0
+    ok41 = eq i_u16_ok, 1
+    ok42 = eq i_u16_value, CONVERT_U16_MAX
+    ok43 = eq i_u16_big_ok, 0
+    ok44 = eq i_u16_big_value, 0
+    ok45 = eq i_u32_ok, 1
+    ok46 = eq i_u32_value, CONVERT_U32_MAX
+    ok47 = eq i_u32_big_ok, 0
+    ok48 = eq i_u32_big_value, 0
+    ok49 = eq i_i8_min_ok, 1
+    ok50 = eq i_i8_min_value, CONVERT_I8_MIN
+    ok51 = eq i_i8_low_ok, 0
+    ok52 = eq i_i8_low_value, 0
+    ok53 = eq i_i16_max_ok, 1
+    ok54 = eq i_i16_max_value, CONVERT_I16_MAX
+    ok55 = eq i_i16_high_ok, 0
+    ok56 = eq i_i16_high_value, 0
+    ok57 = eq i_i32_min_ok, 1
+    ok58 = eq i_i32_min_value, CONVERT_I32_MIN
+    ok59 = eq i_i32_low_ok, 0
+    ok60 = eq i_i32_low_value, 0
+    ok61 = eq i_isize_ok, 1
+    ok62 = eq i_isize_value, neg_small
+    ok63 = eq sat_u_i8_mid, 12
+    ok64 = eq sat_u_i8_high, CONVERT_I8_MAX
+    ok65 = eq sat_u_i16_mid, 12
+    ok66 = eq sat_u_i16_high, CONVERT_I16_MAX
+    ok67 = eq sat_u_i32_mid, 12
+    ok68 = eq sat_u_i32_high, CONVERT_I32_MAX
+    ok69 = eq sat_i_u8_low, 0
+    ok70 = eq sat_i_u8_high, CONVERT_U8_MAX
+    ok71 = eq sat_i_u16_low, 0
+    ok72 = eq sat_i_u16_high, CONVERT_U16_MAX
+    ok73 = eq sat_i_u32_low, 0
+    ok74 = eq sat_i_u32_high, CONVERT_U32_MAX
+    ok75 = eq sat_i_i8_low, CONVERT_I8_MIN
+    ok76 = eq sat_i_i8_high, CONVERT_I8_MAX
+    ok77 = eq sat_i_i16_low, CONVERT_I16_MIN
+    ok78 = eq sat_i_i16_high, CONVERT_I16_MAX
+    ok79 = eq sat_i_i32_low, CONVERT_I32_MIN
+    ok80 = eq sat_i_i32_high, CONVERT_I32_MAX
+
+    all01 = and ok01, ok02
+    all02 = and all01, ok03
+    all03 = and all02, ok04
+    all04 = and all03, ok05
+    all05 = and all04, ok06
+    all06 = and all05, ok07
+    all07 = and all06, ok08
+    all08 = and all07, ok09
+    all09 = and all08, ok10
+    all10 = and all09, ok11
+    all11 = and all10, ok12
+    all12 = and all11, ok13
+    all13 = and all12, ok14
+    all14 = and all13, ok15
+    all15 = and all14, ok16
+    all16 = and all15, ok17
+    all17 = and all16, ok18
+    all18 = and all17, ok19
+    all19 = and all18, ok20
+    all20 = and all19, ok21
+    all21 = and all20, ok22
+    all22 = and all21, ok23
+    all23 = and all22, ok24
+    all24 = and all23, ok25
+    all25 = and all24, ok26
+    all26 = and all25, ok27
+    all27 = and all26, ok28
+    all28 = and all27, ok29
+    all29 = and all28, ok30
+    all30 = and all29, ok31
+    all31 = and all30, ok32
+    all32 = and all31, ok33
+    all33 = and all32, ok34
+    all34 = and all33, ok35
+    all35 = and all34, ok36
+    all36 = and all35, ok37
+    all37 = and all36, ok38
+    all38 = and all37, ok39
+    all39 = and all38, ok40
+    all40 = and all39, ok41
+    all41 = and all40, ok42
+    all42 = and all41, ok43
+    all43 = and all42, ok44
+    all44 = and all43, ok45
+    all45 = and all44, ok46
+    all46 = and all45, ok47
+    all47 = and all46, ok48
+    all48 = and all47, ok49
+    all49 = and all48, ok50
+    all50 = and all49, ok51
+    all51 = and all50, ok52
+    all52 = and all51, ok53
+    all53 = and all52, ok54
+    all54 = and all53, ok55
+    all55 = and all54, ok56
+    all56 = and all55, ok57
+    all57 = and all56, ok58
+    all58 = and all57, ok59
+    all59 = and all58, ok60
+    all60 = and all59, ok61
+    all61 = and all60, ok62
+    all62 = and all61, ok63
+    all63 = and all62, ok64
+    all64 = and all63, ok65
+    all65 = and all64, ok66
+    all66 = and all65, ok67
+    all67 = and all66, ok68
+    all68 = and all67, ok69
+    all69 = and all68, ok70
+    all70 = and all69, ok71
+    all71 = and all70, ok72
+    all72 = and all71, ok73
+    all73 = and all72, ok74
+    all74 = and all73, ok75
+    all75 = and all74, ok76
+    all76 = and all75, ok77
+    all77 = and all76, ok78
+    all78 = and all77, ok79
+    all = and all78, ok80
+
+    br all -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10030)
+
+L_PASS:
+    return 0
+
+@test "sa_std convert primitive macros"():
+L_ENTRY:
+    EXPAND CONVERT_BOOL_TO_U64 bool_true_u64, 1
+    EXPAND CONVERT_BOOL_TO_I32 bool_false_i32, 0
+    EXPAND CONVERT_U64_TO_BOOL zero_bool, 0
+    EXPAND CONVERT_U64_TO_BOOL nonzero_bool, 42
+
+    EXPAND CONVERT_U8_TO_U64 u8_to_u64, 255
+    EXPAND CONVERT_U16_TO_U64 u16_to_u64, 65535
+    EXPAND CONVERT_U32_TO_U64 u32_to_u64, 4294967295
+    neg_four = sub 0, 4
+    EXPAND CONVERT_I32_TO_I64 i32_to_i64, neg_four
+
+    EXPAND CONVERT_TRY_U64_TO_U8 u8_ok, u8_value, 255
+    EXPAND CONVERT_TRY_U64_TO_U8 u8_miss_ok, u8_miss_value, 256
+    EXPAND CONVERT_TRY_U64_TO_U16 u16_ok, u16_value, 65535
+    EXPAND CONVERT_TRY_U64_TO_U16 u16_miss_ok, u16_miss_value, 65536
+    EXPAND CONVERT_TRY_U64_TO_U32 u32_ok, u32_value, 4294967295
+    too_big_u32 = add CONVERT_U32_MAX, 1
+    EXPAND CONVERT_TRY_U64_TO_U32 u32_miss_ok, u32_miss_value, too_big_u32
+    EXPAND CONVERT_TRY_U64_TO_I64 i64_ok, i64_value, CONVERT_I64_MAX
+    too_big_i64 = add CONVERT_I64_MAX, 1
+    EXPAND CONVERT_TRY_U64_TO_I64 i64_miss_ok, i64_miss_value, too_big_i64
+
+    EXPAND CONVERT_TRY_I64_TO_U64 i_to_u_ok, i_to_u_value, 7
+    neg_one = sub 0, 1
+    EXPAND CONVERT_TRY_I64_TO_U64 i_to_u_miss_ok, i_to_u_miss_value, neg_one
+    EXPAND CONVERT_TRY_I64_TO_U8 i_to_u8_ok, i_to_u8_value, 255
+    EXPAND CONVERT_TRY_I64_TO_U8 i_to_u8_neg_ok, i_to_u8_neg_value, neg_one
+    EXPAND CONVERT_TRY_I64_TO_U8 i_to_u8_big_ok, i_to_u8_big_value, 256
+
+    EXPAND CONVERT_SAT_U64_TO_U8 sat_u8_mid, 12
+    EXPAND CONVERT_SAT_U64_TO_U8 sat_u8_high, 999
+    EXPAND CONVERT_SAT_U64_TO_U16 sat_u16_mid, 12
+    EXPAND CONVERT_SAT_U64_TO_U16 sat_u16_high, 99999
+    EXPAND CONVERT_SAT_U64_TO_U32 sat_u32_mid, 12
+    too_big_u32_sat = add CONVERT_U32_MAX, 1
+    EXPAND CONVERT_SAT_U64_TO_U32 sat_u32_high, too_big_u32_sat
+
+    ok_bool_true = eq bool_true_u64, 1
+    ok_bool_false = eq bool_false_i32, 0
+    ok_zero_bool = eq zero_bool, 0
+    ok_nonzero_bool = eq nonzero_bool, 1
+    ok_u8_to_u64 = eq u8_to_u64, 255
+    ok_u16_to_u64 = eq u16_to_u64, 65535
+    ok_u32_to_u64 = eq u32_to_u64, 4294967295
+    ok_i32_to_i64 = eq i32_to_i64, neg_four
+
+    ok_u8_flag = eq u8_ok, 1
+    ok_u8_value = eq u8_value, 255
+    ok_u8_miss_flag = eq u8_miss_ok, 0
+    ok_u8_miss_value = eq u8_miss_value, 0
+    ok_u16_flag = eq u16_ok, 1
+    ok_u16_value = eq u16_value, 65535
+    ok_u16_miss_flag = eq u16_miss_ok, 0
+    ok_u16_miss_value = eq u16_miss_value, 0
+    ok_u32_flag = eq u32_ok, 1
+    ok_u32_value = eq u32_value, 4294967295
+    ok_u32_miss_flag = eq u32_miss_ok, 0
+    ok_u32_miss_value = eq u32_miss_value, 0
+    ok_i64_flag = eq i64_ok, 1
+    ok_i64_value = eq i64_value, CONVERT_I64_MAX
+    ok_i64_miss_flag = eq i64_miss_ok, 0
+    ok_i64_miss_value = eq i64_miss_value, 0
+
+    ok_i_to_u_flag = eq i_to_u_ok, 1
+    ok_i_to_u_value = eq i_to_u_value, 7
+    ok_i_to_u_miss_flag = eq i_to_u_miss_ok, 0
+    ok_i_to_u_miss_value = eq i_to_u_miss_value, 0
+    ok_i_to_u8_flag = eq i_to_u8_ok, 1
+    ok_i_to_u8_value = eq i_to_u8_value, 255
+    ok_i_to_u8_neg_flag = eq i_to_u8_neg_ok, 0
+    ok_i_to_u8_neg_value = eq i_to_u8_neg_value, 0
+    ok_i_to_u8_big_flag = eq i_to_u8_big_ok, 0
+    ok_i_to_u8_big_value = eq i_to_u8_big_value, 0
+
+    ok_sat_u8_mid = eq sat_u8_mid, 12
+    ok_sat_u8_high = eq sat_u8_high, 255
+    ok_sat_u16_mid = eq sat_u16_mid, 12
+    ok_sat_u16_high = eq sat_u16_high, 65535
+    ok_sat_u32_mid = eq sat_u32_mid, 12
+    ok_sat_u32_high = eq sat_u32_high, CONVERT_U32_MAX
+
+    ok01 = and ok_bool_true, ok_bool_false
+    ok02 = and ok01, ok_zero_bool
+    ok03 = and ok02, ok_nonzero_bool
+    ok04 = and ok03, ok_u8_to_u64
+    ok05 = and ok04, ok_u16_to_u64
+    ok06 = and ok05, ok_u32_to_u64
+    ok07 = and ok06, ok_i32_to_i64
+    ok08 = and ok07, ok_u8_flag
+    ok09 = and ok08, ok_u8_value
+    ok10 = and ok09, ok_u8_miss_flag
+    ok11 = and ok10, ok_u8_miss_value
+    ok12 = and ok11, ok_u16_flag
+    ok13 = and ok12, ok_u16_value
+    ok14 = and ok13, ok_u16_miss_flag
+    ok15 = and ok14, ok_u16_miss_value
+    ok16 = and ok15, ok_u32_flag
+    ok17 = and ok16, ok_u32_value
+    ok18 = and ok17, ok_u32_miss_flag
+    ok19 = and ok18, ok_u32_miss_value
+    ok20 = and ok19, ok_i64_flag
+    ok21 = and ok20, ok_i64_value
+    ok22 = and ok21, ok_i64_miss_flag
+    ok23 = and ok22, ok_i64_miss_value
+    ok24 = and ok23, ok_i_to_u_flag
+    ok25 = and ok24, ok_i_to_u_value
+    ok26 = and ok25, ok_i_to_u_miss_flag
+    ok27 = and ok26, ok_i_to_u_miss_value
+    ok28 = and ok27, ok_i_to_u8_flag
+    ok29 = and ok28, ok_i_to_u8_value
+    ok30 = and ok29, ok_i_to_u8_neg_flag
+    ok31 = and ok30, ok_i_to_u8_neg_value
+    ok32 = and ok31, ok_i_to_u8_big_flag
+    ok33 = and ok32, ok_i_to_u8_big_value
+    ok34 = and ok33, ok_sat_u8_mid
+    ok35 = and ok34, ok_sat_u8_high
+    ok36 = and ok35, ok_sat_u16_mid
+    ok37 = and ok36, ok_sat_u16_high
+    ok38 = and ok37, ok_sat_u32_mid
+    ok = and ok38, ok_sat_u32_high
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10031)
+
+L_PASS:
+    return 0

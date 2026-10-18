@@ -15,6 +15,7 @@
 	],
 	"settings": {
 		"files.associations": {
+			"*.sars": "cpp",
 			"*.sa": "cpp",
 			"*.sal": "cpp",
 			"*.sai": "cpp"

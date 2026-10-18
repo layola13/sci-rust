@@ -1,4 +1,0 @@
-// Stable thread namespace aggregation.
-@import "join_handle.sa"
-@import "../thread.sa"
-@import "../thread_local.sa"

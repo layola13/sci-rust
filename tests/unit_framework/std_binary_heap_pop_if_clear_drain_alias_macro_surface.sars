@@ -1,0 +1,165 @@
+@import "sa_std/collections/binary_heap.sars"
+@import "sa_std/vec.sars"
+
+@binary_heap_pop_if_is_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    is_even = eq rem, 0
+    !rem
+    !value
+    return is_even
+
+@test "sa_std binary_heap pop_if clear drain bare alias macro surface"():
+L_ENTRY:
+    // pop_if even from max-heap [1,2,3,4,5]: root is 5 (odd) so bare POP_IF misses.
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH heap, 2
+    EXPAND BINARY_HEAP_PUSH heap, 3
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_PUSH heap, 5
+    EXPAND BINARY_HEAP_POP_IF miss_ok, miss_value, heap, @binary_heap_pop_if_is_even
+    EXPAND BINARY_HEAP_LEN len_after_miss, heap
+    EXPAND BINARY_HEAP_PEEK peek_after_miss, heap
+
+    // After popping the odd root, root is even and bare POP_IF takes it.
+    EXPAND BINARY_HEAP_TRY_POP root_ok, root_value, heap
+    EXPAND BINARY_HEAP_POP_IF hit_ok, hit_value, heap, @binary_heap_pop_if_is_even
+    EXPAND BINARY_HEAP_LEN len_after_hit, heap
+    EXPAND BINARY_HEAP_PEEK peek_after_hit, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    // clear empty: bare CLEAR on an empty heap stays empty.
+    EXPAND BINARY_HEAP_NEW empty_heap
+    EXPAND BINARY_HEAP_CLEAR empty_heap
+    EXPAND BINARY_HEAP_IS_EMPTY empty_still, empty_heap
+    EXPAND BINARY_HEAP_LEN empty_len, empty_heap
+    EXPAND BINARY_HEAP_FREE empty_heap
+
+    // drain materialize: bare DRAIN copies values into a vec and empties the heap.
+    EXPAND BINARY_HEAP_NEW drain_heap
+    EXPAND BINARY_HEAP_PUSH drain_heap, 1
+    EXPAND BINARY_HEAP_PUSH drain_heap, 2
+    EXPAND BINARY_HEAP_PUSH drain_heap, 3
+    EXPAND BINARY_HEAP_PUSH drain_heap, 4
+    EXPAND BINARY_HEAP_PUSH drain_heap, 5
+    EXPAND BINARY_HEAP_DRAIN drain_vec, drain_heap
+    EXPAND VEC_LEN drain_len, drain_vec
+    EXPAND VEC_CONTAINS_U64 has_1, drain_vec, 1
+    EXPAND VEC_CONTAINS_U64 has_2, drain_vec, 2
+    EXPAND VEC_CONTAINS_U64 has_3, drain_vec, 3
+    EXPAND VEC_CONTAINS_U64 has_4, drain_vec, 4
+    EXPAND VEC_CONTAINS_U64 has_5, drain_vec, 5
+    EXPAND BINARY_HEAP_LEN drain_heap_len, drain_heap
+    EXPAND BINARY_HEAP_IS_EMPTY drain_heap_empty, drain_heap
+    EXPAND VEC_FREE drain_vec
+    EXPAND BINARY_HEAP_FREE drain_heap
+
+    ok_miss_flag = eq miss_ok, 0
+    ok_miss_value = eq miss_value, 0
+    ok_len_miss = eq len_after_miss, 5
+    ok_peek_miss = eq peek_after_miss, 5
+    ok_root_flag = eq root_ok, 1
+    ok_root_value = eq root_value, 5
+    ok_hit_flag = eq hit_ok, 1
+    ok_hit_value = eq hit_value, 4
+    ok_len_hit = eq len_after_hit, 3
+    ok_peek_hit = eq peek_after_hit, 3
+    ok_empty_still = eq empty_still, 1
+    ok_empty_len = eq empty_len, 0
+    ok_drain_len = eq drain_len, 5
+    ok_has_1 = eq has_1, 1
+    ok_has_2 = eq has_2, 1
+    ok_has_3 = eq has_3, 1
+    ok_has_4 = eq has_4, 1
+    ok_has_5 = eq has_5, 1
+    ok_drain_heap_len = eq drain_heap_len, 0
+    ok_drain_heap_empty = eq drain_heap_empty, 1
+
+    ok01 = and ok_miss_flag, ok_miss_value
+    ok02 = and ok01, ok_len_miss
+    ok03 = and ok02, ok_peek_miss
+    ok04 = and ok03, ok_root_flag
+    ok05 = and ok04, ok_root_value
+    ok06 = and ok05, ok_hit_flag
+    ok07 = and ok06, ok_hit_value
+    ok08 = and ok07, ok_len_hit
+    ok09 = and ok08, ok_peek_hit
+    ok10 = and ok09, ok_empty_still
+    ok11 = and ok10, ok_empty_len
+    ok12 = and ok11, ok_drain_len
+    ok13 = and ok12, ok_has_1
+    ok14 = and ok13, ok_has_2
+    ok15 = and ok14, ok_has_3
+    ok16 = and ok15, ok_has_4
+    ok17 = and ok16, ok_has_5
+    ok18 = and ok17, ok_drain_heap_len
+    ok = and ok18, ok_drain_heap_empty
+
+    !miss_ok
+    !miss_value
+    !len_after_miss
+    !peek_after_miss
+    !root_ok
+    !root_value
+    !hit_ok
+    !hit_value
+    !len_after_hit
+    !peek_after_hit
+    !empty_still
+    !empty_len
+    !drain_len
+    !has_1
+    !has_2
+    !has_3
+    !has_4
+    !has_5
+    !drain_heap_len
+    !drain_heap_empty
+    !ok_miss_flag
+    !ok_miss_value
+    !ok_len_miss
+    !ok_peek_miss
+    !ok_root_flag
+    !ok_root_value
+    !ok_hit_flag
+    !ok_hit_value
+    !ok_len_hit
+    !ok_peek_hit
+    !ok_empty_still
+    !ok_empty_len
+    !ok_drain_len
+    !ok_has_1
+    !ok_has_2
+    !ok_has_3
+    !ok_has_4
+    !ok_has_5
+    !ok_drain_heap_len
+    !ok_drain_heap_empty
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10861)
+
+L_OK:
+    !ok
+    return

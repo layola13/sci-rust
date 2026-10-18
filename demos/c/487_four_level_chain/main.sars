@@ -1,0 +1,20 @@
+@import "sa_std/io/print.sai"
+@import "l1/a.sars"
+
+@const OUT = utf8:"487\n"
+
+// 487 - Four-level nesting: main -> l1/a -> l1/l2/b -> l1/l2/l3/c
+// -> l1/l2/l3/l4/seed (7 + 40 + 40 + 400).
+@main() -> i32:
+L_ENTRY:
+    value = call @a_value()
+    ok = eq value, 487
+    !value
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

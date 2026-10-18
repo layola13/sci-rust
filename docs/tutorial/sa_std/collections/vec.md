@@ -6,7 +6,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/vec.sa"
+@import "sa_std/vec.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@
 下面的完整 SA 程序展示了如何初始化数组，插入、读取、安全索引检查、尾部弹出数据以及最后的垃圾回收：
 
 ```sa
-@import "sa_std/vec.sa"
+@import "sa_std/vec.sars"
 
 @main() -> i32:
 L_ENTRY:

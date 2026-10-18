@@ -1,0 +1,71 @@
+@import "sa_std/collections/vec_deque.sars"
+
+@deque_partition_lt_30(value: u64) -> u64:
+L_ENTRY:
+    is_lt = ult value, 30
+    !value
+    return is_lt
+
+@test "sa_std vec_deque binary_search"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 8
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 5
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 40
+
+    // Force wrap so make_contiguous is load-bearing for sorted search.
+    EXPAND VEC_DEQUE_PUSH_FRONT deque, 1
+    EXPAND VEC_DEQUE_TRY_POP_FRONT drop_ok, dropped, deque
+    !drop_ok
+    !dropped
+
+    EXPAND VEC_DEQUE_BINARY_SEARCH_U64 hit_ok, hit_idx, deque, 20
+    EXPAND VEC_DEQUE_BINARY_SEARCH miss_ok, miss_idx, deque, 30
+    EXPAND VEC_DEQUE_TRY_BINARY_SEARCH try_hit_ok, try_hit_idx, deque, 10
+    EXPAND VEC_DEQUE_PARTITION_POINT_U64 partition_idx, deque, @deque_partition_lt_30
+
+    ok_hit_flag = eq hit_ok, 1
+    ok_hit_idx = eq hit_idx, 3
+    ok_miss_flag = eq miss_ok, 0
+    ok_miss_idx = eq miss_idx, 5
+    ok_try_hit_flag = eq try_hit_ok, 1
+    ok_try_hit_idx = eq try_hit_idx, 1
+    ok_partition = eq partition_idx, 5
+
+    ok01 = and ok_hit_flag, ok_hit_idx
+    ok02 = and ok01, ok_miss_flag
+    ok03 = and ok02, ok_miss_idx
+    ok04 = and ok03, ok_try_hit_flag
+    ok05 = and ok04, ok_try_hit_idx
+    ok = and ok05, ok_partition
+
+    !hit_ok
+    !hit_idx
+    !miss_ok
+    !miss_idx
+    !try_hit_ok
+    !try_hit_idx
+    !partition_idx
+    !ok_hit_flag
+    !ok_hit_idx
+    !ok_miss_flag
+    !ok_miss_idx
+    !ok_try_hit_flag
+    !ok_try_hit_idx
+    !ok_partition
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND VEC_DEQUE_FREE deque
+    return 0
+
+L_FAIL:
+    panic(10847)

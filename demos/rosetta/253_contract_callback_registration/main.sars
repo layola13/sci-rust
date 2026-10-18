@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "consumer/callback_consumer.sars"
+
+@const RESULT_OK = utf8:"253\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 253 - Contract Callback Registration
+// The callback vtable lives in bridge/callback_vtable.sa and the consumer owns the indirect call.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @callback_consumer_value()
+    ok = eq value, 253
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

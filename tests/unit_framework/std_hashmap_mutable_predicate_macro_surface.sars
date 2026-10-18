@@ -1,0 +1,179 @@
+@import "sa_std/collections/hashmap.sars"
+@import "sa_std/vec.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+@const VALUE_A = utf8:"A"
+@const VALUE_B = utf8:"B"
+@const VALUE_C = utf8:"C"
+@const VALUE_D = utf8:"D"
+
+@retain_mutate_not_bravo(key: ptr, value_ptr: ptr) -> u64:
+L_ENTRY:
+    replacement = &VALUE_C
+    store value_ptr+0, replacement as ptr
+    bravo = &KEY_BRAVO
+    is_bravo = eq key, bravo
+    keep = eq is_bravo, 0
+    !is_bravo
+    !bravo
+    !replacement
+    !value_ptr
+    !key
+    return keep
+
+@extract_mutate_bravo(key: ptr, value_ptr: ptr) -> u64:
+L_ENTRY:
+    replacement = &VALUE_D
+    store value_ptr+0, replacement as ptr
+    bravo = &KEY_BRAVO
+    take = eq key, bravo
+    !bravo
+    !replacement
+    !value_ptr
+    !key
+    return take
+
+@test "sa_std hashmap mutable retain and extract_if predicates"():
+L_ENTRY:
+    key_a = &KEY_ALPHA
+    key_b = &KEY_BRAVO
+    key_c = &KEY_CHARLIE
+    value_a = &VALUE_A
+    value_b = &VALUE_B
+    value_c = &VALUE_C
+    value_d = &VALUE_D
+
+    EXPAND MAP_WITH_CAPACITY retain_map, 8
+    EXPAND MAP_PUT retain_map, key_a, value_a
+    EXPAND MAP_PUT retain_map, key_b, value_b
+    EXPAND MAP_PUT retain_map, key_c, value_c
+    EXPAND MAP_RETAIN retain_len, retain_map, @retain_mutate_not_bravo
+    EXPAND MAP_LEN retain_map_len, retain_map
+    EXPAND MAP_GET retain_a, retain_map, key_a
+    EXPAND MAP_GET retain_b, retain_map, key_b
+    EXPAND MAP_GET retain_c, retain_map, key_c
+
+    EXPAND MAP_WITH_CAPACITY extract_map, 8
+    EXPAND MAP_PUT extract_map, key_a, value_a
+    EXPAND MAP_PUT extract_map, key_b, value_b
+    EXPAND MAP_PUT extract_map, key_c, value_c
+    EXPAND MAP_EXTRACT_IF extract_len, extracted, extract_map, @extract_mutate_bravo
+    EXPAND MAP_LEN extract_map_len, extract_map
+    EXPAND MAP_GET extract_a, extract_map, key_a
+    EXPAND MAP_GET extract_b, extract_map, key_b
+    EXPAND MAP_GET extract_c, extract_map, key_c
+    EXPAND VEC_LEN extracted_len, extracted
+    EXPAND VEC_GET_U64 extracted_key_bits, extracted, 0
+    EXPAND VEC_GET_U64 extracted_value_bits, extracted, 1
+    key_b_bits = bitcast key_b as u64
+    value_d_bits = bitcast value_d as u64
+
+    EXPAND MAP_NEW empty_retain_map
+    EXPAND MAP_RETAIN empty_retain_len, empty_retain_map, @retain_mutate_not_bravo
+    EXPAND MAP_NEW empty_extract_map
+    EXPAND MAP_EXTRACT_IF empty_extract_len, empty_extracted, empty_extract_map, @extract_mutate_bravo
+    EXPAND VEC_LEN empty_extracted_len, empty_extracted
+
+    ok_retain_len = eq retain_len, 2
+    ok_retain_map_len = eq retain_map_len, 2
+    ok_retain_a = eq retain_a, value_c
+    ok_retain_b = eq retain_b, 0
+    ok_retain_c = eq retain_c, value_c
+    ok_extract_len = eq extract_len, 2
+    ok_extract_map_len = eq extract_map_len, 2
+    ok_extract_a = eq extract_a, value_d
+    ok_extract_b = eq extract_b, 0
+    ok_extract_c = eq extract_c, value_d
+    ok_extracted_len = eq extracted_len, 2
+    ok_extracted_key = eq extracted_key_bits, key_b_bits
+    ok_extracted_value = eq extracted_value_bits, value_d_bits
+    ok_empty_retain = eq empty_retain_len, 0
+    ok_empty_extract = eq empty_extract_len, 0
+    ok_empty_vec = eq empty_extracted_len, 0
+
+    ok01 = and ok_retain_len, ok_retain_map_len
+    ok02 = and ok01, ok_retain_a
+    ok03 = and ok02, ok_retain_b
+    ok04 = and ok03, ok_retain_c
+    ok05 = and ok04, ok_extract_len
+    ok06 = and ok05, ok_extract_map_len
+    ok07 = and ok06, ok_extract_a
+    ok08 = and ok07, ok_extract_b
+    ok09 = and ok08, ok_extract_c
+    ok10 = and ok09, ok_extracted_len
+    ok11 = and ok10, ok_extracted_key
+    ok12 = and ok11, ok_extracted_value
+    ok13 = and ok12, ok_empty_retain
+    ok14 = and ok13, ok_empty_extract
+    ok = and ok14, ok_empty_vec
+
+    !retain_len
+    !retain_map_len
+    !retain_a
+    !retain_b
+    !retain_c
+    !extract_len
+    !extract_map_len
+    !extract_a
+    !extract_b
+    !extract_c
+    !extracted_len
+    !extracted_key_bits
+    !extracted_value_bits
+    !key_b_bits
+    !value_d_bits
+    !empty_retain_len
+    !empty_extract_len
+    !empty_extracted_len
+    !ok_retain_len
+    !ok_retain_map_len
+    !ok_retain_a
+    !ok_retain_b
+    !ok_retain_c
+    !ok_extract_len
+    !ok_extract_map_len
+    !ok_extract_a
+    !ok_extract_b
+    !ok_extract_c
+    !ok_extracted_len
+    !ok_extracted_key
+    !ok_extracted_value
+    !ok_empty_retain
+    !ok_empty_extract
+    !ok_empty_vec
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !value_d
+    !value_c
+    !value_b
+    !value_a
+    !key_c
+    !key_b
+    !key_a
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND VEC_FREE empty_extracted
+    EXPAND MAP_FREE empty_extract_map
+    EXPAND MAP_FREE empty_retain_map
+    EXPAND VEC_FREE extracted
+    EXPAND MAP_FREE extract_map
+    EXPAND MAP_FREE retain_map
+    return 0
+
+L_FAIL:
+    panic(10823)

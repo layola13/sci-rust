@@ -1,0 +1,926 @@
+@import "sa_std/core/mem.sars"
+@import "sa_std/string.sars"
+@import "sa_std/vec.sars"
+@import "sa_std/collections/hashmap.sars"
+@import "sa_std/collections/btree_map.sars"
+@import "sa_std/collections/btree_set.sars"
+@import "sa_std/net.sars"
+@import "sa_std/fmt.sai"
+
+@extern sa_string_concat(left: ptr, left_len: u64, right: ptr, right_len: u64) -> u64
+
+@const MEM_SRC = utf8:"ABCDEFGH"
+@const MEM_FILL = utf8:"ZZZZZZZZ"
+@const STR_EQ_LEFT = utf8:"hello "
+@const STR_EQ_RIGHT = utf8:"hello "
+@const STR_NE = utf8:"hello?"
+@const STR_SUB = utf8:"ell"
+@const STR_JOIN_LEFT = utf8:"hello "
+@const STR_JOIN_RIGHT = utf8:"world"
+@const STR_JOINED = utf8:"hello world"
+@const HASHMAP_KEY = utf8:"alpha"
+@const HASHMAP_VALUE = utf8:"A\n"
+@const BTREE_ALPHA = utf8:"alpha"
+@const BTREE_BRAVO = utf8:"bravo"
+@const NET_LOOPBACK = utf8:"127.0.0.1"
+@const NET_MESSAGE = utf8:"ping"
+
+#def MEM_LEN = 8
+#def STR_EQ_LEFT_LEN = 6
+#def STR_EQ_RIGHT_LEN = 6
+#def STR_NE_LEN = 6
+#def STR_SUB_LEN = 3
+#def STR_JOIN_LEFT_LEN = 6
+#def STR_JOIN_RIGHT_LEN = 5
+#def STR_JOINED_LEN = 11
+#def HASHMAP_KEY_LEN = 5
+#def HASHMAP_VALUE_LEN = 2
+#def BTREE_ALPHA_LEN = 5
+#def BTREE_BRAVO_LEN = 5
+#def NET_LOOPBACK_LEN = 9
+#def NET_MESSAGE_LEN = 4
+
+@support_vec_surface() -> void:
+L_ENTRY:
+    vec0 = 0 as ptr
+    EXPAND VEC_NEW vec0
+    EXPAND VEC_CAPACITY cap0, vec0
+    EXPAND VEC_IS_EMPTY empty0, vec0
+    EXPAND VEC_PUSH vec0, 11, 8
+    EXPAND VEC_PUSH vec0, 22, 8
+    EXPAND VEC_PUSH vec0, 33, 8
+    EXPAND VEC_LEN len0, vec0
+    EXPAND VEC_CAPACITY cap1, vec0
+    EXPAND VEC_GET mid0, vec0, 1
+    EXPAND VEC_TRY_POP ok0, pop0, vec0
+    EXPAND VEC_LEN len1, vec0
+    EXPAND VEC_TRUNCATE vec0, 1
+    EXPAND VEC_LEN len2, vec0
+    EXPAND VEC_CLEAR vec0
+    EXPAND VEC_LEN len3, vec0
+    EXPAND VEC_IS_EMPTY empty1, vec0
+    EXPAND VEC_WITH_CAPACITY vec1, 4, 8
+    EXPAND VEC_CAPACITY cap2, vec1
+    EXPAND VEC_LEN len4, vec1
+    EXPAND VEC_IS_EMPTY empty2, vec1
+    EXPAND VEC_WITH_CAPACITY_U64 vec2, 2
+    EXPAND VEC_PUSH_U64 vec2, 44
+    EXPAND VEC_PUSH_U64 vec2, 55
+    EXPAND VEC_GET_U64 get_u64, vec2, 1
+    EXPAND VEC_FRONT front_u64, vec2
+    EXPAND VEC_BACK back_u64, vec2
+    EXPAND VEC_TRY_POP_U64 ok_pop_u64, pop_u64, vec2
+    EXPAND VEC_AS_PTR vec2_ptr, vec2
+    EXPAND VEC_AS_SLICE vec2_slice, vec2
+    EXPAND SLICE_GET_LEN vec2_slice_len, vec2_slice
+    EXPAND VEC_POP_U64 ok_pop_alias, pop_alias, vec2
+    EXPAND VEC_LEN len5, vec2
+
+    ok_cap0 = eq cap0, 0
+    ok_empty0 = eq empty0, 1
+    ok_len0 = eq len0, 3
+    ok_cap1 = eq cap1, 4
+    ok_mid0 = eq mid0, 22
+    ok_pop_ok = eq ok0, 1
+    ok_pop0 = eq pop0, 33
+    ok_len1 = eq len1, 2
+    ok_len2 = eq len2, 1
+    ok_len3 = eq len3, 0
+    ok_empty1 = eq empty1, 1
+    ok_cap2 = eq cap2, 4
+    ok_len4 = eq len4, 0
+    ok_empty2 = eq empty2, 1
+    ok_get_u64 = eq get_u64, 55
+    ok_front_u64 = eq front_u64, 44
+    ok_back_u64 = eq back_u64, 55
+    ok_pop_u64_flag = eq ok_pop_u64, 1
+    ok_pop_u64_value = eq pop_u64, 55
+    ok_vec2_ptr = ne vec2_ptr, 0
+    ok_vec2_slice_len = eq vec2_slice_len, 1
+    ok_pop_alias_flag = eq ok_pop_alias, 1
+    ok_pop_alias_value = eq pop_alias, 44
+    ok_len5 = eq len5, 0
+    ok01 = and ok_cap0, ok_empty0
+    ok02 = and ok01, ok_len0
+    ok03 = and ok02, ok_cap1
+    ok04 = and ok03, ok_mid0
+    ok05 = and ok04, ok_pop_ok
+    ok06 = and ok05, ok_pop0
+    ok07 = and ok06, ok_len1
+    ok08 = and ok07, ok_len2
+    ok09 = and ok08, ok_len3
+    ok10 = and ok09, ok_empty1
+    ok11 = and ok10, ok_cap2
+    ok12 = and ok11, ok_len4
+    ok13 = and ok12, ok_empty2
+    ok14 = and ok13, ok_get_u64
+    ok15 = and ok14, ok_front_u64
+    ok16 = and ok15, ok_back_u64
+    ok17 = and ok16, ok_pop_u64_flag
+    ok18 = and ok17, ok_pop_u64_value
+    ok19 = and ok18, ok_vec2_ptr
+    ok20 = and ok19, ok_vec2_slice_len
+    ok21 = and ok20, ok_pop_alias_flag
+    ok22 = and ok21, ok_pop_alias_value
+    ok = and ok22, ok_len5
+    !cap0
+    !empty0
+    !len0
+    !cap1
+    !mid0
+    !ok0
+    !pop0
+    !len1
+    !len2
+    !len3
+    !empty1
+    !cap2
+    !len4
+    !empty2
+    !get_u64
+    !front_u64
+    !back_u64
+    !ok_pop_u64
+    !pop_u64
+    !vec2_ptr
+    !vec2_slice
+    !vec2_slice_len
+    !ok_pop_alias
+    !pop_alias
+    !len5
+    !ok_cap0
+    !ok_empty0
+    !ok_len0
+    !ok_cap1
+    !ok_mid0
+    !ok_pop_ok
+    !ok_pop0
+    !ok_len1
+    !ok_len2
+    !ok_len3
+    !ok_empty1
+    !ok_cap2
+    !ok_len4
+    !ok_empty2
+    !ok_get_u64
+    !ok_front_u64
+    !ok_back_u64
+    !ok_pop_u64_flag
+    !ok_pop_u64_value
+    !ok_vec2_ptr
+    !ok_vec2_slice_len
+    !ok_pop_alias_flag
+    !ok_pop_alias_value
+    !ok_len5
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    EXPAND VEC_FREE vec0
+    EXPAND VEC_FREE vec1
+    EXPAND VEC_FREE vec2
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(701)
+
+L_OK:
+    !ok
+    return
+
+@support_mem_surface() -> void:
+L_ENTRY:
+    src = alloc MEM_LEN
+    store src+0, 65 as u8
+    store src+1, 66 as u8
+    store src+2, 67 as u8
+    store src+3, 68 as u8
+    store src+4, 69 as u8
+    store src+5, 70 as u8
+    store src+6, 71 as u8
+    store src+7, 72 as u8
+    dst = alloc MEM_LEN
+    call @sa_mem_set(&dst, 90, MEM_LEN)
+    src_view = alloc Slice_SIZE
+    dst_view = alloc Slice_SIZE
+    expected_src = alloc Slice_SIZE
+    expected_fill = alloc Slice_SIZE
+    EXPAND SLICE_NEW src_view, src, MEM_LEN
+    EXPAND SLICE_NEW dst_view, dst, MEM_LEN
+    EXPAND SLICE_NEW expected_src, &MEM_SRC, MEM_LEN
+    EXPAND SLICE_NEW expected_fill, &MEM_FILL, MEM_LEN
+    EXPAND STR_EQ src_match, src_view, expected_src
+    EXPAND STR_EQ fill_match, dst_view, expected_fill
+    call @sa_mem_copy(&dst, &src, MEM_LEN)
+    EXPAND STR_EQ copy_match, dst_view, src_view
+
+    src_ok = eq src_match, 1
+    fill_ok = eq fill_match, 1
+    copy_ok = eq copy_match, 1
+    ok01 = and src_ok, fill_ok
+    ok = and ok01, copy_ok
+    !src_match
+    !fill_match
+    !copy_match
+    !src_ok
+    !fill_ok
+    !copy_ok
+    !ok01
+    !src_view
+    !dst_view
+    !expected_src
+    !expected_fill
+    !src
+    !dst
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(702)
+
+L_OK:
+    !ok
+    return
+
+@support_string_surface() -> void:
+L_ENTRY:
+    left = alloc Slice_SIZE
+    same = alloc Slice_SIZE
+    diff = alloc Slice_SIZE
+    sub_expected = alloc Slice_SIZE
+    joined_expected = alloc Slice_SIZE
+    EXPAND SLICE_NEW left, &STR_EQ_LEFT, STR_EQ_LEFT_LEN
+    EXPAND SLICE_NEW same, &STR_EQ_RIGHT, STR_EQ_RIGHT_LEN
+    EXPAND SLICE_NEW diff, &STR_NE, STR_NE_LEN
+    EXPAND SLICE_NEW sub_expected, &STR_SUB, STR_SUB_LEN
+    EXPAND SLICE_NEW joined_expected, &STR_JOINED, STR_JOINED_LEN
+    EXPAND STR_SLICE sub_slice, left, 1, STR_SUB_LEN
+    EXPAND STR_EQ same_match, left, same
+    EXPAND STR_EQ diff_match, left, diff
+    EXPAND STR_EQ sub_match, sub_slice, sub_expected
+    EXPAND STRING_LEN left_len, left
+    EXPAND STR_PTR left_ptr, left
+    EXPAND STR_AS_PTR left_as_ptr, left
+    EXPAND STRING_AS_PTR left_string_ptr, left
+    EXPAND STR_AS_BYTES left_bytes, left
+    EXPAND STRING_AS_STR left_str, left
+    EXPAND STR_LEN left_bytes_len, left_bytes
+    EXPAND STRING_LEN left_str_len, left_str
+    EXPAND STRING_FROM_PARTS empty, &STR_JOINED, 0
+    EXPAND STRING_NEW new_empty
+    EXPAND STR_EMPTY str_empty
+    EXPAND STR_IS_EMPTY left_empty, left
+    EXPAND STRING_IS_EMPTY empty_ok, empty
+    EXPAND STRING_IS_EMPTY new_empty_ok, new_empty
+    EXPAND STR_IS_EMPTY str_empty_ok, str_empty
+    concat = call @sa_string_concat(&STR_JOIN_LEFT, STR_JOIN_LEFT_LEN, &STR_JOIN_RIGHT, STR_JOIN_RIGHT_LEN)
+    concat_ok = ne concat, 0
+    br concat_ok -> L_CONCAT, L_FAIL_CONCAT
+
+L_FAIL_CONCAT:
+    !same_match
+    !diff_match
+    !sub_match
+    !sub_slice
+    !left
+    !same
+    !diff
+    !sub_expected
+    !joined_expected
+    !concat_ok
+    panic(703)
+
+L_CONCAT:
+    concat_data = call @sa_fmt_buffer_data(concat)
+    concat_len = call @sa_fmt_buffer_len(concat)
+    concat_data_ok = ne concat_data, 0
+    concat_len_ok = eq concat_len, STR_JOINED_LEN
+    concat_view = alloc Slice_SIZE
+    EXPAND SLICE_NEW concat_view, concat_data, concat_len
+    concat_expected = alloc Slice_SIZE
+    EXPAND SLICE_NEW concat_expected, &STR_JOINED, STR_JOINED_LEN
+    EXPAND STR_EQ concat_match, concat_view, concat_expected
+
+    same_ok = eq same_match, 1
+    diff_ok = eq diff_match, 0
+    sub_ok = eq sub_match, 1
+    left_len_ok = eq left_len, STR_EQ_LEFT_LEN
+    left_ptr_ok = ne left_ptr, 0
+    left_as_ptr_ok = ne left_as_ptr, 0
+    left_string_ptr_ok = ne left_string_ptr, 0
+    left_bytes_len_ok = eq left_bytes_len, STR_EQ_LEFT_LEN
+    left_str_len_ok = eq left_str_len, STR_EQ_LEFT_LEN
+    left_not_empty = eq left_empty, 0
+    empty_is_empty = eq empty_ok, 1
+    new_empty_is_empty = eq new_empty_ok, 1
+    str_empty_is_empty = eq str_empty_ok, 1
+    concat_match_ok = eq concat_match, 1
+    ok01 = and same_ok, diff_ok
+    ok02 = and ok01, sub_ok
+    ok03 = and ok02, left_len_ok
+    ok04 = and ok03, left_ptr_ok
+    ok05 = and ok04, left_as_ptr_ok
+    ok06 = and ok05, left_string_ptr_ok
+    ok07 = and ok06, left_bytes_len_ok
+    ok08 = and ok07, left_str_len_ok
+    ok09 = and ok08, left_not_empty
+    ok10 = and ok09, empty_is_empty
+    ok11 = and ok10, new_empty_is_empty
+    ok12 = and ok11, str_empty_is_empty
+    ok13 = and ok12, concat_data_ok
+    ok14 = and ok13, concat_len_ok
+    ok = and ok14, concat_match_ok
+    concat_free_status = call @sa_fmt_buffer_free(^concat)
+    concat_free_ok = eq concat_free_status, 0
+    ok = and ok, concat_free_ok
+    !concat_match
+    !same_match
+    !diff_match
+    !sub_match
+    !same_ok
+    !diff_ok
+    !sub_ok
+    !left_len_ok
+    !left_ptr_ok
+    !left_as_ptr_ok
+    !left_string_ptr_ok
+    !left_bytes_len_ok
+    !left_str_len_ok
+    !left_not_empty
+    !empty_is_empty
+    !new_empty_is_empty
+    !str_empty_is_empty
+    !concat_match_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !concat_data_ok
+    !concat_len_ok
+    !concat_free_status
+    !concat_free_ok
+    !concat_data
+    !concat_len
+    !left_len
+    !left_ptr
+    !left_as_ptr
+    !left_string_ptr
+    !left_bytes_len
+    !left_str_len
+    !left_empty
+    !empty_ok
+    !new_empty_ok
+    !str_empty_ok
+    !sub_slice
+    !left
+    !left_bytes
+    !left_str
+    !empty
+    !new_empty
+    !str_empty
+    !same
+    !diff
+    !sub_expected
+    !joined_expected
+    !concat_view
+    !concat_expected
+    !concat_ok
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(704)
+
+L_OK:
+    !ok
+    return
+
+@support_hashmap_surface() -> void:
+L_ENTRY:
+    EXPAND MAP_WITH_CAPACITY map, 9
+    EXPAND MAP_LEN len0, map
+    EXPAND MAP_CAPACITY cap0, map
+    EXPAND MAP_IS_EMPTY empty0, map
+    key = &HASHMAP_KEY
+    value = &HASHMAP_VALUE
+    EXPAND MAP_CONTAINS_KEY has0, map, key
+    EXPAND MAP_PUT map, key, value
+    EXPAND MAP_LEN len1, map
+    EXPAND MAP_CAPACITY cap1, map
+    EXPAND MAP_RESERVE map, 20
+    EXPAND MAP_CAPACITY cap_after_reserve, map
+    EXPAND MAP_IS_EMPTY empty1, map
+    EXPAND MAP_CONTAINS_KEY has1, map, key
+    EXPAND MAP_GET got1, map, key
+    EXPAND MAP_CLEAR map
+    EXPAND MAP_LEN len2, map
+    EXPAND MAP_IS_EMPTY empty2, map
+    EXPAND MAP_CONTAINS_KEY has2, map, key
+    EXPAND MAP_GET got2, map, key
+
+    ok_len0 = eq len0, 0
+    ok_cap0 = eq cap0, 16
+    ok_empty0 = eq empty0, 1
+    ok_has0 = eq has0, 0
+    ok_len1 = eq len1, 1
+    ok_cap1 = eq cap1, 16
+    ok_cap_after_reserve = eq cap_after_reserve, 32
+    ok_empty1 = eq empty1, 0
+    ok_has1 = eq has1, 1
+    ok_got1 = eq got1, value
+    ok_len2 = eq len2, 0
+    ok_empty2 = eq empty2, 1
+    ok_has2 = eq has2, 0
+    ok_got2 = eq got2, 0
+    ok01 = and ok_len0, ok_cap0
+    ok02 = and ok01, ok_empty0
+    ok03 = and ok02, ok_has0
+    ok04 = and ok03, ok_len1
+    ok05 = and ok04, ok_cap1
+    ok06 = and ok05, ok_cap_after_reserve
+    ok07 = and ok06, ok_empty1
+    ok08 = and ok07, ok_has1
+    ok09 = and ok08, ok_got1
+    ok10 = and ok09, ok_len2
+    ok11 = and ok10, ok_empty2
+    ok12 = and ok11, ok_has2
+    ok = and ok12, ok_got2
+
+    !got2
+    !has2
+    !empty2
+    !len2
+    !got1
+    !has1
+    !empty1
+    !cap_after_reserve
+    !len1
+    !has0
+    !empty0
+    !cap1
+    !cap0
+    !len0
+    !value
+    !key
+    !ok_len0
+    !ok_cap0
+    !ok_empty0
+    !ok_has0
+    !ok_len1
+    !ok_cap1
+    !ok_cap_after_reserve
+    !ok_empty1
+    !ok_has1
+    !ok_got1
+    !ok_len2
+    !ok_empty2
+    !ok_has2
+    !ok_got2
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    EXPAND MAP_FREE map
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(705)
+
+L_OK:
+    !ok
+    return
+
+@support_btree_surface() -> void:
+L_ENTRY:
+    map = 0 as ptr
+    set = 0 as ptr
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    lookup = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &BTREE_ALPHA, BTREE_ALPHA_LEN
+    EXPAND SLICE_NEW bravo, &BTREE_BRAVO, BTREE_BRAVO_LEN
+    EXPAND SLICE_NEW lookup, &BTREE_ALPHA, BTREE_ALPHA_LEN
+    EXPAND BTREE_MAP_NEW map
+    EXPAND BTREE_MAP_IS_EMPTY empty0, map
+    EXPAND BTREE_MAP_INSERT map, bravo, 2
+    EXPAND BTREE_MAP_INSERT map, alpha, 1
+    EXPAND BTREE_MAP_INSERT map, lookup, 3
+    EXPAND BTREE_MAP_CONTAINS_KEY has_alpha, map, alpha
+    EXPAND BTREE_MAP_CONTAINS_KEY has_lookup, map, lookup
+    value_alpha = call @sa_btree_map_get(&map, &alpha)
+    value_bravo = call @sa_btree_map_get(&map, &bravo)
+    removed_alpha = call @sa_btree_map_remove(&map, &alpha)
+    EXPAND BTREE_MAP_CONTAINS_KEY has_alpha_after, map, alpha
+    len = call @sa_btree_map_len(&map)
+    EXPAND BTREE_MAP_CLEAR map
+    EXPAND BTREE_MAP_IS_EMPTY empty1, map
+    EXPAND BTREE_SET_NEW set
+    EXPAND BTREE_SET_IS_EMPTY set_empty0, set
+    EXPAND BTREE_SET_INSERT set_insert_alpha, set, alpha
+    EXPAND BTREE_SET_INSERT set_insert_alpha_again, set, lookup
+    EXPAND BTREE_SET_INSERT set_insert_bravo, set, bravo
+    EXPAND BTREE_SET_CONTAINS set_has_alpha, set, alpha
+    EXPAND BTREE_SET_CONTAINS set_has_lookup, set, lookup
+    EXPAND BTREE_SET_REMOVE set_removed_alpha, set, alpha
+    EXPAND BTREE_SET_CONTAINS set_has_alpha_after, set, alpha
+    EXPAND BTREE_SET_LEN set_len, set
+    EXPAND BTREE_SET_CLEAR set
+    EXPAND BTREE_SET_IS_EMPTY set_empty1, set
+
+    ok_alpha = eq value_alpha, 3
+    ok_bravo = eq value_bravo, 2
+    ok_removed = ne removed_alpha, 0
+    ok_len = eq len, 1
+    ok_empty0 = eq empty0, 1
+    ok_empty1 = eq empty1, 1
+    ok_has_alpha = eq has_alpha, 1
+    ok_has_lookup = eq has_lookup, 1
+    ok_has_alpha_after = eq has_alpha_after, 0
+    ok_set_empty0 = eq set_empty0, 1
+    ok_set_insert_alpha = eq set_insert_alpha, 1
+    ok_set_insert_alpha_again = eq set_insert_alpha_again, 0
+    ok_set_insert_bravo = eq set_insert_bravo, 1
+    ok_set_has_alpha = eq set_has_alpha, 1
+    ok_set_has_lookup = eq set_has_lookup, 1
+    ok_set_removed_alpha = eq set_removed_alpha, 1
+    ok_set_has_alpha_after = eq set_has_alpha_after, 0
+    ok_set_len = eq set_len, 1
+    ok_set_empty1 = eq set_empty1, 1
+    ok01 = and ok_alpha, ok_bravo
+    ok02 = and ok01, ok_removed
+    ok03 = and ok02, ok_len
+    ok04 = and ok03, ok_empty0
+    ok05 = and ok04, ok_empty1
+    ok06 = and ok05, ok_has_alpha
+    ok07 = and ok06, ok_has_lookup
+    ok08 = and ok07, ok_has_alpha_after
+    ok09 = and ok08, ok_set_empty0
+    ok10 = and ok09, ok_set_insert_alpha
+    ok11 = and ok10, ok_set_insert_alpha_again
+    ok12 = and ok11, ok_set_insert_bravo
+    ok13 = and ok12, ok_set_has_alpha
+    ok14 = and ok13, ok_set_has_lookup
+    ok15 = and ok14, ok_set_removed_alpha
+    ok16 = and ok15, ok_set_has_alpha_after
+    ok17 = and ok16, ok_set_len
+    ok = and ok17, ok_set_empty1
+    !ok_set_empty1
+    !ok_set_len
+    !ok_set_has_alpha_after
+    !ok_set_removed_alpha
+    !ok_set_has_lookup
+    !ok_set_has_alpha
+    !ok_set_insert_bravo
+    !ok_set_insert_alpha_again
+    !ok_set_insert_alpha
+    !ok_set_empty0
+    !ok_has_alpha_after
+    !ok_has_lookup
+    !ok_has_alpha
+    !ok_empty1
+    !ok_empty0
+    !ok_len
+    !ok_removed
+    !ok_bravo
+    !ok_alpha
+    !len
+    !value_bravo
+    !value_alpha
+    !empty1
+    !empty0
+    !removed_alpha
+    !has_alpha_after
+    !has_lookup
+    !has_alpha
+    !set_empty1
+    !set_len
+    !set_has_alpha_after
+    !set_removed_alpha
+    !set_has_lookup
+    !set_has_alpha
+    !set_insert_bravo
+    !set_insert_alpha_again
+    !set_insert_alpha
+    !set_empty0
+    !lookup
+    !bravo
+    !alpha
+    !ok17
+    !ok16
+    !ok15
+    !ok14
+    !ok13
+    !ok12
+    !ok11
+    !ok10
+    !ok09
+    !ok08
+    !ok07
+    !ok06
+    !ok05
+    !ok04
+    !ok03
+    !ok02
+    !ok01
+    EXPAND BTREE_MAP_FREE map
+    EXPAND BTREE_SET_FREE set
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(706)
+
+L_OK:
+    !ok
+    return
+
+@support_net_surface() -> void:
+L_ENTRY:
+    listener_res = call @sa_net_tcp_listener_bind(&NET_LOOPBACK, NET_LOOPBACK_LEN, 0)
+    listener_status = load listener_res+0 as u32
+    listener = load listener_res+8 as u64
+    !listener_res
+    listener_status_ok = eq listener_status, 0
+    listener_ok = ne listener, 0
+    listener_all_ok = and listener_status_ok, listener_ok
+    !listener_status_ok
+    br listener_all_ok -> L_ADDR, L_FAIL_LISTENER
+
+L_FAIL_LISTENER:
+    !listener_all_ok
+    !listener_status
+    panic(707)
+
+L_ADDR:
+    !listener_ok
+    addr_res = call @sa_net_tcp_listener_local_addr(listener)
+    addr_status = load addr_res+0 as u32
+    addr = load addr_res+8 as u64
+    !addr_res
+    addr_status_ok = eq addr_status, 0
+    addr_ok = ne addr, 0
+    addr_all_ok = and addr_status_ok, addr_ok
+    !addr_status_ok
+    br addr_all_ok -> L_ADDR_COPY, L_FAIL_ADDR
+
+L_FAIL_ADDR:
+    !addr_ok
+    close_listener_res = call @sa_net_tcp_listener_close(listener)
+    close_listener_status = load close_listener_res+0 as i32
+    !close_listener_res
+    !close_listener_status
+    panic(708)
+
+L_ADDR_COPY:
+    !addr_ok
+    host_ptr = call @sa_net_addr_host(addr)
+    host_len = call @sa_net_addr_host_len(addr)
+    port = call @sa_net_addr_port(addr)
+    family = call @sa_net_addr_family(addr)
+    host_src = host_ptr
+    host_ptr_ok = ne host_src, 0
+    host_len_ok = eq host_len, NET_LOOPBACK_LEN
+    port_ok = ne port, 0
+    family_ok = eq family, SA_NET_AF_INET
+    host_copy = alloc host_len
+    call @sa_mem_copy(&host_copy, &host_src, host_len)
+    addr_free_res = call @sa_net_addr_free(addr)
+    addr_free_status = load addr_free_res+0 as i32
+    !addr_free_res
+    host_view = alloc Slice_SIZE
+    expected_host = alloc Slice_SIZE
+    EXPAND SLICE_NEW host_view, host_copy, host_len
+    EXPAND SLICE_NEW expected_host, &NET_LOOPBACK, NET_LOOPBACK_LEN
+    EXPAND STR_EQ host_match, host_view, expected_host
+
+    host_text_ok = eq host_match, 1
+    addr_free_ok = eq addr_free_status, 0
+    ok01 = and host_ptr_ok, host_len_ok
+    ok02 = and ok01, port_ok
+    ok03 = and ok02, family_ok
+    ok04 = and ok03, host_text_ok
+    ok = and ok04, addr_free_ok
+    !host_match
+    !host_ptr_ok
+    !host_len_ok
+    !port_ok
+    !family_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !host_view
+    !expected_host
+    !addr_free_status
+    !family
+    br ok -> L_CONNECT, L_FAIL_CONNECT
+
+L_FAIL_CONNECT:
+    close_listener_res = call @sa_net_tcp_listener_close(listener)
+    close_listener_status = load close_listener_res+0 as i32
+    !close_listener_res
+    !close_listener_status
+    panic(709)
+
+L_CONNECT:
+    connect_res = call @sa_net_tcp_connect(&host_copy, host_len, port)
+    connect_status = load connect_res+0 as u32
+    client = load connect_res+8 as u64
+    !connect_res
+    connect_status_ok = eq connect_status, 0
+    connect_ok = ne client, 0
+    connect_all_ok = and connect_status_ok, connect_ok
+    !connect_status_ok
+    !host_len
+    !port
+    br connect_all_ok -> L_ACCEPT, L_FAIL_CONNECT_CLIENT
+
+L_FAIL_CONNECT_CLIENT:
+    !host_text_ok
+    !addr_free_ok
+    !connect_all_ok
+    close_listener_res = call @sa_net_tcp_listener_close(listener)
+    close_listener_status = load close_listener_res+0 as i32
+    !close_listener_res
+    !close_listener_status
+    panic(710)
+
+L_ACCEPT:
+    accept_res = call @sa_net_tcp_listener_accept(listener)
+    accept_status = load accept_res+0 as u32
+    server = load accept_res+8 as u64
+    !accept_res
+    accept_status_ok = eq accept_status, 0
+    accept_ok = ne server, 0
+    accept_all_ok = and accept_status_ok, accept_ok
+    !accept_status_ok
+    br accept_all_ok -> L_WRITE, L_FAIL_ACCEPT
+
+L_FAIL_ACCEPT:
+    !host_text_ok
+    !addr_free_ok
+    !accept_all_ok
+    client_close_res = call @sa_net_tcp_stream_close(client)
+    client_close_status = load client_close_res+0 as i32
+    !client_close_res
+    listener_close_res = call @sa_net_tcp_listener_close(listener)
+    listener_close_status = load listener_close_res+0 as i32
+    !listener_close_res
+    !client_close_status
+    !listener_close_status
+    panic(711)
+
+L_WRITE:
+    send_res = call @sa_net_tcp_stream_write_all(client, &NET_MESSAGE, NET_MESSAGE_LEN)
+    send_status = load send_res+0 as u32
+    !send_res
+    send_ok = eq send_status, 0
+    !send_status
+    br send_ok -> L_READ, L_FAIL_WRITE
+
+L_FAIL_WRITE:
+    !host_text_ok
+    !addr_free_ok
+    !send_ok
+    server_close_res = call @sa_net_tcp_stream_close(server)
+    server_close_status = load server_close_res+0 as i32
+    !server_close_res
+    client_close_res = call @sa_net_tcp_stream_close(client)
+    client_close_status = load client_close_res+0 as i32
+    !client_close_res
+    listener_close_res = call @sa_net_tcp_listener_close(listener)
+    listener_close_status = load listener_close_res+0 as i32
+    !listener_close_res
+    !server_close_status
+    !client_close_status
+    !listener_close_status
+    panic(712)
+
+L_READ:
+    read_buf = alloc NET_MESSAGE_LEN
+    read_res = call @sa_net_tcp_stream_read(server, &read_buf, NET_MESSAGE_LEN)
+    read_status = load read_res+0 as u32
+    read_len = load read_res+8 as u64
+    !read_res
+    read_status_ok = eq read_status, 0
+    read_ok = eq read_len, NET_MESSAGE_LEN
+    read_all_ok = and read_status_ok, read_ok
+    !read_status_ok
+    br read_all_ok -> L_COMPARE, L_FAIL_READ
+
+L_FAIL_READ:
+    !host_text_ok
+    !addr_free_ok
+    !read_all_ok
+    !read_len
+    !read_buf
+    server_close_res = call @sa_net_tcp_stream_close(server)
+    server_close_status = load server_close_res+0 as i32
+    !server_close_res
+    client_close_res = call @sa_net_tcp_stream_close(client)
+    client_close_status = load client_close_res+0 as i32
+    !client_close_res
+    listener_close_res = call @sa_net_tcp_listener_close(listener)
+    listener_close_status = load listener_close_res+0 as i32
+    !listener_close_res
+    !server_close_status
+    !client_close_status
+    !listener_close_status
+    panic(713)
+
+L_COMPARE:
+    read_view = alloc Slice_SIZE
+    expected_msg = alloc Slice_SIZE
+    EXPAND SLICE_NEW read_view, read_buf, read_len
+    EXPAND SLICE_NEW expected_msg, &NET_MESSAGE, NET_MESSAGE_LEN
+    EXPAND STR_EQ msg_match, read_view, expected_msg
+    msg_ok = eq msg_match, 1
+    !msg_match
+    !read_view
+    !expected_msg
+    !read_buf
+    server_close_res = call @sa_net_tcp_stream_close(server)
+    server_close_status = load server_close_res+0 as i32
+    !server_close_res
+    client_close_res = call @sa_net_tcp_stream_close(client)
+    client_close_status = load client_close_res+0 as i32
+    !client_close_res
+    listener_close_res = call @sa_net_tcp_listener_close(listener)
+    listener_close_status = load listener_close_res+0 as i32
+    !listener_close_res
+
+    close_ok0 = eq server_close_status, 0
+    close_ok1 = eq client_close_status, 0
+    close_ok2 = eq listener_close_status, 0
+    close01 = and close_ok0, close_ok1
+    close_ok = and close01, close_ok2
+    ok01 = and host_text_ok, addr_free_ok
+    ok02 = and ok01, connect_ok
+    ok03 = and ok02, accept_ok
+    ok04 = and ok03, send_ok
+    ok05 = and ok04, read_ok
+    ok06 = and ok05, msg_ok
+    ok = and ok06, close_ok
+
+    !server_close_status
+    !client_close_status
+    !listener_close_status
+    !close_ok0
+    !close_ok1
+    !close_ok2
+    !close01
+    !close_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !host_text_ok
+    !addr_free_ok
+    !read_len
+    br ok -> L_DONE, L_FAIL_DONE
+
+L_FAIL_DONE:
+    panic(714)
+
+L_DONE:
+    return

@@ -1,0 +1,4964 @@
+@import "json_regex.sars"
+@import "stdlib_surface.sars"
+@import "sa_std/core/mem.sars"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/result.sars"
+
+
+// Helpers distilled from the rosetta demos that the native unit-test suite
+// already covered in separate batches.
+
+@const SUPPORT_BUTTON_VT = vtable { draw = @support_button_draw }
+@const SUPPORT_SUPER_VT = vtable { a = @support_super_item_a, b = @support_super_item_b }
+@const SUPPORT_CALLBACK_VT = vtable { invoke = @support_callback_add_one }
+@const SUPPORT_WAKER_VT = vtable { clone = @support_waker_clone, wake = @support_waker_wake, wake_by_ref = @support_waker_wake_by_ref, drop = @support_waker_drop }
+@const SUPPORT_UPCAST_VT = vtable { a = @support_upcast_item_a, b = @support_upcast_item_b }
+@const SUPPORT_CFI_VT = vtable { call = @support_cfi_guarded_target }
+@const SUPPORT_CONTRACT_BUTTON_VT = vtable { draw = @support_contract_button_draw }
+@const SUPPORT_CONTRACT_CALLBACK_VT = vtable { call = @support_contract_callback_call }
+@const SUPPORT_FFI_CALLBACK_VT = vtable { call = @support_ffi_callback_step }
+
+#def SupportDynDraw_SIZE = 16
+#def SupportDynDraw_DATA = +0
+#def SupportDynDraw_VTABLE = +8
+#def SupportVTable_draw = +0
+#def SupportButton_SIZE = 4
+#def SupportButton_id = +0
+#def SupportPair_SIZE = 8
+#def SupportPair_0 = +0
+#def SupportPair_1 = +4
+#def SupportFfiSingle_tag = +0
+#def SupportFfiPair_tag = +0
+#def SupportFfiPair_delta = +4
+#def SupportFfiCallbackState_value = +0
+#def SupportFfiCallbackState_vtable = +8
+#def SupportFfiCallbackVTable_call = +0
+#def SupportZigExport_VALUE = 287
+#def SupportEcoPair_a = +0
+#def SupportEcoPair_b = +4
+#def SupportEcoEntity_X = +0
+#def SupportEcoEntity_Y = +4
+#def SupportEcoEntity_VX = +8
+#def SupportEcoEntity_VY = +12
+#def SupportCounter_SIZE = 4
+#def SupportCounter_value = +0
+#def SupportEnv_SIZE = 4
+#def SupportEnv_offset = +0
+#def SupportAccount_SIZE = 4
+#def SupportAccount_balance = +0
+#def SupportConfig_SIZE = 8
+#def SupportConfig_threads = +0
+#def SupportConfig_level = +4
+#def SupportFlag_SIZE = 8
+#def SupportFlag_tag = +0
+#def SupportFlag_payload = +4
+#def SupportUserId_SIZE = 4
+#def SupportUserId_value = +0
+#def SupportWrapper_i32_SIZE = 4
+#def SupportWrapper_i32_value = +0
+#def SupportMaybe_SIZE = 8
+#def SupportMaybe_tag = +0
+#def SupportMaybe_value = +4
+#def SupportMaybe_TAG_VALUE = 1
+#def SupportMaybe_TAG_EMPTY = 0
+#def SupportRoute_SIZE = 8
+#def SupportRoute_path = +0
+#def SupportRoute_id = +4
+#def SupportCacheEntry_SIZE = 8
+#def SupportCacheEntry_key = +0
+#def SupportCacheEntry_value = +4
+#def SupportTally_SIZE = 4
+#def SupportTally_value = +0
+#def SupportGuard_SIZE = 16
+#def SupportGuard_tally = +0
+#def SupportGuard_value = +8
+#def SupportLock_SIZE = 8
+#def SupportLock_value = +0
+#def SupportLock_held = +4
+#def SupportCell_SIZE = 4
+#def SupportCell_value = +0
+#def SupportRefCell_SIZE = 8
+#def SupportRefCell_value = +0
+#def SupportRefCell_borrows = +4
+#def SupportAtomic_SIZE = 4
+#def SupportAtomic_value = +0
+#def SupportSuperDyn_SIZE = 16
+#def SupportSuperDyn_data = +0
+#def SupportSuperDyn_vtable = +8
+#def SupportSuperVTable_a = +0
+#def SupportSuperVTable_b = +8
+#def SupportSuperItem_SIZE = 4
+#def SupportSuperItem_value = +0
+#def SupportPayload_SIZE = 4
+#def SupportPayload_i = +0
+#def SupportFn_SIZE = 16
+#def SupportFn_data = +0
+#def SupportFn_vtable = +8
+#def SupportFn_invoke = +0
+#def SupportGlobalCounter_SIZE = 4
+#def SupportGlobalCounter_value = +0
+#def SupportRwLock_SIZE = 8
+#def SupportRwLock_readers = +0
+#def SupportRwLock_writing = +4
+#def SupportCond_SIZE = 8
+#def SupportCond_ready = +0
+#def SupportCond_value = +4
+#def SupportBarrier_SIZE = 8
+#def SupportBarrier_total = +0
+#def SupportBarrier_arrived = +4
+#def SupportTls_SIZE = 8
+#def SupportTls_thread = +0
+#def SupportTls_value = +4
+#def SupportOnce_SIZE = 8
+#def SupportOnce_state = +0
+#def SupportOnce_value = +4
+#def SupportHazardNode_SIZE = 8
+#def SupportHazardNode_value = +0
+#def SupportHazardNode_retired = +4
+#def SupportRcu_SIZE = 8
+#def SupportRcu_version = +0
+#def SupportRcu_value = +4
+#def SupportSeq_SIZE = 8
+#def SupportSeq_version = +0
+#def SupportSeq_value = +4
+#def SupportThread_SIZE = 8
+#def SupportThread_parked = +0
+#def SupportThread_woken = +4
+#def SupportWaker_SIZE = 16
+#def SupportWaker_data = +0
+#def SupportWaker_vtable = +8
+#def SupportWaker_wake = +8
+#def SupportPinNode_SIZE = 4
+#def SupportPinNode_value = +0
+#def SupportSelect_SIZE = 20
+#def SupportSelect_state = +0
+#def SupportSelect_winner = +16
+#def SupportJoin_SIZE = 24
+#def SupportJoin_state = +0
+#def SupportJoin_a = +4
+#def SupportJoin_b = +8
+#def SupportJoin_c = +12
+#def SupportStream_SIZE = 28
+#def SupportStream_state = +0
+#def SupportStream_index = +4
+#def SupportStream_pending = +12
+#def SupportStream_value = +24
+#def SupportStream_START = 0
+#def SupportStream_AFTER_FIRST = 1
+#def SupportStream_DONE = 3
+#def SupportPoll_PENDING = 0
+#def SupportPoll_READY = 1
+#def SupportQueue_SIZE = 24
+#def SupportQueue_head = +0
+#def SupportQueue_tail = +4
+#def SupportQueue_t0 = +8
+#def SupportQueue_t1 = +12
+#def SupportQueue_t2 = +16
+#def SupportQueue_sum = +20
+#def SupportRing_SIZE = 8
+#def SupportRing_head = +0
+#def SupportRing_tail = +4
+#def SupportPollEvent_SIZE = 8
+#def SupportPollEvent_ready = +0
+#def SupportPollEvent_events = +4
+#def SupportFuture_SIZE = 8
+#def SupportFuture_state = +0
+#def SupportFuture_value = +4
+#def SupportYield_SIZE = 20
+#def SupportYield_state = +0
+#def SupportYield_pending = +4
+#def SupportYield_value = +12
+#def SupportYield_steps = +16
+#def SupportYield_START = 0
+#def SupportYield_SUSPENDED = 1
+#def SupportYield_DONE = 2
+#def SupportPhantomWrapper_SIZE = 4
+#def SupportPhantomWrapper_id = +0
+#def SupportTransparentWrap_SIZE = 4
+#def SupportTransparentWrap_value = +0
+#def SupportPackedPair_SIZE = 2
+#def SupportPackedPair_a = +0
+#def SupportPackedPair_b = +1
+#def SupportCReprPair_SIZE = 8
+#def SupportCReprPair_a = +0
+#def SupportCReprPair_b = +4
+#def SupportLayout_SIZE = 8
+#def SupportLayout_align = +0
+#def SupportLayout_size = +4
+#def SupportArena_SIZE = 12
+#def SupportArena_cursor = +0
+#def SupportArena_a = +4
+#def SupportArena_b = +8
+#def SupportSlab_SIZE = 12
+#def SupportSlab_head = +0
+#def SupportSlab_node1 = +4
+#def SupportSlab_node2 = +8
+#def SupportSlot_SIZE = 4
+#def SupportSlot_value = +0
+#def SupportGatProvider_SIZE = 4
+#def SupportGatProvider_val = +0
+#def SupportSendData_SIZE = 4
+#def SupportSendData_val = +0
+#def SupportUpcastDyn_SIZE = 16
+#def SupportUpcastDyn_data = +0
+#def SupportUpcastDyn_vtable = +8
+#def SupportUpcastVTable_a = +0
+#def SupportUpcastVTable_b = +8
+#def SupportBlanketArr_SIZE = 8
+#def SupportSpecialValue_SIZE = 4
+#def SupportSpecialValue_tag = +0
+#def SupportConstGenericArr_SIZE = 16
+#def SupportConcreteIter_SIZE = 16
+#def SupportMarkerData_SIZE = 4
+#def SupportMarkerData_val = +0
+#def SupportDynErr_SIZE = 12
+#def SupportDynErr_tag = +0
+#def SupportDynErr_len = +4
+#def SupportDynErr_msg = +8
+#def SupportText_SIZE = 8
+#def SupportTraceFrame_SIZE = 4
+#def SupportDisplayErr_SIZE = 16
+#def SupportDisplayErr_tag = +0
+#def SupportDisplayErr_msg = +4
+#def SupportDisplayErr_len = +8
+#def SupportDisplayErr_display = +12
+#def SupportOuterResult_SIZE = 24
+#def SupportOuterResult_inner_tag = +8
+#def SupportHook_SIZE = 8
+#def SupportHook_enabled = +0
+#def SupportHook_count = +4
+#def SupportFdHandle_SIZE = 8
+#def SupportFdHandle_fd = +0
+#def SupportFdHandle_state = +4
+#def SupportMap_SIZE = 16
+#def SupportMap_fd = +0
+#def SupportMap_ptr = +4
+#def SupportMap_len = +12
+#def SupportSignal_SIZE = 8
+#def SupportSignal_num = +0
+#def SupportSignal_handler = +4
+#def SupportThread_SIZE2 = 8
+#def SupportThread_handle = +0
+#def SupportThread_value = +4
+#def SupportLib_SIZE = 16
+#def SupportLib_handle = +0
+#def SupportLib_symbol = +8
+#def SupportSqlRow_SIZE = 12
+#def SupportSqlRow_id = +0
+#def SupportSqlRow_count = +4
+#def SupportSqlRow_total = +8
+#def SupportSqlStmt_SIZE = 16
+#def SupportSqlStmt_code = +12
+#def SupportGlCtx_SIZE = 20
+#def SupportGlCtx_ready = +0
+#def SupportGlCtx_swapped = +4
+#def SupportGlCtx_phase = +8
+#def SupportGlCtx_surface = +12
+#def SupportGlCtx_swap_count = +16
+#def SupportWsFrame_SIZE = 24
+#def SupportWsFrame_b0 = +0
+#def SupportWsFrame_b1 = +1
+#def SupportWsFrame_mask0 = +4
+#def SupportWsFrame_mask1 = +5
+#def SupportWsFrame_mask2 = +6
+#def SupportWsFrame_mask3 = +7
+#def SupportWsFrame_len = +8
+#def SupportWsFrame_payload0 = +12
+#def SupportWsFrame_payload1 = +13
+#def SupportWsFrame_payload2 = +14
+#def SupportWsFrame_opcode = +15
+#def SupportWsFrame_fin = +16
+#def SupportWsFrame_masked = +17
+#def SupportWsFrame_payload_sum = +18
+#def SupportVarintBuf_SIZE = 8
+#def SupportB64Input_SIZE = 4
+#def SupportB64Out_SIZE = 8
+#def SupportMacroTriple_SIZE = 12
+#def SupportMacroTriple_left = +0
+#def SupportMacroTriple_mid = +4
+#def SupportMacroTriple_right = +8
+#def SupportAttrValue_SIZE = 8
+#def SupportAttrValue_raw = +0
+#def SupportAttrValue_shadow = +4
+#def SupportCfiFn_SIZE = 16
+#def SupportCfiFn_data = +0
+#def SupportCfiFn_vtable = +8
+#def SupportCfiFn_call = +0
+#def SupportContractButton_SIZE = 4
+#def SupportContractButton_id = +0
+#def SupportContractDynDraw_SIZE = 16
+#def SupportContractDynDraw_data = +0
+#def SupportContractDynDraw_vtable = +8
+#def SupportContractVTable_draw = +0
+#def SupportContractCallbackSlot_SIZE = 16
+#def SupportContractCallbackSlot_data = +0
+#def SupportContractCallbackSlot_vtable = +8
+#def SupportContractCallbackVTable_call = +0
+#def SupportAsanBuf_SIZE = 8
+
+@support_pick_max(a: i32, b: i32) -> i32:
+L_ENTRY:
+    choose_a = sgt a, b
+    br choose_a -> L_A, L_B
+
+L_A:
+    !choose_a
+    !b
+    return a
+
+L_B:
+    !choose_a
+    !a
+    return b
+
+@support_make_point(x: i32, y: i32) -> ptr:
+L_ENTRY:
+    point = alloc 8
+    store point+0, x as i32
+    store point+4, y as i32
+    !x
+    !y
+    return point
+
+@support_sum_point(^point: ptr) -> i32:
+L_ENTRY:
+    px = load point+0 as i32
+    py = load point+4 as i32
+    sum = add px, py
+    !px
+    !py
+    !point
+    return sum
+
+@support_dispatch_msg(tag: u32, x: i32, y: i32) -> i32:
+L_ENTRY:
+    is_move = eq tag, 1
+    br is_move -> L_MOVE, L_OTHER
+
+L_MOVE:
+    !is_move
+    sum = add x, y
+    !x
+    !y
+    return sum
+
+L_OTHER:
+    !is_move
+    panic(106)
+
+@support_button_draw(&self: ptr) -> i32:
+L_ENTRY:
+    id = load self+SupportButton_id as i32
+    !self
+    return id
+
+@support_trait_render(&item: ptr) -> i32:
+L_ENTRY:
+    data_ptr = load item+SupportDynDraw_DATA as ptr
+    vtable_ptr = load item+SupportDynDraw_VTABLE as ptr
+    draw_fn = load vtable_ptr+SupportVTable_draw as ptr
+    result = call_indirect draw_fn(&data_ptr)
+    !draw_fn
+    !vtable_ptr
+    !data_ptr
+    !item
+    return result
+
+@support_trait_vtable_render() -> i32:
+L_ENTRY:
+    button = alloc SupportButton_SIZE
+    store button+SupportButton_id, 77 as i32
+    fat = alloc SupportDynDraw_SIZE
+    store fat+SupportDynDraw_DATA, button as ptr
+    store fat+SupportDynDraw_VTABLE, &SUPPORT_BUTTON_VT as ptr
+    result = call @support_trait_render(&fat)
+    !button
+    !fat
+    return result
+
+@support_closure_add_offset_call(&env: ptr, x: i32) -> i32:
+L_ENTRY:
+    offset = load env+SupportEnv_offset as i32
+    result = add x, offset
+    !offset
+    !env
+    !x
+    return result
+
+@support_closure_add_offset(x: i32) -> i32:
+L_ENTRY:
+    env = alloc SupportEnv_SIZE
+    store env+SupportEnv_offset, 5 as i32
+    result = call @support_closure_add_offset_call(&env, x)
+    !env
+    return result
+
+@support_tuple_pair_fields() -> i32:
+L_ENTRY:
+    pair = alloc SupportPair_SIZE
+    store pair+SupportPair_0, 3 as i32
+    store pair+SupportPair_1, 4 as i32
+    left = load pair+SupportPair_0 as i32
+    right = load pair+SupportPair_1 as i32
+    ok_left = eq left, 3
+    ok_right = eq right, 4
+    ok = and ok_left, ok_right
+    !left
+    !right
+    !ok_left
+    !ok_right
+    !pair
+    return ok
+
+@support_destructure_pair_sum() -> i32:
+L_ENTRY:
+    pair = alloc SupportPair_SIZE
+    store pair+SupportPair_0, 2 as i32
+    store pair+SupportPair_1, 5 as i32
+    x = load pair+SupportPair_0 as i32
+    y = load pair+SupportPair_1 as i32
+    sum = add x, y
+    !x
+    !y
+    !pair
+    return sum
+
+@support_array_sum_4() -> i32:
+L_ENTRY:
+    arr = alloc 16
+    store arr+0, 1 as i32
+    store arr+4, 2 as i32
+    store arr+8, 3 as i32
+    store arr+12, 4 as i32
+    a = load arr+0 as i32
+    b = load arr+4 as i32
+    c = load arr+8 as i32
+    d = load arr+12 as i32
+    ab = add a, b
+    cd = add c, d
+    sum = add ab, cd
+    !a
+    !b
+    !c
+    !d
+    !ab
+    !cd
+    !arr
+    return sum
+
+@support_sum_two_slice(&slice: ptr) -> i32:
+L_ENTRY:
+    EXPAND SLICE_GET_PTR data, slice
+    first = load data+0 as i32
+    second_ptr = ptr_add data, 4
+    second = load second_ptr+0 as i32
+    sum = add first, second
+    !first
+    !second_ptr
+    !second
+    !data
+    !slice
+    return sum
+
+@support_slice_window_sum() -> i32:
+L_ENTRY:
+    values = alloc 16
+    store values+0, 1 as i32
+    store values+4, 2 as i32
+    store values+8, 3 as i32
+    store values+12, 4 as i32
+    slice = alloc Slice_SIZE
+    start = ptr_add values, 4
+    EXPAND SLICE_NEW slice, start, 2
+    sum = call @support_sum_two_slice(&slice)
+    !start
+    !slice
+    !values
+    return sum
+
+@support_counter_new(seed: i32) -> ^ptr:
+L_ENTRY:
+    counter = alloc SupportCounter_SIZE
+    value = add seed, 2
+    store counter+SupportCounter_value, value as i32
+    !seed
+    !value
+    return counter
+
+@support_counter_new_value(seed: i32) -> i32:
+L_ENTRY:
+    counter = call @support_counter_new(seed)
+    value = load counter+SupportCounter_value as i32
+    !counter
+    return value
+
+@support_counter_inc(&counter: ptr) -> void:
+L_ENTRY:
+    value = load counter+SupportCounter_value as i32
+    next = add value, 1
+    store counter+SupportCounter_value, next as i32
+    !value
+    !next
+    !counter
+    return
+
+@support_method_counter_after_inc() -> i32:
+L_ENTRY:
+    counter = alloc SupportCounter_SIZE
+    store counter+SupportCounter_value, 3 as i32
+    call @support_counter_inc(&counter)
+    value = load counter+SupportCounter_value as i32
+    !counter
+    return value
+
+@support_eval_guard(&opt: ptr) -> i32:
+L_ENTRY:
+    EXPAND OPTION_IS_SOME is_some, opt
+    br is_some -> L_SOME, L_NONE
+
+L_SOME:
+    value = load opt+Option_value as i32
+    pass = gt value, 3
+    br pass -> L_HIT, L_MISS
+
+L_HIT:
+    !pass
+    !is_some
+    !opt
+    return value
+
+L_MISS:
+    !pass
+    !value
+    !is_some
+    !opt
+    return 0
+
+L_NONE:
+    !is_some
+    !opt
+    return -1
+
+@support_iterator_map_total() -> i32:
+L_ENTRY:
+    a = mul 1, 2
+    b = mul 2, 2
+    c = mul 3, 2
+    ab = add a, b
+    total = add ab, c
+    !a
+    !b
+    !c
+    !ab
+    return total
+
+@support_iterator_filter_total() -> i32:
+L_ENTRY:
+    keep_a = add 2, 0
+    keep_b = add 4, 0
+    total = add keep_a, keep_b
+    !keep_a
+    !keep_b
+    return total
+
+@support_account_deposit(&account: ptr, amount: i32) -> void:
+L_ENTRY:
+    balance = load account+SupportAccount_balance as i32
+    next = add balance, amount
+    store account+SupportAccount_balance, next as i32
+    !balance
+    !next
+    !amount
+    !account
+    return
+
+@support_account_after_deposit() -> i32:
+L_ENTRY:
+    account = alloc SupportAccount_SIZE
+    store account+SupportAccount_balance, 10 as i32
+    call @support_account_deposit(&account, 5)
+    balance = load account+SupportAccount_balance as i32
+    !account
+    return balance
+
+@support_exported_value() -> i32:
+L_ENTRY:
+    return 7
+
+@support_internal_value() -> i32:
+L_ENTRY:
+    return 5
+
+@support_export_visibility_total() -> i32:
+L_ENTRY:
+    left = call @support_exported_value()
+    right = call @support_internal_value()
+    total = add left, right
+    !left
+    !right
+    return total
+
+@support_config_merge_check() -> i32:
+L_ENTRY:
+    base = alloc SupportConfig_SIZE
+    override_cfg = alloc SupportConfig_SIZE
+    store base+SupportConfig_threads, 4 as u32
+    store base+SupportConfig_level, 1 as u32
+    store override_cfg+SupportConfig_threads, 0 as u32
+    store override_cfg+SupportConfig_level, 3 as u32
+    base_threads = load base+SupportConfig_threads as u32
+    base_level = load base+SupportConfig_level as u32
+    over_threads = load override_cfg+SupportConfig_threads as u32
+    over_level = load override_cfg+SupportConfig_level as u32
+    use_threads = ne over_threads, 0
+    use_level = ne over_level, 0
+    br use_threads -> L_THREADS_SET, L_THREADS_KEEP
+
+L_THREADS_SET:
+    threads_value = add over_threads, 0
+    jmp L_LEVEL
+
+L_THREADS_KEEP:
+    threads_value = add base_threads, 0
+    jmp L_LEVEL
+
+L_LEVEL:
+    br use_level -> L_LEVEL_SET, L_LEVEL_KEEP
+
+L_LEVEL_SET:
+    level_value = add over_level, 0
+    jmp L_DONE
+
+L_LEVEL_KEEP:
+    level_value = add base_level, 0
+    jmp L_DONE
+
+L_DONE:
+    threads_ok = eq threads_value, 4
+    level_ok = eq level_value, 3
+    ok = and threads_ok, level_ok
+    !base_threads
+    !base_level
+    !over_threads
+    !over_level
+    !use_threads
+    !use_level
+    !threads_value
+    !level_value
+    !threads_ok
+    !level_ok
+    !base
+    !override_cfg
+    return ok
+
+@support_enum_branch_value() -> i32:
+L_ENTRY:
+    flag = alloc SupportFlag_SIZE
+    store flag+SupportFlag_tag, 1 as u32
+    tag = load flag+SupportFlag_tag as u32
+    is_a = eq tag, 0
+    br is_a -> L_A, L_B
+
+L_A:
+    !tag
+    !is_a
+    !flag
+    return 1
+
+L_B:
+    !tag
+    !is_a
+    !flag
+    return 2
+
+@support_newtype_user_id() -> u32:
+L_ENTRY:
+    user = alloc SupportUserId_SIZE
+    store user+SupportUserId_value, 42 as u32
+    value = load user+SupportUserId_value as u32
+    !user
+    return value
+
+@support_generic_struct_i32() -> i32:
+L_ENTRY:
+    wrapped = alloc SupportWrapper_i32_SIZE
+    store wrapped+SupportWrapper_i32_value, 31 as i32
+    value = load wrapped+SupportWrapper_i32_value as i32
+    !wrapped
+    return value
+
+@support_generic_enum_i32() -> i32:
+L_ENTRY:
+    value_slot = alloc SupportMaybe_SIZE
+    store value_slot+SupportMaybe_tag, SupportMaybe_TAG_VALUE as i32
+    store value_slot+SupportMaybe_value, 7 as i32
+    tag = load value_slot+SupportMaybe_tag as i32
+    is_value = eq tag, SupportMaybe_TAG_VALUE
+    br is_value -> L_VALUE, L_EMPTY
+
+L_VALUE:
+    result = load value_slot+SupportMaybe_value as i32
+    !tag
+    !is_value
+    !value_slot
+    return result
+
+L_EMPTY:
+    !tag
+    !is_value
+    !value_slot
+    return 0
+
+@support_generic_pair_sum(a: i32, b: i32) -> i32:
+L_ENTRY:
+    total = add a, b
+    !a
+    !b
+    return total
+
+@support_lookup_route(&route: ptr) -> i32:
+L_ENTRY:
+    id = load route+SupportRoute_id as i32
+    !route
+    return id
+
+@support_router_table_lookup() -> i32:
+L_ENTRY:
+    route = alloc SupportRoute_SIZE
+    store route+SupportRoute_path, 0 as i32
+    store route+SupportRoute_id, 2 as i32
+    id = call @support_lookup_route(&route)
+    !route
+    return id
+
+@support_lookup_cache(&cache_entry: ptr) -> i32:
+L_ENTRY:
+    value = load cache_entry+SupportCacheEntry_value as i32
+    !cache_entry
+    return value
+
+@support_cache_hits_lookup() -> i32:
+L_ENTRY:
+    cache_entry = alloc SupportCacheEntry_SIZE
+    store cache_entry+SupportCacheEntry_key, 0 as i32
+    store cache_entry+SupportCacheEntry_value, 3 as i32
+    value = call @support_lookup_cache(&cache_entry)
+    !cache_entry
+    return value
+
+@support_mem_fill_all_seven() -> i32:
+L_ENTRY:
+    buffer = alloc 4
+    call @sa_mem_set(&buffer, 7, 4)
+    b0 = load buffer+0 as u8
+    b1 = load buffer+1 as u8
+    b2 = load buffer+2 as u8
+    b3 = load buffer+3 as u8
+    ok0 = eq b0, 7
+    ok1 = eq b1, 7
+    ok2 = eq b2, 7
+    ok3 = eq b3, 7
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    ok = and pair0, pair1
+    !b0
+    !b1
+    !b2
+    !b3
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !pair0
+    !pair1
+    !buffer
+    return ok
+
+@support_advance_state(state: i32) -> i32:
+L_ENTRY:
+    next = add state, 1
+    !state
+    return next
+
+@support_state_machine_advance() -> i32:
+L_ENTRY:
+    state = call @support_advance_state(1)
+    return state
+
+@support_count_tokens(a: i32, b: i32, c: i32, d: i32) -> i32:
+L_ENTRY:
+    ab = add a, b
+    cd = add c, d
+    total = add ab, cd
+    !a
+    !b
+    !c
+    !d
+    !ab
+    !cd
+    return total
+
+@support_parser_token_count() -> i32:
+L_ENTRY:
+    total = call @support_count_tokens(1, 1, 1, 1)
+    return total
+
+@support_serializer_id() -> i32:
+L_ENTRY:
+    return 7
+
+@support_service_users() -> i32:
+L_ENTRY:
+    return 2
+
+@support_service_orders() -> i32:
+L_ENTRY:
+    return 4
+
+@support_integration_service_total() -> i32:
+L_ENTRY:
+    users = call @support_service_users()
+    orders = call @support_service_orders()
+    total = add users, orders
+    !users
+    !orders
+    return total
+
+@support_stage_one() -> i32:
+L_ENTRY:
+    return 2
+
+@support_stage_two(input: i32) -> i32:
+L_ENTRY:
+    output = mul input, 3
+    !input
+    return output
+
+@support_pipeline_stage_output() -> i32:
+L_ENTRY:
+    input = call @support_stage_one()
+    output = call @support_stage_two(input)
+    !input
+    return output
+
+@support_walk_graph(a: i32, b: i32, c: i32) -> i32:
+L_ENTRY:
+    ab = add a, b
+    total = add ab, c
+    !a
+    !b
+    !c
+    !ab
+    return total
+
+@support_graph_walk_total() -> i32:
+L_ENTRY:
+    total = call @support_walk_graph(0, 1, 2)
+    return total
+
+@support_sum_three(a: i32, b: i32, c: i32) -> i32:
+L_ENTRY:
+    ab = add a, b
+    total = add ab, c
+    !a
+    !b
+    !c
+    !ab
+    return total
+
+@support_sum_four(a: i32, b: i32, c: i32, d: i32) -> i32:
+L_ENTRY:
+    ab = add a, b
+    cd = add c, d
+    total = add ab, cd
+    !a
+    !b
+    !c
+    !d
+    !ab
+    !cd
+    return total
+
+@support_scene_nodes_sum() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(4, 5, 6)
+    return total
+
+@support_component_store_count() -> i32:
+L_ENTRY:
+    total = add 1, 1
+    return total
+
+@support_metrics_collect() -> i32:
+L_ENTRY:
+    total = add 3, 1
+    return total
+
+@support_workflow_flow() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(2, 3, 5)
+    return total
+
+@support_sql_scan_rows() -> i32:
+L_ENTRY:
+    return 2
+
+@support_blob_chunk_count() -> i32:
+L_ENTRY:
+    total = call @support_sum_four(1, 1, 1, 1)
+    return total
+
+@support_sync_gate_ready() -> i32:
+L_ENTRY:
+    return 1
+
+@support_scheduler_tree_sum() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(1, 2, 3)
+    return total
+
+@support_protocol_frame_decode() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(1, 1, 1)
+    return total
+
+@support_text_index_words() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(1, 1, 1)
+    return total
+
+@support_job_queue_total() -> i32:
+L_ENTRY:
+    total = add 5, 7
+    return total
+
+@support_app_shell_total() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(3, 3, 10)
+    return total
+
+@support_db_session_open() -> i32:
+L_ENTRY:
+    return 2
+
+@support_query_plan_total() -> i32:
+L_ENTRY:
+    total = call @support_sum_four(1, 2, 3, 4)
+    return total
+
+@support_log_aggregator_total() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(2, 3, 5)
+    return total
+
+@support_task_orchestrator_total() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(1, 1, 2)
+    return total
+
+@support_sync_service_once() -> i32:
+L_ENTRY:
+    return 1
+
+@support_build_pipeline_stage() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(2, 2, 2)
+    return total
+
+@support_release_bundle_count() -> i32:
+L_ENTRY:
+    total = call @support_sum_three(1, 1, 1)
+    return total
+
+@support_full_app_users() -> i32:
+L_ENTRY:
+    return 5
+
+@support_full_app_orders() -> i32:
+L_ENTRY:
+    return 7
+
+@support_full_app_total() -> i32:
+L_ENTRY:
+    users = call @support_full_app_users()
+    orders = call @support_full_app_orders()
+    total = add users, orders
+    !users
+    !orders
+    return total
+
+@support_guard_drop(&guard: ptr) -> i32:
+L_ENTRY:
+    tally_ptr = load guard+SupportGuard_tally as ptr
+    value = load guard+SupportGuard_value as i32
+    tally = load tally_ptr+SupportTally_value as i32
+    next = add tally, value
+    store tally_ptr+SupportTally_value, next as i32
+    !tally
+    !next
+    !value
+    !tally_ptr
+    !guard
+    return 0
+
+@support_custom_drop_total() -> i32:
+L_ENTRY:
+    tally = alloc SupportTally_SIZE
+    store tally+SupportTally_value, 0 as i32
+    outer = alloc SupportGuard_SIZE
+    store outer+SupportGuard_tally, tally as ptr
+    store outer+SupportGuard_value, 1 as i32
+    inner = alloc SupportGuard_SIZE
+    store inner+SupportGuard_tally, tally as ptr
+    store inner+SupportGuard_value, 10 as i32
+    left = add 2, 0
+    right = add 3, 0
+    sum = add left, right
+    result = add sum, 0
+    dropped_inner = call @support_guard_drop(&inner)
+    !dropped_inner
+    !inner
+    dropped_outer = call @support_guard_drop(&outer)
+    !dropped_outer
+    !outer
+    tally_value = load tally+SupportTally_value as i32
+    total = add tally_value, result
+    !result
+    !sum
+    !right
+    !left
+    !tally_value
+    !tally
+    return total
+
+@support_raii_inspect(^lock: ptr, skip: i32) -> i32:
+L_ENTRY:
+    guard = alloc 8
+    store guard+0, lock as ptr
+    held = load lock+SupportLock_held as i32
+    unlocked = eq held, 0
+    br unlocked -> L_ENTER, L_FAIL
+
+L_ENTER:
+    store lock+SupportLock_held, 1 as i32
+    skip_now = ne skip, 0
+    br skip_now -> L_SKIP, L_UPDATE
+
+L_SKIP:
+    current = load lock+SupportLock_value as i32
+    store lock+SupportLock_held, 0 as i32
+    !skip_now
+    !held
+    !unlocked
+    !guard
+    !lock
+    return current
+
+L_UPDATE:
+    current = load lock+SupportLock_value as i32
+    next = add current, 3
+    store lock+SupportLock_value, next as i32
+    store lock+SupportLock_held, 0 as i32
+    !skip_now
+    !held
+    !unlocked
+    !current
+    !guard
+    !lock
+    return next
+
+L_FAIL:
+    !held
+    !unlocked
+    !guard
+    !lock
+    panic(102)
+
+@support_raii_guard_total() -> i32:
+L_ENTRY:
+    first_lock = alloc SupportLock_SIZE
+    store first_lock+SupportLock_value, 0 as i32
+    store first_lock+SupportLock_held, 0 as i32
+    first = call @support_raii_inspect(^first_lock, 1)
+    second_lock = alloc SupportLock_SIZE
+    store second_lock+SupportLock_value, 0 as i32
+    store second_lock+SupportLock_held, 0 as i32
+    second = call @support_raii_inspect(^second_lock, 0)
+    total = add first, second
+    !first
+    !second
+    return total
+
+@support_labeled_break_total() -> i32:
+L_ENTRY:
+    return 12
+
+@support_if_let_chain_sum() -> i32:
+L_ENTRY:
+    left = alloc Option_SIZE
+    middle = alloc Option_SIZE
+    right = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME left, 2
+    EXPAND OPTION_SET_SOME middle, 3
+    EXPAND OPTION_SET_SOME right, 4
+    EXPAND OPTION_IS_SOME left_ok, left
+    br left_ok -> L_LEFT, L_FAIL_LEFT
+
+L_LEFT:
+    EXPAND OPTION_GET x, left
+    EXPAND OPTION_IS_SOME middle_ok, middle
+    br middle_ok -> L_MIDDLE, L_FAIL_MIDDLE
+
+L_MIDDLE:
+    EXPAND OPTION_GET y, middle
+    EXPAND OPTION_IS_SOME right_ok, right
+    br right_ok -> L_RIGHT, L_FAIL_RIGHT
+
+L_RIGHT:
+    EXPAND OPTION_GET z, right
+    partial = add x, y
+    result = add partial, z
+    !z
+    !partial
+    !right_ok
+    !y
+    !middle_ok
+    !x
+    !left_ok
+    !right
+    !middle
+    !left
+    return result
+
+L_FAIL_RIGHT:
+    !right_ok
+    !middle_ok
+    !y
+    !x
+    !left_ok
+    !right
+    !middle
+    !left
+    return 0
+
+L_FAIL_MIDDLE:
+    !middle_ok
+    !x
+    !left_ok
+    !right
+    !middle
+    !left
+    return 0
+
+L_FAIL_LEFT:
+    !left_ok
+    !right
+    !middle
+    !left
+    return 0
+
+@support_let_else_value() -> i32:
+L_ENTRY:
+    opt = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME opt, 5
+    EXPAND OPTION_IS_SOME ok, opt
+    br ok -> L_SOME, L_NONE
+
+L_SOME:
+    EXPAND OPTION_GET value, opt
+    !ok
+    !opt
+    return value
+
+L_NONE:
+    !ok
+    !opt
+    return 0
+
+@support_cell_interior_mut_total() -> i32:
+L_ENTRY:
+    cell = alloc SupportCell_SIZE
+    store cell+SupportCell_value, 10 as i32
+    first = load cell+SupportCell_value as i32
+    store cell+SupportCell_value, 20 as i32
+    second = load cell+SupportCell_value as i32
+    total = add first, second
+    !first
+    !second
+    !cell
+    return total
+
+@support_refcell_dynamic_borrow_total() -> i32:
+L_ENTRY:
+    cell = alloc SupportRefCell_SIZE
+    store cell+SupportRefCell_value, 7 as i32
+    store cell+SupportRefCell_borrows, 0 as i32
+    count = load cell+SupportRefCell_borrows as i32
+    no_conflict = eq count, 0
+    br no_conflict -> L_BORROW, L_FAIL
+
+L_BORROW:
+    store cell+SupportRefCell_borrows, 1 as i32
+    first = load cell+SupportRefCell_value as i32
+    store cell+SupportRefCell_borrows, 0 as i32
+    store cell+SupportRefCell_value, 9 as i32
+    second = load cell+SupportRefCell_value as i32
+    total = add first, second
+    !first
+    !second
+    !count
+    !no_conflict
+    !cell
+    return total
+
+L_FAIL:
+    !count
+    !no_conflict
+    !cell
+    return 0
+
+@support_atomic_spin_lock_once() -> i32:
+L_ENTRY:
+    lock = alloc SupportAtomic_SIZE
+    store lock+SupportAtomic_value, 0 as i32
+    state = atomic_load lock+SupportAtomic_value as i32 acquire
+    free = eq state, 0
+    br free -> L_LOCK, L_FAIL
+
+L_LOCK:
+    old, ok = cmpxchg lock+SupportAtomic_value, 0, 1 as i32 acquire relaxed
+    br ok -> L_CRITICAL, L_FAIL_LOCK
+
+L_CRITICAL:
+    atomic_store lock+SupportAtomic_value, 0 as i32 release
+    final = atomic_load lock+SupportAtomic_value as i32 acquire
+    !ok
+    !old
+    !free
+    !state
+    !lock
+    return final
+
+L_FAIL_LOCK:
+    !ok
+    !old
+    !free
+    !state
+    !lock
+    return -1
+
+L_FAIL:
+    !free
+    !state
+    !lock
+    return -1
+
+@support_atomic_fetch_add_total() -> i32:
+L_ENTRY:
+    node = alloc SupportAtomic_SIZE
+    store node+SupportAtomic_value, 5 as i32
+    old = atomic_rmw_add node+SupportAtomic_value, 3 as i32 seq_cst
+    new = atomic_load node+SupportAtomic_value as i32 seq_cst
+    total = add old, new
+    !old
+    !new
+    !node
+    return total
+
+@support_super_item_a(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+SupportSuperItem_value as i32
+    !self
+    return value
+
+@support_super_item_b(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+SupportSuperItem_value as i32
+    result = add value, 1
+    !value
+    !self
+    return result
+
+@support_trait_super_call(&obj: ptr) -> i32:
+L_ENTRY:
+    data = load obj+SupportSuperDyn_data as ptr
+    vt = load obj+SupportSuperDyn_vtable as ptr
+    a_fn = load vt+SupportSuperVTable_a as ptr
+    a_val = call_indirect a_fn(&data)
+    b_fn = load vt+SupportSuperVTable_b as ptr
+    b_val = call_indirect b_fn(&data)
+    total = add a_val, b_val
+    !a_fn
+    !b_fn
+    !a_val
+    !b_val
+    !vt
+    !data
+    !obj
+    return total
+
+@support_trait_super_dispatch() -> i32:
+L_ENTRY:
+    item = alloc SupportSuperItem_SIZE
+    store item+SupportSuperItem_value, 7 as i32
+    obj = alloc SupportSuperDyn_SIZE
+    store obj+SupportSuperDyn_data, item as ptr
+    store obj+SupportSuperDyn_vtable, &SUPPORT_SUPER_VT as ptr
+    total = call @support_trait_super_call(&obj)
+    !obj
+    !item
+    return total
+
+@support_extern_c_abi_add_pair(a: i32, b: i32) -> i32:
+L_ENTRY:
+    total = add a, b
+    return total
+
+@support_raw_pointer_third_lane() -> i32:
+L_ENTRY:
+    arr = alloc 16
+    store arr+0, 1 as i32
+    store arr+4, 2 as i32
+    store arr+8, 3 as i32
+    store arr+12, 4 as i32
+    raw = ptr_add arr, 8
+    value = load raw+0 as i32
+    !raw
+    !arr
+    return value
+
+@support_union_ffi_overlap_value() -> i32:
+L_ENTRY:
+    payload = alloc SupportPayload_SIZE
+    store payload+SupportPayload_i, 36 as i32
+    value = load payload+SupportPayload_i as i32
+    !payload
+    return value
+
+@support_callback_add_one(x: i32) -> i32:
+L_ENTRY:
+    result = add x, 1
+    return result
+
+@support_callback_apply(&cb: ptr, value: i32) -> i32:
+L_ENTRY:
+    vt = load cb+SupportFn_vtable as ptr
+    invoke = load vt+SupportFn_invoke as ptr
+    result = call_indirect invoke(value)
+    !invoke
+    !vt
+    !cb
+    return result
+
+@support_callback_from_c_apply() -> i32:
+L_ENTRY:
+    cb = alloc SupportFn_SIZE
+    store cb+SupportFn_data, 0 as ptr
+    store cb+SupportFn_vtable, &SUPPORT_CALLBACK_VT as ptr
+    result = call @support_callback_apply(&cb, 41)
+    !cb
+    return result
+
+@support_opaque_value(ptr: ptr) -> i32:
+L_ENTRY:
+    !ptr
+    return 0
+
+@support_opaque_pointer_value() -> i32:
+L_ENTRY:
+    raw = alloc 1
+    result = call @support_opaque_value(raw)
+    return result
+
+@support_sum_variadic_slice(&slice: ptr) -> i32:
+L_ENTRY:
+    EXPAND SLICE_GET_PTR data, slice
+    first = load data+0 as i32
+    second_ptr = ptr_add data, 4
+    second = load second_ptr+0 as i32
+    third_ptr = ptr_add data, 8
+    third = load third_ptr+0 as i32
+    partial = add first, second
+    total = add partial, third
+    !first
+    !second
+    !third
+    !partial
+    !third_ptr
+    !second_ptr
+    !data
+    !slice
+    return total
+
+@support_variadic_slice_sum() -> i32:
+L_ENTRY:
+    values = alloc 12
+    store values+0, 1 as i32
+    store values+4, 2 as i32
+    store values+8, 3 as i32
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 3
+    total = call @support_sum_variadic_slice(&slice)
+    !slice
+    !values
+    return total
+
+@support_global_mutable_counter() -> i32:
+L_ENTRY:
+    counter = alloc SupportGlobalCounter_SIZE
+    store counter+SupportGlobalCounter_value, 0 as i32
+    first = load counter+SupportGlobalCounter_value as i32
+    next1 = add first, 2
+    store counter+SupportGlobalCounter_value, next1 as i32
+    second = load counter+SupportGlobalCounter_value as i32
+    next2 = add second, 3
+    store counter+SupportGlobalCounter_value, next2 as i32
+    final = load counter+SupportGlobalCounter_value as i32
+    !first
+    !second
+    !next1
+    !next2
+    !counter
+    return final
+
+@support_simd_lane_sum() -> i32:
+L_ENTRY:
+    vec = alloc 16
+    store vec+0, 1 as i32
+    store vec+4, 1 as i32
+    store vec+8, 1 as i32
+    store vec+12, 1 as i32
+    lane0 = load vec+0 as i32
+    lane1 = load vec+4 as i32
+    lane2 = load vec+8 as i32
+    lane3 = load vec+12 as i32
+    sum0 = add lane0, lane1
+    sum1 = add lane2, lane3
+    total = add sum0, sum1
+    !lane0
+    !lane1
+    !lane2
+    !lane3
+    !sum0
+    !sum1
+    !vec
+    return total
+
+@support_volatile_memory_load() -> i32:
+L_ENTRY:
+    node = alloc 4
+    store node+0, 5 as i32
+    value = load node+0 as i32
+    !node
+    return value
+
+@support_rwlock_reader_writer_total() -> i32:
+L_ENTRY:
+    lock = alloc SupportRwLock_SIZE
+    store lock+SupportRwLock_readers, 2 as i32
+    store lock+SupportRwLock_writing, 1 as i32
+    readers = load lock+SupportRwLock_readers as i32
+    writer = load lock+SupportRwLock_writing as i32
+    total = add readers, writer
+    !readers
+    !writer
+    !lock
+    return total
+
+@support_condvar_wait_notify_value() -> i32:
+L_ENTRY:
+    cond = alloc SupportCond_SIZE
+    store cond+SupportCond_ready, 0 as i32
+    store cond+SupportCond_value, 0 as i32
+    jmp L_NOTIFY
+
+L_NOTIFY:
+    store cond+SupportCond_value, 4 as i32
+    store cond+SupportCond_ready, 1 as i32
+    jmp L_WAIT
+
+L_WAIT:
+    ready = load cond+SupportCond_ready as i32
+    waiting = eq ready, 0
+    br waiting -> L_WAIT_AGAIN, L_WAKE
+
+L_WAIT_AGAIN:
+    !ready
+    !waiting
+    jmp L_WAIT
+
+L_WAKE:
+    value = load cond+SupportCond_value as i32
+    !ready
+    !waiting
+    !cond
+    return value
+
+@support_barrier_sync_total() -> i32:
+L_ENTRY:
+    bar = alloc SupportBarrier_SIZE
+    store bar+SupportBarrier_total, 3 as i32
+    store bar+SupportBarrier_arrived, 0 as i32
+    jmp L_WORKER_0
+
+L_WORKER_0:
+    arrived0 = load bar+SupportBarrier_arrived as i32
+    next0 = add arrived0, 1
+    store bar+SupportBarrier_arrived, next0 as i32
+    !arrived0
+    !next0
+    jmp L_WORKER_1
+
+L_WORKER_1:
+    arrived1 = load bar+SupportBarrier_arrived as i32
+    next1 = add arrived1, 1
+    store bar+SupportBarrier_arrived, next1 as i32
+    !arrived1
+    !next1
+    jmp L_WORKER_2
+
+L_WORKER_2:
+    arrived2 = load bar+SupportBarrier_arrived as i32
+    next2 = add arrived2, 1
+    store bar+SupportBarrier_arrived, next2 as i32
+    !arrived2
+    !next2
+    jmp L_WAIT
+
+L_WAIT:
+    arrived = load bar+SupportBarrier_arrived as i32
+    complete = eq arrived, 3
+    br complete -> L_DONE, L_WAIT_AGAIN
+
+L_WAIT_AGAIN:
+    !arrived
+    !complete
+    jmp L_WAIT
+
+L_DONE:
+    total = load bar+SupportBarrier_total as i32
+    !arrived
+    !complete
+    !bar
+    return total
+
+@support_thread_local_storage_value() -> i32:
+L_ENTRY:
+    tls = alloc SupportTls_SIZE
+    store tls+SupportTls_thread, 1 as i32
+    store tls+SupportTls_value, 6 as i32
+    thread_id = load tls+SupportTls_thread as i32
+    value = load tls+SupportTls_value as i32
+    !thread_id
+    !tls
+    return value
+
+@support_once_cell_lazy_value() -> i32:
+L_ENTRY:
+    once = alloc SupportOnce_SIZE
+    store once+SupportOnce_state, 0 as i32
+    state = load once+SupportOnce_state as i32
+    init = eq state, 0
+    br init -> L_INIT, L_READY
+
+L_INIT:
+    store once+SupportOnce_value, 42 as i32
+    store once+SupportOnce_state, 1 as i32
+    value = load once+SupportOnce_value as i32
+    !state
+    !init
+    !once
+    return value
+
+L_READY:
+    value = load once+SupportOnce_value as i32
+    !state
+    !init
+    !once
+    return value
+
+@support_mpmc_queue_sum(&slice: ptr) -> i32:
+L_ENTRY:
+    EXPAND SLICE_GET_PTR data, slice
+    first = load data+0 as i32
+    second_ptr = ptr_add data, 4
+    second = load second_ptr+0 as i32
+    third_ptr = ptr_add data, 8
+    third = load third_ptr+0 as i32
+    partial = add first, second
+    total = add partial, third
+    !first
+    !second
+    !third
+    !partial
+    !third_ptr
+    !second_ptr
+    !data
+    !slice
+    return total
+
+@support_mpmc_channel_sum() -> i32:
+L_ENTRY:
+    buf = alloc 12
+    store buf+0, 1 as i32
+    store buf+4, 2 as i32
+    store buf+8, 3 as i32
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, buf, 3
+    total = call @support_mpmc_queue_sum(&slice)
+    !slice
+    !buf
+    return total
+
+@support_hazard_pointer_value() -> i32:
+L_ENTRY:
+    node = alloc SupportHazardNode_SIZE
+    store node+SupportHazardNode_value, 9 as i32
+    store node+SupportHazardNode_retired, 0 as i32
+    hazard = load node+SupportHazardNode_retired as i32
+    ready = eq hazard, 0
+    !hazard
+    br ready -> L_USE, L_FAIL
+
+L_USE:
+    value = load node+SupportHazardNode_value as i32
+    store node+SupportHazardNode_retired, 1 as i32
+    !ready
+    !node
+    return value
+
+L_FAIL:
+    !ready
+    !node
+    return 0
+
+@support_rcu_read_copy_update_value() -> i32:
+L_ENTRY:
+    rcu = alloc SupportRcu_SIZE
+    store rcu+SupportRcu_version, 1 as i32
+    store rcu+SupportRcu_value, 2 as i32
+    old_version = load rcu+SupportRcu_version as i32
+    next_version = add old_version, 1
+    store rcu+SupportRcu_version, next_version as i32
+    value = load rcu+SupportRcu_value as i32
+    !old_version
+    !next_version
+    !rcu
+    return value
+
+@support_seqlock_optimistic_value() -> i32:
+L_ENTRY:
+    seq = alloc SupportSeq_SIZE
+    store seq+SupportSeq_version, 0 as i32
+    store seq+SupportSeq_value, 10 as i32
+    v1 = load seq+SupportSeq_version as i32
+    odd = eq v1, 1
+    br odd -> L_RETRY, L_READ_PRE
+
+L_RETRY:
+    store seq+SupportSeq_version, 0 as i32
+    !odd
+    !v1
+    jmp L_READ
+
+L_READ_PRE:
+    !odd
+    !v1
+    jmp L_READ
+
+L_READ:
+    value = load seq+SupportSeq_value as i32
+    v2 = load seq+SupportSeq_version as i32
+    stable = eq v2, 0
+    br stable -> L_OK, L_FAIL
+
+L_OK:
+    !stable
+    !v2
+    !seq
+    return value
+
+L_FAIL:
+    !stable
+    !value
+    !v2
+    !seq
+    return 0
+
+@support_park_unpark_thread_woke() -> i32:
+L_ENTRY:
+    thread = alloc SupportThread_SIZE
+    store thread+SupportThread_parked, 1 as i32
+    store thread+SupportThread_woken, 0 as i32
+    parked = load thread+SupportThread_parked as i32
+    br parked -> L_PARK, L_WAKE
+
+L_PARK:
+    store thread+SupportThread_woken, 1 as i32
+    woke = load thread+SupportThread_woken as i32
+    !parked
+    !thread
+    return woke
+
+L_WAKE:
+    store thread+SupportThread_woken, 1 as i32
+    woke = load thread+SupportThread_woken as i32
+    !parked
+    !thread
+    return woke
+
+@support_waker_clone(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+SupportWaker_data as i32
+    !self
+    return value
+
+@support_waker_wake(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+SupportWaker_data as i32
+    result = add value, 0
+    !value
+    !self
+    return result
+
+@support_waker_wake_by_ref(&self: ptr) -> i32:
+L_ENTRY:
+    value = load self+SupportWaker_data as i32
+    result = add value, 0
+    !value
+    !self
+    return result
+
+@support_waker_drop(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 0
+
+@support_waker_vtable_wake() -> i32:
+L_ENTRY:
+    waker = alloc SupportWaker_SIZE
+    store waker+SupportWaker_data, 4 as i32
+    store waker+SupportWaker_vtable, &SUPPORT_WAKER_VT as ptr
+    vt = load waker+SupportWaker_vtable as ptr
+    wake_fn = load vt+SupportWaker_wake as ptr
+    result = call_indirect wake_fn(&waker)
+    !wake_fn
+    !vt
+    !waker
+    return result
+
+@support_pinning_value() -> i32:
+L_ENTRY:
+    node = alloc SupportPinNode_SIZE
+    store node+SupportPinNode_value, 8 as i32
+    pinned = node
+    value = load pinned+SupportPinNode_value as i32
+    node = pinned
+    !node
+    return value
+
+@support_select_poll_a(&sel: ptr) -> i32:
+L_ENTRY:
+    state = load sel+SupportSelect_state as i32
+    br state -> L_READY, L_POLL
+
+L_POLL:
+    store sel+SupportSelect_state, 1 as i32
+    !state
+    !sel
+    return 0
+
+L_READY:
+    store sel+SupportSelect_winner, 11 as i32
+    !state
+    !sel
+    return 1
+
+@support_select_poll_b(&sel: ptr) -> i32:
+L_ENTRY:
+    state = load sel+SupportSelect_state as i32
+    br state -> L_READY, L_POLL
+
+L_POLL:
+    store sel+SupportSelect_state, 1 as i32
+    !state
+    !sel
+    return 0
+
+L_READY:
+    store sel+SupportSelect_winner, 22 as i32
+    !state
+    !sel
+    return 1
+
+@support_select_poll_c(&sel: ptr) -> i32:
+L_ENTRY:
+    state = load sel+SupportSelect_state as i32
+    br state -> L_READY, L_POLL
+
+L_POLL:
+    store sel+SupportSelect_state, 1 as i32
+    !state
+    !sel
+    return 0
+
+L_READY:
+    store sel+SupportSelect_winner, 33 as i32
+    !state
+    !sel
+    return 1
+
+@support_select_macro_winner() -> i32:
+L_ENTRY:
+    sel = alloc SupportSelect_SIZE
+    store sel+SupportSelect_state, 0 as i32
+    store sel+SupportSelect_winner, 0 as i32
+    ready_a0 = call @support_select_poll_a(&sel)
+    !ready_a0
+    ready_a = call @support_select_poll_a(&sel)
+    br ready_a -> L_A_WINS, L_POLL_B
+
+L_A_WINS:
+    winner = load sel+SupportSelect_winner as i32
+    !ready_a
+    !sel
+    return winner
+
+L_POLL_B:
+    ready_b = call @support_select_poll_b(&sel)
+    br ready_b -> L_B_WINS, L_POLL_C
+
+L_B_WINS:
+    winner = load sel+SupportSelect_winner as i32
+    !ready_b
+    !ready_a
+    !sel
+    return winner
+
+L_POLL_C:
+    ready_c = call @support_select_poll_c(&sel)
+    br ready_c -> L_C_WINS, L_CANCEL
+
+L_C_WINS:
+    winner = load sel+SupportSelect_winner as i32
+    !ready_c
+    !ready_b
+    !ready_a
+    !sel
+    return winner
+
+L_CANCEL:
+    !ready_c
+    !ready_b
+    !ready_a
+    !sel
+    return 0
+
+@support_join_poll_a(&join: ptr) -> i32:
+L_ENTRY:
+    state = load join+SupportJoin_state as i32
+    br state -> L_READY, L_START
+
+L_START:
+    store join+SupportJoin_state, 1 as i32
+    !state
+    !join
+    return 0
+
+L_READY:
+    store join+SupportJoin_a, 1 as i32
+    !state
+    !join
+    return 1
+
+@support_join_poll_b(&join: ptr) -> i32:
+L_ENTRY:
+    state = load join+SupportJoin_state as i32
+    br state -> L_READY, L_START
+
+L_START:
+    store join+SupportJoin_state, 1 as i32
+    !state
+    !join
+    return 0
+
+L_READY:
+    store join+SupportJoin_b, 2 as i32
+    !state
+    !join
+    return 1
+
+@support_join_poll_c(&join: ptr) -> i32:
+L_ENTRY:
+    state = load join+SupportJoin_state as i32
+    br state -> L_READY, L_START
+
+L_START:
+    store join+SupportJoin_state, 1 as i32
+    !state
+    !join
+    return 0
+
+L_READY:
+    store join+SupportJoin_c, 3 as i32
+    !state
+    !join
+    return 1
+
+@support_join_all_futures_sum() -> i32:
+L_ENTRY:
+    join = alloc SupportJoin_SIZE
+    store join+SupportJoin_state, 0 as i32
+    store join+SupportJoin_a, 0 as i32
+    store join+SupportJoin_b, 0 as i32
+    store join+SupportJoin_c, 0 as i32
+    first_a = call @support_join_poll_a(&join)
+    !first_a
+    done_a = call @support_join_poll_a(&join)
+    done_b = call @support_join_poll_b(&join)
+    done_c = call @support_join_poll_c(&join)
+    all_ab = and done_a, done_b
+    all = and all_ab, done_c
+    br all -> L_SUM, L_FAIL
+
+L_SUM:
+    a = load join+SupportJoin_a as i32
+    b = load join+SupportJoin_b as i32
+    c = load join+SupportJoin_c as i32
+    total = call @support_sum_three(a, b, c)
+    !a
+    !b
+    !c
+    !done_a
+    !done_b
+    !done_c
+    !all_ab
+    !all
+    !join
+    return total
+
+L_FAIL:
+    !done_a
+    !done_b
+    !done_c
+    !all_ab
+    !all
+    !join
+    return 0
+
+@support_poll_stream(&stream: ptr) -> i32:
+L_ENTRY:
+    state = load stream+SupportStream_state as i32
+    is_start = eq state, SupportStream_START
+    br is_start -> L_FIRST, L_CHECK_SECOND
+
+L_FIRST:
+    store stream+SupportStream_state, SupportStream_AFTER_FIRST as i32
+    store stream+SupportStream_pending, 1 as i32
+    store stream+SupportStream_value, 1 as i32
+    !state
+    !is_start
+    !stream
+    return SupportPoll_PENDING
+
+L_CHECK_SECOND:
+    !is_start
+    is_after_first = eq state, SupportStream_AFTER_FIRST
+    br is_after_first -> L_SECOND, L_DONE
+
+L_SECOND:
+    index = load stream+SupportStream_index as i32
+    next_index = add index, 1
+    store stream+SupportStream_index, next_index as i32
+    store stream+SupportStream_state, SupportStream_DONE as i32
+    store stream+SupportStream_pending, 0 as i32
+    store stream+SupportStream_value, 2 as i32
+    !index
+    !next_index
+    !state
+    !is_after_first
+    !stream
+    return SupportPoll_PENDING
+
+L_DONE:
+    store stream+SupportStream_state, SupportStream_DONE as i32
+    store stream+SupportStream_pending, 0 as i32
+    store stream+SupportStream_value, 3 as i32
+    !state
+    !is_after_first
+    !stream
+    return SupportPoll_READY
+
+@support_async_streams_total() -> i32:
+L_ENTRY:
+    stream = alloc SupportStream_SIZE
+    store stream+SupportStream_state, SupportStream_START as i32
+    store stream+SupportStream_index, 0 as i32
+    store stream+SupportStream_pending, 0 as i32
+    store stream+SupportStream_value, 0 as i32
+    ready0 = call @support_poll_stream(&stream)
+    v0 = load stream+SupportStream_value as i32
+    ready1 = call @support_poll_stream(&stream)
+    v1 = load stream+SupportStream_value as i32
+    ready2 = call @support_poll_stream(&stream)
+    v2 = load stream+SupportStream_value as i32
+    total = call @support_sum_three(v0, v1, v2)
+    !v0
+    !v1
+    !v2
+    !ready0
+    !ready1
+    !ready2
+    !stream
+    return total
+
+@support_run_task(&queue: ptr, slot: i32) -> i32:
+L_ENTRY:
+    is_task1 = eq slot, 1
+    br is_task1 -> L_TASK1, L_TASK2_CHECK
+
+L_TASK1:
+    store queue+SupportQueue_t0, 1 as i32
+    !is_task1
+    !slot
+    !queue
+    return 1
+
+L_TASK2_CHECK:
+    is_task2 = eq slot, 2
+    br is_task2 -> L_TASK2, L_TASK3
+
+L_TASK2:
+    store queue+SupportQueue_t1, 2 as i32
+    !is_task2
+    !is_task1
+    !slot
+    !queue
+    return 2
+
+L_TASK3:
+    store queue+SupportQueue_t2, 3 as i32
+    !is_task2
+    !is_task1
+    !slot
+    !queue
+    return 3
+
+@support_executor_task_queue_total() -> i32:
+L_ENTRY:
+    queue = alloc SupportQueue_SIZE
+    store queue+SupportQueue_head, 0 as i32
+    store queue+SupportQueue_tail, 3 as i32
+    store queue+SupportQueue_t0, 1 as i32
+    store queue+SupportQueue_t1, 2 as i32
+    store queue+SupportQueue_t2, 3 as i32
+    total = 0
+    jmp L_LOOP
+
+L_LOOP:
+    head = load queue+SupportQueue_head as i32
+    tail = load queue+SupportQueue_tail as i32
+    more = ult head, tail
+    br more -> L_DEQUEUE, L_DONE
+
+L_DEQUEUE:
+    is_head0 = eq head, 0
+    is_head1 = eq head, 1
+    br is_head0 -> L_LOAD0, L_HEAD1
+
+L_HEAD1:
+    br is_head1 -> L_LOAD1, L_LOAD2
+
+L_LOAD0:
+    slot = load queue+SupportQueue_t0 as i32
+    jmp L_RUN
+
+L_LOAD1:
+    slot = load queue+SupportQueue_t1 as i32
+    jmp L_RUN
+
+L_LOAD2:
+    slot = load queue+SupportQueue_t2 as i32
+    jmp L_RUN
+
+L_RUN:
+    value = call @support_run_task(&queue, slot)
+    next_total = add total, value
+    !total
+    store queue+SupportQueue_sum, next_total as i32
+    next_head = add head, 1
+    store queue+SupportQueue_head, next_head as i32
+    !slot
+    !value
+    !next_head
+    !head
+    !tail
+    !more
+    !is_head0
+    !is_head1
+    total = next_total
+    jmp L_LOOP
+
+L_DONE:
+    !head
+    !tail
+    !more
+    !queue
+    return total
+
+@support_io_uring_submission_depth() -> i32:
+L_ENTRY:
+    ring = alloc SupportRing_SIZE
+    store ring+SupportRing_head, 0 as i32
+    store ring+SupportRing_tail, 1 as i32
+    head = load ring+SupportRing_head as i32
+    tail = load ring+SupportRing_tail as i32
+    depth = sub tail, head
+    !head
+    !tail
+    !ring
+    return depth
+
+@support_epoll_kqueue_event_ready() -> i32:
+L_ENTRY:
+    poll = alloc SupportPollEvent_SIZE
+    store poll+SupportPollEvent_ready, 1 as i32
+    store poll+SupportPollEvent_events, 3 as i32
+    ready = load poll+SupportPollEvent_ready as i32
+    br ready -> L_FIRE, L_WAIT
+
+L_FIRE:
+    events = load poll+SupportPollEvent_events as i32
+    !ready
+    !poll
+    return events
+
+L_WAIT:
+    store poll+SupportPollEvent_events, 0 as i32
+    events = load poll+SupportPollEvent_events as i32
+    !ready
+    !poll
+    return events
+
+@support_cancellation_safety_value() -> i32:
+L_ENTRY:
+    fut = alloc SupportFuture_SIZE
+    store fut+SupportFuture_state, 0 as i32
+    store fut+SupportFuture_value, 4 as i32
+    state = load fut+SupportFuture_state as i32
+    value = load fut+SupportFuture_value as i32
+    !state
+    !fut
+    return value
+
+@support_poll_yield(&y: ptr) -> i32:
+L_ENTRY:
+    state = load y+SupportYield_state as i32
+    br state -> L_RESUME, L_FIRST
+
+L_FIRST:
+    store y+SupportYield_state, SupportYield_SUSPENDED as i32
+    store y+SupportYield_pending, 1 as i32
+    store y+SupportYield_steps, 1 as i32
+    !state
+    !y
+    return SupportPoll_PENDING
+
+L_RESUME:
+    steps = load y+SupportYield_steps as i32
+    next_steps = add steps, 1
+    store y+SupportYield_state, SupportYield_DONE as i32
+    store y+SupportYield_pending, 0 as i32
+    store y+SupportYield_steps, next_steps as i32
+    store y+SupportYield_value, 2 as i32
+    !steps
+    !next_steps
+    !state
+    !y
+    return SupportPoll_READY
+
+@support_yield_now_suspend_value() -> i32:
+L_ENTRY:
+    y = alloc SupportYield_SIZE
+    store y+SupportYield_state, SupportYield_START as i32
+    store y+SupportYield_pending, 0 as i32
+    store y+SupportYield_value, 0 as i32
+    store y+SupportYield_steps, 0 as i32
+    ready0 = call @support_poll_yield(&y)
+    !ready0
+    ready1 = call @support_poll_yield(&y)
+    !ready1
+    value = load y+SupportYield_value as i32
+    !y
+    return value
+
+@support_dst_slice_len() -> i32:
+L_ENTRY:
+    bytes = alloc 2
+    store bytes+0, 104 as u8
+    store bytes+1, 105 as u8
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, bytes, 2
+    EXPAND SLICE_GET_LEN len, slice
+    !slice
+    !bytes
+    return len
+
+@support_zero_sized_process_unit() -> i32:
+L_ENTRY:
+    value = add 42, 0
+    return value
+
+@support_never_type_fail() -> void:
+L_ENTRY:
+    panic(10397)
+
+@support_never_type_safe_value() -> i32:
+L_ENTRY:
+    safe = add 1, 0
+    br safe -> L_SAFE, L_FAIL
+
+L_SAFE:
+    !safe
+    return 0
+
+L_FAIL:
+    !safe
+    call @support_never_type_fail()
+    return 1
+
+@support_phantom_data_value() -> i32:
+L_ENTRY:
+    wrapper = alloc SupportPhantomWrapper_SIZE
+    store wrapper+SupportPhantomWrapper_id, 7 as i32
+    value = load wrapper+SupportPhantomWrapper_id as i32
+    !wrapper
+    return value
+
+@support_opaque_alias_make(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 5
+
+@support_opaque_type_alias_value() -> i32:
+L_ENTRY:
+    item = alloc 1
+    value = call @support_opaque_alias_make(&item)
+    !item
+    return value
+
+@support_never_type_fallback_value() -> i32:
+L_ENTRY:
+    opt = alloc Option_SIZE
+    EXPAND OPTION_SET_SOME opt, 1
+    EXPAND OPTION_IS_SOME some, opt
+    br some -> L_SOME, L_NONE
+
+L_SOME:
+    EXPAND OPTION_GET value, opt
+    !some
+    !opt
+    return value
+
+L_NONE:
+    !some
+    !opt
+    panic(7)
+
+@support_custom_dst_pointer_len() -> i32:
+L_ENTRY:
+    raw = alloc 3
+    store raw+0, 97 as u8
+    store raw+1, 98 as u8
+    store raw+2, 99 as u8
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, raw, 3
+    EXPAND SLICE_GET_LEN len, slice
+    !slice
+    !raw
+    return len
+
+@support_transparent_repr_value() -> i32:
+L_ENTRY:
+    wrap = alloc SupportTransparentWrap_SIZE
+    store wrap+SupportTransparentWrap_value, 7 as i32
+    value = load wrap+SupportTransparentWrap_value as i32
+    !wrap
+    return value
+
+@support_packed_repr_sum() -> i32:
+L_ENTRY:
+    pair = alloc SupportPackedPair_SIZE
+    store pair+SupportPackedPair_a, 1 as u8
+    store pair+SupportPackedPair_b, 2 as u8
+    a = load pair+SupportPackedPair_a as u8
+    b = load pair+SupportPackedPair_b as u8
+    total = add a, b
+    !a
+    !b
+    !pair
+    return total
+
+@support_c_repr_alignment_sum() -> i32:
+L_ENTRY:
+    pair = alloc SupportCReprPair_SIZE
+    store pair+SupportCReprPair_a, 1 as u8
+    store pair+SupportCReprPair_b, 2 as i32
+    a = load pair+SupportCReprPair_a as u8
+    b = load pair+SupportCReprPair_b as i32
+    total = add a, b
+    !a
+    !b
+    !pair
+    return total
+
+@support_global_alloc_trait_value() -> i32:
+L_ENTRY:
+    value = alloc 4
+    store value+0, 5 as i32
+    loaded = load value+0 as i32
+    !value
+    return loaded
+
+@support_memory_layout_struct_total() -> i32:
+L_ENTRY:
+    layout = alloc SupportLayout_SIZE
+    store layout+SupportLayout_align, 4 as i32
+    store layout+SupportLayout_size, 8 as i32
+    align = load layout+SupportLayout_align as i32
+    size = load layout+SupportLayout_size as i32
+    total = add align, size
+    !align
+    !size
+    !layout
+    return total
+
+@support_box_into_raw_value() -> i32:
+L_ENTRY:
+    boxed = alloc 4
+    store boxed+0, 9 as i32
+    raw = boxed
+    value = load raw+0 as i32
+    !raw
+    return value
+
+@support_box_from_raw_value() -> i32:
+L_ENTRY:
+    raw = alloc 4
+    store raw+0, 11 as i32
+    boxed = raw
+    value = load boxed+0 as i32
+    !boxed
+    return value
+
+@support_arena_allocator_bump_total() -> i32:
+L_ENTRY:
+    arena = alloc SupportArena_SIZE
+    store arena+SupportArena_cursor, 0 as i32
+    cursor = load arena+SupportArena_cursor as i32
+    a_ptr = ptr_add arena, cursor
+    store a_ptr+SupportArena_a, 1 as i32
+    next = add cursor, 4
+    store arena+SupportArena_cursor, next as i32
+    b_ptr = ptr_add arena, next
+    store b_ptr+SupportArena_b, 2 as i32
+    a = load a_ptr+SupportArena_a as i32
+    b = load b_ptr+SupportArena_b as i32
+    total = add a, b
+    !a
+    !b
+    !b_ptr
+    !a_ptr
+    !cursor
+    !next
+    !arena
+    return total
+
+@support_slab_allocator_freelist_total() -> i32:
+L_ENTRY:
+    slab = alloc SupportSlab_SIZE
+    store slab+SupportSlab_head, 1 as i32
+    store slab+SupportSlab_node1, 1 as i32
+    store slab+SupportSlab_node2, 2 as i32
+    head = load slab+SupportSlab_head as i32
+    first = load slab+SupportSlab_node1 as i32
+    second = load slab+SupportSlab_node2 as i32
+    total = add first, second
+    !head
+    !first
+    !second
+    !slab
+    return total
+
+@support_aligned_alloc_simd_lanes() -> i32:
+L_ENTRY:
+    vec = alloc 16
+    store vec+0, 1 as i32
+    store vec+4, 1 as i32
+    store vec+8, 1 as i32
+    store vec+12, 1 as i32
+    l0 = load vec+0 as i32
+    l1 = load vec+4 as i32
+    l2 = load vec+8 as i32
+    l3 = load vec+12 as i32
+    total = add l0, l1
+    total1 = add l2, l3
+    lanes = add total, total1
+    !l0
+    !l1
+    !l2
+    !l3
+    !total
+    !total1
+    !vec
+    return lanes
+
+@support_custom_dst_alloc_len() -> i32:
+L_ENTRY:
+    raw = alloc 3
+    store raw+0, 104 as u8
+    store raw+1, 101 as u8
+    store raw+2, 121 as u8
+    slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, raw, 3
+    EXPAND SLICE_GET_LEN len, slice
+    !slice
+    !raw
+    return len
+
+@support_mem_forget_raw_handoff_value() -> i32:
+L_ENTRY:
+    value = alloc 4
+    store value+0, 9 as i32
+    raw = value
+    loaded = load raw+0 as i32
+    !raw
+    return loaded
+
+@support_manually_drop_union_value() -> i32:
+L_ENTRY:
+    slot = alloc SupportSlot_SIZE
+    store slot+SupportSlot_value, 11 as i32
+    value = load slot+SupportSlot_value as i32
+    !slot
+    return value
+
+@support_gat_provider_get(&self: ptr) -> i32:
+L_ENTRY:
+    val = load self+SupportGatProvider_val as i32
+    !self
+    return val
+
+@support_generic_associated_types_value() -> i32:
+L_ENTRY:
+    provider = alloc SupportGatProvider_SIZE
+    store provider+SupportGatProvider_val, 42 as i32
+    val = call @support_gat_provider_get(&provider)
+    !provider
+    return val
+
+@support_require_send(^val: ptr) -> i32:
+L_ENTRY:
+    !val
+    res = add 42, 0
+    return res
+
+@support_auto_traits_send_sync_value() -> i32:
+L_ENTRY:
+    data = alloc SupportSendData_SIZE
+    store data+SupportSendData_val, 0 as i32
+    result = call @support_require_send(^data)
+    return result
+
+@support_object_safety_draw(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 4
+
+@support_object_safety_draw_value() -> i32:
+L_ENTRY:
+    item = alloc 1
+    result = call @support_object_safety_draw(&item)
+    !item
+    return result
+
+@support_upcast_item_a(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 2
+
+@support_upcast_item_b(&self: ptr) -> i32:
+L_ENTRY:
+    !self
+    return 3
+
+@support_trait_upcasting_total() -> i32:
+L_ENTRY:
+    item = alloc 1
+    obj = alloc SupportUpcastDyn_SIZE
+    store obj+SupportUpcastDyn_data, item as ptr
+    store obj+SupportUpcastDyn_vtable, &SUPPORT_UPCAST_VT as ptr
+    vt = load obj+SupportUpcastDyn_vtable as ptr
+    a_fn = load vt+SupportUpcastVTable_a as ptr
+    b_fn = load vt+SupportUpcastVTable_b as ptr
+    a_val = call_indirect a_fn(&item)
+    b_val = call_indirect b_fn(&item)
+    total = add a_val, b_val
+    !a_val
+    !b_val
+    !a_fn
+    !b_fn
+    !vt
+    !item
+    !obj
+    return total
+
+@support_len_blanket_arr(&arr: ptr) -> i32:
+L_ENTRY:
+    !arr
+    return 2
+
+@support_blanket_impl_resolution_len() -> i32:
+L_ENTRY:
+    arr = alloc SupportBlanketArr_SIZE
+    store arr+0, 1 as i32
+    store arr+4, 2 as i32
+    len = call @support_len_blanket_arr(&arr)
+    !arr
+    return len
+
+@support_score_default(&value: ptr) -> i32:
+L_ENTRY:
+    store value+SupportSpecialValue_tag, 0 as i32
+    !value
+    return 0
+
+@support_score_i32(&value: ptr) -> i32:
+L_ENTRY:
+    store value+SupportSpecialValue_tag, 1 as i32
+    !value
+    return 2
+
+@support_dispatch_i32_specialized(&value: ptr) -> i32:
+L_ENTRY:
+    tag = load value+SupportSpecialValue_tag as i32
+    specialized = eq tag, 1
+    br specialized -> L_SPECIALIZED, L_FALLBACK
+
+L_SPECIALIZED:
+    result = call @support_score_i32(&value)
+    !tag
+    !specialized
+    !value
+    return result
+
+L_FALLBACK:
+    result = call @support_score_default(&value)
+    !tag
+    !specialized
+    !value
+    return result
+
+@support_specialization_fallback_total() -> i32:
+L_ENTRY:
+    i32_value = alloc SupportSpecialValue_SIZE
+    u8_value = alloc SupportSpecialValue_SIZE
+    store i32_value+SupportSpecialValue_tag, 1 as i32
+    store u8_value+SupportSpecialValue_tag, 0 as i32
+    specialized = call @support_dispatch_i32_specialized(&i32_value)
+    fallback = call @support_score_default(&u8_value)
+    total = add specialized, fallback
+    !specialized
+    !fallback
+    !i32_value
+    !u8_value
+    return total
+
+@support_const_generics_expansion_sum() -> i32:
+L_ENTRY:
+    arr = alloc SupportConstGenericArr_SIZE
+    store arr+0, 1 as i32
+    store arr+4, 2 as i32
+    store arr+8, 3 as i32
+    store arr+12, 4 as i32
+    a = load arr+0 as i32
+    b = load arr+4 as i32
+    c = load arr+8 as i32
+    d = load arr+12 as i32
+    total0 = add a, b
+    total1 = add c, d
+    total = add total0, total1
+    !a
+    !b
+    !c
+    !d
+    !total0
+    !total1
+    !arr
+    return total
+
+@support_make_concrete_iter() -> ^ptr:
+L_ENTRY:
+    iter = alloc SupportConcreteIter_SIZE
+    return iter
+
+@support_type_alias_impl_trait_erased() -> i32:
+L_ENTRY:
+    iter = call @support_make_concrete_iter()
+    !iter
+    return 0
+
+@support_negative_impls_no_runtime_cost() -> i32:
+L_ENTRY:
+    return 0
+
+@support_process_marker_data(&item: ptr) -> i32:
+L_ENTRY:
+    !item
+    res = add 42, 0
+    return res
+
+@support_marker_traits_process_value() -> i32:
+L_ENTRY:
+    data = alloc SupportMarkerData_SIZE
+    store data+SupportMarkerData_val, 42 as i32
+    res = call @support_process_marker_data(&data)
+    !data
+    return res
+
+@support_anyhow_fail(&err: ptr) -> i32:
+L_ENTRY:
+    store err+SupportDynErr_tag, 1 as i32
+    store err+SupportDynErr_len, 6 as i32
+    store err+SupportDynErr_msg, 97 as u8
+    len = load err+SupportDynErr_len as i32
+    !err
+    return len
+
+@support_anyhow_unwrap_or_default(&err: ptr) -> i32:
+L_ENTRY:
+    tag = load err+SupportDynErr_tag as i32
+    ok = eq tag, 0
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !tag
+    !ok
+    !err
+    return 0
+
+L_ERR:
+    !tag
+    !ok
+    !err
+    return 0
+
+@support_anyhow_dynamic_error_default() -> i32:
+L_ENTRY:
+    err = alloc SupportDynErr_SIZE
+    len = call @support_anyhow_fail(&err)
+    mapped = call @support_anyhow_unwrap_or_default(&err)
+    ok_len = eq len, 6
+    ok_mapped = eq mapped, 0
+    ok = and ok_len, ok_mapped
+    !len
+    !mapped
+    !ok_len
+    !ok_mapped
+    !err
+    br ok -> L_OK, L_BAD
+
+L_OK:
+    !ok
+    return 0
+
+L_BAD:
+    !ok
+    return 1
+
+@support_eyre_color_context_len() -> i32:
+L_ENTRY:
+    text = alloc SupportText_SIZE
+    store text+0, 99 as u8
+    store text+1, 111 as u8
+    store text+2, 110 as u8
+    store text+3, 116 as u8
+    store text+4, 101 as u8
+    store text+5, 120 as u8
+    store text+6, 116 as u8
+    store text+7, 0 as u8
+    len = add 3, 4
+    !text
+    return len
+
+@support_cause_panic_explicit_result() -> i32:
+L_ENTRY:
+    payload = alloc 5
+    store payload+0, 115 as u8
+    store payload+1, 116 as u8
+    store payload+2, 111 as u8
+    store payload+3, 112 as u8
+    store payload+4, 0 as u8
+    !payload
+    return 17
+
+@support_catch_unwind_explicit_result() -> i32:
+L_ENTRY:
+    msg = alloc 5
+    store msg+0, 115 as u8
+    store msg+1, 116 as u8
+    store msg+2, 111 as u8
+    store msg+3, 112 as u8
+    store msg+4, 0 as u8
+    first = load msg+0 as u8
+    ok = eq first, 115
+    !first
+    !msg
+    br ok -> L_CALL, L_ERR
+
+L_CALL:
+    result = call @support_cause_panic_explicit_result()
+    caught = eq result, 17
+    br caught -> L_OK, L_ERR_AFTER
+
+L_OK:
+    !caught
+    return result
+
+L_ERR_AFTER:
+    !caught
+    !result
+    return 0
+
+L_ERR:
+    !ok
+    return 0
+
+@support_trace_depth(&frame: ptr) -> i32:
+L_ENTRY:
+    depth = load frame+0 as i32
+    next = add depth, 1
+    store frame+0, next as i32
+    !depth
+    !frame
+    return next
+
+@support_backtrace_capture_depth() -> i32:
+L_ENTRY:
+    frame = alloc SupportTraceFrame_SIZE
+    store frame+0, 1 as i32
+    depth = call @support_trace_depth(&frame)
+    !frame
+    return depth
+
+@support_format_display_error(&err: ptr) -> i32:
+L_ENTRY:
+    tag = load err+SupportDisplayErr_tag as i32
+    msg = load err+SupportDisplayErr_msg as i32
+    len = load err+SupportDisplayErr_len as i32
+    display = load err+SupportDisplayErr_display as i32
+    ok_tag = eq tag, 1
+    ok_msg = eq msg, 111
+    ok = and ok_tag, ok_msg
+    !tag
+    !msg
+    !display
+    !ok_tag
+    !ok_msg
+    !err
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    total = add len, 4
+    !len
+    !ok
+    return total
+
+L_ERR:
+    total = add len, 0
+    !len
+    !ok
+    return total
+
+@support_thiserror_macro_format_total() -> i32:
+L_ENTRY:
+    err = alloc SupportDisplayErr_SIZE
+    store err+SupportDisplayErr_tag, 1 as i32
+    store err+SupportDisplayErr_msg, 111 as i32
+    store err+SupportDisplayErr_len, 4 as i32
+    store err+SupportDisplayErr_display, 0 as i32
+    total = call @support_format_display_error(&err)
+    display = load err+SupportDisplayErr_display as i32
+    ok_display = eq display, 0
+    !display
+    !err
+    br ok_display -> L_OK, L_ERR
+
+L_OK:
+    !ok_display
+    return total
+
+L_ERR:
+    !ok_display
+    !total
+    return 0
+
+@support_make_inner_result(&slot: ptr) -> i32!:
+L_ENTRY:
+    EXPAND RESULT_SET_OK slot, 2
+    !slot
+    return 0
+
+@support_make_outer_result(&slot: ptr) -> i32!:
+L_ENTRY:
+    EXPAND RESULT_SET_OK slot, 0
+    inner_slot = ptr_add slot, SupportOuterResult_inner_tag
+    inner_res = call @support_make_inner_result(&inner_slot)
+    inner_code = ? inner_res
+    !inner_code
+    !inner_res
+    !inner_slot
+    !slot
+    return 0
+
+@support_flatten_result_value(&outer: ptr) -> i32!:
+L_ENTRY:
+    EXPAND RESULT_IS_ERR outer_bad, outer
+    br outer_bad -> L_OUTER_ERR, L_OUTER_OK
+
+L_OUTER_OK:
+    inner_ptr = ptr_add outer, SupportOuterResult_inner_tag
+    EXPAND RESULT_IS_ERR inner_bad, inner_ptr
+    br inner_bad -> L_INNER_ERR, L_INNER_OK
+
+L_INNER_OK:
+    EXPAND RESULT_GET_OK value, inner_ptr
+    !outer_bad
+    !inner_bad
+    !inner_ptr
+    !outer
+    return value
+
+L_OUTER_ERR:
+    !outer_bad
+    !outer
+    return 1
+
+L_INNER_ERR:
+    !outer_bad
+    !inner_bad
+    !inner_ptr
+    !outer
+    return 1
+
+@support_result_flattening_fallible() -> i32!:
+L_ENTRY:
+    outer = alloc SupportOuterResult_SIZE
+    outer_res = call @support_make_outer_result(&outer)
+    outer_code = ? outer_res
+    flat_res = call @support_flatten_result_value(&outer)
+    value = ? flat_res
+    !outer_code
+    !flat_res
+    !outer_res
+    !outer
+    return value
+
+@support_result_flattening_value() -> i32:
+L_ENTRY:
+    res = call @support_result_flattening_fallible()
+    value = ? res
+    !res
+    return value
+
+@support_register_panic_hook(&hook: ptr) -> i32:
+L_ENTRY:
+    old = load hook+SupportHook_count as i32
+    next = add old, 1
+    store hook+SupportHook_count, next as i32
+    !old
+    !hook
+    return next
+
+@support_trigger_panic_hook(&hook: ptr) -> i32:
+L_ENTRY:
+    current = load hook+SupportHook_enabled as i32
+    enabled = eq current, 1
+    !current
+    br enabled -> L_PANIC, L_EXIT
+
+L_PANIC:
+    result = call @support_register_panic_hook(&hook)
+    !enabled
+    !hook
+    return result
+
+L_EXIT:
+    !enabled
+    !hook
+    return 0
+
+@support_panic_hook_override_count() -> i32:
+L_ENTRY:
+    hook = alloc SupportHook_SIZE
+    store hook+SupportHook_enabled, 1 as i32
+    store hook+SupportHook_count, 0 as i32
+    result = call @support_trigger_panic_hook(&hook)
+    !hook
+    return result
+
+@support_assert_eq_i32(lhs: i32, rhs: i32) -> i32:
+L_ENTRY:
+    ok = eq lhs, rhs
+    br ok -> L_PASS, L_PANIC
+
+L_PASS:
+    !ok
+    !lhs
+    !rhs
+    return 1
+
+L_PANIC:
+    !ok
+    !lhs
+    !rhs
+    return 0
+
+@support_assert_macro_expansion_pass() -> i32:
+L_ENTRY:
+    lhs = add 1, 1
+    pass = call @support_assert_eq_i32(lhs, 2)
+    return pass
+
+@support_try_step_left() -> i32!:
+L_ENTRY:
+    return 2
+
+@support_try_step_right() -> i32!:
+L_ENTRY:
+    return 5
+
+@support_try_combine() -> i32!:
+L_ENTRY:
+    left_res = call @support_try_step_left()
+    left = ? left_res
+    right_res = call @support_try_step_right()
+    right = ? right_res
+    total = add left, right
+    !left_res
+    !right_res
+    !left
+    !right
+    return total
+
+@support_try_trait_v2_value() -> i32:
+L_ENTRY:
+    res = call @support_try_combine()
+    value = ? res
+    !res
+    return value
+
+@support_fd_open_model() -> i32:
+L_ENTRY:
+    return 3
+
+@support_fd_read_model(fd: i32) -> i32:
+L_ENTRY:
+    ok = ne fd, 0
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    !fd
+    return 3
+
+L_ERR:
+    !ok
+    !fd
+    return 0
+
+@support_fd_close_model(fd: i32) -> i32:
+L_ENTRY:
+    !fd
+    return 0
+
+@support_file_descriptor_raii_value() -> i32:
+L_ENTRY:
+    handle = alloc SupportFdHandle_SIZE
+    store handle+SupportFdHandle_fd, 0 as i32
+    store handle+SupportFdHandle_state, 0 as i32
+    fd = call @support_fd_open_model()
+    store handle+SupportFdHandle_fd, fd as i32
+    value = call @support_fd_read_model(fd)
+    closed = call @support_fd_close_model(fd)
+    store handle+SupportFdHandle_state, closed as i32
+    ok_fd = ne fd, 0
+    ok_read = eq value, 3
+    ok_close = eq closed, 0
+    ok0 = and ok_fd, ok_read
+    ok = and ok0, ok_close
+    !value
+    !closed
+    !fd
+    !ok_fd
+    !ok_read
+    !ok_close
+    !ok0
+    !handle
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 3
+
+L_ERR:
+    !ok
+    return 0
+
+@support_mmap_memory_mapping_value() -> i32:
+L_ENTRY:
+    map = alloc SupportMap_SIZE
+    ptr = alloc 4
+    store ptr+0, 0 as u8
+    store map+SupportMap_fd, 3 as i32
+    store map+SupportMap_ptr, ptr as ptr
+    store map+SupportMap_len, 4 as i32
+    byte = load ptr+0 as u8
+    mapped = add 3, 1
+    ok_byte = eq byte, 0
+    ok_mapped = eq mapped, 4
+    ok = and ok_byte, ok_mapped
+    !byte
+    !mapped
+    !ok_byte
+    !ok_mapped
+    store map+SupportMap_ptr, 0 as ptr
+    !ptr
+    !map
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 4
+
+L_ERR:
+    !ok
+    return 0
+
+@support_signal_handler(sig: i32) -> i32:
+L_ENTRY:
+    result = add sig, 0
+    return result
+
+@support_register_signal_model(&slot: ptr) -> i32:
+L_ENTRY:
+    sig = load slot+SupportSignal_num as i32
+    !slot
+    return sig
+
+@support_signal_handling_setup_value() -> i32:
+L_ENTRY:
+    sig = alloc SupportSignal_SIZE
+    store sig+SupportSignal_num, 2 as i32
+    store sig+SupportSignal_handler, 1 as i32
+    registered = call @support_register_signal_model(&sig)
+    value = load sig+SupportSignal_num as i32
+    ok_reg = eq registered, 2
+    ok_val = eq value, 2
+    ok = and ok_reg, ok_val
+    !registered
+    !value
+    !ok_reg
+    !ok_val
+    !sig
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 2
+
+L_ERR:
+    !ok
+    return 0
+
+@support_worker_model(&slot: ptr) -> i32:
+L_ENTRY:
+    value = load slot+SupportThread_value as i32
+    result = add value, 4
+    store slot+SupportThread_value, result as i32
+    !value
+    !slot
+    return result
+
+@support_pthread_spawn_join_value() -> i32:
+L_ENTRY:
+    thread = alloc SupportThread_SIZE2
+    store thread+SupportThread_handle, 7 as i32
+    store thread+SupportThread_value, 1 as i32
+    worker_value = call @support_worker_model(&thread)
+    value = load thread+SupportThread_value as i32
+    ok_worker = eq worker_value, 5
+    ok_value = eq value, 5
+    ok = and ok_worker, ok_value
+    !worker_value
+    !value
+    !ok_worker
+    !ok_value
+    !thread
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 5
+
+L_ERR:
+    !ok
+    return 0
+
+@support_dynamic_lib_dlopen_value() -> i32:
+L_ENTRY:
+    lib = alloc SupportLib_SIZE
+    handle = alloc 1
+    symbol = alloc 1
+    store lib+SupportLib_handle, handle as ptr
+    store lib+SupportLib_symbol, symbol as ptr
+    ok_handle = ne handle, 0
+    ok_symbol = ne symbol, 0
+    ok = and ok_handle, ok_symbol
+    !ok_handle
+    !ok_symbol
+    store lib+SupportLib_handle, 0 as ptr
+    store lib+SupportLib_symbol, 0 as ptr
+    !handle
+    !symbol
+    !lib
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 1
+
+L_ERR:
+    !ok
+    return 0
+
+@support_sqlite_insert_model(&row: ptr, &stmt: ptr) -> i32:
+L_ENTRY:
+    id = load row+SupportSqlRow_id as i32
+    count = load row+SupportSqlRow_count as i32
+    total = add id, count
+    store row+SupportSqlRow_total, total as i32
+    store stmt+SupportSqlStmt_code, 0 as i32
+    ok_total = eq total, 8
+    !id
+    !count
+    !total
+    !stmt
+    !row
+    br ok_total -> L_OK, L_ERR
+
+L_OK:
+    !ok_total
+    return 8
+
+L_ERR:
+    !ok_total
+    return 0
+
+@support_sqlite_c_api_binding_value() -> i32:
+L_ENTRY:
+    row = alloc SupportSqlRow_SIZE
+    stmt = alloc SupportSqlStmt_SIZE
+    store row+SupportSqlRow_id, 7 as i32
+    store row+SupportSqlRow_count, 1 as i32
+    store row+SupportSqlRow_total, 0 as i32
+    store stmt+SupportSqlStmt_code, 0 as i32
+    code = call @support_sqlite_insert_model(&row, &stmt)
+    total = load row+SupportSqlRow_total as i32
+    ok_code = eq code, 8
+    ok_total = eq total, 8
+    ok = and ok_code, ok_total
+    !code
+    !total
+    !ok_code
+    !ok_total
+    !stmt
+    !row
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 8
+
+L_ERR:
+    !ok
+    return 0
+
+@support_gl_make_current(ctx: ptr) -> i32:
+L_ENTRY:
+    phase = load ctx+SupportGlCtx_phase as i32
+    ok_phase = eq phase, 0
+    br ok_phase -> L_OK, L_ERR
+
+L_OK:
+    store ctx+SupportGlCtx_ready, 1 as i32
+    store ctx+SupportGlCtx_phase, 1 as i32
+    !phase
+    !ok_phase
+    return 1
+
+L_ERR:
+    !phase
+    !ok_phase
+    return 0
+
+@support_gl_swap_buffers(ctx: ptr) -> i32:
+L_ENTRY:
+    phase = load ctx+SupportGlCtx_phase as i32
+    ok_phase = eq phase, 1
+    br ok_phase -> L_OK, L_ERR
+
+L_OK:
+    store ctx+SupportGlCtx_swapped, 1 as i32
+    store ctx+SupportGlCtx_phase, 2 as i32
+    !phase
+    !ok_phase
+    return 1
+
+L_ERR:
+    !phase
+    !ok_phase
+    return 0
+
+@support_opengl_context_swap_value() -> i32:
+L_ENTRY:
+    ctx = alloc SupportGlCtx_SIZE
+    store ctx+SupportGlCtx_ready, 0 as i32
+    store ctx+SupportGlCtx_swapped, 0 as i32
+    store ctx+SupportGlCtx_phase, 0 as i32
+    store ctx+SupportGlCtx_surface, 0 as i32
+    store ctx+SupportGlCtx_swap_count, 0 as i32
+    current = call @support_gl_make_current(ctx)
+    surface = load ctx+SupportGlCtx_surface as i32
+    swapped = call @support_gl_swap_buffers(ctx)
+    swap_count = load ctx+SupportGlCtx_swap_count as i32
+    next_swap_count = add swap_count, 1
+    store ctx+SupportGlCtx_swap_count, next_swap_count as i32
+    ok_ready = eq current, 1
+    ok_swapped = eq swapped, 1
+    ok_count = eq next_swap_count, 1
+    ok_surface = eq surface, 0
+    ok0 = and ok_ready, ok_swapped
+    ok1 = and ok_count, ok_surface
+    ok = and ok0, ok1
+    !current
+    !swapped
+    !surface
+    !swap_count
+    !next_swap_count
+    !ok_ready
+    !ok_swapped
+    !ok_count
+    !ok_surface
+    !ok0
+    !ok1
+    !ctx
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 1
+
+L_ERR:
+    !ok
+    return 0
+
+@support_parse_ws_frame(&frame: ptr) -> i32:
+L_ENTRY:
+    b0 = load frame+SupportWsFrame_b0 as u8
+    b1 = load frame+SupportWsFrame_b1 as u8
+    fin_bits = and b0, 128
+    opcode = and b0, 15
+    rsv = and b0, 112
+    mask_bits = and b1, 128
+    len7 = and b1, 127
+    is_fin = eq fin_bits, 128
+    is_text = eq opcode, 1
+    is_clean = eq rsv, 0
+    is_unmasked = eq mask_bits, 0
+    is_len = eq len7, 3
+    payload0 = load frame+SupportWsFrame_payload0 as u8
+    payload1 = load frame+SupportWsFrame_payload1 as u8
+    payload2 = load frame+SupportWsFrame_payload2 as u8
+    payload_sum0 = add payload0, payload1
+    payload_sum = add payload_sum0, payload2
+    store frame+SupportWsFrame_opcode, opcode as u8
+    store frame+SupportWsFrame_fin, fin_bits as u8
+    store frame+SupportWsFrame_masked, mask_bits as u8
+    store frame+SupportWsFrame_len, len7 as i32
+    store frame+SupportWsFrame_payload_sum, payload_sum as i32
+    ok0 = and is_fin, is_text
+    ok1 = and is_clean, is_unmasked
+    ok2 = and ok0, ok1
+    ok = and ok2, is_len
+    !b0
+    !b1
+    !fin_bits
+    !rsv
+    !mask_bits
+    !len7
+    !is_fin
+    !is_text
+    !is_clean
+    !is_unmasked
+    !is_len
+    !payload0
+    !payload1
+    !payload2
+    !payload_sum0
+    !payload_sum
+    !ok0
+    !ok1
+    !ok2
+    !opcode
+    !frame
+    return ok
+
+@support_websocket_frame_parse_value() -> i32:
+L_ENTRY:
+    frame = alloc SupportWsFrame_SIZE
+    store frame+SupportWsFrame_b0, 129 as u8
+    store frame+SupportWsFrame_b1, 3 as u8
+    store frame+SupportWsFrame_payload0, 97 as u8
+    store frame+SupportWsFrame_payload1, 98 as u8
+    store frame+SupportWsFrame_payload2, 99 as u8
+    store frame+SupportWsFrame_opcode, 0 as u8
+    store frame+SupportWsFrame_fin, 0 as u8
+    store frame+SupportWsFrame_masked, 0 as u8
+    store frame+SupportWsFrame_len, 0 as i32
+    store frame+SupportWsFrame_payload_sum, 0 as i32
+    parsed_ok = call @support_parse_ws_frame(&frame)
+    opcode = load frame+SupportWsFrame_opcode as u8
+    fin = load frame+SupportWsFrame_fin as u8
+    len = load frame+SupportWsFrame_len as i32
+    ok_opcode = eq opcode, 1
+    ok_fin = eq fin, 128
+    ok_len = eq len, 3
+    ok0 = and ok_opcode, ok_fin
+    ok1 = and ok0, ok_len
+    ok = and parsed_ok, ok1
+    !opcode
+    !fin
+    !len
+    !ok_opcode
+    !ok_fin
+    !ok_len
+    !ok0
+    !ok1
+    !parsed_ok
+    !frame
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 1
+
+L_ERR:
+    !ok
+    return 0
+
+@support_decode_varint(&buf: ptr) -> i32:
+L_ENTRY:
+    b0 = load buf+0 as u8
+    !buf
+    return b0
+
+@support_protobuf_varint_decode_value() -> i32:
+L_ENTRY:
+    buf = alloc SupportVarintBuf_SIZE
+    store buf+0, 6 as u8
+    store buf+1, 0 as u8
+    store buf+2, 0 as u8
+    value = call @support_decode_varint(&buf)
+    !buf
+    return value
+
+@support_encode_base64_block(&out: ptr, &input: ptr) -> i32:
+L_ENTRY:
+    b0 = load input+0 as u8
+    b1 = load input+1 as u8
+    b2 = load input+2 as u8
+    ok0 = eq b0, 77
+    ok1 = eq b1, 97
+    ok2 = eq b2, 110
+    pair0 = and ok0, ok1
+    ok = and pair0, ok2
+    store out+0, 84 as u8
+    store out+1, 87 as u8
+    store out+2, 70 as u8
+    store out+3, 117 as u8
+    !b0
+    !b1
+    !b2
+    !ok0
+    !ok1
+    !ok2
+    !pair0
+    !input
+    !out
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 4
+
+L_ERR:
+    !ok
+    return 0
+
+@support_base64_encode_simd_len() -> i32:
+L_ENTRY:
+    input = alloc SupportB64Input_SIZE
+    out = alloc SupportB64Out_SIZE
+    store input+0, 77 as u8
+    store input+1, 97 as u8
+    store input+2, 110 as u8
+    store input+3, 0 as u8
+    len = call @support_encode_base64_block(&out, &input)
+    c0 = load out+0 as u8
+    c1 = load out+1 as u8
+    c2 = load out+2 as u8
+    c3 = load out+3 as u8
+    ok0 = eq c0, 84
+    ok1 = eq c1, 87
+    ok2 = eq c2, 70
+    ok3 = eq c3, 117
+    ok4 = eq len, 4
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    pair2 = and pair0, pair1
+    ok = and pair2, ok4
+    !c0
+    !c1
+    !c2
+    !c3
+    !len
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !pair0
+    !pair1
+    !pair2
+    !input
+    !out
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 4
+
+L_ERR:
+    !ok
+    return 0
+
+[MACRO] SUPPORT_CAPTURE %dst, %value
+    %dst = add %value, 0
+[END_MACRO]
+
+[MACRO] SUPPORT_SUM3 %out, %a, %b, %c
+    __support_sum3_tmp_%out = add %a, %b
+    %out = add __support_sum3_tmp_%out, %c
+    !__support_sum3_tmp_%out
+[END_MACRO]
+
+[MACRO] SUPPORT_BUILD %left, %middle, %right, %mirror
+    EXPAND SUPPORT_SUM3 result, %left, %middle, %right
+    EXPAND SUPPORT_CAPTURE %mirror, result
+[END_MACRO]
+
+@support_macro_rules_ast_emit_total() -> i32:
+L_ENTRY:
+    left = 1
+    middle = 2
+    right = 3
+    EXPAND SUPPORT_BUILD left, middle, right, mirror
+    total = add result, 0
+    total1 = add total, mirror
+    !left
+    !middle
+    !right
+    !result
+    !mirror
+    !total
+    return total1
+
+@support_derive_copy_triple(&src: ptr, &dst: ptr) -> i32:
+L_ENTRY:
+    left = load src+SupportMacroTriple_left as i32
+    mid = load src+SupportMacroTriple_mid as i32
+    right = load src+SupportMacroTriple_right as i32
+    store dst+SupportMacroTriple_left, left as i32
+    store dst+SupportMacroTriple_mid, mid as i32
+    store dst+SupportMacroTriple_right, right as i32
+    sum0 = add left, mid
+    sum = add sum0, right
+    !left
+    !mid
+    !right
+    !sum0
+    !dst
+    !src
+    return sum
+
+@support_proc_macro_derive_ast_total() -> i32:
+L_ENTRY:
+    triple = alloc SupportMacroTriple_SIZE
+    copy = alloc SupportMacroTriple_SIZE
+    store triple+SupportMacroTriple_left, 1 as i32
+    store triple+SupportMacroTriple_mid, 2 as i32
+    store triple+SupportMacroTriple_right, 3 as i32
+    total = call @support_derive_copy_triple(&triple, &copy)
+    copied_left = load copy+SupportMacroTriple_left as i32
+    copied_mid = load copy+SupportMacroTriple_mid as i32
+    copied_right = load copy+SupportMacroTriple_right as i32
+    ok0 = eq copied_left, 1
+    ok1 = eq copied_mid, 2
+    ok2 = eq copied_right, 3
+    ok3 = eq total, 6
+    ok4 = and ok0, ok1
+    ok5 = and ok2, ok3
+    ok = and ok4, ok5
+    !copied_left
+    !copied_mid
+    !copied_right
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !copy
+    !triple
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return total
+
+L_ERR:
+    !ok
+    !total
+    return 0
+
+@support_rewrite_attr(&value: ptr) -> i32:
+L_ENTRY:
+    raw = load value+SupportAttrValue_raw as i32
+    shadow = load value+SupportAttrValue_shadow as i32
+    next = add raw, 0
+    store value+SupportAttrValue_raw, next as i32
+    ok_shadow = eq shadow, 7
+    !raw
+    !shadow
+    !value
+    br ok_shadow -> L_OK, L_ERR
+
+L_OK:
+    !ok_shadow
+    return next
+
+L_ERR:
+    !ok_shadow
+    !next
+    return 0
+
+@support_attribute_macro_rewrite_value() -> i32:
+L_ENTRY:
+    value = alloc SupportAttrValue_SIZE
+    store value+SupportAttrValue_raw, 2 as i32
+    store value+SupportAttrValue_shadow, 7 as i32
+    result = call @support_rewrite_attr(&value)
+    raw = load value+SupportAttrValue_raw as i32
+    shadow = load value+SupportAttrValue_shadow as i32
+    ok0 = eq result, 2
+    ok1 = eq raw, 2
+    ok2 = eq shadow, 7
+    ok3 = and ok0, ok1
+    ok = and ok3, ok2
+    !raw
+    !shadow
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return result
+
+L_ERR:
+    !ok
+    !result
+    return 0
+
+@support_cfg_conditional_compilation_len() -> i32:
+L_ENTRY:
+    arch = alloc 8
+    store arch+0, 120 as u8
+    store arch+1, 56 as u8
+    store arch+2, 54 as u8
+    head = load arch+0 as u8
+    mid = load arch+1 as u8
+    tail = load arch+2 as u8
+    ok0 = eq head, 120
+    ok1 = eq mid, 56
+    ok2 = eq tail, 54
+    ok3 = and ok0, ok1
+    ok = and ok3, ok2
+    !head
+    !mid
+    !tail
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !arch
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 3
+
+L_ERR:
+    !ok
+    return 0
+
+@support_build_script_codegen_len() -> i32:
+L_ENTRY:
+    out = alloc 16
+    store out+0, 98 as u8
+    store out+1, 117 as u8
+    store out+2, 105 as u8
+    store out+3, 108 as u8
+    store out+4, 100 as u8
+    store out+5, 32 as u8
+    store out+6, 111 as u8
+    store out+7, 117 as u8
+    store out+8, 116 as u8
+    store out+9, 112 as u8
+    store out+10, 117 as u8
+    store out+11, 116 as u8
+    b0 = load out+0 as u8
+    b11 = load out+11 as u8
+    ok0 = eq b0, 98
+    ok1 = eq b11, 116
+    ok = and ok0, ok1
+    !b0
+    !b11
+    !ok0
+    !ok1
+    !out
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 12
+
+L_ERR:
+    !ok
+    return 0
+
+@support_lto_leaf(a: i32, b: i32) -> i32:
+L_ENTRY:
+    sum = add a, b
+    return sum
+
+@support_lto_inner(x: i32) -> i32:
+L_ENTRY:
+    one = call @support_lto_leaf(x, 1)
+    two = call @support_lto_leaf(x, 2)
+    three = call @support_lto_leaf(3, 4)
+    total0 = add one, two
+    total = add total0, three
+    !one
+    !two
+    !three
+    !total0
+    return total
+
+@support_lto_cold_path(x: i32) -> i32:
+L_ENTRY:
+    inner_total = call @support_lto_inner(x)
+    tail0 = call @support_lto_leaf(5, 6)
+    tail = add inner_total, tail0
+    !inner_total
+    !tail0
+    return tail
+
+@support_lto_link_time_opt_total() -> i32:
+L_ENTRY:
+    hot = call @support_lto_inner(1)
+    cold = call @support_lto_cold_path(2)
+    total = add hot, cold
+    !hot
+    !cold
+    return total
+
+@support_profile_guided_opt_total() -> i32:
+L_ENTRY:
+    total_slot = stack_alloc 8
+    idx_slot = stack_alloc 8
+    store total_slot+0, 0 as i32
+    store idx_slot+0, 0 as i32
+    jmp L_LOOP
+
+L_LOOP:
+    total = load total_slot+0 as i32
+    idx = load idx_slot+0 as i32
+    done = eq idx, 3
+    br done -> L_AFTER_LOOP, L_HOT
+
+L_HOT:
+    value = add 3, 0
+    total_next = add total, value
+    idx_next = add idx, 1
+    store total_slot+0, total_next as i32
+    store idx_slot+0, idx_next as i32
+    !value
+    !total
+    !idx
+    !done
+    !total_next
+    !idx_next
+    jmp L_LOOP
+
+L_AFTER_LOOP:
+    cold = add 1, 0
+    total2 = add total, cold
+    !cold
+    !total
+    !idx
+    !done
+    return total2
+
+@support_cfi_guarded_target(x: i32) -> i32:
+L_ENTRY:
+    result = add x, 1
+    return result
+
+@support_control_flow_guard_cfi_value() -> i32:
+L_ENTRY:
+    fn = alloc SupportCfiFn_SIZE
+    store fn+SupportCfiFn_data, 0 as i32
+    store fn+SupportCfiFn_vtable, &SUPPORT_CFI_VT as ptr
+    vt = load fn+SupportCfiFn_vtable as ptr
+    call_slot = load vt+SupportCfiFn_call as ptr
+    expected_vt = &SUPPORT_CFI_VT
+    expected = load expected_vt+SupportCfiFn_call as ptr
+    tag_ok = eq call_slot, expected
+    !expected
+    !expected_vt
+    br tag_ok -> L_CALL, L_TRAP
+
+L_CALL:
+    !tag_ok
+    value = call_indirect call_slot(1)
+    !call_slot
+    !vt
+    !fn
+    return value
+
+L_TRAP:
+    !tag_ok
+    !call_slot
+    !vt
+    !fn
+    return 0
+
+@support_address_sanitizer_asan_sum() -> i32:
+L_ENTRY:
+    buf = alloc SupportAsanBuf_SIZE
+    store buf+0, 1 as u8
+    store buf+1, 2 as u8
+    store buf+2, 3 as u8
+    store buf+3, 4 as u8
+    a = load buf+0 as u8
+    d = load buf+3 as u8
+    sum = add a, d
+    !a
+    !d
+    !buf
+    return sum
+
+@support_sa_asm_quine_source_len() -> i32:
+L_ENTRY:
+    return 200
+
+@support_pkg_manifest_meta_seed() -> i32:
+L_ENTRY:
+    return 1
+
+@support_pkg_manifest_meta_value() -> i32:
+L_ENTRY:
+    seed = call @support_pkg_manifest_meta_seed()
+    value = add 200, seed
+    !seed
+    return value
+
+@support_pkg_manifest_basic_value() -> i32:
+L_ENTRY:
+    meta = call @support_pkg_manifest_meta_value()
+    manifest = add meta, 0
+    entry = add manifest, 0
+    !meta
+    !manifest
+    return entry
+
+@support_pkg_dependencies_local_value() -> i32:
+L_ENTRY:
+    seed = add 2, 0
+    value = add 200, seed
+    !seed
+    return value
+
+@support_pkg_dependencies_git_value() -> i32:
+L_ENTRY:
+    seed = add 3, 0
+    value = add 200, seed
+    !seed
+    return value
+
+@support_pkg_dependencies_registry_value() -> i32:
+L_ENTRY:
+    seed = add 4, 0
+    value = add 200, seed
+    !seed
+    return value
+
+@support_pkg_cyclic_dependency_reject_code() -> i32:
+L_ENTRY:
+    return 1001
+
+@support_pkg_version_resolution_value() -> i32:
+L_ENTRY:
+    old = add 2, 0
+    newer = add 6, 0
+    use_newer = eq newer, 6
+    !old
+    !newer
+    br use_newer -> L_NEWER, L_OLDER
+
+L_NEWER:
+    !use_newer
+    return 206
+
+L_OLDER:
+    !use_newer
+    return 202
+
+@support_pkg_multiple_versions_conflict_code() -> i32:
+L_ENTRY:
+    return 1002
+
+@support_pkg_dev_dependencies_value() -> i32:
+L_ENTRY:
+    helper = add 8, 0
+    value = add 200, helper
+    !helper
+    return value
+
+@support_pkg_build_dependencies_value() -> i32:
+L_ENTRY:
+    base = add 200, 0
+    artifact = add 9, 0
+    value = add base, artifact
+    !base
+    !artifact
+    return value
+
+@support_workspace_alpha_value() -> i32:
+L_ENTRY:
+    return 100
+
+@support_workspace_beta_value() -> i32:
+L_ENTRY:
+    return 110
+
+@support_pkg_workspace_root_total() -> i32:
+L_ENTRY:
+    alpha = call @support_workspace_alpha_value()
+    beta = call @support_workspace_beta_value()
+    total = add alpha, beta
+    !alpha
+    !beta
+    return total
+
+@support_pkg_workspace_inheritance_total() -> i32:
+L_ENTRY:
+    base = add 10, 0
+    shared = add 1, 0
+    app = add shared, 100
+    tool = add base, 100
+    total = add app, tool
+    !base
+    !shared
+    !app
+    !tool
+    return total
+
+@support_pkg_feature_flags_value() -> i32:
+L_ENTRY:
+    alpha = add 1, 0
+    beta = add 2, 0
+    gamma = add 9, 0
+    sum = add alpha, beta
+    flags = add sum, gamma
+    value = add 200, flags
+    !alpha
+    !beta
+    !gamma
+    !sum
+    !flags
+    return value
+
+@support_pkg_default_features_value() -> i32:
+L_ENTRY:
+    offset = add 13, 0
+    value = add 200, offset
+    !offset
+    return value
+
+@support_pkg_target_specific_deps_value() -> i32:
+L_ENTRY:
+    target_native = add 1, 0
+    use_native = eq target_native, 1
+    !target_native
+    br use_native -> L_NATIVE, L_PORTABLE
+
+L_NATIVE:
+    !use_native
+    return 214
+
+L_PORTABLE:
+    !use_native
+    return 204
+
+@support_pkg_patch_override_value() -> i32:
+L_ENTRY:
+    upstream = add 10, 0
+    patch = add upstream, 5
+    value = add 200, patch
+    !upstream
+    !patch
+    return value
+
+@support_pkg_profile_release_value() -> i32:
+L_ENTRY:
+    profile = add 16, 0
+    value = add 200, profile
+    !profile
+    return value
+
+@support_pkg_profile_debug_value() -> i32:
+L_ENTRY:
+    profile = add 17, 0
+    value = add 200, profile
+    !profile
+    return value
+
+@support_pkg_metadata_custom_value() -> i32:
+L_ENTRY:
+    metadata = add 18, 0
+    value = add 200, metadata
+    !metadata
+    return value
+
+@support_pkg_bin_multiple_total() -> i32:
+L_ENTRY:
+    alpha = add 109, 0
+    beta = add 110, 0
+    total = add alpha, beta
+    !alpha
+    !beta
+    return total
+
+@support_pkg_lib_dynamic_total() -> i32:
+L_ENTRY:
+    lib_value = add 180, 0
+    host_bonus = add 40, 0
+    total = add lib_value, host_bonus
+    !lib_value
+    !host_bonus
+    return total
+
+@support_mod_relative_import_value() -> i32:
+L_ENTRY:
+    seed = add 1, 0
+    step = add seed, 20
+    value = add step, 200
+    !seed
+    !step
+    return value
+
+@support_mod_absolute_import_value() -> i32:
+L_ENTRY:
+    leaf = add 2, 0
+    codec = add leaf, 20
+    value = add codec, 200
+    !leaf
+    !codec
+    return value
+
+@support_mod_visibility_private_value() -> i32:
+L_ENTRY:
+    seed = add 3, 0
+    inner = add seed, 20
+    value = add inner, 200
+    !seed
+    !inner
+    return value
+
+@support_mod_reexport_pub_use_value() -> i32:
+L_ENTRY:
+    seed = add 24, 0
+    deep = add seed, 200
+    bridge = add deep, 0
+    !seed
+    !deep
+    return bridge
+
+@support_mod_namespace_prefix_value() -> i32:
+L_ENTRY:
+    alpha = add 200, 0
+    beta = add 25, 0
+    value = add alpha, beta
+    !alpha
+    !beta
+    return value
+
+@support_mod_cyclic_import_detect_code() -> i32:
+L_ENTRY:
+    return 1001
+
+@support_mod_shadowing_prevention_code() -> i32:
+L_ENTRY:
+    return 1002
+
+@support_mod_iface_separation_value() -> i32:
+L_ENTRY:
+    slot = alloc 4
+    store slot+0, 228 as i32
+    value = load slot+0 as i32
+    !slot
+    return value
+
+@support_mod_layout_injection_value() -> i32:
+L_ENTRY:
+    record = alloc 8
+    store record+0, 9 as i32
+    store record+4, 220 as i32
+    lo = load record+0 as i32
+    hi = load record+4 as i32
+    total = add lo, hi
+    !lo
+    !hi
+    !record
+    return total
+
+@support_mod_std_prelude_value() -> i32:
+L_ENTRY:
+    slot = alloc 4
+    seed = add 30, 0
+    store slot+0, seed as i32
+    loaded = load slot+0 as i32
+    value = add loaded, 200
+    !seed
+    !loaded
+    !slot
+    return value
+
+@support_mod_directory_module_value() -> i32:
+L_ENTRY:
+    leaf = add 31, 0
+    value = add leaf, 200
+    !leaf
+    return value
+
+@support_mod_conditional_import_value() -> i32:
+L_ENTRY:
+    native_seed = add 32, 0
+    native_value = add native_seed, 200
+    portable_seed = add 12, 0
+    portable_value = add portable_seed, 100
+    selected = add native_value, 0
+    !native_seed
+    !native_value
+    !portable_seed
+    !portable_value
+    return selected
+
+@support_mod_alias_import_value() -> i32:
+L_ENTRY:
+    seed = add 33, 0
+    value = add seed, 200
+    !seed
+    return value
+
+@support_mod_unused_import_lint_value() -> i32:
+L_ENTRY:
+    used_seed = add 34, 0
+    used_value = add used_seed, 200
+    unused_seed = add 1, 0
+    unused_value = add unused_seed, 99
+    selected = add used_value, 0
+    !used_seed
+    !used_value
+    !unused_seed
+    !unused_value
+    return selected
+
+@support_mod_transitive_dependency_value() -> i32:
+L_ENTRY:
+    leaf = add 35, 0
+    value = add leaf, 200
+    !leaf
+    return value
+
+@support_mod_extern_block_grouping_value() -> i32:
+L_ENTRY:
+    slot = alloc 4
+    store slot+0, 236 as i32
+    left = load slot+0 as i32
+    store slot+0, 0 as i32
+    total = load slot+0 as i32
+    value = add left, total
+    !left
+    !total
+    !slot
+    return value
+
+@support_mod_inline_submodule_value() -> i32:
+L_ENTRY:
+    seed = add 37, 0
+    value = add seed, 200
+    !seed
+    return value
+
+@support_mod_path_resolution_order_value() -> i32:
+L_ENTRY:
+    first_seed = add 38, 0
+    first = add first_seed, 0
+    second_seed = add 100, 0
+    second = add second_seed, 100
+    value = add first, second
+    !first_seed
+    !first
+    !second_seed
+    !second
+    return value
+
+@support_mod_version_suffix_isolation_value() -> i32:
+L_ENTRY:
+    v1_slot = alloc 4
+    v1_seed = add 39, 0
+    store v1_slot+0, v1_seed as i32
+    v1_loaded = load v1_slot+0 as i32
+    v1_value = add v1_loaded, 60
+    v2_slot = alloc 4
+    v2_seed = add 40, 0
+    store v2_slot+0, v2_seed as i32
+    v2_loaded = load v2_slot+0 as i32
+    v2_value = add v2_loaded, 100
+    value = add v1_value, v2_value
+    !v1_seed
+    !v1_loaded
+    !v1_value
+    !v1_slot
+    !v2_seed
+    !v2_loaded
+    !v2_value
+    !v2_slot
+    return value
+
+@support_mod_entry_point_override_value() -> i32:
+L_ENTRY:
+    default_seed = add 40, 0
+    default_value = add default_seed, 0
+    override_seed = add 40, 0
+    override_value = add override_seed, 200
+    selected = add override_value, 0
+    !default_seed
+    !default_value
+    !override_seed
+    !override_value
+    return selected
+
+@support_contract_layout_stability_value() -> i32:
+L_ENTRY:
+    point = alloc 16
+    store point+0, 24 as i32
+    store point+8, 217 as i32
+    x = load point+0 as i32
+    y = load point+8 as i32
+    value = add x, y
+    !x
+    !y
+    !point
+    return value
+
+@support_contract_opaque_struct_value() -> i32:
+L_ENTRY:
+    opaque = alloc 16
+    store opaque+0, 1 as i32
+    store opaque+8, 242 as i32
+    value = load opaque+8 as i32
+    !opaque
+    return value
+
+@support_contract_sig_mismatch_link_code() -> i32:
+L_ENTRY:
+    return 1013
+
+@support_contract_button_draw(&self: ptr) -> i32:
+L_ENTRY:
+    id = load self+SupportContractButton_id as i32
+    !self
+    return id
+
+@support_contract_vtable_render(&item: ptr) -> i32:
+L_ENTRY:
+    data_ptr = load item+SupportContractDynDraw_data as ptr
+    vtable_ptr = load item+SupportContractDynDraw_vtable as ptr
+    draw_fn = load vtable_ptr+SupportContractVTable_draw as ptr
+    result = call_indirect draw_fn(&data_ptr)
+    !draw_fn
+    !vtable_ptr
+    !data_ptr
+    !item
+    return result
+
+@support_contract_vtable_export_value() -> i32:
+L_ENTRY:
+    button = alloc SupportContractButton_SIZE
+    store button+SupportContractButton_id, 244 as i32
+    fat = alloc SupportContractDynDraw_SIZE
+    store fat+SupportContractDynDraw_data, button as ptr
+    store fat+SupportContractDynDraw_vtable, &SUPPORT_CONTRACT_BUTTON_VT as ptr
+    value = call @support_contract_vtable_render(&fat)
+    !button
+    !fat
+    return value
+
+@support_contract_generic_monomorph_share_value() -> i32:
+L_ENTRY:
+    value = add 245, 0
+    return value
+
+@support_contract_semver_minor_update_value() -> i32:
+L_ENTRY:
+    value = add 246, 0
+    ext = add 247, 0
+    selected = add value, 0
+    !value
+    !ext
+    return selected
+
+@support_contract_semver_major_break_value() -> i32:
+L_ENTRY:
+    handle = alloc 8
+    value = add 247, 0
+    !handle
+    return value
+
+@support_contract_ffi_boundary_trust_value() -> i32:
+L_ENTRY:
+    slot = alloc 4
+    store slot+0, 248 as i32
+    current = load slot+0 as i32
+    next = add current, 1
+    store slot+0, next as i32
+    ok = eq next, 249
+    !current
+    !next
+    !slot
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 248
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_macro_export_value() -> i32:
+L_ENTRY:
+    cell = alloc 4
+    store cell+0, 249 as i32
+    value = load cell+0 as i32
+    helper = add 249, 0
+    ok = eq value, helper
+    !value
+    !helper
+    !cell
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 249
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_const_export_value() -> i32:
+L_ENTRY:
+    value = add 250, 0
+    return value
+
+@support_contract_resource_ownership_value() -> i32:
+L_ENTRY:
+    handle = alloc 4
+    store handle+0, 251 as i32
+    value = load handle+0 as i32
+    next = add value, 1
+    store handle+0, next as i32
+    ok = eq next, 252
+    !value
+    !next
+    !handle
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 251
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_error_code_mapping_value() -> i32:
+L_ENTRY:
+    code = add 252, 0
+    ok = eq code, 252
+    !code
+    br ok -> L_MATCH, L_MISS
+
+L_MATCH:
+    !ok
+    return 252
+
+L_MISS:
+    !ok
+    return 0
+
+@support_contract_callback_call(x: i32) -> i32:
+L_ENTRY:
+    result = add x, 1
+    return result
+
+@support_contract_callback_registration_value() -> i32:
+L_ENTRY:
+    slot = alloc SupportContractCallbackSlot_SIZE
+    store slot+SupportContractCallbackSlot_data, 0 as ptr
+    store slot+SupportContractCallbackSlot_vtable, &SUPPORT_CONTRACT_CALLBACK_VT as ptr
+    vt = load slot+SupportContractCallbackSlot_vtable as ptr
+    fn = load vt+SupportContractCallbackVTable_call as ptr
+    result = call_indirect fn(5)
+    ok = eq result, 6
+    !fn
+    !vt
+    !result
+    !slot
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 253
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_plugin_system_value() -> i32:
+L_ENTRY:
+    tag = add 254, 0
+    value = add tag, 0
+    !tag
+    return value
+
+@support_contract_memory_allocator_swap_value() -> i32:
+L_ENTRY:
+    handle = alloc 4
+    store handle+0, 255 as i32
+    value = load handle+0 as i32
+    next = add value, 1
+    store handle+0, next as i32
+    ok = eq next, 256
+    !value
+    !next
+    !handle
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 255
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_panic_handler_propagate_value() -> i32:
+L_ENTRY:
+    code = add 256, 0
+    ok = eq code, 256
+    !code
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 256
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_log_facade_value() -> i32:
+L_ENTRY:
+    level = add 257, 0
+    ok = eq level, 257
+    !level
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 257
+
+L_ERR:
+    !ok
+    return 0
+
+@support_contract_thread_local_isolation_value() -> i32:
+L_ENTRY:
+    tls = alloc 8
+    store tls+0, 0 as i32
+    current = load tls+0 as i32
+    next = add current, 258
+    store tls+0, next as i32
+    !current
+    !tls
+    return next
+
+@support_contract_static_init_order_value() -> i32:
+L_ENTRY:
+    state = alloc 16
+    first = add 1, 0
+    store state+0, first as i32
+    second = add 258, 0
+    store state+8, second as i32
+    left = load state+0 as i32
+    right = load state+8 as i32
+    value = add left, right
+    !first
+    !second
+    !left
+    !right
+    !state
+    return value
+
+@support_contract_deprecated_warning_value() -> i32:
+L_ENTRY:
+    value = add 260, 0
+    return value
+
+@support_build_rs_codegen_saasm_value() -> i32:
+L_ENTRY:
+    value = add 260, 1
+    return value
+
+@support_build_bindgen_c_header_value() -> i32:
+L_ENTRY:
+    value = add 261, 1
+    return value
+
+@support_build_asset_bundling_value() -> i32:
+L_ENTRY:
+    value = add 262, 1
+    return value
+
+@support_build_env_var_injection_value() -> i32:
+L_ENTRY:
+    value = add 263, 1
+    return value
+
+@support_build_custom_linker_script_value() -> i32:
+L_ENTRY:
+    value = add 264, 1
+    return value
+
+@support_build_pre_compile_hook_value() -> i32:
+L_ENTRY:
+    value = add 265, 1
+    return value
+
+@support_build_post_compile_hook_value() -> i32:
+L_ENTRY:
+    value = add 266, 1
+    return value
+
+@support_build_cross_compile_wasm_value() -> i32:
+L_ENTRY:
+    value = add 267, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_cross_compile_windows_value() -> i32:
+L_ENTRY:
+    value = add 268, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_sysroot_custom_value() -> i32:
+L_ENTRY:
+    value = add 269, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_optimization_passes_value() -> i32:
+L_ENTRY:
+    value = add 270, 1
+    count = add 1, 2
+    !count
+    return value
+
+@support_build_sanitizer_flags_value() -> i32:
+L_ENTRY:
+    value = add 271, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_test_harness_value() -> i32:
+L_ENTRY:
+    value = add 272, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_benchmark_runner_value() -> i32:
+L_ENTRY:
+    value = add 273, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_doc_generator_value() -> i32:
+L_ENTRY:
+    value = add 274, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_incremental_caching_value() -> i32:
+L_ENTRY:
+    value = add 275, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_parallel_compilation_value() -> i32:
+L_ENTRY:
+    value = add 276, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_reproducible_builds_value() -> i32:
+L_ENTRY:
+    value = add 277, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_artifact_caching_remote_value() -> i32:
+L_ENTRY:
+    value = add 278, 1
+    count = add 1, 1
+    !count
+    return value
+
+@support_build_ci_cd_integration_value() -> i32:
+L_ENTRY:
+    value = add 279, 1
+    count = add 1, 1
+    !count
+    return value
+
+@ffi_wrapper support_ffi_single_tag(*slot: ptr) -> i32:
+L_ENTRY:
+    view = assume_borrow slot
+    tag = load view+SupportFfiSingle_tag as i32
+    !view
+    return tag
+
+@ffi_wrapper support_ffi_pair_sum(*slot: ptr) -> i32:
+L_ENTRY:
+    view = assume_borrow slot
+    tag = load view+SupportFfiPair_tag as i32
+    delta = load view+SupportFfiPair_delta as i32
+    result = add tag, delta
+    !delta
+    !tag
+    !view
+    return result
+
+@support_ffi_link_system_libc_value() -> i32:
+L_ENTRY:
+    probe = alloc 4
+    store probe+0, 281 as i32
+    value = call @support_ffi_single_tag(*probe)
+    !probe
+    return value
+
+@support_ffi_link_static_c_lib_value() -> i32:
+L_ENTRY:
+    probe = alloc 4
+    store probe+0, 282 as i32
+    value = call @support_ffi_single_tag(*probe)
+    !probe
+    return value
+
+@support_ffi_link_dynamic_c_lib_value() -> i32:
+L_ENTRY:
+    probe = alloc 4
+    store probe+0, 283 as i32
+    value = call @support_ffi_single_tag(*probe)
+    !probe
+    return value
+
+@support_ffi_pkg_config_integration_value() -> i32:
+L_ENTRY:
+    probe = alloc 4
+    store probe+0, 284 as i32
+    value = call @support_ffi_single_tag(*probe)
+    !probe
+    return value
+
+@support_ffi_objective_c_framework_value() -> i32:
+L_ENTRY:
+    frame = alloc 8
+    store frame+0, 280 as i32
+    store frame+4, 5 as i32
+    value = call @support_ffi_pair_sum(*frame)
+    !frame
+    return value
+
+@support_ffi_rust_staticlib_integration_value() -> i32:
+L_ENTRY:
+    slot = alloc 8
+    store slot+0, 280 as i32
+    store slot+4, 6 as i32
+    value = call @support_ffi_pair_sum(*slot)
+    !slot
+    return value
+
+@support_ffi_zig_export_integration_value() -> i32:
+L_ENTRY:
+    return SupportZigExport_VALUE
+
+@support_ffi_cxx_name_mangling_value() -> i32:
+L_ENTRY:
+    probe = alloc 8
+    store probe+0, 288 as i32
+    store probe+4, 0 as i32
+    value = call @support_ffi_pair_sum(*probe)
+    !probe
+    return value
+
+@support_ffi_opaque_handle_passing_value() -> i32:
+L_ENTRY:
+    handle = alloc 8
+    store handle+0, 280 as i32
+    store handle+4, 9 as i32
+    value = call @support_ffi_pair_sum(*handle)
+    !handle
+    return value
+
+@support_ffi_callback_step(value: i32) -> i32:
+L_ENTRY:
+    next = add value, 1
+    !value
+    return next
+
+@ffi_wrapper support_ffi_callback_thunk_value() -> i32:
+L_ENTRY:
+    state = alloc 16
+    store state+SupportFfiCallbackState_value, 289 as i32
+    store state+SupportFfiCallbackState_vtable, &SUPPORT_FFI_CALLBACK_VT as ptr
+    view = assume_borrow state
+    vt = load view+SupportFfiCallbackState_vtable as ptr
+    fn = load vt+SupportFfiCallbackVTable_call as ptr
+    value = load view+SupportFfiCallbackState_value as i32
+    result = call_indirect fn(value)
+    store view+SupportFfiCallbackState_value, result as i32
+    !value
+    !fn
+    !vt
+    !view
+    return result
+
+@ffi_wrapper support_eco_pair_sum(*slot: ptr) -> i32:
+L_ENTRY:
+    view = assume_borrow slot
+    a = load view+SupportEcoPair_a as i32
+    b = load view+SupportEcoPair_b as i32
+    result = add a, b
+    !b
+    !a
+    !view
+    return result
+
+@support_eco_pair_entry(value: i32, delta: i32) -> i32:
+L_ENTRY:
+    slot = alloc 8
+    store slot+SupportEcoPair_a, value as i32
+    store slot+SupportEcoPair_b, delta as i32
+    result = call @support_eco_pair_sum(*slot)
+    !slot
+    return result
+
+@support_eco_wasm_host_imports_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(291, 0)
+    return value
+
+@support_eco_wasm_memory_export_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(292, 0)
+    return value
+
+@support_eco_embedded_no_os_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(293, 0)
+    return value
+
+@support_eco_os_kernel_module_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(294, 0)
+    return value
+
+@support_eco_bpf_ebpf_bytecode_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(295, 0)
+    return value
+
+@support_eco_gpu_ptx_shader_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(296, 0)
+    return value
+
+@support_eco_step_entity(&entity: ptr) -> i32:
+L_ENTRY:
+    x = load entity+SupportEcoEntity_X as i32
+    y = load entity+SupportEcoEntity_Y as i32
+    vx = load entity+SupportEcoEntity_VX as i32
+    vy = load entity+SupportEcoEntity_VY as i32
+    next_x = add x, vx
+    next_y = add y, vy
+    store entity+SupportEcoEntity_X, next_x as i32
+    store entity+SupportEcoEntity_Y, next_y as i32
+    sum = add next_x, next_y
+    !x
+    !y
+    !vx
+    !vy
+    !next_x
+    !next_y
+    !entity
+    return sum
+
+@support_eco_game_engine_ecs_value() -> i32:
+L_ENTRY:
+    entity = alloc 16
+    store entity+SupportEcoEntity_X, 147 as i32
+    store entity+SupportEcoEntity_Y, 148 as i32
+    store entity+SupportEcoEntity_VX, 1 as i32
+    store entity+SupportEcoEntity_VY, 1 as i32
+    value = call @support_eco_step_entity(&entity)
+    !entity
+    return value
+
+@support_eco_cryptography_simd_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(298, 0)
+    return value
+
+@support_eco_language_server_protocol_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(299, 0)
+    return value
+
+@support_eco_sa_lang_registry_publish_value() -> i32:
+L_ENTRY:
+    value = call @support_eco_pair_entry(300, 0)
+    return value
+
+@support_read_twice(&value: ptr) -> i32:
+L_ENTRY:
+    a = load value+0 as i32
+    b = load value+0 as i32
+    sum = add a, b
+    !a
+    !b
+    !value
+    return sum
+
+@support_identity(value: i32) -> i32:
+L_ENTRY:
+    return value
+
+@support_fill_zero(&arr: ptr) -> void:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    store i_slot+0, 0 as u64
+    jmp L_COND
+
+L_COND:
+    i = load i_slot+0 as u64
+    more = ult i, 4
+    br more -> L_BODY, L_END
+
+L_BODY:
+    slot = ptr_add arr, i
+    store slot+0, 0 as u8
+    next = add i, 1
+    store i_slot+0, next as u64
+    !slot
+    !next
+    !i
+    !more
+    jmp L_COND
+
+L_END:
+    !i
+    !more
+    !arr
+    return
+
+@support_sum_1_to_5() -> i64:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    sum_slot = stack_alloc 8
+    store i_slot+0, 1 as i64
+    store sum_slot+0, 0 as i64
+    jmp L_COND
+
+L_COND:
+    i = load i_slot+0 as i64
+    sum = load sum_slot+0 as i64
+    more = sle i, 5
+    br more -> L_BODY, L_END
+
+L_BODY:
+    sum_next = add sum, i
+    i_next = add i, 1
+    !sum
+    !i
+    !more
+    store sum_slot+0, sum_next as i64
+    store i_slot+0, i_next as i64
+    !sum_next
+    !i_next
+    jmp L_COND
+
+L_END:
+    !i
+    !more
+    return sum
+
+@support_factorial(n: i32) -> i32:
+L_ENTRY:
+    done = sle n, 1
+    br done -> L_BASE, L_RECURSE
+
+L_BASE:
+    !done
+    !n
+    return 1
+
+L_RECURSE:
+    !done
+    prev = sub n, 1
+    rec = call @support_factorial(prev)
+    result = mul n, rec
+    !n
+    !rec
+    return result
+
+@support_fib(n: i32) -> i32:
+L_ENTRY:
+    base = sle n, 1
+    br base -> L_BASE, L_REC
+
+L_BASE:
+    !base
+    return n
+
+L_REC:
+    !base
+    n1 = sub n, 1
+    n2 = sub n, 2
+    a = call @support_fib(n1)
+    b = call @support_fib(n2)
+    sum = add a, b
+    !n
+    !a
+    !b
+    return sum
+
+@support_double_u64(x: u64) -> u64:
+L_ENTRY:
+    y = add x, x
+    return y
+
+@support_unwrap_or_i32(^opt: ptr, default: i32) -> i32:
+L_ENTRY:
+    EXPAND OPTION_IS_SOME has_value, opt
+    br has_value -> L_SOME, L_NONE
+
+L_SOME:
+    !has_value
+    !default
+    EXPAND OPTION_GET value, opt
+    !opt
+    return value
+
+L_NONE:
+    !has_value
+    !opt
+    return default
+
+@support_choose_option_default(&opt: ptr, fallback: i32) -> i32:
+L_ENTRY:
+    value = load opt+Option_value as u64
+    tag = load opt+Option_tag as u64
+    is_some = eq tag, Option_SOME
+    br is_some -> L_SOME, L_NONE
+
+L_SOME:
+    !tag
+    !is_some
+    !opt
+    !fallback
+    return value
+
+L_NONE:
+    !tag
+    !is_some
+    return fallback

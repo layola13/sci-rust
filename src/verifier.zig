@@ -5901,18 +5901,18 @@ fn verifyPackageIntrinsicProgram(
 
     try tmp.dir.makePath("sa_vendor/github.com/example/pkg");
 
-    var pkg_main = try tmp.dir.createFile("sa_vendor/github.com/example/pkg/index.sa", .{ .truncate = true });
+    var pkg_main = try tmp.dir.createFile("sa_vendor/github.com/example/pkg/index.sars", .{ .truncate = true });
     try pkg_main.writeAll(package_body);
     pkg_main.close();
 
-    var main_file = try tmp.dir.createFile("main.sa", .{ .truncate = true });
+    var main_file = try tmp.dir.createFile("main.sars", .{ .truncate = true });
     try main_file.writeAll(root_source);
     main_file.close();
 
-    const source_text = try tmp.dir.readFileAlloc(allocator, "main.sa", 4096);
+    const source_text = try tmp.dir.readFileAlloc(allocator, "main.sars", 4096);
     defer allocator.free(source_text);
 
-    const path = try tmp.dir.realpathAlloc(allocator, "main.sa");
+    const path = try tmp.dir.realpathAlloc(allocator, "main.sars");
     defer allocator.free(path);
     const project_root = try tmp.dir.realpathAlloc(allocator, ".");
     defer allocator.free(project_root);

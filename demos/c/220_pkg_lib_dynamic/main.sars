@@ -1,0 +1,26 @@
+@import "sa_std/io/print.sai"
+@import "host/index.sars"
+@import "lib/index.sars"
+
+@const RESULT_OK = utf8:"220\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 220 - Pkg Lib Dynamic
+// The package tree splits the library ABI from the host wrapper.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @host_total_value()
+    ok = eq value, 220
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

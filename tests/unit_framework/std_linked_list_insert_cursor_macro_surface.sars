@@ -1,0 +1,53 @@
+@import "sa_std/collections/linked_list.sars"
+
+@test "sa_std linked_list insert after before"():
+L_ENTRY:
+    EXPAND LINKED_LIST_NEW list
+    EXPAND LINKED_LIST_PUSH_BACK list, 1
+    EXPAND LINKED_LIST_PUSH_BACK list, 3
+    EXPAND LINKED_LIST_CURSOR_FRONT ok, n, list
+    EXPAND LINKED_LIST_INSERT_AFTER list, n, 2
+    EXPAND LINKED_LIST_CURSOR_BACK bok, back, list
+    EXPAND LINKED_LIST_INSERT_BEFORE list, back, 4
+    EXPAND LINKED_LIST_LEN len, list
+    EXPAND LINKED_LIST_TRY_GET g0, v0, list, 0
+    EXPAND LINKED_LIST_TRY_GET g1, v1, list, 1
+    EXPAND LINKED_LIST_TRY_GET g2, v2, list, 2
+    EXPAND LINKED_LIST_TRY_GET g3, v3, list, 3
+    EXPAND LINKED_LIST_FREE list
+
+    a = eq len, 4
+    b = eq v0, 1
+    c = eq v1, 2
+    d = eq v2, 4
+    e = eq v3, 3
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok03 = and ok02, d
+    ok_all = and ok03, e
+    !ok
+    !bok
+    !len
+    !g0
+    !v0
+    !g1
+    !v1
+    !g2
+    !v2
+    !g3
+    !v3
+    !a
+    !b
+    !c
+    !d
+    !e
+    !ok01
+    !ok02
+    !ok03
+    br ok_all -> L_OK, L_FAIL
+L_OK:
+    !ok_all
+    return 0
+L_FAIL:
+    !ok_all
+    panic(10899)

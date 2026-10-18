@@ -1,3 +1,0 @@
-// Stable numeric namespace aggregation.
-@import "nonzero.sa"
-@import "../num.sa"

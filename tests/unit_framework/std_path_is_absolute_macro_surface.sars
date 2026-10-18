@@ -1,0 +1,38 @@
+@import "sa_std/path.sars"
+@import "sa_std/string.sars"
+
+@const ABS = utf8:"/tmp"
+@const REL = utf8:"tmp"
+
+@test "sa_std path is_absolute relative"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS abs, &ABS, 4
+    EXPAND STR_FROM_PARTS rel, &REL, 3
+    EXPAND PATH_IS_ABSOLUTE a1, abs
+    EXPAND PATH_IS_RELATIVE r1, abs
+    EXPAND PATH_IS_ABSOLUTE a2, rel
+    EXPAND PATH_IS_RELATIVE r2, rel
+    a = eq a1, 1
+    b = eq r1, 0
+    c = eq a2, 0
+    d = eq r2, 1
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok = and ok02, d
+    !a1
+    !r1
+    !a2
+    !r2
+    !a
+    !b
+    !c
+    !d
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10948)

@@ -1,0 +1,23 @@
+@import "sa_std/core/rc.sars"
+@import "sa_std/core/arc.sars"
+
+@test "sa_std rc arc new get"():
+L_ENTRY:
+    EXPAND RC_NEW rc, 42
+    EXPAND RC_GET rv, rc
+    EXPAND ARC_NEW arc, 7
+    EXPAND ARC_GET av, arc
+    a = eq rv, 42
+    b = eq av, 7
+    ok = and a, b
+    !rv
+    !av
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10927)

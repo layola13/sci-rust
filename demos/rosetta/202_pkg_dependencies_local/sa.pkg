@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "saasm-0.6"
 
 [dependencies]
-local_dep = { path = "pkg/local_dep.sa" }
+local_dep = { path = "pkg/local_dep.sars" }
 
 [targets]
-entry = "main.sa"
-lib = "src/lib.sa"
+entry = "main.sars"
+lib = "src/lib.sars"
 
 [notes]
 compiler_input = false

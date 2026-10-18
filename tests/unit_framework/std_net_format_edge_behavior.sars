@@ -1,0 +1,80 @@
+@import "sa_std/net.sars"
+
+@test "sa_std address format rejects short buffers"():
+L_ENTRY:
+    ipv4 = stack_alloc NetIpv4Addr_SIZE
+    sock4 = stack_alloc NetSocketAddrV4_SIZE
+    out = stack_alloc 32
+    EXPAND NET_IPV4_NEW ipv4, 127, 0, 0, 1
+    EXPAND NET_SOCKET_ADDR_V4_NEW sock4, ipv4, 8080
+    EXPAND NET_IPV4_FORMAT_ASCII short_v4_ok, short_v4_len, ipv4, out, 8
+    EXPAND NET_SOCKET_ADDR_V4_FORMAT_ASCII short_sock_ok, short_sock_len, sock4, out, 8
+    EXPAND NET_IPV4_FORMAT_ASCII zero_v4_ok, zero_v4_len, ipv4, out, 0
+    EXPAND NET_SOCKET_ADDR_V4_FORMAT_ASCII zero_sock_ok, zero_sock_len, sock4, out, 0
+
+    ok_short_v4 = eq short_v4_ok, 0
+    ok_short_v4_len = eq short_v4_len, 0
+    ok_short_sock = eq short_sock_ok, 0
+    ok_short_sock_len = eq short_sock_len, 0
+    ok_zero_v4 = eq zero_v4_ok, 0
+    ok_zero_v4_len = eq zero_v4_len, 0
+    ok_zero_sock = eq zero_sock_ok, 0
+    ok_zero_sock_len = eq zero_sock_len, 0
+    ok1 = and ok_short_v4, ok_short_v4_len
+    ok2 = and ok1, ok_short_sock
+    ok3 = and ok2, ok_short_sock_len
+    ok4 = and ok3, ok_zero_v4
+    ok5 = and ok4, ok_zero_v4_len
+    ok6 = and ok5, ok_zero_sock
+    ok = and ok6, ok_zero_sock_len
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    !ok6
+    !ok5
+    !ok4
+    !ok3
+    !ok2
+    !ok1
+    !ok_zero_sock_len
+    !ok_zero_sock
+    !ok_zero_v4_len
+    !ok_zero_v4
+    !ok_short_sock_len
+    !ok_short_sock
+    !ok_short_v4_len
+    !ok_short_v4
+    !short_sock_len
+    !short_sock_ok
+    !short_v4_len
+    !short_v4_ok
+    !zero_sock_len
+    !zero_sock_ok
+    !zero_v4_len
+    !zero_v4_ok
+    panic(10111)
+L_PASS:
+    !ok
+    !ok6
+    !ok5
+    !ok4
+    !ok3
+    !ok2
+    !ok1
+    !ok_zero_sock_len
+    !ok_zero_sock
+    !ok_zero_v4_len
+    !ok_zero_v4
+    !ok_short_sock_len
+    !ok_short_sock
+    !ok_short_v4_len
+    !ok_short_v4
+    !short_sock_len
+    !short_sock_ok
+    !short_v4_len
+    !short_v4_ok
+    !zero_sock_len
+    !zero_sock_ok
+    !zero_v4_len
+    !zero_v4_ok
+    return 0

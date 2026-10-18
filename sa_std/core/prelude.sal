@@ -1,4 +1,4 @@
-@import "sa_core.sa"
+@import "sa_core.sars"
 @import "arc.sal"
 @import "ascii.sal"
 @import "box.sal"

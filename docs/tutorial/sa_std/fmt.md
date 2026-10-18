@@ -4,7 +4,7 @@ SA 运行时提供的对基本数据类型与自定义内存结构进行格式�
 
 ## 导入
 ```sa
-@import "sa_std/fmt.sa"
+@import "sa_std/fmt.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,9 +12,9 @@ SA 运行时提供的对基本数据类型与自定义内存结构进行格式�
 下面的完整 SA 程序展示了如何将一个正整数和一个带有符号的负整数转换成动态字符串内容并最终输出：
 
 ```sa
-@import "sa_std/fmt.sa"
-@import "sa_std/string.sa"
-@import "sa_std/io.sa"
+@import "sa_std/fmt.sars"
+@import "sa_std/string.sars"
+@import "sa_std/io.sars"
 
 @main() -> i32:
 L_ENTRY:

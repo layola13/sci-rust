@@ -1,0 +1,180 @@
+@import "sa_std/path.sars"
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
+
+@const PATH_BASE = utf8:"foo/bar"
+@const PATH_REDUNDANT = utf8:"foo//./bar/."
+@const PATH_TRAILING = utf8:"foo/bar/"
+@const PATH_JOINED = utf8:"foo/bar/baz"
+@const PATH_JOINED_ALT = utf8:"foo/bar/qux"
+@const PATH_COLLISION_SHAPE = utf8:"foobar"
+@const PATH_CHILD_BAZ = utf8:"baz"
+
+@test "sa_std path hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    EXPAND STR_FROM_PARTS base, &PATH_BASE, 7
+    EXPAND STR_FROM_PARTS redundant, &PATH_REDUNDANT, 12
+    EXPAND STR_FROM_PARTS trailing, &PATH_TRAILING, 8
+    EXPAND STR_FROM_PARTS joined, &PATH_JOINED, 11
+    EXPAND STR_FROM_PARTS joined_alt, &PATH_JOINED_ALT, 11
+    EXPAND STR_FROM_PARTS collision_shape, &PATH_COLLISION_SHAPE, 6
+    EXPAND STR_FROM_PARTS child_baz, &PATH_CHILD_BAZ, 3
+
+    writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_PATH writer_hasher, base
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, writer_hasher
+
+    EXPAND PATH_HASH base_hash, base
+    EXPAND PATH_HASH redundant_hash, redundant
+    EXPAND PATH_HASH trailing_hash, trailing
+    EXPAND PATH_HASH joined_hash, joined
+    EXPAND PATH_HASH joined_alt_hash, joined_alt
+    EXPAND PATH_HASH collision_shape_hash, collision_shape
+    EXPAND HASH_STR str_hash, base
+    EXPAND HASH_SLICE_U8 slice_hash, base
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_PATH build_hash, builder, base
+
+    state = stack_alloc RandomState_SIZE
+    manual_state_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 55, 66
+    EXPAND RANDOM_STATE_HASH_ONE_PATH state_hash, state, base
+    EXPAND RANDOM_STATE_BUILD manual_state_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_PATH manual_state_hasher, base
+    EXPAND DEFAULT_HASHER_FINISH manual_state_hash, manual_state_hasher
+
+    EXPAND PATH_BUF_FROM_PATH path_buf, base
+    EXPAND PATH_BUF_FROM_PATH redundant_buf, redundant
+
+    path_buf_writer_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW path_buf_writer_hasher
+    EXPAND DEFAULT_HASHER_WRITE_PATH_BUF path_buf_writer_hasher, path_buf
+    EXPAND DEFAULT_HASHER_FINISH path_buf_writer_hash, path_buf_writer_hasher
+
+    EXPAND PATH_BUF_HASH path_buf_hash, path_buf
+    EXPAND PATH_BUF_HASH redundant_buf_hash, redundant_buf
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_PATH_BUF path_buf_build_hash, builder, path_buf
+    EXPAND RANDOM_STATE_HASH_ONE_PATH_BUF path_buf_state_hash, state, path_buf
+
+    EXPAND PATH_BUF_PUSH path_buf, child_baz
+    EXPAND PATH_BUF_HASH changed_path_buf_hash, path_buf
+    EXPAND PATH_BUF_AS_PATH changed_view, path_buf
+    EXPAND PATH_HASH changed_view_hash, changed_view
+
+    writer_matches = eq writer_hash, base_hash
+    redundant_normalizes = eq redundant_hash, base_hash
+    trailing_normalizes = eq trailing_hash, base_hash
+    extra_component_matters = ne joined_hash, base_hash
+    component_value_matters = ne joined_alt_hash, joined_hash
+    chunk_bits_separate = ne collision_shape_hash, base_hash
+    path_not_str_hash = ne base_hash, str_hash
+    path_not_slice_hash = ne base_hash, slice_hash
+    build_matches = eq build_hash, base_hash
+    state_matches_manual = eq state_hash, manual_state_hash
+    seeded_differs_default = ne state_hash, base_hash
+    path_buf_writer_matches = eq path_buf_writer_hash, path_buf_hash
+    path_buf_forwards = eq path_buf_hash, base_hash
+    redundant_path_buf_normalizes = eq redundant_buf_hash, path_buf_hash
+    path_buf_build_matches = eq path_buf_build_hash, path_buf_hash
+    path_buf_state_matches = eq path_buf_state_hash, state_hash
+    path_buf_mutation_matters = ne changed_path_buf_hash, path_buf_hash
+    changed_buf_forwards = eq changed_path_buf_hash, changed_view_hash
+    changed_matches_joined = eq changed_path_buf_hash, joined_hash
+
+    c01 = and writer_matches, redundant_normalizes
+    c02 = and c01, trailing_normalizes
+    c03 = and c02, extra_component_matters
+    c04 = and c03, component_value_matters
+    c05 = and c04, chunk_bits_separate
+    c06 = and c05, path_not_str_hash
+    c07 = and c06, path_not_slice_hash
+    c08 = and c07, build_matches
+    c09 = and c08, state_matches_manual
+    c10 = and c09, seeded_differs_default
+    c11 = and c10, path_buf_writer_matches
+    c12 = and c11, path_buf_forwards
+    c13 = and c12, redundant_path_buf_normalizes
+    c14 = and c13, path_buf_build_matches
+    c15 = and c14, path_buf_state_matches
+    c16 = and c15, path_buf_mutation_matters
+    c17 = and c16, changed_buf_forwards
+    ok = and c17, changed_matches_joined
+
+    !writer_hash
+    !base_hash
+    !redundant_hash
+    !trailing_hash
+    !joined_hash
+    !joined_alt_hash
+    !collision_shape_hash
+    !str_hash
+    !slice_hash
+    !build_hash
+    !state_hash
+    !manual_state_hash
+    !path_buf_writer_hash
+    !path_buf_hash
+    !redundant_buf_hash
+    !path_buf_build_hash
+    !path_buf_state_hash
+    !changed_path_buf_hash
+    !changed_view_hash
+    !writer_matches
+    !redundant_normalizes
+    !trailing_normalizes
+    !extra_component_matters
+    !component_value_matters
+    !chunk_bits_separate
+    !path_not_str_hash
+    !path_not_slice_hash
+    !build_matches
+    !state_matches_manual
+    !seeded_differs_default
+    !path_buf_writer_matches
+    !path_buf_forwards
+    !redundant_path_buf_normalizes
+    !path_buf_build_matches
+    !path_buf_state_matches
+    !path_buf_mutation_matters
+    !changed_buf_forwards
+    !changed_matches_joined
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !c16
+    !c17
+    !changed_view
+    EXPAND PATH_BUF_FREE path_buf
+    EXPAND PATH_BUF_FREE redundant_buf
+    !builder
+    !base
+    !redundant
+    !trailing
+    !joined
+    !joined_alt
+    !collision_shape
+    !child_baz
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10588)
+
+L_PASS:
+    !ok
+    return 0

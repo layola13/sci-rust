@@ -1,0 +1,990 @@
+@import "sa_std/time.sars"
+
+@test "sa_std time duration and instant macros"():
+L_ENTRY:
+    EXPAND TIME_DURATION_FROM_S one_s, 2
+    EXPAND TIME_DURATION_FROM_MS one_ms, 3
+    EXPAND TIME_DURATION_FROM_US one_us, 4
+    EXPAND TIME_DURATION_FROM_NS one_ns, 5
+    EXPAND TIME_DURATION_AS_S as_s, one_s
+    EXPAND TIME_DURATION_AS_MS as_ms, one_s
+    EXPAND TIME_DURATION_AS_US as_us, one_ms
+    EXPAND TIME_DURATION_AS_NS as_ns, one_us
+
+    mixed = add one_s, one_ms
+    mixed = add mixed, one_us
+    mixed = add mixed, 567
+    EXPAND TIME_DURATION_SUBSEC_NANOS subsec_ns, mixed
+    EXPAND TIME_DURATION_SUBSEC_MICROS subsec_us, mixed
+    EXPAND TIME_DURATION_SUBSEC_MILLIS subsec_ms, mixed
+
+    EXPAND TIME_CHECKED_ADD_NS add_ok, add_value, 40, 2
+    max_ns = sub 0, 1
+    EXPAND TIME_CHECKED_ADD_NS add_overflow_ok, add_overflow_value, max_ns, 1
+    EXPAND TIME_CHECKED_SUB_NS sub_ok, sub_value, 40, 2
+    EXPAND TIME_CHECKED_SUB_NS sub_underflow_ok, sub_underflow_value, 2, 40
+    EXPAND TIME_SATURATING_ADD_NS sat_add_value, max_ns, 1
+    EXPAND TIME_SATURATING_SUB_NS sat_sub_value, 2, 40
+    EXPAND TIME_CHECKED_MUL_NS mul_ok, mul_value, 7, 6
+    EXPAND TIME_CHECKED_MUL_NS mul_zero_ok, mul_zero_value, 7, 0
+    EXPAND TIME_CHECKED_MUL_NS mul_overflow_ok, mul_overflow_value, max_ns, 2
+    EXPAND TIME_CHECKED_DIV_NS div_ok, div_value, 42, 6
+    EXPAND TIME_CHECKED_DIV_NS div_zero_ok, div_zero_value, 42, 0
+    EXPAND TIME_SATURATING_MUL_NS sat_mul_value, 7, 6
+    EXPAND TIME_SATURATING_MUL_NS sat_mul_zero_value, 7, 0
+    EXPAND TIME_SATURATING_MUL_NS sat_mul_overflow_value, max_ns, 2
+    EXPAND TIME_SATURATING_DIV_NS sat_div_value, 42, 6
+    EXPAND TIME_SATURATING_DIV_NS sat_div_zero_value, 42, 0
+    EXPAND TIME_CHECKED_DURATION_SINCE since_ok, since_value, 90, 40
+    EXPAND TIME_CHECKED_DURATION_SINCE since_underflow_ok, since_underflow_value, 40, 90
+    EXPAND TIME_DURATION_SINCE saturating_since, 40, 90
+    EXPAND TIME_INSTANT_CHECKED_ADD instant_add_ok, instant_add_value, 100, 25
+    EXPAND TIME_INSTANT_CHECKED_SUB instant_sub_ok, instant_sub_value, 100, 25
+    EXPAND TIME_INSTANT_CHECKED_DURATION_SINCE instant_since_ok, instant_since_value, 125, 100
+    EXPAND TIME_INSTANT_DURATION_SINCE instant_since_value2, 125, 100
+
+    ok_one_s = eq one_s, 2000000000
+    ok_one_ms = eq one_ms, 3000000
+    ok_one_us = eq one_us, 4000
+    ok_one_ns = eq one_ns, 5
+    ok_as_s = eq as_s, 2
+    ok_as_ms = eq as_ms, 2000
+    ok_as_us = eq as_us, 3000
+    ok_as_ns = eq as_ns, 4000
+    ok_subsec_ns = eq subsec_ns, 3004567
+    ok_subsec_us = eq subsec_us, 3004
+    ok_subsec_ms = eq subsec_ms, 3
+    ok_add_flag = eq add_ok, 1
+    ok_add_value = eq add_value, 42
+    ok_add_overflow_flag = eq add_overflow_ok, 0
+    ok_add_overflow_value = eq add_overflow_value, 0
+    ok_sub_flag = eq sub_ok, 1
+    ok_sub_value = eq sub_value, 38
+    ok_sub_underflow_flag = eq sub_underflow_ok, 0
+    ok_sub_underflow_value = eq sub_underflow_value, 0
+    ok_sat_add_value = eq sat_add_value, max_ns
+    ok_sat_sub_value = eq sat_sub_value, 0
+    ok_mul_flag = eq mul_ok, 1
+    ok_mul_value = eq mul_value, 42
+    ok_mul_zero_flag = eq mul_zero_ok, 1
+    ok_mul_zero_value = eq mul_zero_value, 0
+    ok_mul_overflow_flag = eq mul_overflow_ok, 0
+    ok_mul_overflow_value = eq mul_overflow_value, 0
+    ok_div_flag = eq div_ok, 1
+    ok_div_value = eq div_value, 7
+    ok_div_zero_flag = eq div_zero_ok, 0
+    ok_div_zero_value = eq div_zero_value, 0
+    ok_sat_mul_value = eq sat_mul_value, 42
+    ok_sat_mul_zero_value = eq sat_mul_zero_value, 0
+    ok_sat_mul_overflow_value = eq sat_mul_overflow_value, max_ns
+    ok_sat_div_value = eq sat_div_value, 7
+    ok_sat_div_zero_value = eq sat_div_zero_value, max_ns
+    ok_since_flag = eq since_ok, 1
+    ok_since_value = eq since_value, 50
+    ok_since_underflow_flag = eq since_underflow_ok, 0
+    ok_since_underflow_value = eq since_underflow_value, 0
+    ok_saturating_since = eq saturating_since, 0
+    ok_instant_add_flag = eq instant_add_ok, 1
+    ok_instant_add_value = eq instant_add_value, 125
+    ok_instant_sub_flag = eq instant_sub_ok, 1
+    ok_instant_sub_value = eq instant_sub_value, 75
+    ok_instant_since_flag = eq instant_since_ok, 1
+    ok_instant_since_value = eq instant_since_value, 25
+    ok_instant_since_value2 = eq instant_since_value2, 25
+
+    ok01 = and ok_one_s, ok_one_ms
+    ok02 = and ok01, ok_one_us
+    ok03 = and ok02, ok_one_ns
+    ok04 = and ok03, ok_as_s
+    ok05 = and ok04, ok_as_ms
+    ok06 = and ok05, ok_as_us
+    ok07 = and ok06, ok_as_ns
+    ok08 = and ok07, ok_subsec_ns
+    ok09 = and ok08, ok_subsec_us
+    ok10 = and ok09, ok_subsec_ms
+    ok11 = and ok10, ok_add_flag
+    ok12 = and ok11, ok_add_value
+    ok13 = and ok12, ok_add_overflow_flag
+    ok14 = and ok13, ok_add_overflow_value
+    ok15 = and ok14, ok_sub_flag
+    ok16 = and ok15, ok_sub_value
+    ok17 = and ok16, ok_sub_underflow_flag
+    ok18 = and ok17, ok_sub_underflow_value
+    ok19 = and ok18, ok_sat_add_value
+    ok20 = and ok19, ok_sat_sub_value
+    ok21 = and ok20, ok_mul_flag
+    ok22 = and ok21, ok_mul_value
+    ok23 = and ok22, ok_mul_zero_flag
+    ok24 = and ok23, ok_mul_zero_value
+    ok25 = and ok24, ok_mul_overflow_flag
+    ok26 = and ok25, ok_mul_overflow_value
+    ok27 = and ok26, ok_div_flag
+    ok28 = and ok27, ok_div_value
+    ok29 = and ok28, ok_div_zero_flag
+    ok30 = and ok29, ok_div_zero_value
+    ok31 = and ok30, ok_sat_mul_value
+    ok32 = and ok31, ok_sat_mul_zero_value
+    ok33 = and ok32, ok_sat_mul_overflow_value
+    ok34 = and ok33, ok_sat_div_value
+    ok35 = and ok34, ok_sat_div_zero_value
+    ok36 = and ok35, ok_since_flag
+    ok37 = and ok36, ok_since_value
+    ok38 = and ok37, ok_since_underflow_flag
+    ok39 = and ok38, ok_since_underflow_value
+    ok40 = and ok39, ok_saturating_since
+    ok41 = and ok40, ok_instant_add_flag
+    ok42 = and ok41, ok_instant_add_value
+    ok43 = and ok42, ok_instant_sub_flag
+    ok44 = and ok43, ok_instant_sub_value
+    ok45 = and ok44, ok_instant_since_flag
+    ok46 = and ok45, ok_instant_since_value
+    ok = and ok46, ok_instant_since_value2
+
+    !one_s
+    !one_ms
+    !one_us
+    !one_ns
+    !as_s
+    !as_ms
+    !as_us
+    !as_ns
+    !mixed
+    !subsec_ns
+    !subsec_us
+    !subsec_ms
+    !add_ok
+    !add_value
+    !max_ns
+    !add_overflow_ok
+    !add_overflow_value
+    !sub_ok
+    !sub_value
+    !sub_underflow_ok
+    !sub_underflow_value
+    !sat_add_value
+    !sat_sub_value
+    !mul_ok
+    !mul_value
+    !mul_zero_ok
+    !mul_zero_value
+    !mul_overflow_ok
+    !mul_overflow_value
+    !div_ok
+    !div_value
+    !div_zero_ok
+    !div_zero_value
+    !sat_mul_value
+    !sat_mul_zero_value
+    !sat_mul_overflow_value
+    !sat_div_value
+    !sat_div_zero_value
+    !since_ok
+    !since_value
+    !since_underflow_ok
+    !since_underflow_value
+    !saturating_since
+    !instant_add_ok
+    !instant_add_value
+    !instant_sub_ok
+    !instant_sub_value
+    !instant_since_ok
+    !instant_since_value
+    !instant_since_value2
+    !ok_one_s
+    !ok_one_ms
+    !ok_one_us
+    !ok_one_ns
+    !ok_as_s
+    !ok_as_ms
+    !ok_as_us
+    !ok_as_ns
+    !ok_subsec_ns
+    !ok_subsec_us
+    !ok_subsec_ms
+    !ok_add_flag
+    !ok_add_value
+    !ok_add_overflow_flag
+    !ok_add_overflow_value
+    !ok_sub_flag
+    !ok_sub_value
+    !ok_sub_underflow_flag
+    !ok_sub_underflow_value
+    !ok_sat_add_value
+    !ok_sat_sub_value
+    !ok_mul_flag
+    !ok_mul_value
+    !ok_mul_zero_flag
+    !ok_mul_zero_value
+    !ok_mul_overflow_flag
+    !ok_mul_overflow_value
+    !ok_div_flag
+    !ok_div_value
+    !ok_div_zero_flag
+    !ok_div_zero_value
+    !ok_sat_mul_value
+    !ok_sat_mul_zero_value
+    !ok_sat_mul_overflow_value
+    !ok_sat_div_value
+    !ok_sat_div_zero_value
+    !ok_since_flag
+    !ok_since_value
+    !ok_since_underflow_flag
+    !ok_since_underflow_value
+    !ok_saturating_since
+    !ok_instant_add_flag
+    !ok_instant_add_value
+    !ok_instant_sub_flag
+    !ok_instant_sub_value
+    !ok_instant_since_flag
+    !ok_instant_since_value
+    !ok_instant_since_value2
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10338)
+
+L_OK:
+    !ok
+    return
+
+@test "sa_std time duration rust-style aliases"():
+L_ENTRY:
+    EXPAND TIME_DURATION_ZERO zero_ns
+    EXPAND TIME_DURATION_MAX max_ns
+    expected_max = sub 0, 1
+    EXPAND TIME_DURATION_IS_ZERO zero_is_zero, zero_ns
+    EXPAND TIME_DURATION_IS_ZERO nonzero_is_zero, 1
+    EXPAND TIME_DURATION_CHECKED_ADD_NS checked_add_ok, checked_add_value, 40, 2
+    EXPAND TIME_DURATION_CHECKED_SUB_NS checked_sub_ok, checked_sub_value, 40, 2
+    EXPAND TIME_DURATION_CHECKED_MUL_NS checked_mul_ok, checked_mul_value, 7, 6
+    EXPAND TIME_DURATION_CHECKED_DIV_NS checked_div_ok, checked_div_value, 42, 6
+    EXPAND TIME_DURATION_SATURATING_ADD_NS sat_add_value, max_ns, 1
+    EXPAND TIME_DURATION_SATURATING_SUB_NS sat_sub_value, 2, 40
+    EXPAND TIME_DURATION_SATURATING_MUL_NS sat_mul_value, max_ns, 2
+    EXPAND TIME_DURATION_SATURATING_DIV_NS sat_div_value, 42, 0
+    EXPAND TIME_DURATION_ABS_DIFF_NS abs_diff_left, 90, 40
+    EXPAND TIME_DURATION_ABS_DIFF_NS abs_diff_right, 40, 90
+    EXPAND TIME_DURATION_NEW new_value, 2, 345
+    EXPAND TIME_DURATION_FROM_SECS secs_value, 3
+    EXPAND TIME_DURATION_FROM_MILLIS millis_value, 4
+    EXPAND TIME_DURATION_FROM_MICROS micros_value, 5
+    EXPAND TIME_DURATION_FROM_NANOS nanos_value, 6
+    EXPAND TIME_DURATION_FROM_MINS mins_value, 2
+    EXPAND TIME_DURATION_FROM_HOURS hours_value, 1
+    EXPAND TIME_DURATION_FROM_DAYS days_value, 1
+    EXPAND TIME_DURATION_FROM_WEEKS weeks_value, 1
+    EXPAND TIME_DURATION_CHECKED_NEW checked_new_ok, checked_new_value, 2, 345
+    EXPAND TIME_DURATION_CHECKED_NEW checked_new_over_ok, checked_new_over_value, 1, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS checked_secs_ok, checked_secs_value, 3
+    EXPAND TIME_DURATION_CHECKED_FROM_SECS checked_secs_fail_ok, checked_secs_fail_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_MILLIS checked_millis_ok, checked_millis_value, 4
+    EXPAND TIME_DURATION_CHECKED_FROM_MILLIS checked_millis_fail_ok, checked_millis_fail_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_MICROS checked_micros_ok, checked_micros_value, 5
+    EXPAND TIME_DURATION_CHECKED_FROM_MICROS checked_micros_fail_ok, checked_micros_fail_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_NANOS checked_nanos_ok, checked_nanos_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_MINS checked_mins_ok, checked_mins_value, 2
+    EXPAND TIME_DURATION_CHECKED_FROM_MINS checked_mins_fail_ok, checked_mins_fail_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_HOURS checked_hours_ok, checked_hours_value, 1
+    EXPAND TIME_DURATION_CHECKED_FROM_HOURS checked_hours_fail_ok, checked_hours_fail_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_DAYS checked_days_ok, checked_days_value, 1
+    EXPAND TIME_DURATION_CHECKED_FROM_DAYS checked_days_fail_ok, checked_days_fail_value, max_ns
+    EXPAND TIME_DURATION_CHECKED_FROM_WEEKS checked_weeks_ok, checked_weeks_value, 1
+    EXPAND TIME_DURATION_CHECKED_FROM_WEEKS checked_weeks_fail_ok, checked_weeks_fail_value, max_ns
+    EXPAND TIME_DURATION_AS_SECS as_secs_value, weeks_value
+    EXPAND TIME_DURATION_AS_MILLIS as_millis_value, secs_value
+    EXPAND TIME_DURATION_AS_MICROS as_micros_value, millis_value
+    EXPAND TIME_DURATION_AS_NANOS as_nanos_value, micros_value
+    EXPAND TIME_DURATION_DIV_DURATION_FLOOR floor_ok, floor_value, 10, 3
+    EXPAND TIME_DURATION_DIV_DURATION_CEIL ceil_ok, ceil_value, 10, 3
+    EXPAND TIME_DURATION_DIV_DURATION_CEIL ceil_exact_ok, ceil_exact_value, 12, 3
+    EXPAND TIME_DURATION_DIV_DURATION_FLOOR floor_zero_ok, floor_zero_value, 10, 0
+    EXPAND TIME_DURATION_DIV_DURATION_CEIL ceil_zero_ok, ceil_zero_value, 10, 0
+
+    zero_ok = eq zero_ns, 0
+    max_ok = eq max_ns, expected_max
+    zero_is_zero_ok = eq zero_is_zero, 1
+    nonzero_is_zero_ok = eq nonzero_is_zero, 0
+    checked_add_flag_ok = eq checked_add_ok, 1
+    checked_add_value_ok = eq checked_add_value, 42
+    checked_sub_flag_ok = eq checked_sub_ok, 1
+    checked_sub_value_ok = eq checked_sub_value, 38
+    checked_mul_flag_ok = eq checked_mul_ok, 1
+    checked_mul_value_ok = eq checked_mul_value, 42
+    checked_div_flag_ok = eq checked_div_ok, 1
+    checked_div_value_ok = eq checked_div_value, 7
+    sat_add_ok = eq sat_add_value, max_ns
+    sat_sub_ok = eq sat_sub_value, 0
+    sat_mul_ok = eq sat_mul_value, max_ns
+    sat_div_ok = eq sat_div_value, max_ns
+    abs_diff_left_ok = eq abs_diff_left, 50
+    abs_diff_right_ok = eq abs_diff_right, 50
+    new_ok = eq new_value, 2000000345
+    secs_ok = eq secs_value, 3000000000
+    millis_ok = eq millis_value, 4000000
+    micros_ok = eq micros_value, 5000
+    nanos_ok = eq nanos_value, 6
+    mins_ok = eq mins_value, 120000000000
+    hours_ok = eq hours_value, 3600000000000
+    days_ok = eq days_value, 86400000000000
+    weeks_ok = eq weeks_value, 604800000000000
+    checked_new_flag_ok = eq checked_new_ok, 1
+    checked_new_value_ok = eq checked_new_value, 2000000345
+    checked_new_over_flag_ok = eq checked_new_over_ok, 0
+    checked_new_over_value_ok = eq checked_new_over_value, 0
+    checked_secs_flag_ok = eq checked_secs_ok, 1
+    checked_secs_value_ok = eq checked_secs_value, 3000000000
+    checked_secs_fail_flag_ok = eq checked_secs_fail_ok, 0
+    checked_secs_fail_value_ok = eq checked_secs_fail_value, 0
+    checked_millis_flag_ok = eq checked_millis_ok, 1
+    checked_millis_value_ok = eq checked_millis_value, 4000000
+    checked_millis_fail_flag_ok = eq checked_millis_fail_ok, 0
+    checked_millis_fail_value_ok = eq checked_millis_fail_value, 0
+    checked_micros_flag_ok = eq checked_micros_ok, 1
+    checked_micros_value_ok = eq checked_micros_value, 5000
+    checked_micros_fail_flag_ok = eq checked_micros_fail_ok, 0
+    checked_micros_fail_value_ok = eq checked_micros_fail_value, 0
+    checked_nanos_flag_ok = eq checked_nanos_ok, 1
+    checked_nanos_value_ok = eq checked_nanos_value, max_ns
+    checked_mins_flag_ok = eq checked_mins_ok, 1
+    checked_mins_value_ok = eq checked_mins_value, 120000000000
+    checked_mins_fail_flag_ok = eq checked_mins_fail_ok, 0
+    checked_mins_fail_value_ok = eq checked_mins_fail_value, 0
+    checked_hours_flag_ok = eq checked_hours_ok, 1
+    checked_hours_value_ok = eq checked_hours_value, 3600000000000
+    checked_hours_fail_flag_ok = eq checked_hours_fail_ok, 0
+    checked_hours_fail_value_ok = eq checked_hours_fail_value, 0
+    checked_days_flag_ok = eq checked_days_ok, 1
+    checked_days_value_ok = eq checked_days_value, 86400000000000
+    checked_days_fail_flag_ok = eq checked_days_fail_ok, 0
+    checked_days_fail_value_ok = eq checked_days_fail_value, 0
+    checked_weeks_flag_ok = eq checked_weeks_ok, 1
+    checked_weeks_value_ok = eq checked_weeks_value, 604800000000000
+    checked_weeks_fail_flag_ok = eq checked_weeks_fail_ok, 0
+    checked_weeks_fail_value_ok = eq checked_weeks_fail_value, 0
+    as_secs_ok = eq as_secs_value, 604800
+    as_millis_ok = eq as_millis_value, 3000
+    as_micros_ok = eq as_micros_value, 4000
+    as_nanos_ok = eq as_nanos_value, 5000
+    floor_flag_ok = eq floor_ok, 1
+    floor_value_ok = eq floor_value, 3
+    ceil_flag_ok = eq ceil_ok, 1
+    ceil_value_ok = eq ceil_value, 4
+    ceil_exact_flag_ok = eq ceil_exact_ok, 1
+    ceil_exact_value_ok = eq ceil_exact_value, 4
+    floor_zero_flag_ok = eq floor_zero_ok, 0
+    floor_zero_value_ok = eq floor_zero_value, 0
+    ceil_zero_flag_ok = eq ceil_zero_ok, 0
+    ceil_zero_value_ok = eq ceil_zero_value, 0
+
+    ok01 = and zero_ok, max_ok
+    ok02 = and ok01, zero_is_zero_ok
+    ok03 = and ok02, nonzero_is_zero_ok
+    ok04 = and ok03, checked_add_flag_ok
+    ok05 = and ok04, checked_add_value_ok
+    ok06 = and ok05, checked_sub_flag_ok
+    ok07 = and ok06, checked_sub_value_ok
+    ok08 = and ok07, checked_mul_flag_ok
+    ok09 = and ok08, checked_mul_value_ok
+    ok10 = and ok09, checked_div_flag_ok
+    ok11 = and ok10, checked_div_value_ok
+    ok12 = and ok11, sat_add_ok
+    ok13 = and ok12, sat_sub_ok
+    ok14 = and ok13, sat_mul_ok
+    ok15 = and ok14, sat_div_ok
+    ok16 = and ok15, abs_diff_left_ok
+    ok17 = and ok16, abs_diff_right_ok
+    ok18 = and ok17, new_ok
+    ok19 = and ok18, secs_ok
+    ok20 = and ok19, millis_ok
+    ok21 = and ok20, micros_ok
+    ok22 = and ok21, nanos_ok
+    ok23 = and ok22, mins_ok
+    ok24 = and ok23, hours_ok
+    ok25 = and ok24, days_ok
+    ok26 = and ok25, weeks_ok
+    ok27 = and ok26, checked_new_flag_ok
+    ok28 = and ok27, checked_new_value_ok
+    ok29 = and ok28, checked_new_over_flag_ok
+    ok30 = and ok29, checked_new_over_value_ok
+    ok31 = and ok30, checked_secs_flag_ok
+    ok32 = and ok31, checked_secs_value_ok
+    ok33 = and ok32, checked_secs_fail_flag_ok
+    ok34 = and ok33, checked_secs_fail_value_ok
+    ok35 = and ok34, checked_millis_flag_ok
+    ok36 = and ok35, checked_millis_value_ok
+    ok37 = and ok36, checked_millis_fail_flag_ok
+    ok38 = and ok37, checked_millis_fail_value_ok
+    ok39 = and ok38, checked_micros_flag_ok
+    ok40 = and ok39, checked_micros_value_ok
+    ok41 = and ok40, checked_micros_fail_flag_ok
+    ok42 = and ok41, checked_micros_fail_value_ok
+    ok43 = and ok42, checked_nanos_flag_ok
+    ok44 = and ok43, checked_nanos_value_ok
+    ok45 = and ok44, checked_mins_flag_ok
+    ok46 = and ok45, checked_mins_value_ok
+    ok47 = and ok46, checked_mins_fail_flag_ok
+    ok48 = and ok47, checked_mins_fail_value_ok
+    ok49 = and ok48, checked_hours_flag_ok
+    ok50 = and ok49, checked_hours_value_ok
+    ok51 = and ok50, checked_hours_fail_flag_ok
+    ok52 = and ok51, checked_hours_fail_value_ok
+    ok53 = and ok52, checked_days_flag_ok
+    ok54 = and ok53, checked_days_value_ok
+    ok55 = and ok54, checked_days_fail_flag_ok
+    ok56 = and ok55, checked_days_fail_value_ok
+    ok57 = and ok56, checked_weeks_flag_ok
+    ok58 = and ok57, checked_weeks_value_ok
+    ok59 = and ok58, checked_weeks_fail_flag_ok
+    ok60 = and ok59, checked_weeks_fail_value_ok
+    ok61 = and ok60, as_secs_ok
+    ok62 = and ok61, as_millis_ok
+    ok63 = and ok62, as_micros_ok
+    ok64 = and ok63, as_nanos_ok
+    ok65 = and ok64, floor_flag_ok
+    ok66 = and ok65, floor_value_ok
+    ok67 = and ok66, ceil_flag_ok
+    ok68 = and ok67, ceil_value_ok
+    ok69 = and ok68, ceil_exact_flag_ok
+    ok70 = and ok69, ceil_exact_value_ok
+    ok71 = and ok70, floor_zero_flag_ok
+    ok72 = and ok71, floor_zero_value_ok
+    ok73 = and ok72, ceil_zero_flag_ok
+    ok = and ok73, ceil_zero_value_ok
+
+    !zero_ns
+    !max_ns
+    !expected_max
+    !zero_is_zero
+    !nonzero_is_zero
+    !checked_add_ok
+    !checked_add_value
+    !checked_sub_ok
+    !checked_sub_value
+    !checked_mul_ok
+    !checked_mul_value
+    !checked_div_ok
+    !checked_div_value
+    !sat_add_value
+    !sat_sub_value
+    !sat_mul_value
+    !sat_div_value
+    !abs_diff_left
+    !abs_diff_right
+    !new_value
+    !secs_value
+    !millis_value
+    !micros_value
+    !nanos_value
+    !mins_value
+    !hours_value
+    !days_value
+    !weeks_value
+    !checked_new_ok
+    !checked_new_value
+    !checked_new_over_ok
+    !checked_new_over_value
+    !checked_secs_ok
+    !checked_secs_value
+    !checked_secs_fail_ok
+    !checked_secs_fail_value
+    !checked_millis_ok
+    !checked_millis_value
+    !checked_millis_fail_ok
+    !checked_millis_fail_value
+    !checked_micros_ok
+    !checked_micros_value
+    !checked_micros_fail_ok
+    !checked_micros_fail_value
+    !checked_nanos_ok
+    !checked_nanos_value
+    !checked_mins_ok
+    !checked_mins_value
+    !checked_mins_fail_ok
+    !checked_mins_fail_value
+    !checked_hours_ok
+    !checked_hours_value
+    !checked_hours_fail_ok
+    !checked_hours_fail_value
+    !checked_days_ok
+    !checked_days_value
+    !checked_days_fail_ok
+    !checked_days_fail_value
+    !checked_weeks_ok
+    !checked_weeks_value
+    !checked_weeks_fail_ok
+    !checked_weeks_fail_value
+    !as_secs_value
+    !as_millis_value
+    !as_micros_value
+    !as_nanos_value
+    !floor_ok
+    !floor_value
+    !ceil_ok
+    !ceil_value
+    !ceil_exact_ok
+    !ceil_exact_value
+    !floor_zero_ok
+    !floor_zero_value
+    !ceil_zero_ok
+    !ceil_zero_value
+    !zero_ok
+    !max_ok
+    !zero_is_zero_ok
+    !nonzero_is_zero_ok
+    !checked_add_flag_ok
+    !checked_add_value_ok
+    !checked_sub_flag_ok
+    !checked_sub_value_ok
+    !checked_mul_flag_ok
+    !checked_mul_value_ok
+    !checked_div_flag_ok
+    !checked_div_value_ok
+    !sat_add_ok
+    !sat_sub_ok
+    !sat_mul_ok
+    !sat_div_ok
+    !abs_diff_left_ok
+    !abs_diff_right_ok
+    !new_ok
+    !secs_ok
+    !millis_ok
+    !micros_ok
+    !nanos_ok
+    !mins_ok
+    !hours_ok
+    !days_ok
+    !weeks_ok
+    !checked_new_flag_ok
+    !checked_new_value_ok
+    !checked_new_over_flag_ok
+    !checked_new_over_value_ok
+    !checked_secs_flag_ok
+    !checked_secs_value_ok
+    !checked_secs_fail_flag_ok
+    !checked_secs_fail_value_ok
+    !checked_millis_flag_ok
+    !checked_millis_value_ok
+    !checked_millis_fail_flag_ok
+    !checked_millis_fail_value_ok
+    !checked_micros_flag_ok
+    !checked_micros_value_ok
+    !checked_micros_fail_flag_ok
+    !checked_micros_fail_value_ok
+    !checked_nanos_flag_ok
+    !checked_nanos_value_ok
+    !checked_mins_flag_ok
+    !checked_mins_value_ok
+    !checked_mins_fail_flag_ok
+    !checked_mins_fail_value_ok
+    !checked_hours_flag_ok
+    !checked_hours_value_ok
+    !checked_hours_fail_flag_ok
+    !checked_hours_fail_value_ok
+    !checked_days_flag_ok
+    !checked_days_value_ok
+    !checked_days_fail_flag_ok
+    !checked_days_fail_value_ok
+    !checked_weeks_flag_ok
+    !checked_weeks_value_ok
+    !checked_weeks_fail_flag_ok
+    !checked_weeks_fail_value_ok
+    !as_secs_ok
+    !as_millis_ok
+    !as_micros_ok
+    !as_nanos_ok
+    !floor_flag_ok
+    !floor_value_ok
+    !ceil_flag_ok
+    !ceil_value_ok
+    !ceil_exact_flag_ok
+    !ceil_exact_value_ok
+    !floor_zero_flag_ok
+    !floor_zero_value_ok
+    !ceil_zero_flag_ok
+    !ceil_zero_value_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    !ok47
+    !ok48
+    !ok49
+    !ok50
+    !ok51
+    !ok52
+    !ok53
+    !ok54
+    !ok55
+    !ok56
+    !ok57
+    !ok58
+    !ok59
+    !ok60
+    !ok61
+    !ok62
+    !ok63
+    !ok64
+    !ok65
+    !ok66
+    !ok67
+    !ok68
+    !ok69
+    !ok70
+    !ok71
+    !ok72
+    !ok73
+    br ok -> L_TIME_ALIAS_OK, L_TIME_ALIAS_FAIL
+
+L_TIME_ALIAS_FAIL:
+    !ok
+    panic(10339)
+
+L_TIME_ALIAS_OK:
+    !ok
+    return
+
+@test "sa_std time duration rust method-name aliases"():
+L_ENTRY:
+    EXPAND TIME_DURATION_MAX max_ns
+    EXPAND TIME_DURATION_CHECKED_ADD add_ok, add_value, 40, 2
+    EXPAND TIME_DURATION_CHECKED_SUB sub_ok, sub_value, 40, 2
+    EXPAND TIME_DURATION_CHECKED_MUL mul_ok, mul_value, 7, 6
+    EXPAND TIME_DURATION_CHECKED_DIV div_ok, div_value, 42, 6
+    EXPAND TIME_DURATION_CHECKED_DIV div_zero_ok, div_zero_value, 42, 0
+    EXPAND TIME_DURATION_SATURATING_ADD sat_add_value, max_ns, 1
+    EXPAND TIME_DURATION_SATURATING_SUB sat_sub_value, 2, 40
+    EXPAND TIME_DURATION_SATURATING_MUL sat_mul_value, max_ns, 2
+    EXPAND TIME_DURATION_ABS_DIFF abs_diff_value, 40, 90
+
+    ok_add_flag = eq add_ok, 1
+    ok_add_value = eq add_value, 42
+    ok_sub_flag = eq sub_ok, 1
+    ok_sub_value = eq sub_value, 38
+    ok_mul_flag = eq mul_ok, 1
+    ok_mul_value = eq mul_value, 42
+    ok_div_flag = eq div_ok, 1
+    ok_div_value = eq div_value, 7
+    ok_div_zero_flag = eq div_zero_ok, 0
+    ok_div_zero_value = eq div_zero_value, 0
+    ok_sat_add = eq sat_add_value, max_ns
+    ok_sat_sub = eq sat_sub_value, 0
+    ok_sat_mul = eq sat_mul_value, max_ns
+    ok_abs_diff = eq abs_diff_value, 50
+
+    ok01 = and ok_add_flag, ok_add_value
+    ok02 = and ok01, ok_sub_flag
+    ok03 = and ok02, ok_sub_value
+    ok04 = and ok03, ok_mul_flag
+    ok05 = and ok04, ok_mul_value
+    ok06 = and ok05, ok_div_flag
+    ok07 = and ok06, ok_div_value
+    ok08 = and ok07, ok_div_zero_flag
+    ok09 = and ok08, ok_div_zero_value
+    ok10 = and ok09, ok_sat_add
+    ok11 = and ok10, ok_sat_sub
+    ok12 = and ok11, ok_sat_mul
+    ok = and ok12, ok_abs_diff
+
+    !max_ns
+    !add_ok
+    !add_value
+    !sub_ok
+    !sub_value
+    !mul_ok
+    !mul_value
+    !div_ok
+    !div_value
+    !div_zero_ok
+    !div_zero_value
+    !sat_add_value
+    !sat_sub_value
+    !sat_mul_value
+    !abs_diff_value
+    !ok_add_flag
+    !ok_add_value
+    !ok_sub_flag
+    !ok_sub_value
+    !ok_mul_flag
+    !ok_mul_value
+    !ok_div_flag
+    !ok_div_value
+    !ok_div_zero_flag
+    !ok_div_zero_value
+    !ok_sat_add
+    !ok_sat_sub
+    !ok_sat_mul
+    !ok_abs_diff
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    br ok -> L_TIME_METHOD_ALIAS_OK, L_TIME_METHOD_ALIAS_FAIL
+
+L_TIME_METHOD_ALIAS_FAIL:
+    !ok
+    panic(10340)
+
+L_TIME_METHOD_ALIAS_OK:
+    !ok
+    return
+
+@test "sa_std time instant/system_time aliases"():
+L_ENTRY:
+    EXPAND TIME_INSTANT_NOW instant0
+    EXPAND TIME_SYSTEM_TIME_NOW system0
+    EXPAND TIME_SYSTEM_TIME_FROM_UNIX_NS system1, 123456789
+    EXPAND TIME_SYSTEM_TIME_AS_UNIX_NS unix1, system1
+    EXPAND TIME_SYSTEM_TIME_CHECKED_DURATION_SINCE since_ok, since_value, 200, 50
+    EXPAND TIME_SYSTEM_TIME_DURATION_SINCE since_sat, 50, 200
+    EXPAND TIME_SYSTEM_TIME_CHECKED_ADD add_ok, add_value, 100, 25
+    EXPAND TIME_SYSTEM_TIME_CHECKED_SUB sub_ok, sub_value, 100, 25
+    EXPAND TIME_SYSTEM_TIME_CHECKED_DURATION_SINCE since_under_ok, since_under_value, 50, 200
+    EXPAND TIME_INSTANT_CHECKED_ADD iadd_ok, iadd_value, 10, 5
+    EXPAND TIME_INSTANT_CHECKED_SUB isub_ok, isub_value, 10, 5
+
+    ok_unix = eq unix1, 123456789
+    ok_since_flag = eq since_ok, 1
+    ok_since_value = eq since_value, 150
+    ok_since_sat = eq since_sat, 0
+    ok_add_flag = eq add_ok, 1
+    ok_add_value = eq add_value, 125
+    ok_sub_flag = eq sub_ok, 1
+    ok_sub_value = eq sub_value, 75
+    ok_under_flag = eq since_under_ok, 0
+    ok_under_value = eq since_under_value, 0
+    ok_iadd_flag = eq iadd_ok, 1
+    ok_iadd_value = eq iadd_value, 15
+    ok_isub_flag = eq isub_ok, 1
+    ok_isub_value = eq isub_value, 5
+
+    ok01 = and ok_unix, ok_since_flag
+    ok02 = and ok01, ok_since_value
+    ok03 = and ok02, ok_since_sat
+    ok04 = and ok03, ok_add_flag
+    ok05 = and ok04, ok_add_value
+    ok06 = and ok05, ok_sub_flag
+    ok07 = and ok06, ok_sub_value
+    ok08 = and ok07, ok_under_flag
+    ok09 = and ok08, ok_under_value
+    ok10 = and ok09, ok_iadd_flag
+    ok11 = and ok10, ok_iadd_value
+    ok12 = and ok11, ok_isub_flag
+    ok = and ok12, ok_isub_value
+
+    !instant0
+    !system0
+    !system1
+    !unix1
+    !since_ok
+    !since_value
+    !since_sat
+    !add_ok
+    !add_value
+    !sub_ok
+    !sub_value
+    !since_under_ok
+    !since_under_value
+    !iadd_ok
+    !iadd_value
+    !isub_ok
+    !isub_value
+    !ok_unix
+    !ok_since_flag
+    !ok_since_value
+    !ok_since_sat
+    !ok_add_flag
+    !ok_add_value
+    !ok_sub_flag
+    !ok_sub_value
+    !ok_under_flag
+    !ok_under_value
+    !ok_iadd_flag
+    !ok_iadd_value
+    !ok_isub_flag
+    !ok_isub_value
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10410)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std time duration default/unix epoch aliases"():
+L_ENTRY:
+    EXPAND TIME_DURATION_ZERO zero_ns
+    EXPAND TIME_DURATION_DEFAULT default_ns
+    EXPAND TIME_SYSTEM_TIME_UNIX_EPOCH epoch
+    EXPAND TIME_SYSTEM_TIME_FROM_UNIX_NS epoch2, 0
+    EXPAND TIME_INSTANT_DURATION_SINCE since0, 10, 3
+    EXPAND TIME_INSTANT_SATURATING_DURATION_SINCE since1, 10, 3
+
+    ok_zero = eq zero_ns, 0
+    ok_default = eq default_ns, 0
+    ok_epoch = eq epoch, 0
+    ok_epoch2 = eq epoch2, 0
+    ok_since = eq since0, 7
+    ok_sat = eq since1, 7
+    ok01 = and ok_zero, ok_default
+    ok02 = and ok01, ok_epoch
+    ok03 = and ok02, ok_epoch2
+    ok04 = and ok03, ok_since
+    ok = and ok04, ok_sat
+
+    !zero_ns
+    !default_ns
+    !epoch
+    !epoch2
+    !since0
+    !since1
+    !ok_zero
+    !ok_default
+    !ok_epoch
+    !ok_epoch2
+    !ok_since
+    !ok_sat
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10428)
+L_OK:
+    !ok
+    return
+
+
+@test "sa_std time instant/system defaults + sleep duration aliases"():
+L_ENTRY:
+    EXPAND TIME_INSTANT_DEFAULT inst0
+    EXPAND TIME_SYSTEM_TIME_DEFAULT sys0
+    EXPAND TIME_SYSTEM_TIME_UNIX_EPOCH epoch
+    EXPAND TIME_SLEEP_DURATION_NS 0
+    ok_inst = eq inst0, 0
+    ok_sys = eq sys0, epoch
+    ok = and ok_inst, ok_sys
+    !inst0
+    !sys0
+    !epoch
+    !ok_inst
+    !ok_sys
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10447)
+L_OK:
+    !ok
+    return
+

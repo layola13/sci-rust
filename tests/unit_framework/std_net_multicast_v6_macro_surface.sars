@@ -1,0 +1,31 @@
+@import "sa_std/net.sars"
+
+@test "sa_std udp multicast v6 option surface"():
+L_ENTRY:
+    socket = add 0, 0
+    enabled = add 0, -1
+    hops = add 0, 999
+
+    EXPAND NET_UDP_SET_MULTICAST_LOOP_V6 loop_set_status, socket, 1
+    EXPAND NET_UDP_SET_MULTICAST_HOPS_V6 hops_set_status, socket, 16
+    EXPAND NET_UDP_MULTICAST_LOOP_V6 loop_get_status, loop_enabled, socket
+    EXPAND NET_UDP_MULTICAST_HOPS_V6 hops_get_status, hops_value, socket
+
+    loop_set_failed = ne loop_set_status, SA_NET_OK
+    hops_set_failed = ne hops_set_status, SA_NET_OK
+    loop_get_failed = ne loop_get_status, SA_NET_OK
+    hops_get_failed = ne hops_get_status, SA_NET_OK
+    !loop_set_failed
+    !hops_set_failed
+    !loop_get_failed
+    !hops_get_failed
+    !loop_set_status
+    !hops_set_status
+    !loop_get_status
+    !hops_get_status
+    !loop_enabled
+    !hops_value
+    !socket
+    !enabled
+    !hops
+    return 0

@@ -1,0 +1,112 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec into_iter slice view macro surface"():
+L_ENTRY:
+    EXPAND VEC_NEW vec
+    EXPAND VEC_PUSH_U64 vec, 11
+    EXPAND VEC_PUSH_U64 vec, 22
+    EXPAND VEC_PUSH_U64 vec, 33
+
+    EXPAND VEC_INTO_ITER_U64 iter, backing_vec, vec
+    initial_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_SLICE_U64 initial_slice, iter
+    initial_len = load initial_slice+Slice_len as u64
+    EXPAND SLICE_GET_U64 initial_first, initial_slice, 0
+    EXPAND ITER_NEXT_U64 first_ok, first, iter
+
+    rem_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_SLICE_U64 rem_slice, iter
+    rem_len = load rem_slice+Slice_len as u64
+    EXPAND SLICE_GET_U64 rem_first, rem_slice, 0
+
+    mut_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_MUT_SLICE_U64 mut_slice, iter
+    mut_len = load mut_slice+Slice_len as u64
+    EXPAND SLICE_GET_MUT_PTR_U64 mut_second_ptr, mut_slice, 1
+    store mut_second_ptr+0, 99 as u64
+
+    EXPAND ITER_NEXT_U64 second_ok, second, iter
+    EXPAND ITER_NEXT_U64 third_ok, third, iter
+    EXPAND ITER_NEXT_U64 done_ok, done_value, iter
+    EXPAND VEC_GET_U64 backing_third, backing_vec, 2
+    EXPAND VEC_FREE backing_vec
+
+    EXPAND VEC_INTO_ITER_DEFAULT_U64 empty_iter, empty_backing
+    empty_slice = stack_alloc Slice_SIZE
+    EXPAND VEC_INTO_ITER_AS_SLICE_U64 empty_slice, empty_iter
+    empty_len = load empty_slice+Slice_len as u64
+    EXPAND VEC_FREE empty_backing
+
+    ok_initial_len = eq initial_len, 3
+    ok_initial_first = eq initial_first, 11
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 11
+    ok_rem_len = eq rem_len, 2
+    ok_rem_first = eq rem_first, 22
+    ok_mut_len = eq mut_len, 2
+    ok_second_flag = eq second_ok, 1
+    ok_second = eq second, 22
+    ok_third_flag = eq third_ok, 1
+    ok_third = eq third, 99
+    ok_done_flag = eq done_ok, 0
+    ok_done_value = eq done_value, 0
+    ok_backing_third = eq backing_third, 99
+    ok_empty_len = eq empty_len, 0
+
+    ok = and ok_initial_len, ok_initial_first
+    ok = and ok, ok_first_flag
+    ok = and ok, ok_first
+    ok = and ok, ok_rem_len
+    ok = and ok, ok_rem_first
+    ok = and ok, ok_mut_len
+    ok = and ok, ok_second_flag
+    ok = and ok, ok_second
+    ok = and ok, ok_third_flag
+    ok = and ok, ok_third
+    ok = and ok, ok_done_flag
+    ok = and ok, ok_done_value
+    ok = and ok, ok_backing_third
+    ok = and ok, ok_empty_len
+
+    !initial_len
+    !initial_first
+    !first_ok
+    !first
+    !rem_len
+    !rem_first
+    !mut_len
+    !mut_second_ptr
+    !second_ok
+    !second
+    !third_ok
+    !third
+    !done_ok
+    !done_value
+    !backing_third
+    !empty_len
+    !ok_initial_len
+    !ok_initial_first
+    !ok_first_flag
+    !ok_first
+    !ok_rem_len
+    !ok_rem_first
+    !ok_mut_len
+    !ok_second_flag
+    !ok_second
+    !ok_third_flag
+    !ok_third
+    !ok_done_flag
+    !ok_done_value
+    !ok_backing_third
+    !ok_empty_len
+    !iter
+    !empty_iter
+    br ok -> L_VEC_INTO_ITER_SLICE_OK, L_VEC_INTO_ITER_SLICE_FAIL
+
+L_VEC_INTO_ITER_SLICE_FAIL:
+    !ok
+    panic(10709)
+
+L_VEC_INTO_ITER_SLICE_OK:
+    !ok
+    return

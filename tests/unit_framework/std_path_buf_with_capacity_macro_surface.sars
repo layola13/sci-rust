@@ -1,0 +1,22 @@
+@import "sa_std/path.sars"
+
+@test "sa_std path_buf with_capacity"():
+L_ENTRY:
+    EXPAND PATH_BUF_WITH_CAPACITY pb, 32
+    EXPAND PATH_BUF_CAPACITY cap, pb
+    EXPAND PATH_BUF_LEN ln, pb
+    EXPAND PATH_BUF_FREE pb
+    a = uge cap, 32
+    b = eq ln, 0
+    ok = and a, b
+    !cap
+    !ln
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10952)

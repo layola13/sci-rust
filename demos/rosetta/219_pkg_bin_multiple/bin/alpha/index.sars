@@ -1,0 +1,6 @@
+@import "bin/alpha/helpers/index.sars"
+
+@alpha_total_value() -> i32:
+L_ENTRY:
+    value = call @alpha_impl_value()
+    return value

@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "ns/prefix/index.sars"
+
+@const RESULT_OK = utf8:"225\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 225 - Mod Namespace Prefix
+// Folder names and function names both carry the ns_prefix_ prefix.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @ns_prefix_value()
+    ok = eq value, 225
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

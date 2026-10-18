@@ -1,0 +1,22 @@
+@import "sa_std/os/unix_ffi.sars"
+
+@test "sa_std os_string with_capacity"():
+L_ENTRY:
+    EXPAND OS_STRING_WITH_CAPACITY os, 16
+    EXPAND OS_STRING_CAPACITY cap, os
+    EXPAND OS_STRING_LEN ln, os
+    EXPAND OS_STRING_FREE os
+    a = uge cap, 16
+    b = eq ln, 0
+    ok = and a, b
+    !cap
+    !ln
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10965)

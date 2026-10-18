@@ -1,0 +1,154 @@
+@import "../support/index.sars"
+
+@main():
+L_ENTRY:
+    call @"03_if_else branch path"()
+    call @"05_struct field layout"()
+    call @"06_enum_and_match tag dispatch"()
+    call @"28_borrow_chains repeated load"()
+    call @"41_module_imports helper import"()
+    call @"sa_std json dom roundtrip"()
+    call @"sa_std json stream tokens"()
+    call @"sa_std regex groups"()
+    call @"sa_std mem"()
+    call @"sa_std string"()
+    call @"sa_std vec"()
+    call @"sa_std hashmap"()
+    call @"sa_std btree"()
+    // call @"sa_std net"() // skip net for now as it might need external setup
+    return
+
+// This suite condenses representative behaviors from the completed rosetta
+// demos into one native-unit-test corpus.
+
+@test "03_if_else branch path"():
+L_ENTRY:
+    value = call @support_pick_max(10, 20)
+    ok = eq value, 20
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(201)
+
+@test "05_struct field layout"():
+L_ENTRY:
+    point = call @support_make_point(10, 20)
+    sum = call @support_sum_point(^point)
+    ok = eq sum, 30
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(202)
+
+@test "06_enum_and_match tag dispatch"():
+L_ENTRY:
+    sum = call @support_dispatch_msg(1, 10, 20)
+    ok = eq sum, 30
+    !sum
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(203)
+
+@test "28_borrow_chains repeated load"():
+L_ENTRY:
+    value = alloc 4
+    store value+0, 6 as i32
+    result = call @support_read_twice(&value)
+    ok = eq result, 12
+    !result
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(204)
+
+@test "41_module_imports helper import"():
+L_ENTRY:
+    result = call @support_identity(42)
+    ok = eq result, 42
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(205)
+
+@test "sa_std json dom roundtrip"():
+L_ENTRY:
+    call @support_json_dom_roundtrip()
+    return
+
+@test "sa_std json stream tokens"():
+L_ENTRY:
+    call @support_json_stream_tokens()
+    return
+
+@test "sa_std regex groups"():
+L_ENTRY:
+    call @support_regex_groups()
+    return
+
+@test "sa_std mem"():
+L_ENTRY:
+    call @support_mem_surface()
+    return
+
+@test "sa_std string"():
+L_ENTRY:
+    call @support_string_surface()
+    return
+
+@test "sa_std vec"():
+L_ENTRY:
+    call @support_vec_surface()
+    return
+
+@test "sa_std hashmap"():
+L_ENTRY:
+    call @support_hashmap_surface()
+    return
+
+@test "sa_std btree"():
+L_ENTRY:
+    call @support_btree_surface()
+    return
+
+@test "sa_std net"():
+L_ENTRY:
+    call @support_net_surface()
+    return
+
+@test should_panic "178 panic hook path"():
+L_ENTRY:
+    panic(99)
+
+@test ignored "framework ignored case"():
+L_ENTRY:
+    return

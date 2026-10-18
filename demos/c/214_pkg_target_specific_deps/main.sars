@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "src/index.sars"
+
+@const RESULT_OK = utf8:"214\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 214 - Pkg Target Specific Deps
+// Native and portable helper files are both present, but the target switch picks one.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @src_package_value()
+    ok = eq value, 214
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

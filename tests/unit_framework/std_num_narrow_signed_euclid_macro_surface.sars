@@ -1,0 +1,51 @@
+@import "sa_std/num.sars"
+
+@test "sa_std num narrow signed direct euclidean div/rem macro surface"():
+L_ENTRY:
+    EXPAND NUM_I8_DIV_EUCLID i8_div_neg_pos, -7, 3
+    EXPAND NUM_I8_REM_EUCLID i8_rem_neg_pos, -7, 3
+    EXPAND NUM_I8_DIV_EUCLID i8_div_pos_neg, 7, -3
+    EXPAND NUM_I8_REM_EUCLID i8_rem_pos_neg, 7, -3
+
+    EXPAND NUM_I16_DIV_EUCLID i16_div_neg_neg, -7, -3
+    EXPAND NUM_I16_REM_EUCLID i16_rem_neg_neg, -7, -3
+    EXPAND NUM_I16_DIV_EUCLID i16_div_pos_pos, 7, 3
+    EXPAND NUM_I16_REM_EUCLID i16_rem_pos_pos, 7, 3
+
+    EXPAND NUM_I32_DIV_EUCLID i32_div_neg_pos, -1025, 64
+    EXPAND NUM_I32_REM_EUCLID i32_rem_neg_pos, -1025, 64
+    EXPAND NUM_I32_DIV_EUCLID i32_div_pos_neg, 1025, -64
+    EXPAND NUM_I32_REM_EUCLID i32_rem_pos_neg, 1025, -64
+
+    ok01 = eq i8_div_neg_pos, -3
+    ok02 = eq i8_rem_neg_pos, 2
+    ok03 = eq i8_div_pos_neg, -2
+    ok04 = eq i8_rem_pos_neg, 1
+    ok05 = eq i16_div_neg_neg, 3
+    ok06 = eq i16_rem_neg_neg, 2
+    ok07 = eq i16_div_pos_pos, 2
+    ok08 = eq i16_rem_pos_pos, 1
+    ok09 = eq i32_div_neg_pos, -17
+    ok10 = eq i32_rem_neg_pos, 63
+    ok11 = eq i32_div_pos_neg, -16
+    ok12 = eq i32_rem_pos_neg, 1
+
+    chain01 = and ok01, ok02
+    chain02 = and chain01, ok03
+    chain03 = and chain02, ok04
+    chain04 = and chain03, ok05
+    chain05 = and chain04, ok06
+    chain06 = and chain05, ok07
+    chain07 = and chain06, ok08
+    chain08 = and chain07, ok09
+    chain09 = and chain08, ok10
+    chain10 = and chain09, ok11
+    ok = and chain10, ok12
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10672)
+
+L_PASS:
+    return 0

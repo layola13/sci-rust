@@ -1,0 +1,202 @@
+@import "sa_std/process.sars"
+
+@test "sa_std process abort macro surface"():
+L_ENTRY:
+    // PROCESS_ABORT is intentionally not invoked here because it terminates
+    // the current process; runtime behavior is covered by the C fork smoke.
+    abort_macro_available = add 1, 0
+    br abort_macro_available -> L_PASS4, L_FAIL4
+
+L_FAIL4:
+    !abort_macro_available
+    panic(10213)
+
+L_PASS4:
+    !abort_macro_available
+    return 0
+
+@test "sa_std process uid/gid aliases"():
+L_ENTRY:
+    EXPAND PROCESS_USER_ID uid0
+    EXPAND PROCESS_UID uid1
+    EXPAND PROCESS_GROUP_ID gid0
+    EXPAND PROCESS_GID gid1
+
+    ok_uid_eq = eq uid0, uid1
+    ok_gid_eq = eq gid0, gid1
+    ok = and ok_uid_eq, ok_gid_eq
+
+    !uid0
+    !uid1
+    !gid0
+    !gid1
+    !ok_uid_eq
+    !ok_gid_eq
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10422)
+
+L_PASS:
+    !ok
+    return 0
+
+@test "sa_std process exit_code alias"():
+L_ENTRY:
+    exit_status = stack_alloc ProcessExitStatus_SIZE
+    EXPAND PROCESS_EXIT_STATUS_NEW exit_status, 0
+    EXPAND PROCESS_EXIT_STATUS_CODE code0, exit_status
+    EXPAND PROCESS_EXIT_CODE code1, exit_status
+    EXPAND PROCESS_EXIT_STATUS_SUCCESS ok0, exit_status
+    ok_code = eq code0, code1
+    ok_zero = eq code1, 0
+    ok01 = and ok_code, ok_zero
+    ok = and ok01, ok0
+    !code0
+    !code1
+    !ok0
+    !ok_code
+    !ok_zero
+    !ok01
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10443)
+
+L_OK:
+    !ok
+    return 0
+
+@test "sa_std process success alias"():
+L_ENTRY:
+    exit_status = stack_alloc ProcessExitStatus_SIZE
+    EXPAND PROCESS_EXIT_STATUS_NEW exit_status, 0
+    EXPAND PROCESS_EXIT_STATUS_SUCCESS ok0, exit_status
+    EXPAND PROCESS_SUCCESS ok1, exit_status
+    ok_eq = eq ok0, ok1
+    ok_true = eq ok1, 1
+    ok = and ok_eq, ok_true
+    !ok0
+    !ok1
+    !ok_eq
+    !ok_true
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10445)
+
+L_OK:
+    !ok
+    return 0
+
+@test "sa_std process is_success/code/output_status aliases"():
+L_ENTRY:
+    exit_status = stack_alloc ProcessExitStatus_SIZE
+    output = stack_alloc ProcessOutput_SIZE
+    EXPAND PROCESS_EXIT_STATUS_NEW exit_status, 0
+    EXPAND PROCESS_IS_SUCCESS ok0, exit_status
+    EXPAND PROCESS_CODE code0, exit_status
+    EXPAND PROCESS_OUTPUT_NEW output, exit_status, 1, 2
+    EXPAND PROCESS_OUTPUT_STATUS st_ptr, output
+    EXPAND PROCESS_OUTPUT_STATUS_PTR st_ptr2, output
+    EXPAND PROCESS_CODE code1, st_ptr
+    EXPAND PROCESS_IS_SUCCESS ok1, st_ptr
+    ok_eq_ptr = eq st_ptr, st_ptr2
+    ok_ok0 = eq ok0, 1
+    ok_code0 = eq code0, 0
+    ok_code1 = eq code1, 0
+    ok_ok1 = eq ok1, 1
+    ok01 = and ok_eq_ptr, ok_ok0
+    ok02 = and ok01, ok_code0
+    ok03 = and ok02, ok_code1
+    ok = and ok03, ok_ok1
+    !ok0
+    !code0
+    !st_ptr
+    !st_ptr2
+    !code1
+    !ok1
+    !ok_eq_ptr
+    !ok_ok0
+    !ok_code0
+    !ok_code1
+    !ok_ok1
+    !ok01
+    !ok02
+    !ok03
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10448)
+
+L_OK:
+    !ok
+    return 0
+
+@test "sa_std process output success/code aliases"():
+L_ENTRY:
+    exit_status = stack_alloc ProcessExitStatus_SIZE
+    output = stack_alloc ProcessOutput_SIZE
+    EXPAND PROCESS_EXIT_STATUS_NEW exit_status, 0
+    EXPAND PROCESS_OUTPUT_NEW output, exit_status, 1, 2
+    EXPAND PROCESS_OUTPUT_SUCCESS ok0, output
+    EXPAND PROCESS_OUTPUT_CODE code0, output
+    EXPAND PROCESS_EXIT_STATUS_NEW exit_status, 7
+    EXPAND PROCESS_OUTPUT_NEW output, exit_status, 1, 2
+    EXPAND PROCESS_OUTPUT_SUCCESS ok1, output
+    EXPAND PROCESS_OUTPUT_CODE code1, output
+
+    ok_ok0 = eq ok0, 1
+    ok_code0 = eq code0, 0
+    ok_ok1 = eq ok1, 0
+    ok_code1 = eq code1, 7
+    ok01 = and ok_ok0, ok_code0
+    ok02 = and ok01, ok_ok1
+    ok = and ok02, ok_code1
+
+    !ok0
+    !code0
+    !ok1
+    !code1
+    !ok_ok0
+    !ok_code0
+    !ok_ok1
+    !ok_code1
+    !ok01
+    !ok02
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10451)
+
+L_OK:
+    !ok
+    return 0
+
+@test "sa_std process exit_status default helper"():
+L_ENTRY:
+    exit_status = stack_alloc ProcessExitStatus_SIZE
+    EXPAND PROCESS_EXIT_STATUS_DEFAULT exit_status
+    EXPAND PROCESS_EXIT_STATUS_CODE code, exit_status
+    EXPAND PROCESS_EXIT_STATUS_SUCCESS ok_success, exit_status
+    ok_code = eq code, 0
+    ok_true = eq ok_success, 1
+    ok = and ok_code, ok_true
+    !code
+    !ok_success
+    !ok_code
+    !ok_true
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10456)
+
+L_OK:
+    !ok
+    return 0

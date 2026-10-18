@@ -1,9 +1,0 @@
-@import "consumer/../layout/public.sal"
-@import "consumer/../bridge/opaque_float_bridge.sa"
-
-@opaque_float_consumer_value() -> f64:
-L_ENTRY:
-    opaque = alloc Opaque_SIZE
-    value = call @opaque_float_bridge_value(&opaque)
-    !opaque
-    return value

@@ -1,0 +1,25 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec clear"():
+L_ENTRY:
+    EXPAND VEC_NEW v
+    EXPAND VEC_PUSH_U64 v, 1
+    EXPAND VEC_PUSH_U64 v, 2
+    EXPAND VEC_CLEAR v
+    EXPAND VEC_LEN ln, v
+    EXPAND VEC_IS_EMPTY e, v
+    EXPAND VEC_FREE v
+    a = eq ln, 0
+    b = eq e, 1
+    ok = and a, b
+    !ln
+    !e
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10986)

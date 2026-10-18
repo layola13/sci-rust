@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/core/rc.sa"
+@import "sa_std/core/rc.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -12,7 +12,7 @@
 下面的完整 SA 程序演示了单线程环境下 `Rc` 的引用克隆和资源回收生命周期：
 
 ```sa
-@import "sa_std/core/rc.sa"
+@import "sa_std/core/rc.sars"
 
 @main() -> i32:
 L_ENTRY:

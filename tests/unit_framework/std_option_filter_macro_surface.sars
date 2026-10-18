@@ -1,0 +1,30 @@
+@import "sa_std/option.sars"
+
+@gt_5(v: u64) -> u64:
+L_ENTRY:
+    out = ugt v, 5
+    !v
+    return out
+
+@test "sa_std option filter"():
+L_ENTRY:
+    EXPAND OPTION_SOME s1, 10
+    EXPAND OPTION_FILTER f1, s1, @gt_5
+    EXPAND OPTION_IS_SOME is1, f1
+    EXPAND OPTION_SOME s2, 3
+    EXPAND OPTION_FILTER f2, s2, @gt_5
+    EXPAND OPTION_IS_NONE is2, f2
+    a = eq is1, 1
+    b = eq is2, 1
+    ok = and a, b
+    !is1
+    !is2
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11001)

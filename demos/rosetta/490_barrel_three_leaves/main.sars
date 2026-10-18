@@ -1,0 +1,20 @@
+@import "sa_std/io/print.sai"
+@import "parts/index.sars"
+
+@const OUT = utf8:"490\n"
+
+// 490 - Barrel aggregation: parts/index.sa re-exports three leaves
+// as one entry point (400 + 50 + 40).
+@main() -> i32:
+L_ENTRY:
+    value = call @barrel_value()
+    ok = eq value, 490
+    !value
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

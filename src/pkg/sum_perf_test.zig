@@ -22,7 +22,7 @@ test "sum flattens one hundred transitive dependencies within budget" {
         const rel = try std.fmt.allocPrint(std.testing.allocator, "pkgs/pkg{d:0>3}", .{idx});
         defer std.testing.allocator.free(rel);
         try tmp.dir.createDirPath(std.testing.io, rel);
-        const source_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sa", .{rel});
+        const source_path = try std.fmt.allocPrint(std.testing.allocator, "{s}/index.sars", .{rel});
         defer std.testing.allocator.free(source_path);
         const source = try std.fmt.allocPrint(std.testing.allocator, "@pkg{d:0>3}() -> i32:\nreturn {d}\n", .{ idx, idx });
         defer std.testing.allocator.free(source);

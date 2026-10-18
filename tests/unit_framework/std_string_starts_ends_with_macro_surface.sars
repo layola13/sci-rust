@@ -1,0 +1,36 @@
+@import "sa_std/string.sars"
+@import "sa_std/core/slice.sars"
+
+@const S = utf8:"foobar"
+@const PRE = utf8:"foo"
+@const SUF = utf8:"bar"
+@const BAD = utf8:"baz"
+
+@test "sa_std string starts_with ends_with"():
+L_ENTRY:
+    EXPAND STR_FROM_PARTS s, &S, 6
+    EXPAND STR_FROM_PARTS pre, &PRE, 3
+    EXPAND STR_FROM_PARTS suf, &SUF, 3
+    EXPAND STR_FROM_PARTS bad, &BAD, 3
+    EXPAND STR_STARTS_WITH sw, s, pre
+    EXPAND STR_ENDS_WITH ew, s, suf
+    EXPAND STR_STARTS_WITH swb, s, bad
+    a = eq sw, 1
+    b = eq ew, 1
+    c = eq swb, 0
+    ok01 = and a, b
+    ok = and ok01, c
+    !sw
+    !ew
+    !swb
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10983)

@@ -1,0 +1,164 @@
+@import "sa_std/string.sars"
+
+@const WORD = utf8:"rust"
+@const PREFIX = utf8:"ru"
+@const SUFFIX = utf8:"st"
+@const INFIX = utf8:"us"
+@const MISS = utf8:"zz"
+
+@main() -> i32:
+L_ENTRY:
+    EXPAND STR_FROM_PARTS word, &WORD, 4
+    EXPAND STR_FROM_PARTS prefix, &PREFIX, 2
+    EXPAND STR_FROM_PARTS suffix, &SUFFIX, 2
+    EXPAND STR_FROM_PARTS infix, &INFIX, 2
+    EXPAND STR_FROM_PARTS miss, &MISS, 2
+    EXPAND STR_EMPTY empty
+    EXPAND STRING_LEN len, word
+    EXPAND STR_CONTAINS contains_ok, word, infix
+    EXPAND STRING_CONTAINS contains_empty_ok, word, empty
+    EXPAND STRING_CONTAINS contains_miss, word, miss
+    EXPAND STR_STARTS_WITH starts_ok, word, prefix
+    EXPAND STRING_STARTS_WITH starts_miss, word, miss
+    EXPAND STR_ENDS_WITH ends_ok, word, suffix
+    EXPAND STRING_ENDS_WITH ends_miss, word, miss
+    EXPAND STR_TRY_STRIP_PREFIX strip_prefix_ok, strip_prefix_tail, word, prefix
+    EXPAND STRING_TRY_STRIP_SUFFIX strip_suffix_ok, strip_suffix_head, word, suffix
+    EXPAND STR_TRY_STRIP_PREFIX strip_prefix_miss_ok, strip_prefix_miss, word, miss
+    EXPAND STRING_TRY_STRIP_SUFFIX strip_suffix_miss_ok, strip_suffix_miss, word, miss
+    EXPAND STR_TRIM_PREFIX trim_prefix_tail, word, prefix
+    EXPAND STRING_TRIM_SUFFIX trim_suffix_head, word, suffix
+    EXPAND STR_TRY_SPLIT_AT split_ok, split_left, split_right, word, 2
+    EXPAND STR_EQ strip_prefix_tail_eq, strip_prefix_tail, suffix
+    EXPAND STR_EQ strip_suffix_head_eq, strip_suffix_head, prefix
+    EXPAND STR_EQ trim_prefix_tail_eq, trim_prefix_tail, suffix
+    EXPAND STR_EQ trim_suffix_head_eq, trim_suffix_head, prefix
+    EXPAND STR_EQ split_left_eq, split_left, prefix
+    EXPAND STR_EQ split_right_eq, split_right, suffix
+    EXPAND STR_IS_EMPTY strip_prefix_miss_empty, strip_prefix_miss
+    EXPAND STR_IS_EMPTY strip_suffix_miss_empty, strip_suffix_miss
+    len_ok = eq len, 4
+    contains_match_ok = eq contains_ok, 1
+    contains_empty_match_ok = eq contains_empty_ok, 1
+    contains_miss_ok = eq contains_miss, 0
+    starts_match_ok = eq starts_ok, 1
+    starts_miss_ok = eq starts_miss, 0
+    ends_match_ok = eq ends_ok, 1
+    ends_miss_ok = eq ends_miss, 0
+    strip_prefix_flag_ok = eq strip_prefix_ok, 1
+    strip_suffix_flag_ok = eq strip_suffix_ok, 1
+    strip_prefix_miss_flag_ok = eq strip_prefix_miss_ok, 0
+    strip_suffix_miss_flag_ok = eq strip_suffix_miss_ok, 0
+    strip_prefix_tail_ok = eq strip_prefix_tail_eq, 1
+    strip_suffix_head_ok = eq strip_suffix_head_eq, 1
+    trim_prefix_tail_ok = eq trim_prefix_tail_eq, 1
+    trim_suffix_head_ok = eq trim_suffix_head_eq, 1
+    split_flag_ok = eq split_ok, 1
+    split_left_ok = eq split_left_eq, 1
+    split_right_ok = eq split_right_eq, 1
+    strip_prefix_miss_empty_ok = eq strip_prefix_miss_empty, 1
+    strip_suffix_miss_empty_ok = eq strip_suffix_miss_empty, 1
+    ok01 = and len_ok, contains_match_ok
+    ok02 = and ok01, contains_empty_match_ok
+    ok03 = and ok02, contains_miss_ok
+    ok04 = and ok03, starts_match_ok
+    ok05 = and ok04, starts_miss_ok
+    ok06 = and ok05, ends_match_ok
+    ok07 = and ok06, ends_miss_ok
+    ok08 = and ok07, strip_prefix_flag_ok
+    ok09 = and ok08, strip_suffix_flag_ok
+    ok10 = and ok09, strip_prefix_miss_flag_ok
+    ok11 = and ok10, strip_suffix_miss_flag_ok
+    ok12 = and ok11, strip_prefix_tail_ok
+    ok13 = and ok12, strip_suffix_head_ok
+    ok14 = and ok13, trim_prefix_tail_ok
+    ok15 = and ok14, trim_suffix_head_ok
+    ok16 = and ok15, split_flag_ok
+    ok17 = and ok16, split_left_ok
+    ok18 = and ok17, split_right_ok
+    ok19 = and ok18, strip_prefix_miss_empty_ok
+    ok = and ok19, strip_suffix_miss_empty_ok
+    !len
+    !contains_ok
+    !contains_empty_ok
+    !contains_miss
+    !starts_ok
+    !starts_miss
+    !ends_ok
+    !ends_miss
+    !strip_prefix_ok
+    !strip_prefix_tail
+    !strip_suffix_ok
+    !strip_suffix_head
+    !strip_prefix_miss_ok
+    !strip_prefix_miss
+    !strip_suffix_miss_ok
+    !strip_suffix_miss
+    !trim_prefix_tail
+    !trim_suffix_head
+    !split_ok
+    !split_left
+    !split_right
+    !strip_prefix_tail_eq
+    !strip_suffix_head_eq
+    !trim_prefix_tail_eq
+    !trim_suffix_head_eq
+    !split_left_eq
+    !split_right_eq
+    !strip_prefix_miss_empty
+    !strip_suffix_miss_empty
+    !len_ok
+    !contains_match_ok
+    !contains_empty_match_ok
+    !contains_miss_ok
+    !starts_match_ok
+    !starts_miss_ok
+    !ends_match_ok
+    !ends_miss_ok
+    !strip_prefix_flag_ok
+    !strip_suffix_flag_ok
+    !strip_prefix_miss_flag_ok
+    !strip_suffix_miss_flag_ok
+    !strip_prefix_tail_ok
+    !strip_suffix_head_ok
+    !trim_prefix_tail_ok
+    !trim_suffix_head_ok
+    !split_flag_ok
+    !split_left_ok
+    !split_right_ok
+    !strip_prefix_miss_empty_ok
+    !strip_suffix_miss_empty_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !word
+    !prefix
+    !suffix
+    !infix
+    !miss
+    !empty
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

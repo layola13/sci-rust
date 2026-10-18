@@ -753,7 +753,7 @@ test "native build and test link installed plugin exporting referenced extern" {
         \\}
     );
 
-    try writeSource(tmp.dir, "main.sa",
+    try writeSource(tmp.dir, "main.sars",
         \\@extern sa_http_probe() -> u32
         \\
         \\@main() -> i32:
@@ -772,7 +772,7 @@ test "native build and test link installed plugin exporting referenced extern" {
         \\    return 1
         \\
     );
-    try writeSource(tmp.dir, "main_test.sa",
+    try writeSource(tmp.dir, "main_test.sars",
         \\@extern sa_http_probe() -> u32
         \\
         \\@test "plugin extern"():
@@ -823,7 +823,7 @@ test "native build and test link installed plugin exporting referenced extern" {
     defer stderr_buffer.deinit();
     const build_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{"sars", "build-exe", "main.sa", "-o", "probe.out" },
+        &.{"sars", "build-exe", "main.sars", "-o", "probe.out" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
     );
@@ -841,7 +841,7 @@ test "native build and test link installed plugin exporting referenced extern" {
     stderr_buffer.clearRetainingCapacity();
     const test_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{"sars", "test", "main_test.sa", "--jobs", "1" },
+        &.{"sars", "test", "main_test.sars", "--jobs", "1" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
     );

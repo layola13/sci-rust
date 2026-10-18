@@ -1,0 +1,3 @@
+// Stable numeric namespace aggregation.
+@import "nonzero.sars"
+@import "../num.sars"

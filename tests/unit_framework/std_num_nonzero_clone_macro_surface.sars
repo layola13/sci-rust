@@ -1,0 +1,242 @@
+@import "sa_std/num.sars"
+
+@test "sa_std nonzero integer clone macro surface"():
+L_ENTRY:
+    u8_src = stack_alloc NonZeroU8_SIZE
+    u8_copy = stack_alloc NonZeroU8_SIZE
+    u8_clone = stack_alloc NonZeroU8_SIZE
+    u8_clone_from = stack_alloc NonZeroU8_SIZE
+    u16_src = stack_alloc NonZeroU16_SIZE
+    u16_copy = stack_alloc NonZeroU16_SIZE
+    u16_clone = stack_alloc NonZeroU16_SIZE
+    u16_clone_from = stack_alloc NonZeroU16_SIZE
+    u32_src = stack_alloc NonZeroU32_SIZE
+    u32_copy = stack_alloc NonZeroU32_SIZE
+    u32_clone = stack_alloc NonZeroU32_SIZE
+    u32_clone_from = stack_alloc NonZeroU32_SIZE
+    u64_src = stack_alloc NonZeroU64_SIZE
+    u64_copy = stack_alloc NonZeroU64_SIZE
+    u64_clone = stack_alloc NonZeroU64_SIZE
+    u64_clone_from = stack_alloc NonZeroU64_SIZE
+    usize_src = stack_alloc NonZeroUsize_SIZE
+    usize_copy = stack_alloc NonZeroUsize_SIZE
+    usize_clone = stack_alloc NonZeroUsize_SIZE
+    usize_clone_from = stack_alloc NonZeroUsize_SIZE
+    i8_src = stack_alloc NonZeroI8_SIZE
+    i8_copy = stack_alloc NonZeroI8_SIZE
+    i8_clone = stack_alloc NonZeroI8_SIZE
+    i8_clone_from = stack_alloc NonZeroI8_SIZE
+    i16_src = stack_alloc NonZeroI16_SIZE
+    i16_copy = stack_alloc NonZeroI16_SIZE
+    i16_clone = stack_alloc NonZeroI16_SIZE
+    i16_clone_from = stack_alloc NonZeroI16_SIZE
+    i32_src = stack_alloc NonZeroI32_SIZE
+    i32_copy = stack_alloc NonZeroI32_SIZE
+    i32_clone = stack_alloc NonZeroI32_SIZE
+    i32_clone_from = stack_alloc NonZeroI32_SIZE
+    i64_src = stack_alloc NonZeroI64_SIZE
+    i64_copy = stack_alloc NonZeroI64_SIZE
+    i64_clone = stack_alloc NonZeroI64_SIZE
+    i64_clone_from = stack_alloc NonZeroI64_SIZE
+    isize_src = stack_alloc NonZeroIsize_SIZE
+    isize_copy = stack_alloc NonZeroIsize_SIZE
+    isize_clone = stack_alloc NonZeroIsize_SIZE
+    isize_clone_from = stack_alloc NonZeroIsize_SIZE
+
+    EXPAND NONZERO_U8_NEW ok_u8_src, u8_src, 7
+    EXPAND NONZERO_U8_NEW ok_u8_old, u8_clone_from, 1
+    EXPAND NONZERO_U16_NEW ok_u16_src, u16_src, 300
+    EXPAND NONZERO_U16_NEW ok_u16_old, u16_clone_from, 1
+    EXPAND NONZERO_U32_NEW ok_u32_src, u32_src, 70000
+    EXPAND NONZERO_U32_NEW ok_u32_old, u32_clone_from, 1
+    EXPAND NONZERO_U64_NEW ok_u64_src, u64_src, 9000000
+    EXPAND NONZERO_U64_NEW ok_u64_old, u64_clone_from, 1
+    EXPAND NONZERO_USIZE_NEW ok_usize_src, usize_src, 11
+    EXPAND NONZERO_USIZE_NEW ok_usize_old, usize_clone_from, 1
+    EXPAND NONZERO_I8_NEW ok_i8_src, i8_src, -7
+    EXPAND NONZERO_I8_NEW ok_i8_old, i8_clone_from, 1
+    EXPAND NONZERO_I16_NEW ok_i16_src, i16_src, -300
+    EXPAND NONZERO_I16_NEW ok_i16_old, i16_clone_from, 1
+    EXPAND NONZERO_I32_NEW ok_i32_src, i32_src, -70000
+    EXPAND NONZERO_I32_NEW ok_i32_old, i32_clone_from, 1
+    EXPAND NONZERO_I64_NEW ok_i64_src, i64_src, -9000000
+    EXPAND NONZERO_I64_NEW ok_i64_old, i64_clone_from, 1
+    EXPAND NONZERO_ISIZE_NEW ok_isize_src, isize_src, -11
+    EXPAND NONZERO_ISIZE_NEW ok_isize_old, isize_clone_from, 1
+
+    EXPAND NONZERO_U8_COPY u8_copy, u8_src
+    EXPAND NONZERO_U8_CLONE u8_clone, u8_src
+    EXPAND NONZERO_U8_CLONE_FROM u8_clone_from, u8_src
+    EXPAND NONZERO_U16_COPY u16_copy, u16_src
+    EXPAND NONZERO_U16_CLONE u16_clone, u16_src
+    EXPAND NONZERO_U16_CLONE_FROM u16_clone_from, u16_src
+    EXPAND NONZERO_U32_COPY u32_copy, u32_src
+    EXPAND NONZERO_U32_CLONE u32_clone, u32_src
+    EXPAND NONZERO_U32_CLONE_FROM u32_clone_from, u32_src
+    EXPAND NONZERO_U64_COPY u64_copy, u64_src
+    EXPAND NONZERO_U64_CLONE u64_clone, u64_src
+    EXPAND NONZERO_U64_CLONE_FROM u64_clone_from, u64_src
+    EXPAND NONZERO_USIZE_COPY usize_copy, usize_src
+    EXPAND NONZERO_USIZE_CLONE usize_clone, usize_src
+    EXPAND NONZERO_USIZE_CLONE_FROM usize_clone_from, usize_src
+    EXPAND NONZERO_I8_COPY i8_copy, i8_src
+    EXPAND NONZERO_I8_CLONE i8_clone, i8_src
+    EXPAND NONZERO_I8_CLONE_FROM i8_clone_from, i8_src
+    EXPAND NONZERO_I16_COPY i16_copy, i16_src
+    EXPAND NONZERO_I16_CLONE i16_clone, i16_src
+    EXPAND NONZERO_I16_CLONE_FROM i16_clone_from, i16_src
+    EXPAND NONZERO_I32_COPY i32_copy, i32_src
+    EXPAND NONZERO_I32_CLONE i32_clone, i32_src
+    EXPAND NONZERO_I32_CLONE_FROM i32_clone_from, i32_src
+    EXPAND NONZERO_I64_COPY i64_copy, i64_src
+    EXPAND NONZERO_I64_CLONE i64_clone, i64_src
+    EXPAND NONZERO_I64_CLONE_FROM i64_clone_from, i64_src
+    EXPAND NONZERO_ISIZE_COPY isize_copy, isize_src
+    EXPAND NONZERO_ISIZE_CLONE isize_clone, isize_src
+    EXPAND NONZERO_ISIZE_CLONE_FROM isize_clone_from, isize_src
+
+    EXPAND NONZERO_U8_NEW ok_u8_mut, u8_src, 9
+    EXPAND NONZERO_U16_NEW ok_u16_mut, u16_src, 301
+    EXPAND NONZERO_U32_NEW ok_u32_mut, u32_src, 70001
+    EXPAND NONZERO_U64_NEW ok_u64_mut, u64_src, 9000001
+    EXPAND NONZERO_USIZE_NEW ok_usize_mut, usize_src, 12
+    EXPAND NONZERO_I8_NEW ok_i8_mut, i8_src, -8
+    EXPAND NONZERO_I16_NEW ok_i16_mut, i16_src, -301
+    EXPAND NONZERO_I32_NEW ok_i32_mut, i32_src, -70001
+    EXPAND NONZERO_I64_NEW ok_i64_mut, i64_src, -9000001
+    EXPAND NONZERO_ISIZE_NEW ok_isize_mut, isize_src, -12
+
+    EXPAND NONZERO_U8_GET u8_copy_value, u8_copy
+    EXPAND NONZERO_U8_GET u8_clone_value, u8_clone
+    EXPAND NONZERO_U8_GET u8_clone_from_value, u8_clone_from
+    EXPAND NONZERO_U16_GET u16_copy_value, u16_copy
+    EXPAND NONZERO_U16_GET u16_clone_value, u16_clone
+    EXPAND NONZERO_U16_GET u16_clone_from_value, u16_clone_from
+    EXPAND NONZERO_U32_GET u32_copy_value, u32_copy
+    EXPAND NONZERO_U32_GET u32_clone_value, u32_clone
+    EXPAND NONZERO_U32_GET u32_clone_from_value, u32_clone_from
+    EXPAND NONZERO_U64_GET u64_copy_value, u64_copy
+    EXPAND NONZERO_U64_GET u64_clone_value, u64_clone
+    EXPAND NONZERO_U64_GET u64_clone_from_value, u64_clone_from
+    EXPAND NONZERO_USIZE_GET usize_copy_value, usize_copy
+    EXPAND NONZERO_USIZE_GET usize_clone_value, usize_clone
+    EXPAND NONZERO_USIZE_GET usize_clone_from_value, usize_clone_from
+    EXPAND NONZERO_I8_GET i8_copy_value, i8_copy
+    EXPAND NONZERO_I8_GET i8_clone_value, i8_clone
+    EXPAND NONZERO_I8_GET i8_clone_from_value, i8_clone_from
+    EXPAND NONZERO_I16_GET i16_copy_value, i16_copy
+    EXPAND NONZERO_I16_GET i16_clone_value, i16_clone
+    EXPAND NONZERO_I16_GET i16_clone_from_value, i16_clone_from
+    EXPAND NONZERO_I32_GET i32_copy_value, i32_copy
+    EXPAND NONZERO_I32_GET i32_clone_value, i32_clone
+    EXPAND NONZERO_I32_GET i32_clone_from_value, i32_clone_from
+    EXPAND NONZERO_I64_GET i64_copy_value, i64_copy
+    EXPAND NONZERO_I64_GET i64_clone_value, i64_clone
+    EXPAND NONZERO_I64_GET i64_clone_from_value, i64_clone_from
+    EXPAND NONZERO_ISIZE_GET isize_copy_value, isize_copy
+    EXPAND NONZERO_ISIZE_GET isize_clone_value, isize_clone
+    EXPAND NONZERO_ISIZE_GET isize_clone_from_value, isize_clone_from
+
+    ok_new_01 = and ok_u8_src, ok_u8_old
+    ok_new_02 = and ok_u16_src, ok_u16_old
+    ok_new_03 = and ok_u32_src, ok_u32_old
+    ok_new_04 = and ok_u64_src, ok_u64_old
+    ok_new_05 = and ok_usize_src, ok_usize_old
+    ok_new_06 = and ok_i8_src, ok_i8_old
+    ok_new_07 = and ok_i16_src, ok_i16_old
+    ok_new_08 = and ok_i32_src, ok_i32_old
+    ok_new_09 = and ok_i64_src, ok_i64_old
+    ok_new_10 = and ok_isize_src, ok_isize_old
+    ok_new_11 = and ok_new_01, ok_new_02
+    ok_new_12 = and ok_new_03, ok_new_04
+    ok_new_13 = and ok_new_05, ok_new_06
+    ok_new_14 = and ok_new_07, ok_new_08
+    ok_new_15 = and ok_new_09, ok_new_10
+    ok_new_16 = and ok_new_11, ok_new_12
+    ok_new_17 = and ok_new_13, ok_new_14
+    ok_new_18 = and ok_new_16, ok_new_17
+    ok_new = and ok_new_18, ok_new_15
+
+    ok_mut_01 = and ok_u8_mut, ok_u16_mut
+    ok_mut_02 = and ok_u32_mut, ok_u64_mut
+    ok_mut_03 = and ok_usize_mut, ok_i8_mut
+    ok_mut_04 = and ok_i16_mut, ok_i32_mut
+    ok_mut_05 = and ok_i64_mut, ok_isize_mut
+    ok_mut_06 = and ok_mut_01, ok_mut_02
+    ok_mut_07 = and ok_mut_03, ok_mut_04
+    ok_mut_08 = and ok_mut_06, ok_mut_07
+    ok_mut = and ok_mut_08, ok_mut_05
+
+    ok_u8_copy = eq u8_copy_value, 7
+    ok_u8_clone = eq u8_clone_value, 7
+    ok_u8_clone_from = eq u8_clone_from_value, 7
+    ok_u16_copy = eq u16_copy_value, 300
+    ok_u16_clone = eq u16_clone_value, 300
+    ok_u16_clone_from = eq u16_clone_from_value, 300
+    ok_u32_copy = eq u32_copy_value, 70000
+    ok_u32_clone = eq u32_clone_value, 70000
+    ok_u32_clone_from = eq u32_clone_from_value, 70000
+    ok_u64_copy = eq u64_copy_value, 9000000
+    ok_u64_clone = eq u64_clone_value, 9000000
+    ok_u64_clone_from = eq u64_clone_from_value, 9000000
+    ok_usize_copy = eq usize_copy_value, 11
+    ok_usize_clone = eq usize_clone_value, 11
+    ok_usize_clone_from = eq usize_clone_from_value, 11
+    ok_i8_copy = eq i8_copy_value, -7
+    ok_i8_clone = eq i8_clone_value, -7
+    ok_i8_clone_from = eq i8_clone_from_value, -7
+    ok_i16_copy = eq i16_copy_value, -300
+    ok_i16_clone = eq i16_clone_value, -300
+    ok_i16_clone_from = eq i16_clone_from_value, -300
+    ok_i32_copy = eq i32_copy_value, -70000
+    ok_i32_clone = eq i32_clone_value, -70000
+    ok_i32_clone_from = eq i32_clone_from_value, -70000
+    ok_i64_copy = eq i64_copy_value, -9000000
+    ok_i64_clone = eq i64_clone_value, -9000000
+    ok_i64_clone_from = eq i64_clone_from_value, -9000000
+    ok_isize_copy = eq isize_copy_value, -11
+    ok_isize_clone = eq isize_clone_value, -11
+    ok_isize_clone_from = eq isize_clone_from_value, -11
+
+    ok_values_01 = and ok_u8_copy, ok_u8_clone
+    ok_values_02 = and ok_values_01, ok_u8_clone_from
+    ok_values_03 = and ok_u16_copy, ok_u16_clone
+    ok_values_04 = and ok_values_03, ok_u16_clone_from
+    ok_values_05 = and ok_u32_copy, ok_u32_clone
+    ok_values_06 = and ok_values_05, ok_u32_clone_from
+    ok_values_07 = and ok_u64_copy, ok_u64_clone
+    ok_values_08 = and ok_values_07, ok_u64_clone_from
+    ok_values_09 = and ok_usize_copy, ok_usize_clone
+    ok_values_10 = and ok_values_09, ok_usize_clone_from
+    ok_values_11 = and ok_i8_copy, ok_i8_clone
+    ok_values_12 = and ok_values_11, ok_i8_clone_from
+    ok_values_13 = and ok_i16_copy, ok_i16_clone
+    ok_values_14 = and ok_values_13, ok_i16_clone_from
+    ok_values_15 = and ok_i32_copy, ok_i32_clone
+    ok_values_16 = and ok_values_15, ok_i32_clone_from
+    ok_values_17 = and ok_i64_copy, ok_i64_clone
+    ok_values_18 = and ok_values_17, ok_i64_clone_from
+    ok_values_19 = and ok_isize_copy, ok_isize_clone
+    ok_values_20 = and ok_values_19, ok_isize_clone_from
+    ok_values_21 = and ok_values_02, ok_values_04
+    ok_values_22 = and ok_values_06, ok_values_08
+    ok_values_23 = and ok_values_10, ok_values_12
+    ok_values_24 = and ok_values_14, ok_values_16
+    ok_values_25 = and ok_values_18, ok_values_20
+    ok_values_26 = and ok_values_21, ok_values_22
+    ok_values_27 = and ok_values_23, ok_values_24
+    ok_values_28 = and ok_values_26, ok_values_27
+    ok_values = and ok_values_28, ok_values_25
+
+    ok_01 = and ok_new, ok_mut
+    ok = and ok_01, ok_values
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10604)
+
+L_PASS:
+    !ok
+    return 0

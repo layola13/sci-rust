@@ -1,0 +1,57 @@
+@import "sa_std/core/iter.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std iter from_slice next"():
+L_ENTRY:
+    buf = alloc 24
+    store buf+0, 1 as u64
+    store buf+8, 2 as u64
+    store buf+16, 3 as u64
+    slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, buf, 3
+    EXPAND ITER_FROM_SLICE it, slice
+    EXPAND ITER_NEXT_U64 h0, v0, it
+    EXPAND ITER_NEXT_U64 h1, v1, it
+    EXPAND ITER_NEXT_U64 h2, v2, it
+    EXPAND ITER_NEXT_U64 h3, v3, it
+    a = eq h0, 1
+    b = eq v0, 1
+    c = eq h1, 1
+    d = eq v1, 2
+    e = eq h2, 1
+    f = eq v2, 3
+    g = eq h3, 0
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok03 = and ok02, d
+    ok04 = and ok03, e
+    ok05 = and ok04, f
+    ok = and ok05, g
+    !h0
+    !v0
+    !h1
+    !v1
+    !h2
+    !v2
+    !h3
+    !v3
+    !a
+    !b
+    !c
+    !d
+    !e
+    !f
+    !g
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !buf
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10943)

@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "consumer/broken_consumer.sars"
+
+@const RESULT_OK = utf8:"243\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 243 - Contract Sig Mismatch Link
+// The mismatch stays local in consumer/broken_consumer.sa so the compiler can diagnose it directly.
+
+@main() -> i32:
+L_ENTRY:
+    result = call @broken_consumer_value()
+    ok = eq result, 243
+    !result
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

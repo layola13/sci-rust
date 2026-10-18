@@ -1,0 +1,40 @@
+@import "sa_std/borrow.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std cow clone and eq"():
+L_ENTRY:
+    data = alloc 24
+    store data+0, 1 as u64
+    store data+8, 2 as u64
+    store data+16, 3 as u64
+    slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 3
+    cow = stack_alloc CowSlice_SIZE
+    clone = stack_alloc CowSlice_SIZE
+    EXPAND COW_SLICE_BORROWED cow, slice
+    EXPAND COW_SLICE_CLONE clone, cow
+    EXPAND COW_SLICE_EQ eq1, cow, clone
+    EXPAND COW_SLICE_IS_BORROWED is_b, clone
+    EXPAND COW_SLICE_LEN ln, clone
+
+    ok_eq = eq eq1, 1
+    ok_b = eq is_b, 1
+    ok_ln = eq ln, 3
+    ok01 = and ok_eq, ok_b
+    ok = and ok01, ok_ln
+
+    !eq1
+    !is_b
+    !ln
+    !ok_eq
+    !ok_b
+    !ok_ln
+    !ok01
+    !data
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10876)

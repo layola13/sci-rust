@@ -1,0 +1,106 @@
+@import "sa_std/vec.sars"
+
+@vec_into_iter_for_each_noop(value: u64) -> u64:
+L_ENTRY:
+    !value
+    return 0
+
+@vec_into_iter_try_each_lt_four(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 4
+    !value
+    return out
+
+@vec_into_iter_try_each_lt_ten(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 10
+    !value
+    return out
+
+@test "sa_std vec into_iter for_each macro surface"():
+L_ENTRY:
+    EXPAND VEC_NEW each_vec
+    EXPAND VEC_PUSH_U64 each_vec, 1
+    EXPAND VEC_PUSH_U64 each_vec, 2
+    EXPAND VEC_PUSH_U64 each_vec, 3
+    EXPAND VEC_INTO_ITER_U64 each_iter, each_backing, each_vec
+    EXPAND VEC_INTO_ITER_FOR_EACH_U64 each_iter, @vec_into_iter_for_each_noop
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 each_empty, each_iter
+
+    EXPAND VEC_NEW try_all_vec
+    EXPAND VEC_PUSH_U64 try_all_vec, 1
+    EXPAND VEC_PUSH_U64 try_all_vec, 2
+    EXPAND VEC_PUSH_U64 try_all_vec, 3
+    EXPAND VEC_INTO_ITER_U64 try_all_iter, try_all_backing, try_all_vec
+    EXPAND VEC_INTO_ITER_TRY_FOR_EACH_U64 try_all_ok, try_all_iter, @vec_into_iter_try_each_lt_ten
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 try_all_empty, try_all_iter
+
+    EXPAND VEC_NEW try_stop_vec
+    EXPAND VEC_PUSH_U64 try_stop_vec, 1
+    EXPAND VEC_PUSH_U64 try_stop_vec, 2
+    EXPAND VEC_PUSH_U64 try_stop_vec, 4
+    EXPAND VEC_PUSH_U64 try_stop_vec, 5
+    EXPAND VEC_INTO_ITER_U64 try_stop_iter, try_stop_backing, try_stop_vec
+    EXPAND VEC_INTO_ITER_TRY_FOR_EACH_U64 try_stop_ok, try_stop_iter, @vec_into_iter_try_each_lt_four
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_LEN_U64 try_stop_remaining, try_stop_iter
+    EXPAND VEC_INTO_ITER_NEXT_U64 try_stop_next_has, try_stop_next, try_stop_iter
+
+    EXPAND VEC_INTO_ITER_DEFAULT_U64 empty_iter, empty_backing
+    EXPAND VEC_INTO_ITER_TRY_FOR_EACH_U64 empty_try_ok, empty_iter, @vec_into_iter_try_each_lt_four
+    EXPAND VEC_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_after_try, empty_iter
+
+    EXPAND VEC_FREE each_backing
+    EXPAND VEC_FREE try_all_backing
+    EXPAND VEC_FREE try_stop_backing
+    EXPAND VEC_FREE empty_backing
+
+    ok_each_empty = eq each_empty, 1
+    ok_try_all = eq try_all_ok, 1
+    ok_try_all_empty = eq try_all_empty, 1
+    ok_try_stop = eq try_stop_ok, 0
+    ok_try_stop_remaining = eq try_stop_remaining, 1
+    ok_try_stop_next_has = eq try_stop_next_has, 1
+    ok_try_stop_next = eq try_stop_next, 5
+    ok_empty_try = eq empty_try_ok, 1
+    ok_empty_after_try = eq empty_after_try, 1
+
+    ok = and ok_each_empty, ok_try_all
+    ok = and ok, ok_try_all_empty
+    ok = and ok, ok_try_stop
+    ok = and ok, ok_try_stop_remaining
+    ok = and ok, ok_try_stop_next_has
+    ok = and ok, ok_try_stop_next
+    ok = and ok, ok_empty_try
+    ok = and ok, ok_empty_after_try
+
+    !each_empty
+    !try_all_ok
+    !try_all_empty
+    !try_stop_ok
+    !try_stop_remaining
+    !try_stop_next_has
+    !try_stop_next
+    !empty_try_ok
+    !empty_after_try
+    !ok_each_empty
+    !ok_try_all
+    !ok_try_all_empty
+    !ok_try_stop
+    !ok_try_stop_remaining
+    !ok_try_stop_next_has
+    !ok_try_stop_next
+    !ok_empty_try
+    !ok_empty_after_try
+    !each_iter
+    !try_all_iter
+    !try_stop_iter
+    !empty_iter
+    br ok -> L_VEC_INTO_ITER_FOR_EACH_OK, L_VEC_INTO_ITER_FOR_EACH_FAIL
+
+L_VEC_INTO_ITER_FOR_EACH_FAIL:
+    !ok
+    panic(10716)
+
+L_VEC_INTO_ITER_FOR_EACH_OK:
+    !ok
+    return

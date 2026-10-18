@@ -1,0 +1,57 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/result.sal"
+@import "sa_std/core/result.sars"
+@import "sa_std/core/panic.sars"
+
+@const RESULT_OK = utf8:"5\n"
+@const RESULT_ERR = utf8:"13\n"
+@const RESULT_PANIC = utf8:"error\n"
+
+@make_some(&slot: ptr) -> i32:
+L_ENTRY:
+    EXPAND RESULT_SET_OK slot, 5
+    !slot
+    return 0
+
+@make_err(&slot: ptr) -> i32:
+L_ENTRY:
+    EXPAND RESULT_SET_ERR slot, 13
+    !slot
+    return 1
+
+@unwrap_value(&res: ptr) -> i32:
+L_ENTRY:
+    EXPAND RESULT_UNWRAP value, res
+    return value
+
+@unwrap_err_value(&res: ptr) -> i32:
+L_ENTRY:
+    EXPAND RESULT_UNWRAP_ERR err_value, res
+    return err_value
+
+@main() -> i32:
+L_ENTRY:
+    some_res = alloc Result_SIZE
+    err_res = alloc Result_SIZE
+    call @make_some(&some_res)
+    call @make_err(&err_res)
+    value = call @unwrap_value(&some_res)
+    err_value = call @unwrap_err_value(&err_res)
+    ok_value = eq value, 5
+    ok_err = eq err_value, 13
+    ok = and ok_value, ok_err
+    !value
+    !err_value
+    !ok_value
+    !ok_err
+    !some_res
+    !err_res
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    call @sa_print_bytes(&RESULT_OK, 2)
+    return 0
+
+L_ERR:
+    call @sa_print_bytes(&RESULT_PANIC, 6)
+    return 1

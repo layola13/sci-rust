@@ -1,0 +1,8 @@
+@import "consumer/../impl/float32_const_impl.sars"
+
+@float32_consumer_value() -> f32:
+L_ENTRY:
+    v = call @float32_const_value()
+    d = fadd v, v
+    !v
+    return d

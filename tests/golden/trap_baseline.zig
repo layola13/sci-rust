@@ -55,18 +55,18 @@ const TrapCase = struct {
 
 test "golden trap baseline regression stays stable" {
     const cases = [_]TrapCase{
-        .{ .path = "demos/support/unknown_register.sa", .out_name = "unknown_register.out", .trap = "UnknownRegister", .code = 1007, .message = "register is not declared in the current scope" },
-        .{ .path = "demos/support/use_after_move.sa", .out_name = "use_after_move.out", .trap = "UseAfterMove", .code = 1009, .message = "moved value is no longer usable" },
-        .{ .path = "demos/support/borrow_conflict.sa", .out_name = "borrow_conflict.out", .trap = "BorrowConflict", .code = 1008, .message = "borrow rules reject this access" },
-        .{ .path = "demos/support/memory_leak.sa", .out_name = "memory_leak.out", .trap = "MemoryLeak", .code = 1012, .message = "live registers remain at function exit" },
-        .{ .path = "demos/support/phi_conflict.sa", .out_name = "phi_conflict.out", .trap = "PhiStateConflict", .code = 1015, .message = "incoming control-flow states do not agree" },
-        .{ .path = "demos/support/macro_recursion.sa", .out_name = "macro_recursion.out", .trap = "MacroRecursionLimit", .code = 1005, .message = "macro recursion limit exceeded" },
-        .{ .path = "demos/support/forbidden_syntax.sa", .out_name = "forbidden_syntax.out", .trap = "ForbiddenSyntax", .code = 1001, .message = "forbidden syntax detected during flattening" },
-        .{ .path = "demos/support/illegal_unsafe_context.sa", .out_name = "illegal_unsafe_context.out", .trap = "IllegalUnsafeContext", .code = 1019, .message = "raw pointer and assume_* instructions are only legal inside @ffi_wrapper" },
-        .{ .path = "demos/support/early_return_leak.sa", .out_name = "early_return_leak.out", .trap = "EarlyReturnLeak", .code = 1026, .message = "early return would leak live registers" },
-        .{ .path = "demos/support/atomic_ordering_mismatch.sa", .out_name = "atomic_ordering_mismatch.out", .trap = "AtomicOrderingMismatch", .code = 1029, .message = "same-address RMW ordering combination is not allowed" },
-        .{ .path = "demos/support/invalid_atomic_ordering.sa", .out_name = "invalid_atomic_ordering.out", .trap = "InvalidAtomicOrdering", .code = 1028, .message = "invalid atomic ordering" },
-        .{ .path = "demos/support/capability_mismatch.sa", .out_name = "capability_mismatch.out", .trap = "CapabilityMismatch", .code = 1013, .message = "call-site capability prefix does not match the callee contract" },
+        .{ .path = "demos/support/unknown_register.sars", .out_name = "unknown_register.out", .trap = "UnknownRegister", .code = 1007, .message = "register is not declared in the current scope" },
+        .{ .path = "demos/support/use_after_move.sars", .out_name = "use_after_move.out", .trap = "UseAfterMove", .code = 1009, .message = "moved value is no longer usable" },
+        .{ .path = "demos/support/borrow_conflict.sars", .out_name = "borrow_conflict.out", .trap = "BorrowConflict", .code = 1008, .message = "borrow rules reject this access" },
+        .{ .path = "demos/support/memory_leak.sars", .out_name = "memory_leak.out", .trap = "MemoryLeak", .code = 1012, .message = "live registers remain at function exit" },
+        .{ .path = "demos/support/phi_conflict.sars", .out_name = "phi_conflict.out", .trap = "PhiStateConflict", .code = 1015, .message = "incoming control-flow states do not agree" },
+        .{ .path = "demos/support/macro_recursion.sars", .out_name = "macro_recursion.out", .trap = "MacroRecursionLimit", .code = 1005, .message = "macro recursion limit exceeded" },
+        .{ .path = "demos/support/forbidden_syntax.sars", .out_name = "forbidden_syntax.out", .trap = "ForbiddenSyntax", .code = 1001, .message = "forbidden syntax detected during flattening" },
+        .{ .path = "demos/support/illegal_unsafe_context.sars", .out_name = "illegal_unsafe_context.out", .trap = "IllegalUnsafeContext", .code = 1019, .message = "raw pointer and assume_* instructions are only legal inside @ffi_wrapper" },
+        .{ .path = "demos/support/early_return_leak.sars", .out_name = "early_return_leak.out", .trap = "EarlyReturnLeak", .code = 1026, .message = "early return would leak live registers" },
+        .{ .path = "demos/support/atomic_ordering_mismatch.sars", .out_name = "atomic_ordering_mismatch.out", .trap = "AtomicOrderingMismatch", .code = 1029, .message = "same-address RMW ordering combination is not allowed" },
+        .{ .path = "demos/support/invalid_atomic_ordering.sars", .out_name = "invalid_atomic_ordering.out", .trap = "InvalidAtomicOrdering", .code = 1028, .message = "invalid atomic ordering" },
+        .{ .path = "demos/support/capability_mismatch.sars", .out_name = "capability_mismatch.out", .trap = "CapabilityMismatch", .code = 1013, .message = "call-site capability prefix does not match the callee contract" },
     };
 
     inline for (cases) |case| {

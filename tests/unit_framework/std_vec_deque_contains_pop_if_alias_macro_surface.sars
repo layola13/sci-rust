@@ -1,0 +1,132 @@
+@import "sa_std/collections/vec_deque.sars"
+
+@vec_deque_is_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    is_even = eq rem, 0
+    !rem
+    !value
+    return is_even
+
+@vec_deque_is_odd(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    is_odd = eq rem, 1
+    !rem
+    !value
+    return is_odd
+
+@test "sa_std vec_deque contains/pop_if aliases"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 6
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 1
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 4
+
+    EXPAND VEC_DEQUE_CONTAINS has_two, deque, 2
+    EXPAND VEC_DEQUE_CONTAINS has_nine, deque, 9
+    EXPAND VEC_DEQUE_POP_FRONT_IF front_ok, front_value, deque, @vec_deque_is_odd
+    EXPAND VEC_DEQUE_TRY_FRONT after_front_ok, after_front, deque
+    EXPAND VEC_DEQUE_POP_BACK_IF back_ok, back_value, deque, @vec_deque_is_even
+    EXPAND VEC_DEQUE_TRY_BACK after_back_ok, after_back, deque
+    EXPAND VEC_DEQUE_LEN len_after, deque
+    EXPAND VEC_DEQUE_POP_FRONT_IF skip_ok, skip_value, deque, @vec_deque_is_odd
+    EXPAND VEC_DEQUE_LEN len_after_skip, deque
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY empty_deque, 0
+    EXPAND VEC_DEQUE_CONTAINS empty_has, empty_deque, 1
+    EXPAND VEC_DEQUE_POP_FRONT_IF empty_front_ok, empty_front_value, empty_deque, @vec_deque_is_even
+    EXPAND VEC_DEQUE_POP_BACK_IF empty_back_ok, empty_back_value, empty_deque, @vec_deque_is_even
+
+    ok_has_two = eq has_two, 1
+    ok_has_nine = eq has_nine, 0
+    ok_front = eq front_ok, 1
+    ok_front_value = eq front_value, 1
+    ok_after_front_flag = eq after_front_ok, 1
+    ok_after_front = eq after_front, 2
+    ok_back = eq back_ok, 1
+    ok_back_value = eq back_value, 4
+    ok_after_back_flag = eq after_back_ok, 1
+    ok_after_back = eq after_back, 3
+    ok_len = eq len_after, 2
+    ok_skip = eq skip_ok, 0
+    ok_len_skip = eq len_after_skip, 2
+    ok_empty_has = eq empty_has, 0
+    ok_empty_front = eq empty_front_ok, 0
+    ok_empty_back = eq empty_back_ok, 0
+
+    ok01 = and ok_has_two, ok_has_nine
+    ok02 = and ok01, ok_front
+    ok03 = and ok02, ok_front_value
+    ok04 = and ok03, ok_after_front_flag
+    ok05 = and ok04, ok_after_front
+    ok06 = and ok05, ok_back
+    ok07 = and ok06, ok_back_value
+    ok08 = and ok07, ok_after_back_flag
+    ok09 = and ok08, ok_after_back
+    ok10 = and ok09, ok_len
+    ok11 = and ok10, ok_skip
+    ok12 = and ok11, ok_len_skip
+    ok13 = and ok12, ok_empty_has
+    ok14 = and ok13, ok_empty_front
+    ok = and ok14, ok_empty_back
+
+    !has_two
+    !has_nine
+    !front_ok
+    !front_value
+    !after_front_ok
+    !after_front
+    !back_ok
+    !back_value
+    !after_back_ok
+    !after_back
+    !len_after
+    !skip_ok
+    !skip_value
+    !len_after_skip
+    !empty_has
+    !empty_front_ok
+    !empty_front_value
+    !empty_back_ok
+    !empty_back_value
+    !ok_has_two
+    !ok_has_nine
+    !ok_front
+    !ok_front_value
+    !ok_after_front_flag
+    !ok_after_front
+    !ok_back
+    !ok_back_value
+    !ok_after_back_flag
+    !ok_after_back
+    !ok_len
+    !ok_skip
+    !ok_len_skip
+    !ok_empty_has
+    !ok_empty_front
+    !ok_empty_back
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND VEC_DEQUE_FREE empty_deque
+    EXPAND VEC_DEQUE_FREE deque
+    return 0
+
+L_FAIL:
+    panic(10838)

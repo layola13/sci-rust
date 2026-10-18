@@ -1,0 +1,25 @@
+@import "sa_std/io/print.sai"
+@import "src/index.sars"
+
+@const RESULT_OK = utf8:"216\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 216 - Pkg Profile Release
+// The release profile is a dedicated nested helper folder under src/profiles/release.
+
+@main() -> i32:
+L_ENTRY:
+    value = call @src_package_value()
+    ok = eq value, 216
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

@@ -1,4 +1,4 @@
 @import "../io.sal"
-@import "buf_reader.sa"
-@import "buf_writer.sa"
+@import "buf_reader.sars"
+@import "buf_writer.sars"
 @import "print.sai"

@@ -6,8 +6,8 @@
 
 ## 导入
 ```sa
-@import "sa_std/btree_map.sa"
-@import "sa_std/btree_set.sa"
+@import "sa_std/btree_map.sars"
+@import "sa_std/btree_set.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -15,7 +15,7 @@
 下面的完整 SA 程序展示了如何初始化 BTreeMap，插入数据（此时数据会被自动按节点拆分排序），获取特定数据，并释放整棵树。
 
 ```sa
-@import "sa_std/btree_map.sa"
+@import "sa_std/btree_map.sars"
 
 @main() -> i32:
 L_ENTRY:

@@ -1,0 +1,23 @@
+@import "sa_std/net.sars"
+
+@test "sa_std tcp linger option surface"():
+L_ENTRY:
+    stream = add 0, 0
+    enabled = add 0, -1
+    timeout_ns = add 0, 123
+
+    EXPAND NET_TCP_STREAM_SET_LINGER set_status, stream, 1, 1000000000
+    EXPAND NET_TCP_STREAM_LINGER get_status, got_enabled, got_timeout_ns, stream
+
+    set_failed = ne set_status, SA_NET_OK
+    get_failed = ne get_status, SA_NET_OK
+    !set_failed
+    !get_failed
+    !set_status
+    !get_status
+    !got_enabled
+    !got_timeout_ns
+    !stream
+    !enabled
+    !timeout_ns
+    return 0

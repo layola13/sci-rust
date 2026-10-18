@@ -1,0 +1,88 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/collections/btree_set.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+
+@main() -> i32:
+L_ENTRY:
+    set = 0 as ptr
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    lookup = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW lookup, &KEY_ALPHA, 5
+    EXPAND BTREE_SET_NEW set
+    EXPAND BTREE_SET_IS_EMPTY empty0, set
+    EXPAND BTREE_SET_INSERT insert_alpha, set, alpha
+    EXPAND BTREE_SET_INSERT insert_alpha_again, set, lookup
+    EXPAND BTREE_SET_INSERT insert_bravo, set, bravo
+    EXPAND BTREE_SET_CONTAINS has_alpha, set, alpha
+    EXPAND BTREE_SET_CONTAINS has_lookup, set, lookup
+    EXPAND BTREE_SET_REMOVE removed_alpha, set, alpha
+    EXPAND BTREE_SET_CONTAINS has_alpha_after, set, alpha
+    EXPAND BTREE_SET_LEN len, set
+    EXPAND BTREE_SET_CLEAR set
+    EXPAND BTREE_SET_IS_EMPTY empty1, set
+    ok_empty0 = eq empty0, 1
+    ok_insert_alpha = eq insert_alpha, 1
+    ok_insert_alpha_again = eq insert_alpha_again, 0
+    ok_insert_bravo = eq insert_bravo, 1
+    ok_has_alpha = eq has_alpha, 1
+    ok_has_lookup = eq has_lookup, 1
+    ok_removed_alpha = eq removed_alpha, 1
+    ok_has_alpha_after = eq has_alpha_after, 0
+    ok_len = eq len, 1
+    ok_empty1 = eq empty1, 1
+    ok01 = and ok_empty0, ok_insert_alpha
+    ok02 = and ok01, ok_insert_alpha_again
+    ok03 = and ok02, ok_insert_bravo
+    ok04 = and ok03, ok_has_alpha
+    ok05 = and ok04, ok_has_lookup
+    ok06 = and ok05, ok_removed_alpha
+    ok07 = and ok06, ok_has_alpha_after
+    ok08 = and ok07, ok_len
+    ok = and ok08, ok_empty1
+    !empty0
+    !insert_alpha
+    !insert_alpha_again
+    !insert_bravo
+    !has_alpha
+    !has_lookup
+    !removed_alpha
+    !has_alpha_after
+    !len
+    !empty1
+    !ok_empty0
+    !ok_insert_alpha
+    !ok_insert_alpha_again
+    !ok_insert_bravo
+    !ok_has_alpha
+    !ok_has_lookup
+    !ok_removed_alpha
+    !ok_has_alpha_after
+    !ok_len
+    !ok_empty1
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !lookup
+    !bravo
+    !alpha
+    EXPAND BTREE_SET_FREE set
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

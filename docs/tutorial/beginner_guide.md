@@ -224,7 +224,7 @@ L_DONE:
 Vec 示例：
 
 ```sa
-@import "sa_std/vec.sa"
+@import "sa_std/vec.sars"
 
 @main() -> i32:
 L_ENTRY:
@@ -249,7 +249,7 @@ L_ERR:
 打印宏示例：
 
 ```sa
-@import "sa_std/io.sa"
+@import "sa_std/io.sars"
 
 @const MSG = utf8:"done"
 

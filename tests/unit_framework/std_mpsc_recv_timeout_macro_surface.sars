@@ -1,0 +1,63 @@
+@import "sa_std/sync/mpsc.sars"
+
+@test "sa_std mpsc try_recv_timeout empty times out"():
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 4
+    EXPAND MPSC_TRY_RECV_TIMEOUT_NS recv_ok, val, chan, 30000
+    EXPAND MPSC_FREE chan
+    a = eq recv_ok, 0
+    !recv_ok
+    !val
+    br a -> L_OK, L_FAIL
+L_OK:
+    !a
+    return 0
+L_FAIL:
+    !a
+    panic(10884)
+
+@test "sa_std mpsc try_recv_timeout gets value"():
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 4
+    EXPAND MPSC_TRY_SEND s, chan, 55
+    EXPAND MPSC_TRY_RECV_TIMEOUT_NS recv_ok, val, chan, 1000000
+    EXPAND MPSC_FREE chan
+    a = eq s, 1
+    b = eq recv_ok, 1
+    c = eq val, 55
+    ok01 = and a, b
+    ok_all = and ok01, c
+    !s
+    !recv_ok
+    !val
+    !a
+    !b
+    !c
+    !ok01
+    br ok_all -> L_OK, L_FAIL
+L_OK:
+    !ok_all
+    return 0
+L_FAIL:
+    !ok_all
+    panic(10885)
+
+@test "sa_std mpsc try_recv_timeout zero initializes value"():
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 4
+    EXPAND MPSC_TRY_RECV_TIMEOUT_NS recv_ok, val, chan, 0
+    EXPAND MPSC_FREE chan
+    ok0 = eq recv_ok, 0
+    ok1 = eq val, 0
+    ok = and ok0, ok1
+    !recv_ok
+    !val
+    !ok0
+    !ok1
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10991)

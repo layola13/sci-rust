@@ -1,0 +1,109 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap into_iter bare alias macro surface"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH heap, 5
+    EXPAND BINARY_HEAP_PUSH heap, 3
+    EXPAND BINARY_HEAP_PUSH heap, 7
+
+    EXPAND BINARY_HEAP_INTO_ITER iter, backing_vec, heap
+    EXPAND BINARY_HEAP_INTO_ITER_NEXT first_ok, first, iter
+    EXPAND BINARY_HEAP_INTO_ITER_NEXT second_ok, second, iter
+    EXPAND BINARY_HEAP_INTO_ITER_NEXT third_ok, third, iter
+    EXPAND BINARY_HEAP_INTO_ITER_NEXT fourth_ok, fourth, iter
+    EXPAND BINARY_HEAP_INTO_ITER_NEXT done_ok, done_value, iter
+    EXPAND VEC_LEN backing_len, backing_vec
+    EXPAND VEC_FREE backing_vec
+
+    EXPAND BINARY_HEAP_NEW sorted_heap
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 1
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 5
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 3
+    EXPAND BINARY_HEAP_PUSH sorted_heap, 7
+    EXPAND BINARY_HEAP_INTO_SORTED_VEC sorted_vec, sorted_heap
+    EXPAND VEC_LEN sorted_len, sorted_vec
+    EXPAND VEC_GET_U64 sorted0, sorted_vec, 0
+    EXPAND VEC_GET_U64 sorted1, sorted_vec, 1
+    EXPAND VEC_GET_U64 sorted2, sorted_vec, 2
+    EXPAND VEC_GET_U64 sorted3, sorted_vec, 3
+    EXPAND VEC_FREE sorted_vec
+
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 7
+    ok_second_flag = eq second_ok, 1
+    ok_third_flag = eq third_ok, 1
+    ok_fourth_flag = eq fourth_ok, 1
+    ok_done_flag = eq done_ok, 0
+    ok_done_value = eq done_value, 0
+    ok_backing_len = eq backing_len, 4
+    ok_sorted_len = eq sorted_len, 4
+    ok_sorted0 = eq sorted0, 1
+    ok_sorted1 = eq sorted1, 3
+    ok_sorted2 = eq sorted2, 5
+    ok_sorted3 = eq sorted3, 7
+
+    ok01 = and ok_first_flag, ok_first
+    ok02 = and ok01, ok_second_flag
+    ok03 = and ok02, ok_third_flag
+    ok04 = and ok03, ok_fourth_flag
+    ok05 = and ok04, ok_done_flag
+    ok06 = and ok05, ok_done_value
+    ok07 = and ok06, ok_backing_len
+    ok08 = and ok07, ok_sorted_len
+    ok09 = and ok08, ok_sorted0
+    ok10 = and ok09, ok_sorted1
+    ok11 = and ok10, ok_sorted2
+    ok = and ok11, ok_sorted3
+
+    !first_ok
+    !first
+    !second_ok
+    !second
+    !third_ok
+    !third
+    !fourth_ok
+    !fourth
+    !done_ok
+    !done_value
+    !backing_len
+    !sorted_len
+    !sorted0
+    !sorted1
+    !sorted2
+    !sorted3
+    !ok_first_flag
+    !ok_first
+    !ok_second_flag
+    !ok_third_flag
+    !ok_fourth_flag
+    !ok_done_flag
+    !ok_done_value
+    !ok_backing_len
+    !ok_sorted_len
+    !ok_sorted0
+    !ok_sorted1
+    !ok_sorted2
+    !ok_sorted3
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !iter
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10845)
+
+L_OK:
+    !ok
+    return

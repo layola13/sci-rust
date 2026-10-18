@@ -1,0 +1,156 @@
+@import "sa_std/vec_deque.sars"
+
+@vec_deque_extract_if_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    out = eq rem, 0
+    !rem
+    !value
+    return out
+
+@vec_deque_extract_if_never(value: u64) -> u64:
+L_ENTRY:
+    !value
+    return 0
+
+@vec_deque_extract_if_always(value: u64) -> u64:
+L_ENTRY:
+    !value
+    return 1
+
+@test "sa_std vec_deque extract_if macro surface"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY deque, 6
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 1
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 5
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 6
+    EXPAND VEC_DEQUE_TRY_POP_FRONT pop_ok, popped, deque
+    EXPAND VEC_DEQUE_PUSH_BACK deque, 7
+    EXPAND VEC_DEQUE_EXTRACT_IF_U64 remain_len, extracted, deque, @vec_deque_extract_if_even
+    EXPAND VEC_LEN extracted_len, extracted
+    EXPAND VEC_GET_U64 extracted0, extracted, 0
+    EXPAND VEC_GET_U64 extracted1, extracted, 1
+    EXPAND VEC_GET_U64 extracted2, extracted, 2
+    EXPAND VEC_DEQUE_LEN deque_len_after_extract, deque
+    EXPAND VEC_DEQUE_GET_U64 remain0, deque, 0
+    EXPAND VEC_DEQUE_GET_U64 remain1, deque, 1
+    EXPAND VEC_DEQUE_GET_U64 remain2, deque, 2
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY never_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK never_deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK never_deque, 11
+    EXPAND VEC_DEQUE_PUSH_BACK never_deque, 12
+    EXPAND VEC_DEQUE_EXTRACT_IF_U64 never_remain_len, never_extracted, never_deque, @vec_deque_extract_if_never
+    EXPAND VEC_LEN never_extracted_len, never_extracted
+    EXPAND VEC_DEQUE_LEN never_deque_len, never_deque
+    EXPAND VEC_DEQUE_GET_U64 never0, never_deque, 0
+    EXPAND VEC_DEQUE_GET_U64 never2, never_deque, 2
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY always_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK always_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK always_deque, 21
+    EXPAND VEC_DEQUE_PUSH_BACK always_deque, 22
+    EXPAND VEC_DEQUE_EXTRACT_IF_U64 always_remain_len, always_extracted, always_deque, @vec_deque_extract_if_always
+    EXPAND VEC_LEN always_extracted_len, always_extracted
+    EXPAND VEC_GET_U64 always0, always_extracted, 0
+    EXPAND VEC_GET_U64 always2, always_extracted, 2
+    EXPAND VEC_DEQUE_IS_EMPTY always_empty, always_deque
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY empty_deque, 0
+    EXPAND VEC_DEQUE_EXTRACT_IF_U64 empty_remain_len, empty_extracted, empty_deque, @vec_deque_extract_if_always
+    EXPAND VEC_LEN empty_extracted_len, empty_extracted
+    EXPAND VEC_DEQUE_IS_EMPTY empty_still_empty, empty_deque
+
+    ok = eq pop_ok, 1
+    check = eq popped, 1
+    ok = and ok, check
+    check = eq remain_len, 3
+    ok = and ok, check
+    check = eq extracted_len, 3
+    ok = and ok, check
+    check = eq extracted0, 2
+    ok = and ok, check
+    check = eq extracted1, 4
+    ok = and ok, check
+    check = eq extracted2, 6
+    ok = and ok, check
+    check = eq deque_len_after_extract, 3
+    ok = and ok, check
+    check = eq remain0, 3
+    ok = and ok, check
+    check = eq remain1, 5
+    ok = and ok, check
+    check = eq remain2, 7
+    ok = and ok, check
+    check = eq never_remain_len, 3
+    ok = and ok, check
+    check = eq never_extracted_len, 0
+    ok = and ok, check
+    check = eq never_deque_len, 3
+    ok = and ok, check
+    check = eq never0, 10
+    ok = and ok, check
+    check = eq never2, 12
+    ok = and ok, check
+    check = eq always_remain_len, 0
+    ok = and ok, check
+    check = eq always_extracted_len, 3
+    ok = and ok, check
+    check = eq always0, 20
+    ok = and ok, check
+    check = eq always2, 22
+    ok = and ok, check
+    check = eq always_empty, 1
+    ok = and ok, check
+    check = eq empty_remain_len, 0
+    ok = and ok, check
+    check = eq empty_extracted_len, 0
+    ok = and ok, check
+    check = eq empty_still_empty, 1
+    ok = and ok, check
+
+    !pop_ok
+    !popped
+    !remain_len
+    !extracted_len
+    !extracted0
+    !extracted1
+    !extracted2
+    !deque_len_after_extract
+    !remain0
+    !remain1
+    !remain2
+    !never_remain_len
+    !never_extracted_len
+    !never_deque_len
+    !never0
+    !never2
+    !always_remain_len
+    !always_extracted_len
+    !always0
+    !always2
+    !always_empty
+    !empty_remain_len
+    !empty_extracted_len
+    !empty_still_empty
+    !check
+    EXPAND VEC_FREE extracted
+    EXPAND VEC_FREE never_extracted
+    EXPAND VEC_FREE always_extracted
+    EXPAND VEC_FREE empty_extracted
+    EXPAND VEC_DEQUE_FREE deque
+    EXPAND VEC_DEQUE_FREE never_deque
+    EXPAND VEC_DEQUE_FREE always_deque
+    EXPAND VEC_DEQUE_FREE empty_deque
+    br ok -> L_VEC_DEQUE_EXTRACT_IF_OK, L_VEC_DEQUE_EXTRACT_IF_FAIL
+
+L_VEC_DEQUE_EXTRACT_IF_FAIL:
+    !ok
+    panic(10803)
+
+L_VEC_DEQUE_EXTRACT_IF_OK:
+    !ok
+    return

@@ -1,0 +1,1023 @@
+@import "sa_std/collections/hashset.sars"
+
+@const KEY_A = utf8:"alpha"
+@const KEY_B = utf8:"bravo"
+@const KEY_C = utf8:"charlie"
+
+@set_retain_not_bravo(key: ptr) -> u64:
+L_ENTRY:
+    bravo = &KEY_B
+    is_bravo = eq key, bravo
+    keep = eq is_bravo, 0
+    !is_bravo
+    !bravo
+    !key
+    return keep
+
+@set_extract_bravo(key: ptr) -> u64:
+L_ENTRY:
+    bravo = &KEY_B
+    take = eq key, bravo
+    !bravo
+    !key
+    return take
+
+@test "sa_std hashset convenience macros"():
+L_ENTRY:
+    EXPAND SET_WITH_CAPACITY set, 9
+    EXPAND SET_LEN len0, set
+    EXPAND SET_CAPACITY cap0, set
+    EXPAND SET_IS_EMPTY empty0, set
+    key_a = &KEY_A
+    key_b = &KEY_B
+    EXPAND SET_INSERT ins_a, set, key_a
+    EXPAND SET_INSERT ins_b, set, key_b
+    EXPAND SET_LEN len1, set
+    EXPAND SET_CAPACITY cap1, set
+    EXPAND SET_RESERVE set, 20
+    EXPAND SET_CAPACITY cap_after_reserve, set
+    EXPAND SET_SHRINK_TO_FIT set
+    EXPAND SET_CAPACITY cap_after_shrink, set
+    EXPAND SET_IS_EMPTY empty1, set
+    EXPAND SET_CONTAINS has_a, set, key_a
+    EXPAND SET_REMOVE rem_a, set, key_a
+    EXPAND SET_CONTAINS has_a_after_remove, set, key_a
+    EXPAND SET_CLEAR set
+    EXPAND SET_SHRINK_TO_FIT set
+    EXPAND SET_CAPACITY cap_after_clear_shrink, set
+    EXPAND SET_LEN len2, set
+    EXPAND SET_IS_EMPTY empty2, set
+    EXPAND SET_CONTAINS has_b_after_clear, set, key_b
+    EXPAND SET_INSERT ins_after_clear, set, key_b
+    EXPAND SET_LEN len3, set
+    EXPAND SET_CAPACITY cap_after_reinsert, set
+    EXPAND SET_CONTAINS has_b_after_reinsert, set, key_b
+
+    ok_len0 = eq len0, 0
+    ok_cap0 = eq cap0, 16
+    ok_empty0 = eq empty0, 1
+    ok_ins_a = eq ins_a, 1
+    ok_ins_b = eq ins_b, 1
+    ok_len1 = eq len1, 2
+    ok_cap1 = eq cap1, 16
+    ok_cap_after_reserve = eq cap_after_reserve, 32
+    ok_cap_after_shrink = eq cap_after_shrink, 8
+    ok_empty1 = eq empty1, 0
+    ok_has_a = eq has_a, 1
+    ok_rem_a = eq rem_a, 1
+    ok_has_a_after_remove = eq has_a_after_remove, 0
+    ok_cap_after_clear_shrink = eq cap_after_clear_shrink, 0
+    ok_len2 = eq len2, 0
+    ok_empty2 = eq empty2, 1
+    ok_has_b_after_clear = eq has_b_after_clear, 0
+    ok_ins_after_clear = eq ins_after_clear, 1
+    ok_len3 = eq len3, 1
+    ok_cap_after_reinsert = eq cap_after_reinsert, 8
+    ok_has_b_after_reinsert = eq has_b_after_reinsert, 1
+    ok01 = and ok_len0, ok_cap0
+    ok02 = and ok01, ok_empty0
+    ok03 = and ok02, ok_ins_a
+    ok04 = and ok03, ok_ins_b
+    ok05 = and ok04, ok_len1
+    ok06 = and ok05, ok_cap1
+    ok07 = and ok06, ok_cap_after_reserve
+    ok08 = and ok07, ok_cap_after_shrink
+    ok09 = and ok08, ok_empty1
+    ok10 = and ok09, ok_has_a
+    ok11 = and ok10, ok_rem_a
+    ok12 = and ok11, ok_has_a_after_remove
+    ok13 = and ok12, ok_cap_after_clear_shrink
+    ok14 = and ok13, ok_len2
+    ok15 = and ok14, ok_empty2
+    ok16 = and ok15, ok_has_b_after_clear
+    ok17 = and ok16, ok_ins_after_clear
+    ok18 = and ok17, ok_len3
+    ok19 = and ok18, ok_cap_after_reinsert
+    ok = and ok19, ok_has_b_after_reinsert
+    !len0
+    !cap0
+    !empty0
+    !ins_a
+    !ins_b
+    !len1
+    !cap1
+    !cap_after_reserve
+    !cap_after_shrink
+    !empty1
+    !has_a
+    !rem_a
+    !has_a_after_remove
+    !cap_after_clear_shrink
+    !len2
+    !empty2
+    !has_b_after_clear
+    !ins_after_clear
+    !len3
+    !cap_after_reinsert
+    !has_b_after_reinsert
+    !key_a
+    !key_b
+    !ok_len0
+    !ok_cap0
+    !ok_empty0
+    !ok_ins_a
+    !ok_ins_b
+    !ok_len1
+    !ok_cap1
+    !ok_cap_after_reserve
+    !ok_cap_after_shrink
+    !ok_empty1
+    !ok_has_a
+    !ok_rem_a
+    !ok_has_a_after_remove
+    !ok_cap_after_clear_shrink
+    !ok_len2
+    !ok_empty2
+    !ok_has_b_after_clear
+    !ok_ins_after_clear
+    !ok_len3
+    !ok_cap_after_reinsert
+    !ok_has_b_after_reinsert
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    EXPAND SET_FREE set
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(904)
+
+L_OK:
+    !ok
+    return
+
+@test "sa_std hashset rust parity macros"():
+L_ENTRY:
+    EXPAND SET_TRY_WITH_CAPACITY try_new_ok, set, 2
+    EXPAND SET_NEW other
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+
+    EXPAND SET_TRY_RESERVE reserve_ok, set, 4
+    EXPAND SET_INSERT ins_a, set, key_a
+    EXPAND SET_INSERT ins_b, set, key_b
+    EXPAND SET_GET get_a_ok, get_a_key, set, key_a
+    EXPAND SET_GET get_c_ok, get_c_key, set, key_c
+    EXPAND SET_REPLACE replace_a_ok, replace_a_key, set, key_a
+    EXPAND SET_INSERT other_ins_a, other, key_a
+    EXPAND SET_INSERT other_ins_b, other, key_b
+    EXPAND SET_IS_SUBSET subset0, set, other
+    EXPAND SET_IS_SUPERSET superset0, other, set
+    EXPAND SET_IS_DISJOINT disjoint0, set, other
+    EXPAND SET_TAKE take_a_ok, take_a_key, set, key_a
+    EXPAND SET_TAKE take_a_miss_ok, take_a_miss_key, set, key_a
+    EXPAND SET_IS_SUBSET subset1, set, other
+    EXPAND SET_IS_SUPERSET superset1, set, other
+    EXPAND SET_NEW disjoint_set
+    EXPAND SET_INSERT disjoint_insert_c, disjoint_set, key_c
+    EXPAND SET_IS_DISJOINT disjoint1, set, disjoint_set
+    EXPAND SET_SHRINK_TO set, 1
+    EXPAND SET_CAPACITY cap_after_shrink_to, set
+    EXPAND SET_LEN len_after_take, set
+    EXPAND SET_GET_OR_INSERT get_or_insert_existing, get_or_insert_existing_key, set, key_b
+    EXPAND SET_GET_OR_INSERT get_or_insert_new, get_or_insert_new_key, set, key_c
+    EXPAND SET_LEN len_after_get_or_insert, set
+
+    ok_try_new = eq try_new_ok, 1
+    ok_reserve = eq reserve_ok, 1
+    ok_ins_a = eq ins_a, 1
+    ok_ins_b = eq ins_b, 1
+    ok_get_a_flag = eq get_a_ok, 1
+    ok_get_a_key = eq get_a_key, key_a
+    ok_get_c_flag = eq get_c_ok, 0
+    ok_get_c_key = eq get_c_key, 0
+    ok_replace_a_flag = eq replace_a_ok, 1
+    ok_replace_a_key = eq replace_a_key, key_a
+    ok_other_ins_a = eq other_ins_a, 1
+    ok_other_ins_b = eq other_ins_b, 1
+    ok_subset0 = eq subset0, 1
+    ok_superset0 = eq superset0, 1
+    ok_disjoint0 = eq disjoint0, 0
+    ok_take_a_flag = eq take_a_ok, 1
+    ok_take_a_key = eq take_a_key, key_a
+    ok_take_a_miss_flag = eq take_a_miss_ok, 0
+    ok_take_a_miss_key = eq take_a_miss_key, 0
+    ok_subset1 = eq subset1, 1
+    ok_superset1 = eq superset1, 0
+    ok_disjoint_insert_c = eq disjoint_insert_c, 1
+    ok_disjoint1 = eq disjoint1, 1
+    ok_cap_after_shrink_to = eq cap_after_shrink_to, 8
+    ok_len_after_take = eq len_after_take, 1
+    ok_get_or_insert_existing = eq get_or_insert_existing, 0
+    ok_get_or_insert_existing_key = eq get_or_insert_existing_key, key_b
+    ok_get_or_insert_new = eq get_or_insert_new, 1
+    ok_get_or_insert_new_key = eq get_or_insert_new_key, key_c
+    ok_len_after_get_or_insert = eq len_after_get_or_insert, 2
+
+    ok01 = and ok_try_new, ok_reserve
+    ok02 = and ok01, ok_ins_a
+    ok03 = and ok02, ok_ins_b
+    ok04 = and ok03, ok_get_a_flag
+    ok05 = and ok04, ok_get_a_key
+    ok06 = and ok05, ok_get_c_flag
+    ok07 = and ok06, ok_get_c_key
+    ok08 = and ok07, ok_replace_a_flag
+    ok09 = and ok08, ok_replace_a_key
+    ok10 = and ok09, ok_other_ins_a
+    ok11 = and ok10, ok_other_ins_b
+    ok12 = and ok11, ok_subset0
+    ok13 = and ok12, ok_superset0
+    ok14 = and ok13, ok_disjoint0
+    ok15 = and ok14, ok_take_a_flag
+    ok16 = and ok15, ok_take_a_key
+    ok17 = and ok16, ok_take_a_miss_flag
+    ok18 = and ok17, ok_take_a_miss_key
+    ok19 = and ok18, ok_subset1
+    ok20 = and ok19, ok_superset1
+    ok21 = and ok20, ok_disjoint_insert_c
+    ok22 = and ok21, ok_disjoint1
+    ok23 = and ok22, ok_cap_after_shrink_to
+    ok24 = and ok23, ok_len_after_take
+    ok25 = and ok24, ok_get_or_insert_existing
+    ok26 = and ok25, ok_get_or_insert_existing_key
+    ok27 = and ok26, ok_get_or_insert_new
+    ok28 = and ok27, ok_get_or_insert_new_key
+    ok = and ok28, ok_len_after_get_or_insert
+
+    !try_new_ok
+    !reserve_ok
+    !ins_a
+    !ins_b
+    !get_a_ok
+    !get_a_key
+    !get_c_ok
+    !get_c_key
+    !replace_a_ok
+    !replace_a_key
+    !other_ins_a
+    !other_ins_b
+    !subset0
+    !superset0
+    !disjoint0
+    !take_a_ok
+    !take_a_key
+    !take_a_miss_ok
+    !take_a_miss_key
+    !subset1
+    !superset1
+    !disjoint_insert_c
+    !disjoint1
+    !cap_after_shrink_to
+    !len_after_take
+    !get_or_insert_existing
+    !get_or_insert_existing_key
+    !get_or_insert_new
+    !get_or_insert_new_key
+    !len_after_get_or_insert
+    !key_c
+    !key_b
+    !key_a
+    !ok_try_new
+    !ok_reserve
+    !ok_ins_a
+    !ok_ins_b
+    !ok_get_a_flag
+    !ok_get_a_key
+    !ok_get_c_flag
+    !ok_get_c_key
+    !ok_replace_a_flag
+    !ok_replace_a_key
+    !ok_other_ins_a
+    !ok_other_ins_b
+    !ok_subset0
+    !ok_superset0
+    !ok_disjoint0
+    !ok_take_a_flag
+    !ok_take_a_key
+    !ok_take_a_miss_flag
+    !ok_take_a_miss_key
+    !ok_subset1
+    !ok_superset1
+    !ok_disjoint_insert_c
+    !ok_disjoint1
+    !ok_cap_after_shrink_to
+    !ok_len_after_take
+    !ok_get_or_insert_existing
+    !ok_get_or_insert_existing_key
+    !ok_get_or_insert_new
+    !ok_get_or_insert_new_key
+    !ok_len_after_get_or_insert
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    EXPAND SET_FREE disjoint_set
+    EXPAND SET_FREE other
+    EXPAND SET_FREE set
+    br ok -> L_PARITY_OK, L_PARITY_FAIL
+
+L_PARITY_FAIL:
+    !ok
+    panic(10050)
+
+L_PARITY_OK:
+    !ok
+    return
+
+@test "sa_std hashset key view macros"():
+L_ENTRY:
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_a_bits = bitcast key_a as u64
+    key_b_bits = bitcast key_b as u64
+
+    EXPAND SET_WITH_CAPACITY keys_set, 4
+    EXPAND SET_INSERT keys_ins_a, keys_set, key_a
+    EXPAND SET_INSERT keys_ins_b, keys_set, key_b
+    EXPAND SET_KEYS keys_vec, keys_set
+    EXPAND VEC_LEN keys_len, keys_vec
+    EXPAND VEC_CONTAINS_U64 keys_has_a, keys_vec, key_a_bits
+    EXPAND VEC_CONTAINS_U64 keys_has_b, keys_vec, key_b_bits
+    EXPAND SET_LEN keys_set_len_after, keys_set
+
+    EXPAND SET_WITH_CAPACITY into_set, 4
+    EXPAND SET_INSERT into_ins_a, into_set, key_a
+    EXPAND SET_INSERT into_ins_b, into_set, key_b
+    EXPAND SET_INTO_KEYS into_keys_vec, into_set
+    EXPAND VEC_LEN into_keys_len, into_keys_vec
+    EXPAND VEC_CONTAINS_U64 into_keys_has_a, into_keys_vec, key_a_bits
+    EXPAND VEC_CONTAINS_U64 into_keys_has_b, into_keys_vec, key_b_bits
+    EXPAND SET_LEN into_set_len_after, into_set
+    EXPAND SET_IS_EMPTY into_set_empty_after, into_set
+
+    ok_keys_ins_a = eq keys_ins_a, 1
+    ok_keys_ins_b = eq keys_ins_b, 1
+    ok_keys_len = eq keys_len, 2
+    ok_keys_has_a = eq keys_has_a, 1
+    ok_keys_has_b = eq keys_has_b, 1
+    ok_keys_set_len_after = eq keys_set_len_after, 2
+    ok_into_ins_a = eq into_ins_a, 1
+    ok_into_ins_b = eq into_ins_b, 1
+    ok_into_keys_len = eq into_keys_len, 2
+    ok_into_keys_has_a = eq into_keys_has_a, 1
+    ok_into_keys_has_b = eq into_keys_has_b, 1
+    ok_into_set_len_after = eq into_set_len_after, 0
+    ok_into_set_empty_after = eq into_set_empty_after, 1
+
+    ok01 = and ok_keys_ins_a, ok_keys_ins_b
+    ok02 = and ok01, ok_keys_len
+    ok03 = and ok02, ok_keys_has_a
+    ok04 = and ok03, ok_keys_has_b
+    ok05 = and ok04, ok_keys_set_len_after
+    ok06 = and ok05, ok_into_ins_a
+    ok07 = and ok06, ok_into_ins_b
+    ok08 = and ok07, ok_into_keys_len
+    ok09 = and ok08, ok_into_keys_has_a
+    ok10 = and ok09, ok_into_keys_has_b
+    ok11 = and ok10, ok_into_set_len_after
+    ok = and ok11, ok_into_set_empty_after
+
+    !key_a
+    !key_b
+    !key_a_bits
+    !key_b_bits
+    !keys_ins_a
+    !keys_ins_b
+    !keys_len
+    !keys_has_a
+    !keys_has_b
+    !keys_set_len_after
+    !into_ins_a
+    !into_ins_b
+    !into_keys_len
+    !into_keys_has_a
+    !into_keys_has_b
+    !into_set_len_after
+    !into_set_empty_after
+    !ok_keys_ins_a
+    !ok_keys_ins_b
+    !ok_keys_len
+    !ok_keys_has_a
+    !ok_keys_has_b
+    !ok_keys_set_len_after
+    !ok_into_ins_a
+    !ok_into_ins_b
+    !ok_into_keys_len
+    !ok_into_keys_has_a
+    !ok_into_keys_has_b
+    !ok_into_set_len_after
+    !ok_into_set_empty_after
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    EXPAND VEC_FREE into_keys_vec
+    EXPAND VEC_FREE keys_vec
+    EXPAND SET_FREE into_set
+    EXPAND SET_FREE keys_set
+    br ok -> L_SET_KEYS_OK, L_SET_KEYS_FAIL
+
+L_SET_KEYS_FAIL:
+    !ok
+    panic(10051)
+
+L_SET_KEYS_OK:
+    !ok
+    return
+
+@test "sa_std hashset retain macro"():
+L_ENTRY:
+    EXPAND SET_WITH_CAPACITY set, 4
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+
+    EXPAND SET_INSERT ins_a, set, key_a
+    EXPAND SET_INSERT ins_b, set, key_b
+    EXPAND SET_INSERT ins_c, set, key_c
+    EXPAND SET_RETAIN retain_len, set, @set_retain_not_bravo
+    EXPAND SET_LEN len_after_retain, set
+    EXPAND SET_CONTAINS has_a, set, key_a
+    EXPAND SET_CONTAINS has_b, set, key_b
+    EXPAND SET_CONTAINS has_c, set, key_c
+    EXPAND SET_INSERT reinsert_b, set, key_b
+    EXPAND SET_LEN len_after_reinsert, set
+    EXPAND SET_CONTAINS has_b_after_reinsert, set, key_b
+
+    ins_a_ok = eq ins_a, 1
+    ins_b_ok = eq ins_b, 1
+    ins_c_ok = eq ins_c, 1
+    retain_len_ok = eq retain_len, 2
+    len_after_retain_ok = eq len_after_retain, 2
+    has_a_ok = eq has_a, 1
+    has_b_ok = eq has_b, 0
+    has_c_ok = eq has_c, 1
+    reinsert_b_ok = eq reinsert_b, 1
+    len_after_reinsert_ok = eq len_after_reinsert, 3
+    has_b_after_reinsert_ok = eq has_b_after_reinsert, 1
+    ok01 = and ins_a_ok, ins_b_ok
+    ok02 = and ok01, ins_c_ok
+    ok03 = and ok02, retain_len_ok
+    ok04 = and ok03, len_after_retain_ok
+    ok05 = and ok04, has_a_ok
+    ok06 = and ok05, has_b_ok
+    ok07 = and ok06, has_c_ok
+    ok08 = and ok07, reinsert_b_ok
+    ok09 = and ok08, len_after_reinsert_ok
+    ok = and ok09, has_b_after_reinsert_ok
+
+    !ins_a
+    !ins_b
+    !ins_c
+    !retain_len
+    !len_after_retain
+    !has_a
+    !has_b
+    !has_c
+    !reinsert_b
+    !len_after_reinsert
+    !has_b_after_reinsert
+    !key_c
+    !key_b
+    !key_a
+    !ins_a_ok
+    !ins_b_ok
+    !ins_c_ok
+    !retain_len_ok
+    !len_after_retain_ok
+    !has_a_ok
+    !has_b_ok
+    !has_c_ok
+    !reinsert_b_ok
+    !len_after_reinsert_ok
+    !has_b_after_reinsert_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    EXPAND SET_FREE set
+    br ok -> L_RETAIN_OK, L_RETAIN_FAIL
+
+L_RETAIN_FAIL:
+    !ok
+    panic(918)
+
+L_RETAIN_OK:
+    !ok
+    return
+
+@test "sa_std hashset drain and extract macros"():
+L_ENTRY:
+    EXPAND SET_WITH_CAPACITY set, 4
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+
+    EXPAND SET_INSERT ins_a, set, key_a
+    EXPAND SET_INSERT ins_b, set, key_b
+    EXPAND SET_INSERT ins_c, set, key_c
+    EXPAND SET_EXTRACT_IF extract_len, extract_vec, set, @set_extract_bravo
+    EXPAND VEC_LEN extract_vec_len, extract_vec
+    key_a_bits = bitcast key_a as u64
+    key_b_bits = bitcast key_b as u64
+    key_c_bits = bitcast key_c as u64
+    EXPAND VEC_CONTAINS_U64 extract_has_b, extract_vec, key_b_bits
+    EXPAND SET_LEN len_after_extract, set
+    EXPAND SET_CONTAINS has_a_after_extract, set, key_a
+    EXPAND SET_CONTAINS has_b_after_extract, set, key_b
+    EXPAND SET_CONTAINS has_c_after_extract, set, key_c
+
+    EXPAND SET_DRAIN drain_vec, set
+    EXPAND VEC_LEN drain_vec_len, drain_vec
+    EXPAND VEC_CONTAINS_U64 drain_has_a, drain_vec, key_a_bits
+    EXPAND VEC_CONTAINS_U64 drain_has_c, drain_vec, key_c_bits
+    EXPAND SET_LEN len_after_drain, set
+    EXPAND SET_CONTAINS has_a_after_drain, set, key_a
+    EXPAND SET_INSERT reinsert_b, set, key_b
+    EXPAND SET_LEN len_after_reinsert, set
+    EXPAND SET_CONTAINS has_b_after_reinsert, set, key_b
+
+    ins_a_ok = eq ins_a, 1
+    ins_b_ok = eq ins_b, 1
+    ins_c_ok = eq ins_c, 1
+    extract_len_ok = eq extract_len, 2
+    extract_vec_len_ok = eq extract_vec_len, 1
+    extract_has_b_ok = eq extract_has_b, 1
+    len_after_extract_ok = eq len_after_extract, 2
+    has_a_after_extract_ok = eq has_a_after_extract, 1
+    has_b_after_extract_ok = eq has_b_after_extract, 0
+    has_c_after_extract_ok = eq has_c_after_extract, 1
+    drain_vec_len_ok = eq drain_vec_len, 2
+    drain_has_a_ok = eq drain_has_a, 1
+    drain_has_c_ok = eq drain_has_c, 1
+    len_after_drain_ok = eq len_after_drain, 0
+    has_a_after_drain_ok = eq has_a_after_drain, 0
+    reinsert_b_ok = eq reinsert_b, 1
+    len_after_reinsert_ok = eq len_after_reinsert, 1
+    has_b_after_reinsert_ok = eq has_b_after_reinsert, 1
+    ok01 = and ins_a_ok, ins_b_ok
+    ok02 = and ok01, ins_c_ok
+    ok03 = and ok02, extract_len_ok
+    ok04 = and ok03, extract_vec_len_ok
+    ok05 = and ok04, extract_has_b_ok
+    ok06 = and ok05, len_after_extract_ok
+    ok07 = and ok06, has_a_after_extract_ok
+    ok08 = and ok07, has_b_after_extract_ok
+    ok09 = and ok08, has_c_after_extract_ok
+    ok10 = and ok09, drain_vec_len_ok
+    ok11 = and ok10, drain_has_a_ok
+    ok12 = and ok11, drain_has_c_ok
+    ok13 = and ok12, len_after_drain_ok
+    ok14 = and ok13, has_a_after_drain_ok
+    ok15 = and ok14, reinsert_b_ok
+    ok16 = and ok15, len_after_reinsert_ok
+    ok = and ok16, has_b_after_reinsert_ok
+
+    !ins_a
+    !ins_b
+    !ins_c
+    !extract_len
+    !extract_vec_len
+    !key_a_bits
+    !key_b_bits
+    !key_c_bits
+    !extract_has_b
+    !len_after_extract
+    !has_a_after_extract
+    !has_b_after_extract
+    !has_c_after_extract
+    !drain_vec_len
+    !drain_has_a
+    !drain_has_c
+    !len_after_drain
+    !has_a_after_drain
+    !reinsert_b
+    !len_after_reinsert
+    !has_b_after_reinsert
+    !key_c
+    !key_b
+    !key_a
+    !ins_a_ok
+    !ins_b_ok
+    !ins_c_ok
+    !extract_len_ok
+    !extract_vec_len_ok
+    !extract_has_b_ok
+    !len_after_extract_ok
+    !has_a_after_extract_ok
+    !has_b_after_extract_ok
+    !has_c_after_extract_ok
+    !drain_vec_len_ok
+    !drain_has_a_ok
+    !drain_has_c_ok
+    !len_after_drain_ok
+    !has_a_after_drain_ok
+    !reinsert_b_ok
+    !len_after_reinsert_ok
+    !has_b_after_reinsert_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    EXPAND VEC_FREE drain_vec
+    EXPAND VEC_FREE extract_vec
+    EXPAND SET_FREE set
+    br ok -> L_DRAIN_EXTRACT_OK, L_DRAIN_EXTRACT_FAIL
+
+L_DRAIN_EXTRACT_FAIL:
+    !ok
+    panic(10052)
+
+L_DRAIN_EXTRACT_OK:
+    !ok
+    return
+
+@test "sa_std hashset set algebra macros"():
+L_ENTRY:
+    EXPAND SET_NEW left
+    EXPAND SET_NEW right
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+    EXPAND SET_INSERT left_ins_a, left, key_a
+    EXPAND SET_INSERT left_ins_b, left, key_b
+    EXPAND SET_INSERT right_ins_b, right, key_b
+    EXPAND SET_INSERT right_ins_c, right, key_c
+
+    EXPAND SET_UNION union_set, left, right
+    EXPAND SET_INTERSECTION intersection_set, left, right
+    EXPAND SET_DIFFERENCE difference_set, left, right
+    EXPAND SET_SYMMETRIC_DIFFERENCE symmetric_set, left, right
+
+    EXPAND SET_LEN union_len, union_set
+    EXPAND SET_CONTAINS union_has_a, union_set, key_a
+    EXPAND SET_CONTAINS union_has_b, union_set, key_b
+    EXPAND SET_CONTAINS union_has_c, union_set, key_c
+
+    EXPAND SET_LEN intersection_len, intersection_set
+    EXPAND SET_CONTAINS intersection_has_a, intersection_set, key_a
+    EXPAND SET_CONTAINS intersection_has_b, intersection_set, key_b
+    EXPAND SET_CONTAINS intersection_has_c, intersection_set, key_c
+
+    EXPAND SET_LEN difference_len, difference_set
+    EXPAND SET_CONTAINS difference_has_a, difference_set, key_a
+    EXPAND SET_CONTAINS difference_has_b, difference_set, key_b
+    EXPAND SET_CONTAINS difference_has_c, difference_set, key_c
+
+    EXPAND SET_LEN symmetric_len, symmetric_set
+    EXPAND SET_CONTAINS symmetric_has_a, symmetric_set, key_a
+    EXPAND SET_CONTAINS symmetric_has_b, symmetric_set, key_b
+    EXPAND SET_CONTAINS symmetric_has_c, symmetric_set, key_c
+
+    ok_left_ins_a = eq left_ins_a, 1
+    ok_left_ins_b = eq left_ins_b, 1
+    ok_right_ins_b = eq right_ins_b, 1
+    ok_right_ins_c = eq right_ins_c, 1
+    ok_union_len = eq union_len, 3
+    ok_union_has_a = eq union_has_a, 1
+    ok_union_has_b = eq union_has_b, 1
+    ok_union_has_c = eq union_has_c, 1
+    ok_intersection_len = eq intersection_len, 1
+    ok_intersection_has_a = eq intersection_has_a, 0
+    ok_intersection_has_b = eq intersection_has_b, 1
+    ok_intersection_has_c = eq intersection_has_c, 0
+    ok_difference_len = eq difference_len, 1
+    ok_difference_has_a = eq difference_has_a, 1
+    ok_difference_has_b = eq difference_has_b, 0
+    ok_difference_has_c = eq difference_has_c, 0
+    ok_symmetric_len = eq symmetric_len, 2
+    ok_symmetric_has_a = eq symmetric_has_a, 1
+    ok_symmetric_has_b = eq symmetric_has_b, 0
+    ok_symmetric_has_c = eq symmetric_has_c, 1
+
+    ok01 = and ok_left_ins_a, ok_left_ins_b
+    ok02 = and ok01, ok_right_ins_b
+    ok03 = and ok02, ok_right_ins_c
+    ok04 = and ok03, ok_union_len
+    ok05 = and ok04, ok_union_has_a
+    ok06 = and ok05, ok_union_has_b
+    ok07 = and ok06, ok_union_has_c
+    ok08 = and ok07, ok_intersection_len
+    ok09 = and ok08, ok_intersection_has_a
+    ok10 = and ok09, ok_intersection_has_b
+    ok11 = and ok10, ok_intersection_has_c
+    ok12 = and ok11, ok_difference_len
+    ok13 = and ok12, ok_difference_has_a
+    ok14 = and ok13, ok_difference_has_b
+    ok15 = and ok14, ok_difference_has_c
+    ok16 = and ok15, ok_symmetric_len
+    ok17 = and ok16, ok_symmetric_has_a
+    ok18 = and ok17, ok_symmetric_has_b
+    ok = and ok18, ok_symmetric_has_c
+
+    !left_ins_a
+    !left_ins_b
+    !right_ins_b
+    !right_ins_c
+    !union_len
+    !union_has_a
+    !union_has_b
+    !union_has_c
+    !intersection_len
+    !intersection_has_a
+    !intersection_has_b
+    !intersection_has_c
+    !difference_len
+    !difference_has_a
+    !difference_has_b
+    !difference_has_c
+    !symmetric_len
+    !symmetric_has_a
+    !symmetric_has_b
+    !symmetric_has_c
+    !key_c
+    !key_b
+    !key_a
+    !ok_left_ins_a
+    !ok_left_ins_b
+    !ok_right_ins_b
+    !ok_right_ins_c
+    !ok_union_len
+    !ok_union_has_a
+    !ok_union_has_b
+    !ok_union_has_c
+    !ok_intersection_len
+    !ok_intersection_has_a
+    !ok_intersection_has_b
+    !ok_intersection_has_c
+    !ok_difference_len
+    !ok_difference_has_a
+    !ok_difference_has_b
+    !ok_difference_has_c
+    !ok_symmetric_len
+    !ok_symmetric_has_a
+    !ok_symmetric_has_b
+    !ok_symmetric_has_c
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    EXPAND SET_FREE symmetric_set
+    EXPAND SET_FREE difference_set
+    EXPAND SET_FREE intersection_set
+    EXPAND SET_FREE union_set
+    EXPAND SET_FREE right
+    EXPAND SET_FREE left
+    br ok -> L_ALGEBRA_OK, L_ALGEBRA_FAIL
+
+L_ALGEBRA_FAIL:
+    !ok
+    panic(10053)
+
+L_ALGEBRA_OK:
+    !ok
+    return
+
+@test "sa_std hashset extra_capacity/entry aliases"():
+L_ENTRY:
+    EXPAND SET_WITH_CAPACITY set, 4
+    EXPAND SET_LEN len0, set
+    EXPAND SET_CAPACITY cap0, set
+    EXPAND SET_EXTRA_CAPACITY ec0, set
+    expected0 = sub cap0, len0
+    ec0_ok = eq ec0, expected0
+
+    key_a = &KEY_A
+    key_b = &KEY_B
+    EXPAND SET_ENTRY_GET_OR_INSERT ins_a, stored_a, set, key_a
+    ins_a_ok = eq ins_a, 1
+    stored_a_ok = eq stored_a, key_a
+    EXPAND SET_OR_INSERT ins_a2, stored_a2, set, key_a
+    ins_a2_ok = eq ins_a2, 0
+    stored_a2_ok = eq stored_a2, key_a
+    EXPAND SET_OR_INSERT ins_b, stored_b, set, key_b
+    ins_b_ok = eq ins_b, 1
+
+    EXPAND SET_LEN len1, set
+    EXPAND SET_CAPACITY cap1, set
+    EXPAND SET_EXTRA_CAPACITY ec1, set
+    expected1 = sub cap1, len1
+    ec1_ok = eq ec1, expected1
+    len1_ok = eq len1, 2
+
+    EXPAND SET_FREE set
+
+    ok = and ec0_ok, ins_a_ok
+    ok = and ok, stored_a_ok
+    ok = and ok, ins_a2_ok
+    ok = and ok, stored_a2_ok
+    ok = and ok, ins_b_ok
+    ok = and ok, ec1_ok
+    ok = and ok, len1_ok
+
+    !len0
+    !cap0
+    !ec0
+    !expected0
+    !key_a
+    !key_b
+    !ins_a
+    !stored_a
+    !ins_a2
+    !stored_a2
+    !ins_b
+    !stored_b
+    !len1
+    !cap1
+    !ec1
+    !expected1
+    !ec0_ok
+    !ins_a_ok
+    !stored_a_ok
+    !ins_a2_ok
+    !stored_a2_ok
+    !ins_b_ok
+    !ec1_ok
+    !len1_ok
+    br ok -> L_SET_EC_OK, L_SET_EC_FAIL
+
+L_SET_EC_FAIL:
+    !ok
+    panic(10054)
+
+L_SET_EC_OK:
+    !ok
+    return
+
+@test "sa_std hashset literal arity macros"():
+L_ENTRY:
+    key_a = &KEY_A
+    key_b = &KEY_B
+    key_c = &KEY_C
+
+    EXPAND SET_LIT1 set1, key_a
+    EXPAND SET_LEN len1, set1
+    EXPAND SET_CONTAINS has1a, set1, key_a
+    len1_ok = eq len1, 1
+    has1a_ok = eq has1a, 1
+
+    EXPAND SET_LIT2 set2, key_a, key_b
+    EXPAND SET_LEN len2, set2
+    EXPAND SET_CONTAINS has2a, set2, key_a
+    EXPAND SET_CONTAINS has2b, set2, key_b
+    len2_ok = eq len2, 2
+    has2a_ok = eq has2a, 1
+    has2b_ok = eq has2b, 1
+
+    EXPAND SET_LIT3 set3, key_a, key_b, key_c
+    EXPAND SET_LEN len3, set3
+    EXPAND SET_CONTAINS has3a, set3, key_a
+    EXPAND SET_CONTAINS has3b, set3, key_b
+    EXPAND SET_CONTAINS has3c, set3, key_c
+    len3_ok = eq len3, 3
+    has3a_ok = eq has3a, 1
+    has3b_ok = eq has3b, 1
+    has3c_ok = eq has3c, 1
+
+    EXPAND SET_FREE set1
+    EXPAND SET_FREE set2
+    EXPAND SET_FREE set3
+
+    ok = and len1_ok, has1a_ok
+    ok = and ok, len2_ok
+    ok = and ok, has2a_ok
+    ok = and ok, has2b_ok
+    ok = and ok, len3_ok
+    ok = and ok, has3a_ok
+    ok = and ok, has3b_ok
+    ok = and ok, has3c_ok
+
+    !key_a
+    !key_b
+    !key_c
+    !len1
+    !has1a
+    !len2
+    !has2a
+    !has2b
+    !len3
+    !has3a
+    !has3b
+    !has3c
+    !len1_ok
+    !has1a_ok
+    !len2_ok
+    !has2a_ok
+    !has2b_ok
+    !len3_ok
+    !has3a_ok
+    !has3b_ok
+    !has3c_ok
+    br ok -> L_SET_LIT_OK, L_SET_LIT_FAIL
+
+L_SET_LIT_FAIL:
+    !ok
+    panic(10055)
+
+L_SET_LIT_OK:
+    !ok
+    return
+
+
+@test "sa_std hashset default alias"():
+L_ENTRY:
+    EXPAND SET_DEFAULT set
+    EXPAND SET_LEN len0, set
+    EXPAND SET_IS_EMPTY empty0, set
+    EXPAND SET_FREE set
+
+    ok_len = eq len0, 0
+    ok_empty = eq empty0, 1
+    ok = and ok_len, ok_empty
+
+    !len0
+    !empty0
+    !ok_len
+    !ok_empty
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    panic(10432)
+L_OK:
+    !ok
+    return

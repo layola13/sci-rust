@@ -1,0 +1,43 @@
+@import "sa_std/process.sars"
+
+@const MISSING_EXEC_BIN = utf8:"/definitely-not-a-real-sa-command-builder-exec-target"
+
+#def MISSING_EXEC_BIN_LEN = 52
+#def ARG_SIZE = 16
+
+@test "sa_std process Command builder exec failure macro"():
+L_ENTRY:
+    argv = stack_alloc ARG_SIZE
+    dummy = stack_alloc 1
+    groups = stack_alloc 8
+    EXPAND PROCESS_ARGV_SET_CONST argv, 0, MISSING_EXEC_BIN, MISSING_EXEC_BIN_LEN
+
+    EXPAND PROCESS_COMMAND_BUILDER_NEW cwd_len0, has_cwd0, arg0_len0, has_arg00, pgroup0, has_pgroup0, setsid0
+    EXPAND PROCESS_COMMAND_BUILDER_EXEC exec_status, argv, 1, dummy, cwd_len0, has_cwd0, dummy, arg0_len0, has_arg00, pgroup0, has_pgroup0, setsid0, 0, 0, 0, 0, groups, 0, 0, dummy, 0, 0
+
+    exec_failed = ne exec_status, SA_PROCESS_OK
+    br exec_failed -> L_PASS, L_FAIL
+
+L_FAIL:
+    !exec_failed
+    !exec_status
+    !cwd_len0
+    !has_cwd0
+    !arg0_len0
+    !has_arg00
+    !pgroup0
+    !has_pgroup0
+    !setsid0
+    panic(10692)
+
+L_PASS:
+    !exec_failed
+    !exec_status
+    !cwd_len0
+    !has_cwd0
+    !arg0_len0
+    !has_arg00
+    !pgroup0
+    !has_pgroup0
+    !setsid0
+    return 0

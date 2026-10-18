@@ -1,0 +1,180 @@
+@import "sa_std/array.sars"
+
+@array_into_iter_try_collect_times_ten_lt_four(value: u64, &out_value: ptr) -> u64:
+L_ENTRY:
+    keep = ult value, 4
+    br keep -> L_ARRAY_TRY_COLLECT_KEEP, L_ARRAY_TRY_COLLECT_STOP
+L_ARRAY_TRY_COLLECT_KEEP:
+    mapped = mul value, 10
+    store out_value+0, mapped as u64
+    !mapped
+    !out_value
+    !value
+    return keep
+L_ARRAY_TRY_COLLECT_STOP:
+    !out_value
+    !value
+    return keep
+
+@array_into_iter_try_collect_times_ten_lt_ten(value: u64, &out_value: ptr) -> u64:
+L_ENTRY:
+    keep = ult value, 10
+    mapped = mul value, 10
+    store out_value+0, mapped as u64
+    !mapped
+    !out_value
+    !value
+    return keep
+
+@test "sa_std array into_iter collect macro surface"():
+L_ENTRY:
+    collect_arr = stack_alloc 24
+    store collect_arr+0, 1 as u64
+    store collect_arr+8, 2 as u64
+    store collect_arr+16, 3 as u64
+    EXPAND ARRAY_INTO_ITER_U64 collect_iter, collect_backing, collect_arr, 3
+    EXPAND ARRAY_INTO_ITER_COLLECT_U64 collected_vec, collect_iter
+    EXPAND VEC_LEN collected_len, collected_vec
+    EXPAND VEC_GET_U64 collected_0, collected_vec, 0
+    EXPAND VEC_GET_U64 collected_2, collected_vec, 2
+    EXPAND ARRAY_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 collect_empty, collect_iter
+
+    try_all_arr = stack_alloc 24
+    store try_all_arr+0, 1 as u64
+    store try_all_arr+8, 2 as u64
+    store try_all_arr+16, 3 as u64
+    EXPAND ARRAY_INTO_ITER_U64 try_all_iter, try_all_backing, try_all_arr, 3
+    EXPAND ARRAY_INTO_ITER_TRY_COLLECT_U64 try_all_ok, try_all_vec, try_all_iter, @array_into_iter_try_collect_times_ten_lt_ten
+    EXPAND VEC_LEN try_all_len, try_all_vec
+    EXPAND VEC_GET_U64 try_all_0, try_all_vec, 0
+    EXPAND VEC_GET_U64 try_all_2, try_all_vec, 2
+    EXPAND ARRAY_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 try_all_empty, try_all_iter
+
+    try_stop_arr = stack_alloc 32
+    store try_stop_arr+0, 1 as u64
+    store try_stop_arr+8, 2 as u64
+    store try_stop_arr+16, 4 as u64
+    store try_stop_arr+24, 5 as u64
+    EXPAND ARRAY_INTO_ITER_U64 try_stop_iter, try_stop_backing, try_stop_arr, 4
+    EXPAND ARRAY_INTO_ITER_TRY_COLLECT_U64 try_stop_ok, try_stop_vec, try_stop_iter, @array_into_iter_try_collect_times_ten_lt_four
+    EXPAND VEC_LEN try_stop_len, try_stop_vec
+    EXPAND VEC_GET_U64 try_stop_0, try_stop_vec, 0
+    EXPAND VEC_GET_U64 try_stop_1, try_stop_vec, 1
+    EXPAND ARRAY_INTO_ITER_EXACT_SIZE_LEN_U64 try_stop_remaining, try_stop_iter
+    EXPAND ARRAY_INTO_ITER_NEXT_U64 try_stop_next_has, try_stop_next, try_stop_iter
+
+    collect_into_arr = stack_alloc 16
+    store collect_into_arr+0, 8 as u64
+    store collect_into_arr+8, 9 as u64
+    EXPAND ARRAY_INTO_ITER_U64 collect_into_iter, collect_into_backing, collect_into_arr, 2
+    EXPAND VEC_NEW collect_into_dest
+    EXPAND VEC_PUSH_U64 collect_into_dest, 7
+    EXPAND ARRAY_INTO_ITER_COLLECT_INTO_U64 collect_into_dest, collect_into_iter
+    EXPAND VEC_LEN collect_into_len, collect_into_dest
+    EXPAND VEC_GET_U64 collect_into_0, collect_into_dest, 0
+    EXPAND VEC_GET_U64 collect_into_2, collect_into_dest, 2
+    EXPAND ARRAY_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 collect_into_empty, collect_into_iter
+
+    EXPAND VEC_FREE collect_backing
+    EXPAND VEC_FREE collected_vec
+    EXPAND VEC_FREE try_all_backing
+    EXPAND VEC_FREE try_all_vec
+    EXPAND VEC_FREE try_stop_backing
+    EXPAND VEC_FREE try_stop_vec
+    EXPAND VEC_FREE collect_into_backing
+    EXPAND VEC_FREE collect_into_dest
+
+    ok_collect_len = eq collected_len, 3
+    ok_collect_0 = eq collected_0, 1
+    ok_collect_2 = eq collected_2, 3
+    ok_collect_empty = eq collect_empty, 1
+    ok_try_all_ok = eq try_all_ok, 1
+    ok_try_all_len = eq try_all_len, 3
+    ok_try_all_0 = eq try_all_0, 10
+    ok_try_all_2 = eq try_all_2, 30
+    ok_try_all_empty = eq try_all_empty, 1
+    ok_try_stop_ok = eq try_stop_ok, 0
+    ok_try_stop_len = eq try_stop_len, 2
+    ok_try_stop_0 = eq try_stop_0, 10
+    ok_try_stop_1 = eq try_stop_1, 20
+    ok_try_stop_remaining = eq try_stop_remaining, 1
+    ok_try_stop_next_has = eq try_stop_next_has, 1
+    ok_try_stop_next = eq try_stop_next, 5
+    ok_collect_into_len = eq collect_into_len, 3
+    ok_collect_into_0 = eq collect_into_0, 7
+    ok_collect_into_2 = eq collect_into_2, 9
+    ok_collect_into_empty = eq collect_into_empty, 1
+
+    ok = and ok_collect_len, ok_collect_0
+    ok = and ok, ok_collect_2
+    ok = and ok, ok_collect_empty
+    ok = and ok, ok_try_all_ok
+    ok = and ok, ok_try_all_len
+    ok = and ok, ok_try_all_0
+    ok = and ok, ok_try_all_2
+    ok = and ok, ok_try_all_empty
+    ok = and ok, ok_try_stop_ok
+    ok = and ok, ok_try_stop_len
+    ok = and ok, ok_try_stop_0
+    ok = and ok, ok_try_stop_1
+    ok = and ok, ok_try_stop_remaining
+    ok = and ok, ok_try_stop_next_has
+    ok = and ok, ok_try_stop_next
+    ok = and ok, ok_collect_into_len
+    ok = and ok, ok_collect_into_0
+    ok = and ok, ok_collect_into_2
+    ok = and ok, ok_collect_into_empty
+
+    !collected_len
+    !collected_0
+    !collected_2
+    !collect_empty
+    !try_all_ok
+    !try_all_len
+    !try_all_0
+    !try_all_2
+    !try_all_empty
+    !try_stop_ok
+    !try_stop_len
+    !try_stop_0
+    !try_stop_1
+    !try_stop_remaining
+    !try_stop_next_has
+    !try_stop_next
+    !collect_into_len
+    !collect_into_0
+    !collect_into_2
+    !collect_into_empty
+    !ok_collect_len
+    !ok_collect_0
+    !ok_collect_2
+    !ok_collect_empty
+    !ok_try_all_ok
+    !ok_try_all_len
+    !ok_try_all_0
+    !ok_try_all_2
+    !ok_try_all_empty
+    !ok_try_stop_ok
+    !ok_try_stop_len
+    !ok_try_stop_0
+    !ok_try_stop_1
+    !ok_try_stop_remaining
+    !ok_try_stop_next_has
+    !ok_try_stop_next
+    !ok_collect_into_len
+    !ok_collect_into_0
+    !ok_collect_into_2
+    !ok_collect_into_empty
+    !collect_iter
+    !try_all_iter
+    !try_stop_iter
+    !collect_into_iter
+    br ok -> L_ARRAY_INTO_ITER_COLLECT_OK, L_ARRAY_INTO_ITER_COLLECT_FAIL
+
+L_ARRAY_INTO_ITER_COLLECT_FAIL:
+    !ok
+    panic(10746)
+
+L_ARRAY_INTO_ITER_COLLECT_OK:
+    !ok
+    return

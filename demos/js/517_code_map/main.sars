@@ -1,0 +1,22 @@
+@import "sa_std/io/print.sai"
+@import "consumer/consume.sars"
+
+@const OUT = utf8:"517\n"
+
+// 517 - Error-code mapping split across bridge and consumer files:
+// code 0 maps to 517 through a fallible boundary.
+@main() -> i32:
+L_ENTRY:
+    r = call @mapped_value()
+    v = ?r
+    ok = eq v, 517
+    !r
+    !v
+    br ok -> L_OK, L_ERR
+L_OK:
+    !ok
+    call @sa_print_bytes(&OUT, 4)
+    return 0
+L_ERR:
+    !ok
+    return 1

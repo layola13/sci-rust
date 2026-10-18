@@ -1,0 +1,137 @@
+@import "sa_std/borrow.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std cow slice hash_one macro surface"():
+L_ENTRY:
+    EXPAND BUILD_HASHER_DEFAULT_NEW builder
+
+    data = stack_alloc 16
+    store data+0, 11 as u64
+    store data+8, 22 as u64
+    slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, data, 2
+
+    same_data = stack_alloc 16
+    store same_data+0, 11 as u64
+    store same_data+8, 22 as u64
+    same_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW same_slice, same_data, 2
+
+    short_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW short_slice, data, 1
+
+    other_data = stack_alloc 16
+    store other_data+0, 11 as u64
+    store other_data+8, 23 as u64
+    other_slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW other_slice, other_data, 2
+
+    cow_borrowed = stack_alloc CowSlice_SIZE
+    cow_owned_same = stack_alloc CowSlice_SIZE
+    cow_borrowed_short = stack_alloc CowSlice_SIZE
+    cow_owned_other = stack_alloc CowSlice_SIZE
+    cow_view = stack_alloc Slice_SIZE
+    changed_view = stack_alloc Slice_SIZE
+    EXPAND COW_SLICE_BORROWED cow_borrowed, slice
+    EXPAND COW_SLICE_OWNED cow_owned_same, same_slice
+    EXPAND COW_SLICE_BORROWED cow_borrowed_short, short_slice
+    EXPAND COW_SLICE_OWNED cow_owned_other, other_slice
+    EXPAND COW_SLICE_AS_SLICE cow_view, cow_borrowed
+
+    write_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND DEFAULT_HASHER_NEW write_hasher
+    EXPAND DEFAULT_HASHER_WRITE_COW_SLICE_U64 write_hasher, cow_borrowed
+    EXPAND DEFAULT_HASHER_FINISH writer_hash, write_hasher
+
+    EXPAND COW_SLICE_HASH_U64 borrowed_hash, cow_borrowed
+    EXPAND COW_SLICE_HASH_U64 owned_same_hash, cow_owned_same
+    EXPAND COW_SLICE_HASH_U64 short_hash, cow_borrowed_short
+    EXPAND COW_SLICE_HASH_U64 other_hash, cow_owned_other
+    EXPAND SLICE_HASH_U64 slice_hash, cow_view
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_COW_SLICE_U64 build_hash, builder, cow_borrowed
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_SLICE_U64 build_slice_hash, builder, cow_view
+
+    state = stack_alloc RandomState_SIZE
+    state_manual_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_WITH_SEEDS state, 11, 22
+    EXPAND RANDOM_STATE_HASH_ONE_COW_SLICE_U64 state_hash, state, cow_borrowed
+    EXPAND RANDOM_STATE_BUILD state_manual_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_SLICE_U64 state_manual_hasher, cow_view
+    EXPAND DEFAULT_HASHER_FINISH state_manual_hash, state_manual_hasher
+
+    store data+8, 24 as u64
+    EXPAND COW_SLICE_AS_SLICE changed_view, cow_borrowed
+    EXPAND COW_SLICE_HASH_U64 changed_hash, cow_borrowed
+    EXPAND SLICE_HASH_U64 changed_slice_hash, changed_view
+    EXPAND BUILD_HASHER_DEFAULT_HASH_ONE_COW_SLICE_U64 changed_build_hash, builder, cow_borrowed
+
+    writer_matches_slice = eq writer_hash, slice_hash
+    borrowed_matches_slice = eq borrowed_hash, slice_hash
+    tag_and_address_ignored = eq owned_same_hash, borrowed_hash
+    length_matters = ne short_hash, borrowed_hash
+    value_matters = ne other_hash, borrowed_hash
+    build_matches_cow = eq build_hash, borrowed_hash
+    build_matches_slice = eq build_hash, build_slice_hash
+    state_matches_manual = eq state_hash, state_manual_hash
+    seeded_differs_default = ne state_hash, borrowed_hash
+    changed_matches_slice = eq changed_hash, changed_slice_hash
+    changed_build_matches = eq changed_build_hash, changed_hash
+    changed_differs_old = ne changed_hash, borrowed_hash
+
+    c01 = and writer_matches_slice, borrowed_matches_slice
+    c02 = and c01, tag_and_address_ignored
+    c03 = and c02, length_matters
+    c04 = and c03, value_matters
+    c05 = and c04, build_matches_cow
+    c06 = and c05, build_matches_slice
+    c07 = and c06, state_matches_manual
+    c08 = and c07, seeded_differs_default
+    c09 = and c08, changed_matches_slice
+    c10 = and c09, changed_build_matches
+    ok = and c10, changed_differs_old
+
+    !writer_hash
+    !borrowed_hash
+    !owned_same_hash
+    !short_hash
+    !other_hash
+    !slice_hash
+    !build_hash
+    !build_slice_hash
+    !state_hash
+    !state_manual_hash
+    !changed_hash
+    !changed_slice_hash
+    !changed_build_hash
+    !writer_matches_slice
+    !borrowed_matches_slice
+    !tag_and_address_ignored
+    !length_matters
+    !value_matters
+    !build_matches_cow
+    !build_matches_slice
+    !state_matches_manual
+    !seeded_differs_default
+    !changed_matches_slice
+    !changed_build_matches
+    !changed_differs_old
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !builder
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10584)
+
+L_PASS:
+    !ok
+    return 0

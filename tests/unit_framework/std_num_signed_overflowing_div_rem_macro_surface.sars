@@ -1,0 +1,84 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_SIGNED_OVERFLOWING_DIV_REM_EQ %out_acc, %prev_acc, %value, %expected
+    __test_signed_overflowing_div_rem_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_signed_overflowing_div_rem_eq_%out_acc
+    !__test_signed_overflowing_div_rem_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std signed primitive overflowing div and rem macro surface"():
+L_ENTRY:
+    EXPAND NUM_I8_OVERFLOWING_DIV i8_div_value, i8_div_over, 5, 2
+    EXPAND NUM_I16_OVERFLOWING_DIV i16_div_value, i16_div_over, -9, 2
+    EXPAND NUM_I32_OVERFLOWING_DIV i32_div_over_value, i32_div_over_over, NUM_I32_MIN, -1
+    EXPAND NUM_I64_OVERFLOWING_DIV i64_div_over_value, i64_div_over_over, NUM_I64_MIN, -1
+    EXPAND NUM_ISIZE_OVERFLOWING_DIV isize_div_over_value, isize_div_over_over, NUM_ISIZE_MIN, -1
+
+    EXPAND NUM_I8_OVERFLOWING_DIV_EUCLID i8_div_euclid_value, i8_div_euclid_over, -7, 3
+    EXPAND NUM_I16_OVERFLOWING_DIV_EUCLID i16_div_euclid_value, i16_div_euclid_over, 7, -3
+    EXPAND NUM_I32_OVERFLOWING_DIV_EUCLID i32_div_euclid_over_value, i32_div_euclid_over_over, NUM_I32_MIN, -1
+    EXPAND NUM_I64_OVERFLOWING_DIV_EUCLID i64_div_euclid_value, i64_div_euclid_over, -7, 3
+    EXPAND NUM_ISIZE_OVERFLOWING_DIV_EUCLID isize_div_euclid_over_value, isize_div_euclid_over_over, NUM_ISIZE_MIN, -1
+
+    EXPAND NUM_I8_OVERFLOWING_REM i8_rem_value, i8_rem_over, 5, 2
+    EXPAND NUM_I16_OVERFLOWING_REM i16_rem_value, i16_rem_over, -7, 3
+    EXPAND NUM_I32_OVERFLOWING_REM i32_rem_over_value, i32_rem_over_over, NUM_I32_MIN, -1
+    EXPAND NUM_I64_OVERFLOWING_REM i64_rem_over_value, i64_rem_over_over, NUM_I64_MIN, -1
+    EXPAND NUM_ISIZE_OVERFLOWING_REM isize_rem_over_value, isize_rem_over_over, NUM_ISIZE_MIN, -1
+
+    EXPAND NUM_I8_OVERFLOWING_REM_EUCLID i8_rem_euclid_value, i8_rem_euclid_over, -7, 3
+    EXPAND NUM_I16_OVERFLOWING_REM_EUCLID i16_rem_euclid_value, i16_rem_euclid_over, 7, -3
+    EXPAND NUM_I32_OVERFLOWING_REM_EUCLID i32_rem_euclid_over_value, i32_rem_euclid_over_over, NUM_I32_MIN, -1
+    EXPAND NUM_I64_OVERFLOWING_REM_EUCLID i64_rem_euclid_value, i64_rem_euclid_over, -7, 3
+    EXPAND NUM_ISIZE_OVERFLOWING_REM_EUCLID isize_rem_euclid_over_value, isize_rem_euclid_over_over, NUM_ISIZE_MIN, -1
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_01, acc_00, i8_div_value, 2
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_02, acc_01, i8_div_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_03, acc_02, i16_div_value, -4
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_04, acc_03, i16_div_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_05, acc_04, i32_div_over_value, NUM_I32_MIN
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_06, acc_05, i32_div_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_07, acc_06, i64_div_over_value, NUM_I64_MIN
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_08, acc_07, i64_div_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_09, acc_08, isize_div_over_value, NUM_ISIZE_MIN
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_10, acc_09, isize_div_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_11, acc_10, i8_div_euclid_value, -3
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_12, acc_11, i8_div_euclid_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_13, acc_12, i16_div_euclid_value, -2
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_14, acc_13, i16_div_euclid_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_15, acc_14, i32_div_euclid_over_value, NUM_I32_MIN
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_16, acc_15, i32_div_euclid_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_17, acc_16, i64_div_euclid_value, -3
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_18, acc_17, i64_div_euclid_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_19, acc_18, isize_div_euclid_over_value, NUM_ISIZE_MIN
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_20, acc_19, isize_div_euclid_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_21, acc_20, i8_rem_value, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_22, acc_21, i8_rem_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_23, acc_22, i16_rem_value, -1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_24, acc_23, i16_rem_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_25, acc_24, i32_rem_over_value, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_26, acc_25, i32_rem_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_27, acc_26, i64_rem_over_value, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_28, acc_27, i64_rem_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_29, acc_28, isize_rem_over_value, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_30, acc_29, isize_rem_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_31, acc_30, i8_rem_euclid_value, 2
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_32, acc_31, i8_rem_euclid_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_33, acc_32, i16_rem_euclid_value, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_34, acc_33, i16_rem_euclid_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_35, acc_34, i32_rem_euclid_over_value, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_36, acc_35, i32_rem_euclid_over_over, 1
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_37, acc_36, i64_rem_euclid_value, 2
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_38, acc_37, i64_rem_euclid_over, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_39, acc_38, isize_rem_euclid_over_value, 0
+    EXPAND TEST_SIGNED_OVERFLOWING_DIV_REM_EQ acc_40, acc_39, isize_rem_euclid_over_over, 1
+    br acc_40 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_40
+    panic(10658)
+
+L_PASS:
+    !acc_40
+    return 0

@@ -1,3 +1,0 @@
-// Public JoinHandle facade over thread.sa.
-@import "thread.sal"
-@import "thread.sa"

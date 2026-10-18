@@ -1,0 +1,27 @@
+@import "sa_std/sync/once.sars"
+
+@test "sa_std once_lock set get"():
+L_ENTRY:
+    EXPAND ONCE_LOCK_NEW lock
+    EXPAND ONCE_LOCK_SET s0, lock, 42
+    EXPAND ONCE_LOCK_SET s1, lock, 99
+    EXPAND ONCE_LOCK_GET v, lock
+    a = eq s0, 1
+    b = eq s1, 0
+    c = eq v, 42
+    ok01 = and a, b
+    ok = and ok01, c
+    !s0
+    !s1
+    !v
+    !a
+    !b
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11008)

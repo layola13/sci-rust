@@ -1,0 +1,33 @@
+@import "sa_std/core/mem.sars"
+@import "sa_std/core/box.sal"
+
+@test "sa_std box into_inner leak raw"():
+L_ENTRY:
+    EXPAND BOX_NEW b, 42
+    EXPAND BOX_INTO_INNER v, b
+    EXPAND BOX_NEW b2, 7
+    EXPAND BOX_LEAK p, b2
+    loaded = load p+0 as u64
+    EXPAND BOX_INTO_RAW raw, b2
+    EXPAND BOX_FROM_RAW b3, raw
+    EXPAND BOX_GET v3, b3
+
+    a = eq v, 42
+    b1 = eq loaded, 7
+    c = eq v3, 7
+    ok01 = and a, b1
+    ok = and ok01, c
+    !v
+    !loaded
+    !v3
+    !a
+    !b1
+    !c
+    !ok01
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10890)

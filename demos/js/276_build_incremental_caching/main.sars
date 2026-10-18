@@ -1,0 +1,34 @@
+@import "sa_std/io/print.sai"
+@import "generated/cache/state.sars"
+
+@const RESULT_OK = utf8:"276\n"
+@const RESULT_ERR = utf8:"error\n"
+
+#def EXPECTED_BUILD = 276
+
+// 276 - Build Incremental Caching
+// build/cache.toml and cache/*.json feed generated/cache/state.sa.
+
+@cache_artifact_value() -> i32:
+L_ENTRY:
+    value = call @cache_state_value()
+    count = call @cache_state_count()
+    !count
+    return value
+
+@main() -> i32:
+L_ENTRY:
+    value = call @cache_artifact_value()
+    ok = eq value, EXPECTED_BUILD
+    !value
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

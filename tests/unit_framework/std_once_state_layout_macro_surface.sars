@@ -1,0 +1,62 @@
+@import "sa_std/sync/once.sars"
+
+@test "sa_std OnceState layout and poison query macros"():
+L_ENTRY:
+    state_clean = stack_alloc OnceState_SIZE
+    state_poisoned = stack_alloc OnceState_SIZE
+
+    EXPAND ONCE_STATE_NEW state_clean, 0
+    EXPAND ONCE_STATE_NEW state_poisoned, 1
+
+    EXPAND ONCE_STATE_IS_POISONED clean_is_poisoned, state_clean
+    EXPAND ONCE_STATE_IS_POISONED poisoned_is_poisoned, state_poisoned
+    EXPAND ONCE_STATE_SET_STATE_TO clean_state_to0, state_clean
+    EXPAND ONCE_STATE_SET_STATE_TO poisoned_state_to0, state_poisoned
+    EXPAND ONCE_STATE_POISON state_clean
+    EXPAND ONCE_STATE_SET_STATE_TO clean_state_to1, state_clean
+
+    clean_raw = load state_clean+OnceState_poisoned as u8
+    poisoned_raw = load state_poisoned+OnceState_poisoned as u8
+
+    ok_size = eq OnceState_SIZE, 8
+    ok_align = eq OnceState_ALIGN, 4
+    ok_poisoned_off = eq OnceState_poisoned, +0
+    ok_state_to_off = eq OnceState_set_state_to, +4
+    ok_complete = eq OnceState_STATE_COMPLETE, 0
+    ok_running = eq OnceState_STATE_RUNNING, 1
+    ok_poisoned_state = eq OnceState_STATE_POISONED, 2
+    ok_incomplete = eq OnceState_STATE_INCOMPLETE, 3
+    ok_queued = eq OnceState_STATE_QUEUED, 4
+    ok_mask = eq OnceState_STATE_MASK, 3
+    ok_clean_query = eq clean_is_poisoned, 0
+    ok_poisoned_query = eq poisoned_is_poisoned, 1
+    ok_clean_state_to0 = eq clean_state_to0, OnceState_STATE_COMPLETE
+    ok_poisoned_state_to0 = eq poisoned_state_to0, OnceState_STATE_COMPLETE
+    ok_clean_state_to1 = eq clean_state_to1, OnceState_STATE_POISONED
+    ok_clean_raw = eq clean_raw, 0
+    ok_poisoned_raw = eq poisoned_raw, 1
+
+    c01 = and ok_size, ok_align
+    c02 = and c01, ok_poisoned_off
+    c03 = and c02, ok_state_to_off
+    c04 = and c03, ok_complete
+    c05 = and c04, ok_running
+    c06 = and c05, ok_poisoned_state
+    c07 = and c06, ok_incomplete
+    c08 = and c07, ok_queued
+    c09 = and c08, ok_mask
+    c10 = and c09, ok_clean_query
+    c11 = and c10, ok_poisoned_query
+    c12 = and c11, ok_clean_state_to0
+    c13 = and c12, ok_poisoned_state_to0
+    c14 = and c13, ok_clean_state_to1
+    c15 = and c14, ok_clean_raw
+    ok = and c15, ok_poisoned_raw
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10506)
+
+L_PASS:
+    return 0

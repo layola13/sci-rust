@@ -1,0 +1,54 @@
+@import "sa_std/collections/linked_list.sars"
+
+@ll_odd(v: u64) -> u64:
+L_ENTRY:
+    rem = urem v, 2
+    out = eq rem, 1
+    !rem
+    !v
+    return out
+
+@test "sa_std linked_list extract_if"():
+L_ENTRY:
+    EXPAND LINKED_LIST_NEW list
+    EXPAND LINKED_LIST_PUSH_BACK list, 1
+    EXPAND LINKED_LIST_PUSH_BACK list, 2
+    EXPAND LINKED_LIST_PUSH_BACK list, 3
+    EXPAND LINKED_LIST_PUSH_BACK list, 4
+    EXPAND LINKED_LIST_EXTRACT_IF n, extracted, list, @ll_odd
+    EXPAND LINKED_LIST_LEN remain, list
+    EXPAND LINKED_LIST_LEN elen, extracted
+    EXPAND LINKED_LIST_CONTAINS has1, extracted, 1
+    EXPAND LINKED_LIST_CONTAINS has2, list, 2
+    EXPAND LINKED_LIST_FREE list
+    EXPAND LINKED_LIST_FREE extracted
+
+    a = eq n, 2
+    b = eq remain, 2
+    c = eq elen, 2
+    d = eq has1, 1
+    e = eq has2, 1
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok03 = and ok02, d
+    ok = and ok03, e
+    !n
+    !remain
+    !elen
+    !has1
+    !has2
+    !a
+    !b
+    !c
+    !d
+    !e
+    !ok01
+    !ok02
+    !ok03
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10889)

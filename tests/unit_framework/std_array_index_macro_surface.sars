@@ -1,0 +1,27 @@
+@import "sa_std/array.sars"
+
+@test "sa_std array index macro surface"():
+L_ENTRY:
+    arr = stack_alloc 32
+    store arr+0, 5 as u64
+    store arr+8, 10 as u64
+    store arr+16, 15 as u64
+    store arr+24, 20 as u64
+
+    EXPAND ARRAY_INDEX_U64 index_two, arr, 2
+    EXPAND ARRAY_INDEX_MUT_PTR_U64 index_mut_one, arr, 1
+    store index_mut_one+0, 77 as u64
+    !index_mut_one
+    EXPAND ARRAY_INDEX_U64 after_mut, arr, 1
+
+    ok_index_two = eq index_two, 15
+    ok_after_mut = eq after_mut, 77
+    ok = and ok_index_two, ok_after_mut
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10526)
+
+L_PASS:
+    return 0

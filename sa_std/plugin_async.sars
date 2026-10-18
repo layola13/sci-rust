@@ -1,0 +1,90 @@
+// Plugin async adapter macros.
+//
+// A plugin operation is polled by the concrete adapter and exposed as a
+// PollResult<u64>: pending while the plugin reports would_block/not-ready,
+// ready-ok with the owned result handle, or ready-err with the plugin status.
+// This keeps HTTP, process, DB-worker, and future plugin adapters on one ABI.
+@import "plugin_async.sal"
+@import "core/future.sars"
+
+[MACRO] PLUGIN_ASYNC_OP_NEW %out_op, %handle, %deadline_ms
+    %out_op = alloc PluginAsyncOp_SIZE
+    store %out_op+PluginAsyncOp_handle, %handle as ptr
+    store %out_op+PluginAsyncOp_state, PluginAsync_PENDING as u64
+    store %out_op+PluginAsyncOp_status, PluginAsync_STATUS_OK as u64
+    store %out_op+PluginAsyncOp_value, 0 as ptr
+    store %out_op+PluginAsyncOp_error, 0 as u64
+    store %out_op+PluginAsyncOp_deadline_ms, %deadline_ms as u64
+    store %out_op+PluginAsyncOp_cancelled, 0 as u64
+    store %out_op+PluginAsyncOp_owned, 1 as u64
+[END_MACRO]
+
+[MACRO] PLUGIN_ASYNC_OP_STATE %out_state, %op
+    %out_state = load %op+PluginAsyncOp_state as u64
+[END_MACRO]
+
+[MACRO] PLUGIN_ASYNC_OP_HANDLE %out_handle, %op
+    %out_handle = load %op+PluginAsyncOp_handle as ptr
+[END_MACRO]
+
+[MACRO] PLUGIN_ASYNC_OP_SET_READY %op, %value
+    store %op+PluginAsyncOp_state, PluginAsync_READY as u64
+    store %op+PluginAsyncOp_status, PluginAsync_STATUS_OK as u64
+    store %op+PluginAsyncOp_value, %value as ptr
+[END_MACRO]
+
+[MACRO] PLUGIN_ASYNC_OP_SET_ERROR %op, %status
+    store %op+PluginAsyncOp_state, PluginAsync_FAILED as u64
+    store %op+PluginAsyncOp_status, %status as u64
+    store %op+PluginAsyncOp_error, %status as u64
+[END_MACRO]
+
+[MACRO] PLUGIN_ASYNC_OP_CANCEL %op
+    store %op+PluginAsyncOp_state, PluginAsync_CANCELLED as u64
+    store %op+PluginAsyncOp_status, PluginAsync_STATUS_CLOSED as u64
+    store %op+PluginAsyncOp_error, PluginAsync_ERROR_CANCELLED as u64
+    store %op+PluginAsyncOp_cancelled, 1 as u64
+[END_MACRO]
+
+[MACRO] PLUGIN_ASYNC_OP_IS_DONE %out_done, %op
+    __plugin_async_state_%out_done = load %op+PluginAsyncOp_state as u64
+    __plugin_async_ready_%out_done = eq __plugin_async_state_%out_done, PluginAsync_READY
+    __plugin_async_failed_%out_done = eq __plugin_async_state_%out_done, PluginAsync_FAILED
+    __plugin_async_cancelled_%out_done = eq __plugin_async_state_%out_done, PluginAsync_CANCELLED
+    __plugin_async_terminal_%out_done = or __plugin_async_ready_%out_done, __plugin_async_failed_%out_done
+    %out_done = or __plugin_async_terminal_%out_done, __plugin_async_cancelled_%out_done
+    !__plugin_async_cancelled_%out_done
+    !__plugin_async_terminal_%out_done
+    !__plugin_async_failed_%out_done
+    !__plugin_async_ready_%out_done
+    !__plugin_async_state_%out_done
+[END_MACRO]
+
+// Convert a plugin poll status plus its ready bit into PollResult<u64>.
+// `%value` must be the result handle when ready; it is ignored for errors.
+[MACRO] PLUGIN_ASYNC_POLL_RESULT %out_poll, %status, %ready, %value
+    __plugin_async_poll_is_would_block_%out_poll = eq %status, PluginAsync_STATUS_WOULD_BLOCK
+    __plugin_async_poll_is_ready_%out_poll = ne %ready, 0
+    __plugin_async_poll_is_ok_%out_poll = eq %status, PluginAsync_STATUS_OK
+    __plugin_async_poll_is_not_ready_%out_poll = eq %ready, 0
+    __plugin_async_poll_ok_pending_%out_poll = and __plugin_async_poll_is_ok_%out_poll, __plugin_async_poll_is_not_ready_%out_poll
+    __plugin_async_poll_is_pending_%out_poll = or __plugin_async_poll_is_would_block_%out_poll, __plugin_async_poll_ok_pending_%out_poll
+    br __plugin_async_poll_is_pending_%out_poll -> L_PLUGIN_ASYNC_POLL_PENDING_%out_poll, L_PLUGIN_ASYNC_POLL_STATUS_%out_poll
+L_PLUGIN_ASYNC_POLL_PENDING_%out_poll:
+    EXPAND POLL_RESULT_PENDING %out_poll
+    jmp L_PLUGIN_ASYNC_POLL_DONE_%out_poll
+L_PLUGIN_ASYNC_POLL_STATUS_%out_poll:
+    br __plugin_async_poll_is_ok_%out_poll -> L_PLUGIN_ASYNC_POLL_READY_%out_poll, L_PLUGIN_ASYNC_POLL_ERROR_%out_poll
+L_PLUGIN_ASYNC_POLL_READY_%out_poll:
+    EXPAND POLL_RESULT_READY_OK %out_poll, %value
+    jmp L_PLUGIN_ASYNC_POLL_DONE_%out_poll
+L_PLUGIN_ASYNC_POLL_ERROR_%out_poll:
+    EXPAND POLL_RESULT_READY_ERR %out_poll, %status
+L_PLUGIN_ASYNC_POLL_DONE_%out_poll:
+    !__plugin_async_poll_is_would_block_%out_poll
+    !__plugin_async_poll_is_ready_%out_poll
+    !__plugin_async_poll_is_ok_%out_poll
+    !__plugin_async_poll_is_not_ready_%out_poll
+    !__plugin_async_poll_ok_pending_%out_poll
+    !__plugin_async_poll_is_pending_%out_poll
+[END_MACRO]

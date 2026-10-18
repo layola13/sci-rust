@@ -1,0 +1,128 @@
+@import "sa_std/sync/mpsc.sars"
+
+@test "sa_std mpsc concrete error constructors"():
+L_ENTRY:
+    EXPAND MPSC_SEND_ERROR_NEW send_error, 41
+    EXPAND MPSC_SEND_ERROR_VALUE send_value, send_error
+    EXPAND MPSC_TRY_SEND_ERROR_NEW try_send_error, TRY_SEND_ERROR_FULL, 52
+    EXPAND MPSC_TRY_SEND_ERROR_KIND try_send_kind, try_send_error
+    EXPAND MPSC_TRY_SEND_ERROR_VALUE try_send_value, try_send_error
+    EXPAND MPSC_TRY_RECV_ERROR_NEW try_recv_error, TRY_RECV_ERROR_DISCONNECTED
+    EXPAND MPSC_TRY_RECV_ERROR_KIND try_recv_kind, try_recv_error
+    EXPAND MPSC_RECV_TIMEOUT_ERROR_NEW timeout_error, RECV_TIMEOUT_ERROR_TIMEOUT
+    EXPAND MPSC_RECV_TIMEOUT_ERROR_KIND timeout_kind, timeout_error
+    EXPAND MPSC_NEW full_chan, 1
+    EXPAND MPSC_TRY_SEND full_send0, full_chan, 1
+    EXPAND MPSC_TRY_SEND_ERROR full_send1, full_error, full_chan, 2
+    EXPAND MPSC_TRY_SEND_ERROR_KIND full_kind, full_error
+    EXPAND MPSC_TRY_RECV drain_ok, drain_value, full_chan
+    EXPAND MPSC_TRY_RECV_ERROR empty_recv, empty_error, empty_value, full_chan
+    EXPAND MPSC_TRY_RECV_ERROR_KIND empty_kind, empty_error
+    EXPAND MPSC_FREE full_chan
+    EXPAND MPSC_TRY_SEND_ERROR disconnected_send, disconnected_send_error, 0, 3
+    EXPAND MPSC_TRY_SEND_ERROR_KIND disconnected_send_kind, disconnected_send_error
+    EXPAND MPSC_TRY_RECV_ERROR disconnected_recv, disconnected_recv_error, disconnected_value, 0
+    EXPAND MPSC_TRY_RECV_ERROR_KIND disconnected_recv_kind, disconnected_recv_error
+
+    c0 = eq send_value, 41
+    c1 = eq try_send_kind, TRY_SEND_ERROR_FULL
+    c2 = eq try_send_value, 52
+    c3 = eq try_recv_kind, TRY_RECV_ERROR_DISCONNECTED
+    c4 = eq timeout_kind, RECV_TIMEOUT_ERROR_TIMEOUT
+    c5 = eq full_send0, 1
+    c6 = eq full_send1, 0
+    c7 = eq full_kind, TRY_SEND_ERROR_FULL
+    c8 = eq empty_recv, 0
+    c9 = eq empty_value, 0
+    c10 = eq empty_kind, TRY_RECV_ERROR_EMPTY
+    c11 = eq disconnected_send, 0
+    c12 = eq disconnected_send_kind, TRY_SEND_ERROR_DISCONNECTED
+    c13 = eq disconnected_recv, 0
+    c14 = eq disconnected_value, 0
+    c15 = eq disconnected_recv_kind, TRY_RECV_ERROR_DISCONNECTED
+    drain_c0 = eq drain_ok, 1
+    drain_c1 = eq drain_value, 1
+    a0 = and c0, c1
+    a1 = and a0, c2
+    a2 = and a1, c3
+    a3 = and a2, c4
+    a4 = and a3, c5
+    a5 = and a4, c6
+    a6 = and a5, c7
+    a7 = and a6, c8
+    a8 = and a7, c9
+    a9 = and a8, c10
+    a10 = and a9, c11
+    a11 = and a10, c12
+    a12 = and a11, c13
+    a13 = and a12, c14
+    a14 = and a13, c15
+    a15 = and a14, drain_c0
+    ok = and a15, drain_c1
+    !send_error
+    !send_value
+    !try_send_error
+    !try_send_kind
+    !try_send_value
+    !try_recv_error
+    !try_recv_kind
+    !timeout_error
+    !timeout_kind
+    !full_send0
+    !full_send1
+    !full_error
+    !full_kind
+    !empty_recv
+    !empty_error
+    !empty_value
+    !empty_kind
+    !disconnected_send
+    !disconnected_send_error
+    !disconnected_send_kind
+    !disconnected_recv
+    !disconnected_recv_error
+    !disconnected_value
+    !disconnected_recv_kind
+    !c0
+    !c1
+    !c2
+    !c3
+    !c4
+    !c5
+    !c6
+    !c7
+    !c8
+    !c9
+    !c10
+    !c11
+    !c12
+    !c13
+    !c14
+    !c15
+    !drain_c0
+    !drain_c1
+    !drain_ok
+    !drain_value
+    !a0
+    !a1
+    !a2
+    !a3
+    !a4
+    !a5
+    !a6
+    !a7
+    !a8
+    !a9
+    !a10
+    !a11
+    !a12
+    !a13
+    !a14
+    !a15
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(11003)

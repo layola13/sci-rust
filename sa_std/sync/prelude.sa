@@ -1,8 +1,0 @@
-@import "atomic.sa"
-@import "barrier.sa"
-@import "condvar.sa"
-@import "mpsc.sa"
-@import "mutex.sa"
-@import "once.sa"
-@import "poison.sa"
-@import "rwlock.sa"

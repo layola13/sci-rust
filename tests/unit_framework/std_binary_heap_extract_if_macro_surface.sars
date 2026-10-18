@@ -1,0 +1,62 @@
+@import "sa_std/collections/binary_heap.sars"
+@import "sa_std/vec.sars"
+
+@bh_take_odd(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    odd = eq rem, 1
+    !rem
+    !value
+    return odd
+
+@test "sa_std binary_heap extract_if"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH heap, 2
+    EXPAND BINARY_HEAP_PUSH heap, 3
+    EXPAND BINARY_HEAP_PUSH heap, 4
+    EXPAND BINARY_HEAP_EXTRACT_IF extracted_len, extracted, heap, @bh_take_odd
+    EXPAND BINARY_HEAP_LEN remain, heap
+    EXPAND VEC_LEN elen, extracted
+    EXPAND VEC_CONTAINS_U64 has1, extracted, 1
+    EXPAND VEC_CONTAINS_U64 has3, extracted, 3
+    EXPAND VEC_CONTAINS_U64 has2, extracted, 2
+    EXPAND BINARY_HEAP_FREE heap
+    EXPAND VEC_FREE extracted
+
+    ok_el = eq extracted_len, 2
+    ok_elen = eq elen, 2
+    ok_remain = eq remain, 2
+    ok_h1 = eq has1, 1
+    ok_h3 = eq has3, 1
+    ok_h2 = eq has2, 0
+    ok01 = and ok_el, ok_elen
+    ok02 = and ok01, ok_remain
+    ok03 = and ok02, ok_h1
+    ok04 = and ok03, ok_h3
+    ok = and ok04, ok_h2
+
+    !extracted_len
+    !elen
+    !remain
+    !has1
+    !has3
+    !has2
+    !ok_el
+    !ok_elen
+    !ok_remain
+    !ok_h1
+    !ok_h3
+    !ok_h2
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10879)

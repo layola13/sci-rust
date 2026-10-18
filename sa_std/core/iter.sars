@@ -1,0 +1,2805 @@
+@import "iter.sal"
+@import "slice.sal"
+@import "slice.sars"
+@import "../vec_runtime_macros.sars"
+
+[MACRO] ITER_NEW %out_iter, %slice_reg
+    %out_iter = alloc Iter_SIZE
+    __iter_ptr_%out_iter = load %slice_reg+Slice_ptr as ptr
+    __iter_len_%out_iter = load %slice_reg+Slice_len as u64
+    store %out_iter+Iter_ptr, __iter_ptr_%out_iter as ptr
+    store %out_iter+Iter_len, __iter_len_%out_iter as u64
+    store %out_iter+Iter_index, 0 as u64
+    !__iter_ptr_%out_iter
+    !__iter_len_%out_iter
+[END_MACRO]
+
+[MACRO] ITER_FROM_SLICE %out_iter, %slice_reg
+    EXPAND ITER_NEW %out_iter, %slice_reg
+[END_MACRO]
+
+[MACRO] ITER_IS_EMPTY %out_bool, %iter_reg
+    __iter_len_%out_bool = load %iter_reg+Iter_len as u64
+    __iter_index_%out_bool = load %iter_reg+Iter_index as u64
+    __iter_done_%out_bool = eq __iter_index_%out_bool, __iter_len_%out_bool
+    %out_bool = __iter_done_%out_bool
+    !__iter_index_%out_bool
+    !__iter_len_%out_bool
+[END_MACRO]
+
+[MACRO] ITER_HAS_NEXT %out_bool, %iter_reg
+    __iter_len_%out_bool = load %iter_reg+Iter_len as u64
+    __iter_index_%out_bool = load %iter_reg+Iter_index as u64
+    %out_bool = lt __iter_index_%out_bool, __iter_len_%out_bool
+    !__iter_index_%out_bool
+    !__iter_len_%out_bool
+[END_MACRO]
+
+[MACRO] ITER_REMAINING %out_len, %iter_reg
+    __iter_len_%out_len = load %iter_reg+Iter_len as u64
+    __iter_index_%out_len = load %iter_reg+Iter_index as u64
+    %out_len = sub __iter_len_%out_len, __iter_index_%out_len
+    !__iter_index_%out_len
+    !__iter_len_%out_len
+[END_MACRO]
+
+[MACRO] ITER_LEN %out_len, %iter_reg
+    __iter_len_%out_len = load %iter_reg+Iter_len as u64
+    __iter_index_%out_len = load %iter_reg+Iter_index as u64
+    %out_len = sub __iter_len_%out_len, __iter_index_%out_len
+    !__iter_index_%out_len
+    !__iter_len_%out_len
+[END_MACRO]
+
+[MACRO] ITER_PEEK_U64 %out_value, %iter_reg
+    __iter_ptr_%out_value = load %iter_reg+Iter_ptr as ptr
+    __iter_index_%out_value = load %iter_reg+Iter_index as u64
+    __iter_off_%out_value = mul __iter_index_%out_value, 8
+    __iter_item_%out_value = ptr_add __iter_ptr_%out_value, __iter_off_%out_value
+    %out_value = load __iter_item_%out_value+0 as u64
+    !__iter_item_%out_value
+    !__iter_off_%out_value
+    !__iter_index_%out_value
+    !__iter_ptr_%out_value
+[END_MACRO]
+
+// Rust method-name alias over ITER_PEEK_U64.
+[MACRO] ITER_PEEK %out_value, %iter_reg
+    EXPAND ITER_PEEK_U64 %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_TRY_PEEK_U64 %out_has, %out_value, %iter_reg
+    __iter_try_peek_len_%out_has = load %iter_reg+Iter_len as u64
+    __iter_try_peek_index_%out_has = load %iter_reg+Iter_index as u64
+    __iter_try_peek_done_%out_has = eq __iter_try_peek_index_%out_has, __iter_try_peek_len_%out_has
+    br __iter_try_peek_done_%out_has -> L_ITER_TRY_PEEK_NONE_%out_has, L_ITER_TRY_PEEK_SOME_%out_has
+L_ITER_TRY_PEEK_SOME_%out_has:
+    EXPAND ITER_PEEK_U64 %out_value, %iter_reg
+    %out_has = add 0, 1
+    !__iter_try_peek_done_%out_has
+    !__iter_try_peek_index_%out_has
+    !__iter_try_peek_len_%out_has
+    jmp L_ITER_TRY_PEEK_END_%out_has
+L_ITER_TRY_PEEK_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_try_peek_done_%out_has
+    !__iter_try_peek_index_%out_has
+    !__iter_try_peek_len_%out_has
+L_ITER_TRY_PEEK_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_PEEK_U64.
+[MACRO] ITER_TRY_PEEK %out_has, %out_value, %iter_reg
+    EXPAND ITER_TRY_PEEK_U64 %out_has, %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_NEXT %out_has, %out_value, %iter_reg, %elem_size
+    __iter_ptr_%out_has = load %iter_reg+Iter_ptr as ptr
+    __iter_len_%out_has = load %iter_reg+Iter_len as u64
+    __iter_index_%out_has = load %iter_reg+Iter_index as u64
+    __iter_done_%out_has = eq __iter_index_%out_has, __iter_len_%out_has
+    br __iter_done_%out_has -> L_ITER_NEXT_NONE_%out_has, L_ITER_NEXT_SOME_%out_has
+L_ITER_NEXT_SOME_%out_has:
+    __iter_off_%out_has = mul __iter_index_%out_has, %elem_size
+    __iter_item_%out_has = ptr_add __iter_ptr_%out_has, __iter_off_%out_has
+    %out_value = load __iter_item_%out_has+0 as u64
+    __iter_next_%out_has = add __iter_index_%out_has, 1
+    store %iter_reg+Iter_index, __iter_next_%out_has as u64
+    %out_has = add 0, 1
+    !__iter_next_%out_has
+    !__iter_item_%out_has
+    !__iter_off_%out_has
+    !__iter_done_%out_has
+    !__iter_index_%out_has
+    !__iter_len_%out_has
+    !__iter_ptr_%out_has
+    jmp L_ITER_NEXT_END_%out_has
+L_ITER_NEXT_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_done_%out_has
+    !__iter_index_%out_has
+    !__iter_len_%out_has
+    !__iter_ptr_%out_has
+L_ITER_NEXT_END_%out_has:
+[END_MACRO]
+
+[MACRO] ITER_NEXT_U64 %out_has, %out_value, %iter_reg
+    EXPAND ITER_NEXT %out_has, %out_value, %iter_reg, 8
+[END_MACRO]
+
+[MACRO] ITER_CLONE %out_iter, %iter_reg
+    %out_iter = alloc Iter_SIZE
+    __iter_clone_ptr_%out_iter = load %iter_reg+Iter_ptr as ptr
+    __iter_clone_len_%out_iter = load %iter_reg+Iter_len as u64
+    __iter_clone_index_%out_iter = load %iter_reg+Iter_index as u64
+    store %out_iter+Iter_ptr, __iter_clone_ptr_%out_iter as ptr
+    store %out_iter+Iter_len, __iter_clone_len_%out_iter as u64
+    store %out_iter+Iter_index, __iter_clone_index_%out_iter as u64
+    !__iter_clone_index_%out_iter
+    !__iter_clone_len_%out_iter
+    !__iter_clone_ptr_%out_iter
+[END_MACRO]
+
+[MACRO] ITER_BY_REF %out_iter, %iter_reg
+    %out_iter = ptr_add %iter_reg, 0
+[END_MACRO]
+
+[MACRO] ITER_AS_SLICE_U64 %out_slice, %iter_reg
+    __iter_slice_ptr_%out_slice = load %iter_reg+Iter_ptr as ptr
+    __iter_slice_len_%out_slice = load %iter_reg+Iter_len as u64
+    __iter_slice_index_%out_slice = load %iter_reg+Iter_index as u64
+    __iter_slice_off_%out_slice = mul __iter_slice_index_%out_slice, 8
+    __iter_slice_data_%out_slice = ptr_add __iter_slice_ptr_%out_slice, __iter_slice_off_%out_slice
+    __iter_slice_rem_%out_slice = sub __iter_slice_len_%out_slice, __iter_slice_index_%out_slice
+    store %out_slice+Slice_ptr, __iter_slice_data_%out_slice as ptr
+    store %out_slice+Slice_len, __iter_slice_rem_%out_slice as u64
+    !__iter_slice_rem_%out_slice
+    !__iter_slice_data_%out_slice
+    !__iter_slice_off_%out_slice
+    !__iter_slice_index_%out_slice
+    !__iter_slice_len_%out_slice
+    !__iter_slice_ptr_%out_slice
+[END_MACRO]
+
+// Rust method-name alias over ITER_AS_SLICE_U64.
+[MACRO] ITER_AS_SLICE %out_slice, %iter_reg
+    EXPAND ITER_AS_SLICE_U64 %out_slice, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_NEXT_BACK_U64 %out_has, %out_value, %iter_reg
+    __iter_back_ptr_%out_has = load %iter_reg+Iter_ptr as ptr
+    __iter_back_len_%out_has = load %iter_reg+Iter_len as u64
+    __iter_back_index_%out_has = load %iter_reg+Iter_index as u64
+    __iter_back_has_%out_has = ult __iter_back_index_%out_has, __iter_back_len_%out_has
+    br __iter_back_has_%out_has -> L_ITER_NEXT_BACK_SOME_%out_has, L_ITER_NEXT_BACK_NONE_%out_has
+L_ITER_NEXT_BACK_SOME_%out_has:
+    __iter_back_next_len_%out_has = sub __iter_back_len_%out_has, 1
+    __iter_back_off_%out_has = mul __iter_back_next_len_%out_has, 8
+    __iter_back_item_%out_has = ptr_add __iter_back_ptr_%out_has, __iter_back_off_%out_has
+    %out_value = load __iter_back_item_%out_has+0 as u64
+    store %iter_reg+Iter_len, __iter_back_next_len_%out_has as u64
+    %out_has = add 0, 1
+    !__iter_back_item_%out_has
+    !__iter_back_off_%out_has
+    !__iter_back_next_len_%out_has
+    !__iter_back_has_%out_has
+    !__iter_back_index_%out_has
+    !__iter_back_len_%out_has
+    !__iter_back_ptr_%out_has
+    jmp L_ITER_NEXT_BACK_END_%out_has
+L_ITER_NEXT_BACK_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_back_has_%out_has
+    !__iter_back_index_%out_has
+    !__iter_back_len_%out_has
+    !__iter_back_ptr_%out_has
+L_ITER_NEXT_BACK_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_NEXT_BACK_U64.
+[MACRO] ITER_NEXT_BACK %out_has, %out_value, %iter_reg
+    EXPAND ITER_NEXT_BACK_U64 %out_has, %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_NTH_U64 %out_has, %out_value, %iter_reg, %nth
+    __iter_nth_len_%out_has = load %iter_reg+Iter_len as u64
+    __iter_nth_index_%out_has = load %iter_reg+Iter_index as u64
+    __iter_nth_remaining_%out_has = sub __iter_nth_len_%out_has, __iter_nth_index_%out_has
+    __iter_nth_ok_%out_has = ult %nth, __iter_nth_remaining_%out_has
+    br __iter_nth_ok_%out_has -> L_ITER_NTH_SOME_%out_has, L_ITER_NTH_NONE_%out_has
+L_ITER_NTH_SOME_%out_has:
+    __iter_nth_target_%out_has = add __iter_nth_index_%out_has, %nth
+    __iter_nth_ptr_%out_has = load %iter_reg+Iter_ptr as ptr
+    __iter_nth_off_%out_has = mul __iter_nth_target_%out_has, 8
+    __iter_nth_item_%out_has = ptr_add __iter_nth_ptr_%out_has, __iter_nth_off_%out_has
+    %out_value = load __iter_nth_item_%out_has+0 as u64
+    __iter_nth_next_%out_has = add __iter_nth_target_%out_has, 1
+    store %iter_reg+Iter_index, __iter_nth_next_%out_has as u64
+    %out_has = add 0, 1
+    !__iter_nth_next_%out_has
+    !__iter_nth_item_%out_has
+    !__iter_nth_off_%out_has
+    !__iter_nth_ptr_%out_has
+    !__iter_nth_target_%out_has
+    !__iter_nth_ok_%out_has
+    !__iter_nth_remaining_%out_has
+    !__iter_nth_index_%out_has
+    !__iter_nth_len_%out_has
+    jmp L_ITER_NTH_END_%out_has
+L_ITER_NTH_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    store %iter_reg+Iter_index, __iter_nth_len_%out_has as u64
+    !__iter_nth_ok_%out_has
+    !__iter_nth_remaining_%out_has
+    !__iter_nth_index_%out_has
+    !__iter_nth_len_%out_has
+L_ITER_NTH_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_NTH_U64.
+[MACRO] ITER_NTH %out_has, %out_value, %iter_reg, %nth
+    EXPAND ITER_NTH_U64 %out_has, %out_value, %iter_reg, %nth
+[END_MACRO]
+
+[MACRO] ITER_TRY_NEXT_CHUNK_U64 %out_ok, %out_filled, %iter_reg, %dst_ptr, %count
+    %out_filled = add 0, 0
+    jmp L_ITER_NEXT_CHUNK_HEAD_%out_ok
+L_ITER_NEXT_CHUNK_HEAD_%out_ok:
+    __iter_chunk_more_%out_ok = ult %out_filled, %count
+    br __iter_chunk_more_%out_ok -> L_ITER_NEXT_CHUNK_NEXT_%out_ok, L_ITER_NEXT_CHUNK_DONE_%out_ok
+L_ITER_NEXT_CHUNK_NEXT_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_chunk_has_%out_ok, __iter_chunk_value_%out_ok, %iter_reg
+    br __iter_chunk_has_%out_ok -> L_ITER_NEXT_CHUNK_STORE_%out_ok, L_ITER_NEXT_CHUNK_SHORT_%out_ok
+L_ITER_NEXT_CHUNK_STORE_%out_ok:
+    __iter_chunk_off_%out_ok = mul %out_filled, 8
+    __iter_chunk_slot_%out_ok = ptr_add %dst_ptr, __iter_chunk_off_%out_ok
+    store __iter_chunk_slot_%out_ok+0, __iter_chunk_value_%out_ok as u64
+    __iter_chunk_next_filled_%out_ok = add %out_filled, 1
+    !%out_filled
+    %out_filled = add __iter_chunk_next_filled_%out_ok, 0
+    !__iter_chunk_next_filled_%out_ok
+    !__iter_chunk_slot_%out_ok
+    !__iter_chunk_off_%out_ok
+    !__iter_chunk_value_%out_ok
+    !__iter_chunk_has_%out_ok
+    !__iter_chunk_more_%out_ok
+    jmp L_ITER_NEXT_CHUNK_HEAD_%out_ok
+L_ITER_NEXT_CHUNK_SHORT_%out_ok:
+    %out_ok = add 0, 0
+    !__iter_chunk_value_%out_ok
+    !__iter_chunk_has_%out_ok
+    !__iter_chunk_more_%out_ok
+    jmp L_ITER_NEXT_CHUNK_END_%out_ok
+L_ITER_NEXT_CHUNK_DONE_%out_ok:
+    %out_ok = add 0, 1
+    !__iter_chunk_more_%out_ok
+L_ITER_NEXT_CHUNK_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_NEXT_CHUNK_U64.
+[MACRO] ITER_TRY_NEXT_CHUNK %out_ok, %out_filled, %iter_reg, %dst_ptr, %count
+    EXPAND ITER_TRY_NEXT_CHUNK_U64 %out_ok, %out_filled, %iter_reg, %dst_ptr, %count
+[END_MACRO]
+
+[MACRO] ITER_COUNT %out_count, %iter_reg
+    __iter_count_len_%out_count = load %iter_reg+Iter_len as u64
+    __iter_count_index_%out_count = load %iter_reg+Iter_index as u64
+    %out_count = sub __iter_count_len_%out_count, __iter_count_index_%out_count
+    store %iter_reg+Iter_index, __iter_count_len_%out_count as u64
+    !__iter_count_index_%out_count
+    !__iter_count_len_%out_count
+[END_MACRO]
+
+[MACRO] ITER_LAST_U64 %out_has, %out_value, %iter_reg
+    EXPAND ITER_NEXT_BACK_U64 %out_has, %out_value, %iter_reg
+    __iter_last_len_%out_has = load %iter_reg+Iter_len as u64
+    store %iter_reg+Iter_index, __iter_last_len_%out_has as u64
+    !__iter_last_len_%out_has
+[END_MACRO]
+
+// Rust method-name alias over ITER_LAST_U64.
+[MACRO] ITER_LAST %out_has, %out_value, %iter_reg
+    EXPAND ITER_LAST_U64 %out_has, %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_FIND_U64 %out_has, %out_value, %iter_reg, %pred_fn
+    jmp L_ITER_FIND_HEAD_%out_has
+L_ITER_FIND_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_find_has_%out_has, __iter_find_value_%out_has, %iter_reg
+    br __iter_find_has_%out_has -> L_ITER_FIND_CHECK_%out_has, L_ITER_FIND_NONE_%out_has
+L_ITER_FIND_CHECK_%out_has:
+    __iter_find_pred_%out_has = call %pred_fn(__iter_find_value_%out_has)
+    __iter_find_match_%out_has = ne __iter_find_pred_%out_has, 0
+    br __iter_find_match_%out_has -> L_ITER_FIND_SOME_%out_has, L_ITER_FIND_NEXT_%out_has
+L_ITER_FIND_NEXT_%out_has:
+    !__iter_find_match_%out_has
+    !__iter_find_pred_%out_has
+    !__iter_find_value_%out_has
+    !__iter_find_has_%out_has
+    jmp L_ITER_FIND_HEAD_%out_has
+L_ITER_FIND_SOME_%out_has:
+    %out_value = add __iter_find_value_%out_has, 0
+    %out_has = add 0, 1
+    !__iter_find_match_%out_has
+    !__iter_find_pred_%out_has
+    !__iter_find_value_%out_has
+    !__iter_find_has_%out_has
+    jmp L_ITER_FIND_END_%out_has
+L_ITER_FIND_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_find_value_%out_has
+    !__iter_find_has_%out_has
+L_ITER_FIND_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_FIND_U64.
+[MACRO] ITER_FIND %out_has, %out_value, %iter_reg, %pred_fn
+    EXPAND ITER_FIND_U64 %out_has, %out_value, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_TRY_FIND_U64 %out_ok, %out_has, %out_value, %iter_reg, %pred_fn
+    __iter_try_find_match_slot_%out_ok = stack_alloc 8
+    jmp L_ITER_TRY_FIND_HEAD_%out_ok
+L_ITER_TRY_FIND_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_try_find_has_%out_ok, __iter_try_find_value_%out_ok, %iter_reg
+    br __iter_try_find_has_%out_ok -> L_ITER_TRY_FIND_CHECK_%out_ok, L_ITER_TRY_FIND_NONE_%out_ok
+L_ITER_TRY_FIND_CHECK_%out_ok:
+    __iter_try_find_ok_%out_ok = call %pred_fn(__iter_try_find_value_%out_ok, &__iter_try_find_match_slot_%out_ok)
+    __iter_try_find_continue_%out_ok = ne __iter_try_find_ok_%out_ok, 0
+    br __iter_try_find_continue_%out_ok -> L_ITER_TRY_FIND_MATCH_CHECK_%out_ok, L_ITER_TRY_FIND_FAIL_%out_ok
+L_ITER_TRY_FIND_MATCH_CHECK_%out_ok:
+    __iter_try_find_match_value_%out_ok = load __iter_try_find_match_slot_%out_ok+0 as u64
+    __iter_try_find_match_%out_ok = ne __iter_try_find_match_value_%out_ok, 0
+    br __iter_try_find_match_%out_ok -> L_ITER_TRY_FIND_SOME_%out_ok, L_ITER_TRY_FIND_NEXT_%out_ok
+L_ITER_TRY_FIND_NEXT_%out_ok:
+    !__iter_try_find_match_%out_ok
+    !__iter_try_find_match_value_%out_ok
+    !__iter_try_find_continue_%out_ok
+    !__iter_try_find_ok_%out_ok
+    !__iter_try_find_value_%out_ok
+    !__iter_try_find_has_%out_ok
+    jmp L_ITER_TRY_FIND_HEAD_%out_ok
+L_ITER_TRY_FIND_SOME_%out_ok:
+    %out_value = add __iter_try_find_value_%out_ok, 0
+    %out_has = add 0, 1
+    %out_ok = add 0, 1
+    !__iter_try_find_match_%out_ok
+    !__iter_try_find_match_value_%out_ok
+    !__iter_try_find_continue_%out_ok
+    !__iter_try_find_ok_%out_ok
+    !__iter_try_find_value_%out_ok
+    !__iter_try_find_has_%out_ok
+    jmp L_ITER_TRY_FIND_END_%out_ok
+L_ITER_TRY_FIND_FAIL_%out_ok:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    %out_ok = add 0, 0
+    !__iter_try_find_continue_%out_ok
+    !__iter_try_find_ok_%out_ok
+    !__iter_try_find_value_%out_ok
+    !__iter_try_find_has_%out_ok
+    jmp L_ITER_TRY_FIND_END_%out_ok
+L_ITER_TRY_FIND_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    %out_ok = add 0, 1
+    !__iter_try_find_value_%out_ok
+    !__iter_try_find_has_%out_ok
+L_ITER_TRY_FIND_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_FIND_U64.
+[MACRO] ITER_TRY_FIND %out_ok, %out_has, %out_value, %iter_reg, %pred_fn
+    EXPAND ITER_TRY_FIND_U64 %out_ok, %out_has, %out_value, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_FIND_MAP_U64 %out_has, %out_value, %iter_reg, %map_fn
+    __iter_find_map_slot_%out_has = stack_alloc 8
+    jmp L_ITER_FIND_MAP_HEAD_%out_has
+L_ITER_FIND_MAP_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_find_map_has_%out_has, __iter_find_map_value_%out_has, %iter_reg
+    br __iter_find_map_has_%out_has -> L_ITER_FIND_MAP_CHECK_%out_has, L_ITER_FIND_MAP_NONE_%out_has
+L_ITER_FIND_MAP_CHECK_%out_has:
+    __iter_find_map_found_%out_has = call %map_fn(__iter_find_map_value_%out_has, &__iter_find_map_slot_%out_has)
+    __iter_find_map_match_%out_has = ne __iter_find_map_found_%out_has, 0
+    br __iter_find_map_match_%out_has -> L_ITER_FIND_MAP_SOME_%out_has, L_ITER_FIND_MAP_NEXT_%out_has
+L_ITER_FIND_MAP_NEXT_%out_has:
+    !__iter_find_map_match_%out_has
+    !__iter_find_map_found_%out_has
+    !__iter_find_map_value_%out_has
+    !__iter_find_map_has_%out_has
+    jmp L_ITER_FIND_MAP_HEAD_%out_has
+L_ITER_FIND_MAP_SOME_%out_has:
+    %out_value = load __iter_find_map_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_find_map_match_%out_has
+    !__iter_find_map_found_%out_has
+    !__iter_find_map_value_%out_has
+    !__iter_find_map_has_%out_has
+    jmp L_ITER_FIND_MAP_END_%out_has
+L_ITER_FIND_MAP_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_find_map_value_%out_has
+    !__iter_find_map_has_%out_has
+L_ITER_FIND_MAP_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_FIND_MAP_U64.
+[MACRO] ITER_FIND_MAP %out_has, %out_value, %iter_reg, %map_fn
+    EXPAND ITER_FIND_MAP_U64 %out_has, %out_value, %iter_reg, %map_fn
+[END_MACRO]
+
+[MACRO] ITER_POSITION_U64 %out_has, %out_index, %iter_reg, %pred_fn
+    __iter_pos_base_%out_has = load %iter_reg+Iter_index as u64
+    jmp L_ITER_POSITION_HEAD_%out_has
+L_ITER_POSITION_HEAD_%out_has:
+    __iter_pos_before_%out_has = load %iter_reg+Iter_index as u64
+    EXPAND ITER_NEXT_U64 __iter_pos_has_%out_has, __iter_pos_value_%out_has, %iter_reg
+    br __iter_pos_has_%out_has -> L_ITER_POSITION_CHECK_%out_has, L_ITER_POSITION_NONE_%out_has
+L_ITER_POSITION_CHECK_%out_has:
+    __iter_pos_pred_%out_has = call %pred_fn(__iter_pos_value_%out_has)
+    __iter_pos_match_%out_has = ne __iter_pos_pred_%out_has, 0
+    br __iter_pos_match_%out_has -> L_ITER_POSITION_SOME_%out_has, L_ITER_POSITION_NEXT_%out_has
+L_ITER_POSITION_NEXT_%out_has:
+    !__iter_pos_match_%out_has
+    !__iter_pos_pred_%out_has
+    !__iter_pos_value_%out_has
+    !__iter_pos_has_%out_has
+    !__iter_pos_before_%out_has
+    jmp L_ITER_POSITION_HEAD_%out_has
+L_ITER_POSITION_SOME_%out_has:
+    %out_index = sub __iter_pos_before_%out_has, __iter_pos_base_%out_has
+    %out_has = add 0, 1
+    !__iter_pos_match_%out_has
+    !__iter_pos_pred_%out_has
+    !__iter_pos_value_%out_has
+    !__iter_pos_has_%out_has
+    !__iter_pos_before_%out_has
+    !__iter_pos_base_%out_has
+    jmp L_ITER_POSITION_END_%out_has
+L_ITER_POSITION_NONE_%out_has:
+    %out_index = add 0, 0
+    %out_has = add 0, 0
+    !__iter_pos_value_%out_has
+    !__iter_pos_has_%out_has
+    !__iter_pos_before_%out_has
+    !__iter_pos_base_%out_has
+L_ITER_POSITION_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_POSITION_U64.
+[MACRO] ITER_POSITION %out_has, %out_index, %iter_reg, %pred_fn
+    EXPAND ITER_POSITION_U64 %out_has, %out_index, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_RPOSITION_U64 %out_has, %out_index, %iter_reg, %pred_fn
+    __iter_rpos_base_%out_has = load %iter_reg+Iter_index as u64
+    jmp L_ITER_RPOSITION_HEAD_%out_has
+L_ITER_RPOSITION_HEAD_%out_has:
+    __iter_rpos_len_before_%out_has = load %iter_reg+Iter_len as u64
+    EXPAND ITER_NEXT_BACK_U64 __iter_rpos_has_%out_has, __iter_rpos_value_%out_has, %iter_reg
+    br __iter_rpos_has_%out_has -> L_ITER_RPOSITION_CHECK_%out_has, L_ITER_RPOSITION_NONE_%out_has
+L_ITER_RPOSITION_CHECK_%out_has:
+    __iter_rpos_pred_%out_has = call %pred_fn(__iter_rpos_value_%out_has)
+    __iter_rpos_match_%out_has = ne __iter_rpos_pred_%out_has, 0
+    br __iter_rpos_match_%out_has -> L_ITER_RPOSITION_SOME_%out_has, L_ITER_RPOSITION_NEXT_%out_has
+L_ITER_RPOSITION_NEXT_%out_has:
+    !__iter_rpos_match_%out_has
+    !__iter_rpos_pred_%out_has
+    !__iter_rpos_value_%out_has
+    !__iter_rpos_has_%out_has
+    !__iter_rpos_len_before_%out_has
+    jmp L_ITER_RPOSITION_HEAD_%out_has
+L_ITER_RPOSITION_SOME_%out_has:
+    __iter_rpos_match_index_%out_has = sub __iter_rpos_len_before_%out_has, 1
+    %out_index = sub __iter_rpos_match_index_%out_has, __iter_rpos_base_%out_has
+    %out_has = add 0, 1
+    !__iter_rpos_match_index_%out_has
+    !__iter_rpos_match_%out_has
+    !__iter_rpos_pred_%out_has
+    !__iter_rpos_value_%out_has
+    !__iter_rpos_has_%out_has
+    !__iter_rpos_len_before_%out_has
+    !__iter_rpos_base_%out_has
+    jmp L_ITER_RPOSITION_END_%out_has
+L_ITER_RPOSITION_NONE_%out_has:
+    %out_index = add 0, 0
+    %out_has = add 0, 0
+    !__iter_rpos_value_%out_has
+    !__iter_rpos_has_%out_has
+    !__iter_rpos_len_before_%out_has
+    !__iter_rpos_base_%out_has
+L_ITER_RPOSITION_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_RPOSITION_U64.
+[MACRO] ITER_RPOSITION %out_has, %out_index, %iter_reg, %pred_fn
+    EXPAND ITER_RPOSITION_U64 %out_has, %out_index, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_ANY_U64 %out_bool, %iter_reg, %pred_fn
+    jmp L_ITER_ANY_HEAD_%out_bool
+L_ITER_ANY_HEAD_%out_bool:
+    EXPAND ITER_NEXT_U64 __iter_any_has_%out_bool, __iter_any_value_%out_bool, %iter_reg
+    br __iter_any_has_%out_bool -> L_ITER_ANY_CHECK_%out_bool, L_ITER_ANY_FALSE_%out_bool
+L_ITER_ANY_CHECK_%out_bool:
+    __iter_any_pred_%out_bool = call %pred_fn(__iter_any_value_%out_bool)
+    __iter_any_match_%out_bool = ne __iter_any_pred_%out_bool, 0
+    br __iter_any_match_%out_bool -> L_ITER_ANY_TRUE_%out_bool, L_ITER_ANY_NEXT_%out_bool
+L_ITER_ANY_NEXT_%out_bool:
+    !__iter_any_match_%out_bool
+    !__iter_any_pred_%out_bool
+    !__iter_any_value_%out_bool
+    !__iter_any_has_%out_bool
+    jmp L_ITER_ANY_HEAD_%out_bool
+L_ITER_ANY_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__iter_any_match_%out_bool
+    !__iter_any_pred_%out_bool
+    !__iter_any_value_%out_bool
+    !__iter_any_has_%out_bool
+    jmp L_ITER_ANY_END_%out_bool
+L_ITER_ANY_FALSE_%out_bool:
+    %out_bool = add 0, 0
+    !__iter_any_value_%out_bool
+    !__iter_any_has_%out_bool
+L_ITER_ANY_END_%out_bool:
+[END_MACRO]
+
+// Rust method-name alias over ITER_ANY_U64.
+[MACRO] ITER_ANY %out_bool, %iter_reg, %pred_fn
+    EXPAND ITER_ANY_U64 %out_bool, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_ALL_U64 %out_bool, %iter_reg, %pred_fn
+    jmp L_ITER_ALL_HEAD_%out_bool
+L_ITER_ALL_HEAD_%out_bool:
+    EXPAND ITER_NEXT_U64 __iter_all_has_%out_bool, __iter_all_value_%out_bool, %iter_reg
+    br __iter_all_has_%out_bool -> L_ITER_ALL_CHECK_%out_bool, L_ITER_ALL_TRUE_%out_bool
+L_ITER_ALL_CHECK_%out_bool:
+    __iter_all_pred_%out_bool = call %pred_fn(__iter_all_value_%out_bool)
+    __iter_all_match_%out_bool = ne __iter_all_pred_%out_bool, 0
+    br __iter_all_match_%out_bool -> L_ITER_ALL_NEXT_%out_bool, L_ITER_ALL_FALSE_%out_bool
+L_ITER_ALL_NEXT_%out_bool:
+    !__iter_all_match_%out_bool
+    !__iter_all_pred_%out_bool
+    !__iter_all_value_%out_bool
+    !__iter_all_has_%out_bool
+    jmp L_ITER_ALL_HEAD_%out_bool
+L_ITER_ALL_FALSE_%out_bool:
+    %out_bool = add 0, 0
+    !__iter_all_match_%out_bool
+    !__iter_all_pred_%out_bool
+    !__iter_all_value_%out_bool
+    !__iter_all_has_%out_bool
+    jmp L_ITER_ALL_END_%out_bool
+L_ITER_ALL_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__iter_all_value_%out_bool
+    !__iter_all_has_%out_bool
+L_ITER_ALL_END_%out_bool:
+[END_MACRO]
+
+// Rust method-name alias over ITER_ALL_U64.
+[MACRO] ITER_ALL %out_bool, %iter_reg, %pred_fn
+    EXPAND ITER_ALL_U64 %out_bool, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_FOLD_U64 %out_value, %iter_reg, %init_value, %fold_fn
+    __iter_fold_acc_slot_%out_value = stack_alloc 8
+    store __iter_fold_acc_slot_%out_value+0, %init_value as u64
+    jmp L_ITER_FOLD_HEAD_%out_value
+L_ITER_FOLD_HEAD_%out_value:
+    EXPAND ITER_NEXT_U64 __iter_fold_has_%out_value, __iter_fold_value_%out_value, %iter_reg
+    br __iter_fold_has_%out_value -> L_ITER_FOLD_BODY_%out_value, L_ITER_FOLD_DONE_%out_value
+L_ITER_FOLD_BODY_%out_value:
+    __iter_fold_acc_%out_value = load __iter_fold_acc_slot_%out_value+0 as u64
+    __iter_fold_next_%out_value = call %fold_fn(__iter_fold_acc_%out_value, __iter_fold_value_%out_value)
+    store __iter_fold_acc_slot_%out_value+0, __iter_fold_next_%out_value as u64
+    !__iter_fold_next_%out_value
+    !__iter_fold_acc_%out_value
+    !__iter_fold_value_%out_value
+    !__iter_fold_has_%out_value
+    jmp L_ITER_FOLD_HEAD_%out_value
+L_ITER_FOLD_DONE_%out_value:
+    %out_value = load __iter_fold_acc_slot_%out_value+0 as u64
+    !__iter_fold_value_%out_value
+    !__iter_fold_has_%out_value
+[END_MACRO]
+
+// Rust method-name alias over ITER_FOLD_U64.
+[MACRO] ITER_FOLD %out_value, %iter_reg, %init_value, %fold_fn
+    EXPAND ITER_FOLD_U64 %out_value, %iter_reg, %init_value, %fold_fn
+[END_MACRO]
+
+[MACRO] ITER_TRY_FOLD_U64 %out_ok, %out_value, %iter_reg, %init_value, %fold_fn
+    __iter_try_fold_acc_slot_%out_ok = stack_alloc 8
+    __iter_try_fold_next_slot_%out_ok = stack_alloc 8
+    store __iter_try_fold_acc_slot_%out_ok+0, %init_value as u64
+    store __iter_try_fold_next_slot_%out_ok+0, %init_value as u64
+    jmp L_ITER_TRY_FOLD_HEAD_%out_ok
+L_ITER_TRY_FOLD_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_try_fold_has_%out_ok, __iter_try_fold_value_%out_ok, %iter_reg
+    br __iter_try_fold_has_%out_ok -> L_ITER_TRY_FOLD_BODY_%out_ok, L_ITER_TRY_FOLD_DONE_%out_ok
+L_ITER_TRY_FOLD_BODY_%out_ok:
+    __iter_try_fold_acc_%out_ok = load __iter_try_fold_acc_slot_%out_ok+0 as u64
+    __iter_try_fold_status_%out_ok = call %fold_fn(__iter_try_fold_acc_%out_ok, __iter_try_fold_value_%out_ok, &__iter_try_fold_next_slot_%out_ok)
+    __iter_try_fold_continue_%out_ok = ne __iter_try_fold_status_%out_ok, 0
+    br __iter_try_fold_continue_%out_ok -> L_ITER_TRY_FOLD_NEXT_%out_ok, L_ITER_TRY_FOLD_FAIL_%out_ok
+L_ITER_TRY_FOLD_NEXT_%out_ok:
+    __iter_try_fold_next_%out_ok = load __iter_try_fold_next_slot_%out_ok+0 as u64
+    store __iter_try_fold_acc_slot_%out_ok+0, __iter_try_fold_next_%out_ok as u64
+    !__iter_try_fold_next_%out_ok
+    !__iter_try_fold_continue_%out_ok
+    !__iter_try_fold_status_%out_ok
+    !__iter_try_fold_acc_%out_ok
+    !__iter_try_fold_value_%out_ok
+    !__iter_try_fold_has_%out_ok
+    jmp L_ITER_TRY_FOLD_HEAD_%out_ok
+L_ITER_TRY_FOLD_FAIL_%out_ok:
+    %out_value = load __iter_try_fold_acc_slot_%out_ok+0 as u64
+    %out_ok = add 0, 0
+    !__iter_try_fold_continue_%out_ok
+    !__iter_try_fold_status_%out_ok
+    !__iter_try_fold_acc_%out_ok
+    !__iter_try_fold_value_%out_ok
+    !__iter_try_fold_has_%out_ok
+    jmp L_ITER_TRY_FOLD_END_%out_ok
+L_ITER_TRY_FOLD_DONE_%out_ok:
+    %out_value = load __iter_try_fold_acc_slot_%out_ok+0 as u64
+    %out_ok = add 0, 1
+    !__iter_try_fold_value_%out_ok
+    !__iter_try_fold_has_%out_ok
+L_ITER_TRY_FOLD_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_FOLD_U64.
+[MACRO] ITER_TRY_FOLD %out_ok, %out_value, %iter_reg, %init_value, %fold_fn
+    EXPAND ITER_TRY_FOLD_U64 %out_ok, %out_value, %iter_reg, %init_value, %fold_fn
+[END_MACRO]
+
+[MACRO] ITER_RFOLD_U64 %out_value, %iter_reg, %init_value, %fold_fn
+    __iter_rfold_acc_slot_%out_value = stack_alloc 8
+    store __iter_rfold_acc_slot_%out_value+0, %init_value as u64
+    jmp L_ITER_RFOLD_HEAD_%out_value
+L_ITER_RFOLD_HEAD_%out_value:
+    EXPAND ITER_NEXT_BACK_U64 __iter_rfold_has_%out_value, __iter_rfold_value_%out_value, %iter_reg
+    br __iter_rfold_has_%out_value -> L_ITER_RFOLD_BODY_%out_value, L_ITER_RFOLD_DONE_%out_value
+L_ITER_RFOLD_BODY_%out_value:
+    __iter_rfold_acc_%out_value = load __iter_rfold_acc_slot_%out_value+0 as u64
+    __iter_rfold_next_%out_value = call %fold_fn(__iter_rfold_acc_%out_value, __iter_rfold_value_%out_value)
+    store __iter_rfold_acc_slot_%out_value+0, __iter_rfold_next_%out_value as u64
+    !__iter_rfold_next_%out_value
+    !__iter_rfold_acc_%out_value
+    !__iter_rfold_value_%out_value
+    !__iter_rfold_has_%out_value
+    jmp L_ITER_RFOLD_HEAD_%out_value
+L_ITER_RFOLD_DONE_%out_value:
+    %out_value = load __iter_rfold_acc_slot_%out_value+0 as u64
+    !__iter_rfold_value_%out_value
+    !__iter_rfold_has_%out_value
+[END_MACRO]
+
+// Rust method-name alias over ITER_RFOLD_U64.
+[MACRO] ITER_RFOLD %out_value, %iter_reg, %init_value, %fold_fn
+    EXPAND ITER_RFOLD_U64 %out_value, %iter_reg, %init_value, %fold_fn
+[END_MACRO]
+
+[MACRO] ITER_TRY_RFOLD_U64 %out_ok, %out_value, %iter_reg, %init_value, %fold_fn
+    __iter_try_rfold_acc_slot_%out_ok = stack_alloc 8
+    __iter_try_rfold_next_slot_%out_ok = stack_alloc 8
+    store __iter_try_rfold_acc_slot_%out_ok+0, %init_value as u64
+    store __iter_try_rfold_next_slot_%out_ok+0, %init_value as u64
+    jmp L_ITER_TRY_RFOLD_HEAD_%out_ok
+L_ITER_TRY_RFOLD_HEAD_%out_ok:
+    EXPAND ITER_NEXT_BACK_U64 __iter_try_rfold_has_%out_ok, __iter_try_rfold_value_%out_ok, %iter_reg
+    br __iter_try_rfold_has_%out_ok -> L_ITER_TRY_RFOLD_BODY_%out_ok, L_ITER_TRY_RFOLD_DONE_%out_ok
+L_ITER_TRY_RFOLD_BODY_%out_ok:
+    __iter_try_rfold_acc_%out_ok = load __iter_try_rfold_acc_slot_%out_ok+0 as u64
+    __iter_try_rfold_status_%out_ok = call %fold_fn(__iter_try_rfold_acc_%out_ok, __iter_try_rfold_value_%out_ok, &__iter_try_rfold_next_slot_%out_ok)
+    __iter_try_rfold_continue_%out_ok = ne __iter_try_rfold_status_%out_ok, 0
+    br __iter_try_rfold_continue_%out_ok -> L_ITER_TRY_RFOLD_NEXT_%out_ok, L_ITER_TRY_RFOLD_FAIL_%out_ok
+L_ITER_TRY_RFOLD_NEXT_%out_ok:
+    __iter_try_rfold_next_%out_ok = load __iter_try_rfold_next_slot_%out_ok+0 as u64
+    store __iter_try_rfold_acc_slot_%out_ok+0, __iter_try_rfold_next_%out_ok as u64
+    !__iter_try_rfold_next_%out_ok
+    !__iter_try_rfold_continue_%out_ok
+    !__iter_try_rfold_status_%out_ok
+    !__iter_try_rfold_acc_%out_ok
+    !__iter_try_rfold_value_%out_ok
+    !__iter_try_rfold_has_%out_ok
+    jmp L_ITER_TRY_RFOLD_HEAD_%out_ok
+L_ITER_TRY_RFOLD_FAIL_%out_ok:
+    %out_value = load __iter_try_rfold_acc_slot_%out_ok+0 as u64
+    %out_ok = add 0, 0
+    !__iter_try_rfold_continue_%out_ok
+    !__iter_try_rfold_status_%out_ok
+    !__iter_try_rfold_acc_%out_ok
+    !__iter_try_rfold_value_%out_ok
+    !__iter_try_rfold_has_%out_ok
+    jmp L_ITER_TRY_RFOLD_END_%out_ok
+L_ITER_TRY_RFOLD_DONE_%out_ok:
+    %out_value = load __iter_try_rfold_acc_slot_%out_ok+0 as u64
+    %out_ok = add 0, 1
+    !__iter_try_rfold_value_%out_ok
+    !__iter_try_rfold_has_%out_ok
+L_ITER_TRY_RFOLD_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_RFOLD_U64.
+[MACRO] ITER_TRY_RFOLD %out_ok, %out_value, %iter_reg, %init_value, %fold_fn
+    EXPAND ITER_TRY_RFOLD_U64 %out_ok, %out_value, %iter_reg, %init_value, %fold_fn
+[END_MACRO]
+
+[MACRO] ITER_SUM_U64 %out_value, %iter_reg
+    __iter_sum_slot_%out_value = stack_alloc 8
+    store __iter_sum_slot_%out_value+0, 0 as u64
+    jmp L_ITER_SUM_HEAD_%out_value
+L_ITER_SUM_HEAD_%out_value:
+    EXPAND ITER_NEXT_U64 __iter_sum_has_%out_value, __iter_sum_value_%out_value, %iter_reg
+    br __iter_sum_has_%out_value -> L_ITER_SUM_BODY_%out_value, L_ITER_SUM_DONE_%out_value
+L_ITER_SUM_BODY_%out_value:
+    __iter_sum_acc_%out_value = load __iter_sum_slot_%out_value+0 as u64
+    __iter_sum_next_%out_value = add __iter_sum_acc_%out_value, __iter_sum_value_%out_value
+    store __iter_sum_slot_%out_value+0, __iter_sum_next_%out_value as u64
+    !__iter_sum_next_%out_value
+    !__iter_sum_acc_%out_value
+    !__iter_sum_value_%out_value
+    !__iter_sum_has_%out_value
+    jmp L_ITER_SUM_HEAD_%out_value
+L_ITER_SUM_DONE_%out_value:
+    %out_value = load __iter_sum_slot_%out_value+0 as u64
+    !__iter_sum_value_%out_value
+    !__iter_sum_has_%out_value
+[END_MACRO]
+
+// Rust method-name alias over ITER_SUM_U64.
+[MACRO] ITER_SUM %out_value, %iter_reg
+    EXPAND ITER_SUM_U64 %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_PRODUCT_U64 %out_value, %iter_reg
+    __iter_product_slot_%out_value = stack_alloc 8
+    store __iter_product_slot_%out_value+0, 1 as u64
+    jmp L_ITER_PRODUCT_HEAD_%out_value
+L_ITER_PRODUCT_HEAD_%out_value:
+    EXPAND ITER_NEXT_U64 __iter_product_has_%out_value, __iter_product_value_%out_value, %iter_reg
+    br __iter_product_has_%out_value -> L_ITER_PRODUCT_BODY_%out_value, L_ITER_PRODUCT_DONE_%out_value
+L_ITER_PRODUCT_BODY_%out_value:
+    __iter_product_acc_%out_value = load __iter_product_slot_%out_value+0 as u64
+    __iter_product_next_%out_value = mul __iter_product_acc_%out_value, __iter_product_value_%out_value
+    store __iter_product_slot_%out_value+0, __iter_product_next_%out_value as u64
+    !__iter_product_next_%out_value
+    !__iter_product_acc_%out_value
+    !__iter_product_value_%out_value
+    !__iter_product_has_%out_value
+    jmp L_ITER_PRODUCT_HEAD_%out_value
+L_ITER_PRODUCT_DONE_%out_value:
+    %out_value = load __iter_product_slot_%out_value+0 as u64
+    !__iter_product_value_%out_value
+    !__iter_product_has_%out_value
+[END_MACRO]
+
+// Rust method-name alias over ITER_PRODUCT_U64.
+[MACRO] ITER_PRODUCT %out_value, %iter_reg
+    EXPAND ITER_PRODUCT_U64 %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_MIN_U64 %out_has, %out_value, %iter_reg
+    EXPAND ITER_NEXT_U64 __iter_min_has_%out_has, __iter_min_value_%out_has, %iter_reg
+    br __iter_min_has_%out_has -> L_ITER_MIN_INIT_%out_has, L_ITER_MIN_NONE_%out_has
+L_ITER_MIN_INIT_%out_has:
+    __iter_min_slot_%out_has = stack_alloc 8
+    store __iter_min_slot_%out_has+0, __iter_min_value_%out_has as u64
+    !__iter_min_value_%out_has
+    !__iter_min_has_%out_has
+    jmp L_ITER_MIN_HEAD_%out_has
+L_ITER_MIN_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_min_next_has_%out_has, __iter_min_next_value_%out_has, %iter_reg
+    br __iter_min_next_has_%out_has -> L_ITER_MIN_BODY_%out_has, L_ITER_MIN_DONE_%out_has
+L_ITER_MIN_BODY_%out_has:
+    __iter_min_current_%out_has = load __iter_min_slot_%out_has+0 as u64
+    __iter_min_less_%out_has = ult __iter_min_next_value_%out_has, __iter_min_current_%out_has
+    br __iter_min_less_%out_has -> L_ITER_MIN_STORE_%out_has, L_ITER_MIN_KEEP_%out_has
+L_ITER_MIN_STORE_%out_has:
+    store __iter_min_slot_%out_has+0, __iter_min_next_value_%out_has as u64
+    jmp L_ITER_MIN_NEXT_%out_has
+L_ITER_MIN_KEEP_%out_has:
+    jmp L_ITER_MIN_NEXT_%out_has
+L_ITER_MIN_NEXT_%out_has:
+    !__iter_min_less_%out_has
+    !__iter_min_current_%out_has
+    !__iter_min_next_value_%out_has
+    !__iter_min_next_has_%out_has
+    jmp L_ITER_MIN_HEAD_%out_has
+L_ITER_MIN_DONE_%out_has:
+    %out_value = load __iter_min_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_min_next_value_%out_has
+    !__iter_min_next_has_%out_has
+    jmp L_ITER_MIN_END_%out_has
+L_ITER_MIN_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_min_value_%out_has
+    !__iter_min_has_%out_has
+L_ITER_MIN_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MIN_U64.
+[MACRO] ITER_MIN %out_has, %out_value, %iter_reg
+    EXPAND ITER_MIN_U64 %out_has, %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_MAX_U64 %out_has, %out_value, %iter_reg
+    EXPAND ITER_NEXT_U64 __iter_max_has_%out_has, __iter_max_value_%out_has, %iter_reg
+    br __iter_max_has_%out_has -> L_ITER_MAX_INIT_%out_has, L_ITER_MAX_NONE_%out_has
+L_ITER_MAX_INIT_%out_has:
+    __iter_max_slot_%out_has = stack_alloc 8
+    store __iter_max_slot_%out_has+0, __iter_max_value_%out_has as u64
+    !__iter_max_value_%out_has
+    !__iter_max_has_%out_has
+    jmp L_ITER_MAX_HEAD_%out_has
+L_ITER_MAX_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_max_next_has_%out_has, __iter_max_next_value_%out_has, %iter_reg
+    br __iter_max_next_has_%out_has -> L_ITER_MAX_BODY_%out_has, L_ITER_MAX_DONE_%out_has
+L_ITER_MAX_BODY_%out_has:
+    __iter_max_current_%out_has = load __iter_max_slot_%out_has+0 as u64
+    __iter_max_greater_%out_has = ugt __iter_max_next_value_%out_has, __iter_max_current_%out_has
+    br __iter_max_greater_%out_has -> L_ITER_MAX_STORE_%out_has, L_ITER_MAX_KEEP_%out_has
+L_ITER_MAX_STORE_%out_has:
+    store __iter_max_slot_%out_has+0, __iter_max_next_value_%out_has as u64
+    jmp L_ITER_MAX_NEXT_%out_has
+L_ITER_MAX_KEEP_%out_has:
+    jmp L_ITER_MAX_NEXT_%out_has
+L_ITER_MAX_NEXT_%out_has:
+    !__iter_max_greater_%out_has
+    !__iter_max_current_%out_has
+    !__iter_max_next_value_%out_has
+    !__iter_max_next_has_%out_has
+    jmp L_ITER_MAX_HEAD_%out_has
+L_ITER_MAX_DONE_%out_has:
+    %out_value = load __iter_max_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_max_next_value_%out_has
+    !__iter_max_next_has_%out_has
+    jmp L_ITER_MAX_END_%out_has
+L_ITER_MAX_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_max_value_%out_has
+    !__iter_max_has_%out_has
+L_ITER_MAX_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MAX_U64.
+[MACRO] ITER_MAX %out_has, %out_value, %iter_reg
+    EXPAND ITER_MAX_U64 %out_has, %out_value, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_SIZE_HINT %out_lower, %out_upper, %iter_reg
+    EXPAND ITER_LEN %out_lower, %iter_reg
+    %out_upper = add %out_lower, 0
+[END_MACRO]
+
+[MACRO] ITER_ADVANCE_BY %out_ok, %out_remaining, %iter_reg, %count
+    __iter_adv_len_%out_ok = load %iter_reg+Iter_len as u64
+    __iter_adv_index_%out_ok = load %iter_reg+Iter_index as u64
+    __iter_adv_remaining_%out_ok = sub __iter_adv_len_%out_ok, __iter_adv_index_%out_ok
+    __iter_adv_can_%out_ok = ule %count, __iter_adv_remaining_%out_ok
+    br __iter_adv_can_%out_ok -> L_ITER_ADVANCE_BY_OK_%out_ok, L_ITER_ADVANCE_BY_SHORT_%out_ok
+L_ITER_ADVANCE_BY_OK_%out_ok:
+    __iter_adv_next_%out_ok = add __iter_adv_index_%out_ok, %count
+    store %iter_reg+Iter_index, __iter_adv_next_%out_ok as u64
+    %out_remaining = add 0, 0
+    %out_ok = add 0, 1
+    !__iter_adv_next_%out_ok
+    !__iter_adv_can_%out_ok
+    !__iter_adv_remaining_%out_ok
+    !__iter_adv_index_%out_ok
+    !__iter_adv_len_%out_ok
+    jmp L_ITER_ADVANCE_BY_END_%out_ok
+L_ITER_ADVANCE_BY_SHORT_%out_ok:
+    %out_remaining = sub %count, __iter_adv_remaining_%out_ok
+    store %iter_reg+Iter_index, __iter_adv_len_%out_ok as u64
+    %out_ok = add 0, 0
+    !__iter_adv_can_%out_ok
+    !__iter_adv_remaining_%out_ok
+    !__iter_adv_index_%out_ok
+    !__iter_adv_len_%out_ok
+L_ITER_ADVANCE_BY_END_%out_ok:
+[END_MACRO]
+
+[MACRO] ITER_ADVANCE_BACK_BY %out_ok, %out_remaining, %iter_reg, %count
+    __iter_adv_back_len_%out_ok = load %iter_reg+Iter_len as u64
+    __iter_adv_back_index_%out_ok = load %iter_reg+Iter_index as u64
+    __iter_adv_back_remaining_%out_ok = sub __iter_adv_back_len_%out_ok, __iter_adv_back_index_%out_ok
+    __iter_adv_back_can_%out_ok = ule %count, __iter_adv_back_remaining_%out_ok
+    br __iter_adv_back_can_%out_ok -> L_ITER_ADVANCE_BACK_BY_OK_%out_ok, L_ITER_ADVANCE_BACK_BY_SHORT_%out_ok
+L_ITER_ADVANCE_BACK_BY_OK_%out_ok:
+    __iter_adv_back_next_len_%out_ok = sub __iter_adv_back_len_%out_ok, %count
+    store %iter_reg+Iter_len, __iter_adv_back_next_len_%out_ok as u64
+    %out_remaining = add 0, 0
+    %out_ok = add 0, 1
+    !__iter_adv_back_next_len_%out_ok
+    !__iter_adv_back_can_%out_ok
+    !__iter_adv_back_remaining_%out_ok
+    !__iter_adv_back_index_%out_ok
+    !__iter_adv_back_len_%out_ok
+    jmp L_ITER_ADVANCE_BACK_BY_END_%out_ok
+L_ITER_ADVANCE_BACK_BY_SHORT_%out_ok:
+    %out_remaining = sub %count, __iter_adv_back_remaining_%out_ok
+    store %iter_reg+Iter_len, __iter_adv_back_index_%out_ok as u64
+    %out_ok = add 0, 0
+    !__iter_adv_back_can_%out_ok
+    !__iter_adv_back_remaining_%out_ok
+    !__iter_adv_back_index_%out_ok
+    !__iter_adv_back_len_%out_ok
+L_ITER_ADVANCE_BACK_BY_END_%out_ok:
+[END_MACRO]
+
+[MACRO] ITER_NTH_BACK_U64 %out_has, %out_value, %iter_reg, %nth
+    __iter_nth_back_len_%out_has = load %iter_reg+Iter_len as u64
+    __iter_nth_back_index_%out_has = load %iter_reg+Iter_index as u64
+    __iter_nth_back_remaining_%out_has = sub __iter_nth_back_len_%out_has, __iter_nth_back_index_%out_has
+    __iter_nth_back_ok_%out_has = ult %nth, __iter_nth_back_remaining_%out_has
+    br __iter_nth_back_ok_%out_has -> L_ITER_NTH_BACK_SOME_%out_has, L_ITER_NTH_BACK_NONE_%out_has
+L_ITER_NTH_BACK_SOME_%out_has:
+    __iter_nth_back_skip_%out_has = add %nth, 1
+    __iter_nth_back_target_%out_has = sub __iter_nth_back_len_%out_has, __iter_nth_back_skip_%out_has
+    __iter_nth_back_ptr_%out_has = load %iter_reg+Iter_ptr as ptr
+    __iter_nth_back_off_%out_has = mul __iter_nth_back_target_%out_has, 8
+    __iter_nth_back_item_%out_has = ptr_add __iter_nth_back_ptr_%out_has, __iter_nth_back_off_%out_has
+    %out_value = load __iter_nth_back_item_%out_has+0 as u64
+    store %iter_reg+Iter_len, __iter_nth_back_target_%out_has as u64
+    %out_has = add 0, 1
+    !__iter_nth_back_item_%out_has
+    !__iter_nth_back_off_%out_has
+    !__iter_nth_back_ptr_%out_has
+    !__iter_nth_back_target_%out_has
+    !__iter_nth_back_skip_%out_has
+    !__iter_nth_back_ok_%out_has
+    !__iter_nth_back_remaining_%out_has
+    !__iter_nth_back_index_%out_has
+    !__iter_nth_back_len_%out_has
+    jmp L_ITER_NTH_BACK_END_%out_has
+L_ITER_NTH_BACK_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    store %iter_reg+Iter_len, __iter_nth_back_index_%out_has as u64
+    !__iter_nth_back_ok_%out_has
+    !__iter_nth_back_remaining_%out_has
+    !__iter_nth_back_index_%out_has
+    !__iter_nth_back_len_%out_has
+L_ITER_NTH_BACK_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_NTH_BACK_U64.
+[MACRO] ITER_NTH_BACK %out_has, %out_value, %iter_reg, %nth
+    EXPAND ITER_NTH_BACK_U64 %out_has, %out_value, %iter_reg, %nth
+[END_MACRO]
+
+[MACRO] ITER_RFIND_U64 %out_has, %out_value, %iter_reg, %pred_fn
+    jmp L_ITER_RFIND_HEAD_%out_has
+L_ITER_RFIND_HEAD_%out_has:
+    EXPAND ITER_NEXT_BACK_U64 __iter_rfind_has_%out_has, __iter_rfind_value_%out_has, %iter_reg
+    br __iter_rfind_has_%out_has -> L_ITER_RFIND_CHECK_%out_has, L_ITER_RFIND_NONE_%out_has
+L_ITER_RFIND_CHECK_%out_has:
+    __iter_rfind_pred_%out_has = call %pred_fn(__iter_rfind_value_%out_has)
+    __iter_rfind_match_%out_has = ne __iter_rfind_pred_%out_has, 0
+    br __iter_rfind_match_%out_has -> L_ITER_RFIND_SOME_%out_has, L_ITER_RFIND_NEXT_%out_has
+L_ITER_RFIND_NEXT_%out_has:
+    !__iter_rfind_match_%out_has
+    !__iter_rfind_pred_%out_has
+    !__iter_rfind_value_%out_has
+    !__iter_rfind_has_%out_has
+    jmp L_ITER_RFIND_HEAD_%out_has
+L_ITER_RFIND_SOME_%out_has:
+    %out_value = add __iter_rfind_value_%out_has, 0
+    %out_has = add 0, 1
+    !__iter_rfind_match_%out_has
+    !__iter_rfind_pred_%out_has
+    !__iter_rfind_value_%out_has
+    !__iter_rfind_has_%out_has
+    jmp L_ITER_RFIND_END_%out_has
+L_ITER_RFIND_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_rfind_value_%out_has
+    !__iter_rfind_has_%out_has
+L_ITER_RFIND_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_RFIND_U64.
+[MACRO] ITER_RFIND %out_has, %out_value, %iter_reg, %pred_fn
+    EXPAND ITER_RFIND_U64 %out_has, %out_value, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_REDUCE_U64 %out_has, %out_value, %iter_reg, %reduce_fn
+    EXPAND ITER_NEXT_U64 __iter_reduce_has_%out_has, __iter_reduce_first_%out_has, %iter_reg
+    br __iter_reduce_has_%out_has -> L_ITER_REDUCE_INIT_%out_has, L_ITER_REDUCE_NONE_%out_has
+L_ITER_REDUCE_INIT_%out_has:
+    __iter_reduce_slot_%out_has = stack_alloc 8
+    store __iter_reduce_slot_%out_has+0, __iter_reduce_first_%out_has as u64
+    !__iter_reduce_first_%out_has
+    !__iter_reduce_has_%out_has
+    jmp L_ITER_REDUCE_HEAD_%out_has
+L_ITER_REDUCE_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_reduce_next_has_%out_has, __iter_reduce_next_value_%out_has, %iter_reg
+    br __iter_reduce_next_has_%out_has -> L_ITER_REDUCE_BODY_%out_has, L_ITER_REDUCE_DONE_%out_has
+L_ITER_REDUCE_BODY_%out_has:
+    __iter_reduce_acc_%out_has = load __iter_reduce_slot_%out_has+0 as u64
+    __iter_reduce_next_acc_%out_has = call %reduce_fn(__iter_reduce_acc_%out_has, __iter_reduce_next_value_%out_has)
+    store __iter_reduce_slot_%out_has+0, __iter_reduce_next_acc_%out_has as u64
+    !__iter_reduce_next_acc_%out_has
+    !__iter_reduce_acc_%out_has
+    !__iter_reduce_next_value_%out_has
+    !__iter_reduce_next_has_%out_has
+    jmp L_ITER_REDUCE_HEAD_%out_has
+L_ITER_REDUCE_DONE_%out_has:
+    %out_value = load __iter_reduce_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_reduce_next_value_%out_has
+    !__iter_reduce_next_has_%out_has
+    jmp L_ITER_REDUCE_END_%out_has
+L_ITER_REDUCE_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_reduce_first_%out_has
+    !__iter_reduce_has_%out_has
+L_ITER_REDUCE_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_REDUCE_U64.
+[MACRO] ITER_REDUCE %out_has, %out_value, %iter_reg, %reduce_fn
+    EXPAND ITER_REDUCE_U64 %out_has, %out_value, %iter_reg, %reduce_fn
+[END_MACRO]
+
+[MACRO] ITER_TRY_REDUCE_U64 %out_ok, %out_has, %out_value, %iter_reg, %reduce_fn
+    EXPAND ITER_NEXT_U64 __iter_try_reduce_has_%out_ok, __iter_try_reduce_first_%out_ok, %iter_reg
+    br __iter_try_reduce_has_%out_ok -> L_ITER_TRY_REDUCE_INIT_%out_ok, L_ITER_TRY_REDUCE_NONE_%out_ok
+L_ITER_TRY_REDUCE_INIT_%out_ok:
+    __iter_try_reduce_acc_slot_%out_ok = stack_alloc 8
+    __iter_try_reduce_next_slot_%out_ok = stack_alloc 8
+    store __iter_try_reduce_acc_slot_%out_ok+0, __iter_try_reduce_first_%out_ok as u64
+    store __iter_try_reduce_next_slot_%out_ok+0, __iter_try_reduce_first_%out_ok as u64
+    !__iter_try_reduce_first_%out_ok
+    !__iter_try_reduce_has_%out_ok
+    jmp L_ITER_TRY_REDUCE_HEAD_%out_ok
+L_ITER_TRY_REDUCE_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_try_reduce_next_has_%out_ok, __iter_try_reduce_next_value_%out_ok, %iter_reg
+    br __iter_try_reduce_next_has_%out_ok -> L_ITER_TRY_REDUCE_BODY_%out_ok, L_ITER_TRY_REDUCE_DONE_%out_ok
+L_ITER_TRY_REDUCE_BODY_%out_ok:
+    __iter_try_reduce_acc_%out_ok = load __iter_try_reduce_acc_slot_%out_ok+0 as u64
+    __iter_try_reduce_status_%out_ok = call %reduce_fn(__iter_try_reduce_acc_%out_ok, __iter_try_reduce_next_value_%out_ok, &__iter_try_reduce_next_slot_%out_ok)
+    __iter_try_reduce_continue_%out_ok = ne __iter_try_reduce_status_%out_ok, 0
+    br __iter_try_reduce_continue_%out_ok -> L_ITER_TRY_REDUCE_NEXT_%out_ok, L_ITER_TRY_REDUCE_FAIL_%out_ok
+L_ITER_TRY_REDUCE_NEXT_%out_ok:
+    __iter_try_reduce_next_acc_%out_ok = load __iter_try_reduce_next_slot_%out_ok+0 as u64
+    store __iter_try_reduce_acc_slot_%out_ok+0, __iter_try_reduce_next_acc_%out_ok as u64
+    !__iter_try_reduce_next_acc_%out_ok
+    !__iter_try_reduce_continue_%out_ok
+    !__iter_try_reduce_status_%out_ok
+    !__iter_try_reduce_acc_%out_ok
+    !__iter_try_reduce_next_value_%out_ok
+    !__iter_try_reduce_next_has_%out_ok
+    jmp L_ITER_TRY_REDUCE_HEAD_%out_ok
+L_ITER_TRY_REDUCE_FAIL_%out_ok:
+    %out_value = load __iter_try_reduce_acc_slot_%out_ok+0 as u64
+    %out_has = add 0, 0
+    %out_ok = add 0, 0
+    !__iter_try_reduce_continue_%out_ok
+    !__iter_try_reduce_status_%out_ok
+    !__iter_try_reduce_acc_%out_ok
+    !__iter_try_reduce_next_value_%out_ok
+    !__iter_try_reduce_next_has_%out_ok
+    jmp L_ITER_TRY_REDUCE_END_%out_ok
+L_ITER_TRY_REDUCE_DONE_%out_ok:
+    %out_value = load __iter_try_reduce_acc_slot_%out_ok+0 as u64
+    %out_has = add 0, 1
+    %out_ok = add 0, 1
+    !__iter_try_reduce_next_value_%out_ok
+    !__iter_try_reduce_next_has_%out_ok
+    jmp L_ITER_TRY_REDUCE_END_%out_ok
+L_ITER_TRY_REDUCE_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    %out_ok = add 0, 1
+    !__iter_try_reduce_first_%out_ok
+    !__iter_try_reduce_has_%out_ok
+L_ITER_TRY_REDUCE_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_REDUCE_U64.
+[MACRO] ITER_TRY_REDUCE %out_ok, %out_has, %out_value, %iter_reg, %reduce_fn
+    EXPAND ITER_TRY_REDUCE_U64 %out_ok, %out_has, %out_value, %iter_reg, %reduce_fn
+[END_MACRO]
+
+[MACRO] ITER_FOR_EACH_U64 %iter_reg, %each_fn
+    jmp L_ITER_FOR_EACH_HEAD_%iter_reg
+L_ITER_FOR_EACH_HEAD_%iter_reg:
+    EXPAND ITER_NEXT_U64 __iter_each_has_%iter_reg, __iter_each_value_%iter_reg, %iter_reg
+    br __iter_each_has_%iter_reg -> L_ITER_FOR_EACH_BODY_%iter_reg, L_ITER_FOR_EACH_DONE_%iter_reg
+L_ITER_FOR_EACH_BODY_%iter_reg:
+    __iter_each_result_%iter_reg = call %each_fn(__iter_each_value_%iter_reg)
+    !__iter_each_result_%iter_reg
+    !__iter_each_value_%iter_reg
+    !__iter_each_has_%iter_reg
+    jmp L_ITER_FOR_EACH_HEAD_%iter_reg
+L_ITER_FOR_EACH_DONE_%iter_reg:
+    !__iter_each_value_%iter_reg
+    !__iter_each_has_%iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_FOR_EACH_U64.
+[MACRO] ITER_FOR_EACH %iter_reg, %each_fn
+    EXPAND ITER_FOR_EACH_U64 %iter_reg, %each_fn
+[END_MACRO]
+
+[MACRO] ITER_TRY_FOR_EACH_U64 %out_ok, %iter_reg, %each_fn
+    jmp L_ITER_TRY_FOR_EACH_HEAD_%out_ok
+L_ITER_TRY_FOR_EACH_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_try_each_has_%out_ok, __iter_try_each_value_%out_ok, %iter_reg
+    br __iter_try_each_has_%out_ok -> L_ITER_TRY_FOR_EACH_BODY_%out_ok, L_ITER_TRY_FOR_EACH_DONE_%out_ok
+L_ITER_TRY_FOR_EACH_BODY_%out_ok:
+    __iter_try_each_status_%out_ok = call %each_fn(__iter_try_each_value_%out_ok)
+    __iter_try_each_continue_%out_ok = ne __iter_try_each_status_%out_ok, 0
+    br __iter_try_each_continue_%out_ok -> L_ITER_TRY_FOR_EACH_NEXT_%out_ok, L_ITER_TRY_FOR_EACH_FAIL_%out_ok
+L_ITER_TRY_FOR_EACH_NEXT_%out_ok:
+    !__iter_try_each_continue_%out_ok
+    !__iter_try_each_status_%out_ok
+    !__iter_try_each_value_%out_ok
+    !__iter_try_each_has_%out_ok
+    jmp L_ITER_TRY_FOR_EACH_HEAD_%out_ok
+L_ITER_TRY_FOR_EACH_FAIL_%out_ok:
+    %out_ok = add 0, 0
+    !__iter_try_each_continue_%out_ok
+    !__iter_try_each_status_%out_ok
+    !__iter_try_each_value_%out_ok
+    !__iter_try_each_has_%out_ok
+    jmp L_ITER_TRY_FOR_EACH_END_%out_ok
+L_ITER_TRY_FOR_EACH_DONE_%out_ok:
+    %out_ok = add 0, 1
+    !__iter_try_each_value_%out_ok
+    !__iter_try_each_has_%out_ok
+L_ITER_TRY_FOR_EACH_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_FOR_EACH_U64.
+[MACRO] ITER_TRY_FOR_EACH %out_ok, %iter_reg, %each_fn
+    EXPAND ITER_TRY_FOR_EACH_U64 %out_ok, %iter_reg, %each_fn
+[END_MACRO]
+
+[MACRO] ITER_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_COLLECT_HEAD_%out_vec
+L_ITER_COLLECT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_collect_has_%out_vec, __iter_collect_value_%out_vec, %iter_reg
+    br __iter_collect_has_%out_vec -> L_ITER_COLLECT_PUSH_%out_vec, L_ITER_COLLECT_DONE_%out_vec
+L_ITER_COLLECT_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_collect_value_%out_vec
+    !__iter_collect_value_%out_vec
+    !__iter_collect_has_%out_vec
+    jmp L_ITER_COLLECT_HEAD_%out_vec
+L_ITER_COLLECT_DONE_%out_vec:
+    !__iter_collect_value_%out_vec
+    !__iter_collect_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_COLLECT_U64.
+[MACRO] ITER_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_COPIED_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_COPIED_COLLECT_U64.
+[MACRO] ITER_COPIED_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_COPIED_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_CLONED_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_CLONED_COLLECT_U64.
+[MACRO] ITER_CLONED_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_CLONED_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_BY_REF_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_BY_REF __iter_by_ref_collect_iter_%out_vec, %iter_reg
+    EXPAND ITER_COLLECT_U64 %out_vec, __iter_by_ref_collect_iter_%out_vec
+    !__iter_by_ref_collect_iter_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_BY_REF_COLLECT_U64.
+[MACRO] ITER_BY_REF_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_BY_REF_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_FUSE_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_FUSE_COLLECT_U64.
+[MACRO] ITER_FUSE_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_FUSE_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_PEEKABLE_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_PEEKABLE_COLLECT_U64.
+[MACRO] ITER_PEEKABLE_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_PEEKABLE_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_TRY_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %try_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_try_collect_slot_%out_ok = stack_alloc 8
+    jmp L_ITER_TRY_COLLECT_HEAD_%out_ok
+L_ITER_TRY_COLLECT_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_try_collect_has_%out_ok, __iter_try_collect_value_%out_ok, %iter_reg
+    br __iter_try_collect_has_%out_ok -> L_ITER_TRY_COLLECT_CHECK_%out_ok, L_ITER_TRY_COLLECT_DONE_%out_ok
+L_ITER_TRY_COLLECT_CHECK_%out_ok:
+    __iter_try_collect_status_%out_ok = call %try_fn(__iter_try_collect_value_%out_ok, &__iter_try_collect_slot_%out_ok)
+    __iter_try_collect_continue_%out_ok = ne __iter_try_collect_status_%out_ok, 0
+    br __iter_try_collect_continue_%out_ok -> L_ITER_TRY_COLLECT_PUSH_%out_ok, L_ITER_TRY_COLLECT_FAIL_%out_ok
+L_ITER_TRY_COLLECT_PUSH_%out_ok:
+    __iter_try_collect_mapped_%out_ok = load __iter_try_collect_slot_%out_ok+0 as u64
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_try_collect_mapped_%out_ok
+    !__iter_try_collect_mapped_%out_ok
+    !__iter_try_collect_continue_%out_ok
+    !__iter_try_collect_status_%out_ok
+    !__iter_try_collect_value_%out_ok
+    !__iter_try_collect_has_%out_ok
+    jmp L_ITER_TRY_COLLECT_HEAD_%out_ok
+L_ITER_TRY_COLLECT_FAIL_%out_ok:
+    %out_ok = add 0, 0
+    !__iter_try_collect_continue_%out_ok
+    !__iter_try_collect_status_%out_ok
+    !__iter_try_collect_value_%out_ok
+    !__iter_try_collect_has_%out_ok
+    jmp L_ITER_TRY_COLLECT_END_%out_ok
+L_ITER_TRY_COLLECT_DONE_%out_ok:
+    %out_ok = add 0, 1
+    !__iter_try_collect_value_%out_ok
+    !__iter_try_collect_has_%out_ok
+L_ITER_TRY_COLLECT_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_COLLECT_U64.
+[MACRO] ITER_TRY_COLLECT %out_ok, %out_vec, %iter_reg, %try_fn
+    EXPAND ITER_TRY_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %try_fn
+[END_MACRO]
+
+[MACRO] ITER_ARRAY_CHUNKS_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %chunk_size
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_array_chunks_zero_%out_ok = eq %chunk_size, 0
+    br __iter_array_chunks_zero_%out_ok -> L_ITER_ARRAY_CHUNKS_INVALID_%out_ok, L_ITER_ARRAY_CHUNKS_INIT_%out_ok
+L_ITER_ARRAY_CHUNKS_INIT_%out_ok:
+    __iter_array_chunks_ptr_%out_ok = load %iter_reg+Iter_ptr as ptr
+    __iter_array_chunks_len_%out_ok = load %iter_reg+Iter_len as u64
+    __iter_array_chunks_start_%out_ok = load %iter_reg+Iter_index as u64
+    __iter_array_chunks_remaining_%out_ok = sub __iter_array_chunks_len_%out_ok, __iter_array_chunks_start_%out_ok
+    __iter_array_chunks_remainder_%out_ok = urem __iter_array_chunks_remaining_%out_ok, %chunk_size
+    __iter_array_chunks_full_%out_ok = sub __iter_array_chunks_remaining_%out_ok, __iter_array_chunks_remainder_%out_ok
+    __iter_array_chunks_end_%out_ok = add __iter_array_chunks_start_%out_ok, __iter_array_chunks_full_%out_ok
+    __iter_array_chunks_index_%out_ok = add __iter_array_chunks_start_%out_ok, 0
+    %out_ok = add 0, 1
+    __iter_array_chunks_empty_%out_ok = eq __iter_array_chunks_full_%out_ok, 0
+    br __iter_array_chunks_empty_%out_ok -> L_ITER_ARRAY_CHUNKS_DONE_%out_ok, L_ITER_ARRAY_CHUNKS_HEAD_%out_ok
+L_ITER_ARRAY_CHUNKS_HEAD_%out_ok:
+    __iter_array_chunks_more_%out_ok = ult __iter_array_chunks_index_%out_ok, __iter_array_chunks_end_%out_ok
+    br __iter_array_chunks_more_%out_ok -> L_ITER_ARRAY_CHUNKS_PUSH_%out_ok, L_ITER_ARRAY_CHUNKS_DONE_MORE_%out_ok
+L_ITER_ARRAY_CHUNKS_PUSH_%out_ok:
+    __iter_array_chunks_off_%out_ok = mul __iter_array_chunks_index_%out_ok, 8
+    __iter_array_chunks_item_%out_ok = ptr_add __iter_array_chunks_ptr_%out_ok, __iter_array_chunks_off_%out_ok
+    __iter_array_chunks_value_%out_ok = load __iter_array_chunks_item_%out_ok+0 as u64
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_array_chunks_value_%out_ok
+    __iter_array_chunks_next_%out_ok = add __iter_array_chunks_index_%out_ok, 1
+    !__iter_array_chunks_index_%out_ok
+    __iter_array_chunks_index_%out_ok = add __iter_array_chunks_next_%out_ok, 0
+    !__iter_array_chunks_next_%out_ok
+    !__iter_array_chunks_value_%out_ok
+    !__iter_array_chunks_item_%out_ok
+    !__iter_array_chunks_off_%out_ok
+    !__iter_array_chunks_more_%out_ok
+    jmp L_ITER_ARRAY_CHUNKS_HEAD_%out_ok
+L_ITER_ARRAY_CHUNKS_DONE_MORE_%out_ok:
+    !__iter_array_chunks_more_%out_ok
+    jmp L_ITER_ARRAY_CHUNKS_DONE_%out_ok
+L_ITER_ARRAY_CHUNKS_DONE_%out_ok:
+    store %iter_reg+Iter_index, __iter_array_chunks_end_%out_ok as u64
+    !__iter_array_chunks_empty_%out_ok
+    !__iter_array_chunks_index_%out_ok
+    !__iter_array_chunks_end_%out_ok
+    !__iter_array_chunks_full_%out_ok
+    !__iter_array_chunks_remainder_%out_ok
+    !__iter_array_chunks_remaining_%out_ok
+    !__iter_array_chunks_start_%out_ok
+    !__iter_array_chunks_len_%out_ok
+    !__iter_array_chunks_ptr_%out_ok
+    !__iter_array_chunks_zero_%out_ok
+    jmp L_ITER_ARRAY_CHUNKS_END_%out_ok
+L_ITER_ARRAY_CHUNKS_INVALID_%out_ok:
+    %out_ok = add 0, 0
+    !__iter_array_chunks_zero_%out_ok
+L_ITER_ARRAY_CHUNKS_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_ARRAY_CHUNKS_COLLECT_U64.
+[MACRO] ITER_ARRAY_CHUNKS_COLLECT %out_ok, %out_vec, %iter_reg, %chunk_size
+    EXPAND ITER_ARRAY_CHUNKS_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %chunk_size
+[END_MACRO]
+
+[MACRO] ITER_MAP_WINDOWS_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %window_size, %map_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_map_windows_zero_%out_ok = eq %window_size, 0
+    br __iter_map_windows_zero_%out_ok -> L_ITER_MAP_WINDOWS_INVALID_%out_ok, L_ITER_MAP_WINDOWS_INIT_%out_ok
+L_ITER_MAP_WINDOWS_INIT_%out_ok:
+    __iter_map_windows_ptr_%out_ok = load %iter_reg+Iter_ptr as ptr
+    __iter_map_windows_len_%out_ok = load %iter_reg+Iter_len as u64
+    __iter_map_windows_start_%out_ok = load %iter_reg+Iter_index as u64
+    __iter_map_windows_remaining_%out_ok = sub __iter_map_windows_len_%out_ok, __iter_map_windows_start_%out_ok
+    __iter_map_windows_short_%out_ok = ult __iter_map_windows_remaining_%out_ok, %window_size
+    %out_ok = add 0, 1
+    br __iter_map_windows_short_%out_ok -> L_ITER_MAP_WINDOWS_CONSUME_EMPTY_%out_ok, L_ITER_MAP_WINDOWS_RUN_%out_ok
+L_ITER_MAP_WINDOWS_RUN_%out_ok:
+    __iter_map_windows_span_%out_ok = sub __iter_map_windows_remaining_%out_ok, %window_size
+    __iter_map_windows_count_%out_ok = add __iter_map_windows_span_%out_ok, 1
+    __iter_map_windows_done_count_%out_ok = add 0, 0
+    jmp L_ITER_MAP_WINDOWS_HEAD_%out_ok
+L_ITER_MAP_WINDOWS_HEAD_%out_ok:
+    __iter_map_windows_more_%out_ok = ult __iter_map_windows_done_count_%out_ok, __iter_map_windows_count_%out_ok
+    br __iter_map_windows_more_%out_ok -> L_ITER_MAP_WINDOWS_PUSH_%out_ok, L_ITER_MAP_WINDOWS_DONE_MORE_%out_ok
+L_ITER_MAP_WINDOWS_PUSH_%out_ok:
+    __iter_map_windows_abs_index_%out_ok = add __iter_map_windows_start_%out_ok, __iter_map_windows_done_count_%out_ok
+    __iter_map_windows_off_%out_ok = mul __iter_map_windows_abs_index_%out_ok, 8
+    __iter_map_windows_item_%out_ok = ptr_add __iter_map_windows_ptr_%out_ok, __iter_map_windows_off_%out_ok
+    __iter_map_windows_mapped_%out_ok = call %map_fn(__iter_map_windows_item_%out_ok, %window_size)
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_map_windows_mapped_%out_ok
+    __iter_map_windows_next_count_%out_ok = add __iter_map_windows_done_count_%out_ok, 1
+    !__iter_map_windows_done_count_%out_ok
+    __iter_map_windows_done_count_%out_ok = add __iter_map_windows_next_count_%out_ok, 0
+    !__iter_map_windows_next_count_%out_ok
+    !__iter_map_windows_mapped_%out_ok
+    !__iter_map_windows_item_%out_ok
+    !__iter_map_windows_off_%out_ok
+    !__iter_map_windows_abs_index_%out_ok
+    !__iter_map_windows_more_%out_ok
+    jmp L_ITER_MAP_WINDOWS_HEAD_%out_ok
+L_ITER_MAP_WINDOWS_DONE_MORE_%out_ok:
+    !__iter_map_windows_more_%out_ok
+    !__iter_map_windows_done_count_%out_ok
+    !__iter_map_windows_count_%out_ok
+    !__iter_map_windows_span_%out_ok
+    jmp L_ITER_MAP_WINDOWS_CONSUME_EMPTY_%out_ok
+L_ITER_MAP_WINDOWS_CONSUME_EMPTY_%out_ok:
+    store %iter_reg+Iter_index, __iter_map_windows_len_%out_ok as u64
+    !__iter_map_windows_short_%out_ok
+    !__iter_map_windows_remaining_%out_ok
+    !__iter_map_windows_start_%out_ok
+    !__iter_map_windows_len_%out_ok
+    !__iter_map_windows_ptr_%out_ok
+    !__iter_map_windows_zero_%out_ok
+    jmp L_ITER_MAP_WINDOWS_END_%out_ok
+L_ITER_MAP_WINDOWS_INVALID_%out_ok:
+    %out_ok = add 0, 0
+    !__iter_map_windows_zero_%out_ok
+L_ITER_MAP_WINDOWS_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MAP_WINDOWS_COLLECT_U64.
+[MACRO] ITER_MAP_WINDOWS_COLLECT %out_ok, %out_vec, %iter_reg, %window_size, %map_fn
+    EXPAND ITER_MAP_WINDOWS_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %window_size, %map_fn
+[END_MACRO]
+
+[MACRO] ITER_COLLECT_INTO_U64 %vec_reg, %iter_reg
+    jmp L_ITER_COLLECT_INTO_HEAD_%iter_reg
+L_ITER_COLLECT_INTO_HEAD_%iter_reg:
+    EXPAND ITER_NEXT_U64 __iter_collect_into_has_%iter_reg, __iter_collect_into_value_%iter_reg, %iter_reg
+    br __iter_collect_into_has_%iter_reg -> L_ITER_COLLECT_INTO_PUSH_%iter_reg, L_ITER_COLLECT_INTO_DONE_%iter_reg
+L_ITER_COLLECT_INTO_PUSH_%iter_reg:
+    EXPAND ITER_VEC_PUSH_U64 %vec_reg, __iter_collect_into_value_%iter_reg
+    !__iter_collect_into_value_%iter_reg
+    !__iter_collect_into_has_%iter_reg
+    jmp L_ITER_COLLECT_INTO_HEAD_%iter_reg
+L_ITER_COLLECT_INTO_DONE_%iter_reg:
+    !__iter_collect_into_value_%iter_reg
+    !__iter_collect_into_has_%iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_COLLECT_INTO_U64.
+[MACRO] ITER_COLLECT_INTO %vec_reg, %iter_reg
+    EXPAND ITER_COLLECT_INTO_U64 %vec_reg, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_TAKE_COLLECT_U64 %out_vec, %iter_reg, %count
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_take_collect_taken_%out_vec = add 0, 0
+    jmp L_ITER_TAKE_COLLECT_HEAD_%out_vec
+L_ITER_TAKE_COLLECT_HEAD_%out_vec:
+    __iter_take_collect_more_%out_vec = ult __iter_take_collect_taken_%out_vec, %count
+    br __iter_take_collect_more_%out_vec -> L_ITER_TAKE_COLLECT_NEXT_%out_vec, L_ITER_TAKE_COLLECT_COUNT_DONE_%out_vec
+L_ITER_TAKE_COLLECT_NEXT_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_take_collect_has_%out_vec, __iter_take_collect_value_%out_vec, %iter_reg
+    br __iter_take_collect_has_%out_vec -> L_ITER_TAKE_COLLECT_PUSH_%out_vec, L_ITER_TAKE_COLLECT_STOP_%out_vec
+L_ITER_TAKE_COLLECT_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_take_collect_value_%out_vec
+    __iter_take_collect_next_taken_%out_vec = add __iter_take_collect_taken_%out_vec, 1
+    !__iter_take_collect_taken_%out_vec
+    __iter_take_collect_taken_%out_vec = add __iter_take_collect_next_taken_%out_vec, 0
+    !__iter_take_collect_next_taken_%out_vec
+    !__iter_take_collect_value_%out_vec
+    !__iter_take_collect_has_%out_vec
+    !__iter_take_collect_more_%out_vec
+    jmp L_ITER_TAKE_COLLECT_HEAD_%out_vec
+L_ITER_TAKE_COLLECT_STOP_%out_vec:
+    !__iter_take_collect_value_%out_vec
+    !__iter_take_collect_has_%out_vec
+    !__iter_take_collect_more_%out_vec
+    jmp L_ITER_TAKE_COLLECT_DONE_%out_vec
+L_ITER_TAKE_COLLECT_COUNT_DONE_%out_vec:
+    !__iter_take_collect_more_%out_vec
+    jmp L_ITER_TAKE_COLLECT_DONE_%out_vec
+L_ITER_TAKE_COLLECT_DONE_%out_vec:
+    !__iter_take_collect_taken_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_TAKE_COLLECT_U64.
+[MACRO] ITER_TAKE_COLLECT %out_vec, %iter_reg, %count
+    EXPAND ITER_TAKE_COLLECT_U64 %out_vec, %iter_reg, %count
+[END_MACRO]
+
+[MACRO] ITER_SKIP_COLLECT_U64 %out_vec, %iter_reg, %count
+    EXPAND ITER_ADVANCE_BY __iter_skip_collect_ok_%out_vec, __iter_skip_collect_remaining_%out_vec, %iter_reg, %count
+    !__iter_skip_collect_remaining_%out_vec
+    !__iter_skip_collect_ok_%out_vec
+    EXPAND ITER_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+// Rust method-name alias over ITER_SKIP_COLLECT_U64.
+[MACRO] ITER_SKIP_COLLECT %out_vec, %iter_reg, %count
+    EXPAND ITER_SKIP_COLLECT_U64 %out_vec, %iter_reg, %count
+[END_MACRO]
+
+[MACRO] ITER_INTERSPERSE_COLLECT_U64 %out_vec, %iter_reg, %separator
+    EXPAND ITER_VEC_NEW %out_vec
+    EXPAND ITER_NEXT_U64 __iter_intersperse_first_has_%out_vec, __iter_intersperse_first_value_%out_vec, %iter_reg
+    br __iter_intersperse_first_has_%out_vec -> L_ITER_INTERSPERSE_FIRST_%out_vec, L_ITER_INTERSPERSE_DONE_EMPTY_%out_vec
+L_ITER_INTERSPERSE_FIRST_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_intersperse_first_value_%out_vec
+    !__iter_intersperse_first_value_%out_vec
+    !__iter_intersperse_first_has_%out_vec
+    jmp L_ITER_INTERSPERSE_HEAD_%out_vec
+L_ITER_INTERSPERSE_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_intersperse_has_%out_vec, __iter_intersperse_value_%out_vec, %iter_reg
+    br __iter_intersperse_has_%out_vec -> L_ITER_INTERSPERSE_PUSH_PAIR_%out_vec, L_ITER_INTERSPERSE_DONE_%out_vec
+L_ITER_INTERSPERSE_PUSH_PAIR_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, %separator
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_intersperse_value_%out_vec
+    !__iter_intersperse_value_%out_vec
+    !__iter_intersperse_has_%out_vec
+    jmp L_ITER_INTERSPERSE_HEAD_%out_vec
+L_ITER_INTERSPERSE_DONE_EMPTY_%out_vec:
+    !__iter_intersperse_first_value_%out_vec
+    !__iter_intersperse_first_has_%out_vec
+    jmp L_ITER_INTERSPERSE_END_%out_vec
+L_ITER_INTERSPERSE_DONE_%out_vec:
+    !__iter_intersperse_value_%out_vec
+    !__iter_intersperse_has_%out_vec
+L_ITER_INTERSPERSE_END_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_INTERSPERSE_COLLECT_U64.
+[MACRO] ITER_INTERSPERSE_COLLECT %out_vec, %iter_reg, %separator
+    EXPAND ITER_INTERSPERSE_COLLECT_U64 %out_vec, %iter_reg, %separator
+[END_MACRO]
+
+[MACRO] ITER_INTERSPERSE_WITH_COLLECT_U64 %out_vec, %iter_reg, %sep_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    EXPAND ITER_NEXT_U64 __iter_intersperse_with_first_has_%out_vec, __iter_intersperse_with_first_value_%out_vec, %iter_reg
+    br __iter_intersperse_with_first_has_%out_vec -> L_ITER_INTERSPERSE_WITH_FIRST_%out_vec, L_ITER_INTERSPERSE_WITH_DONE_EMPTY_%out_vec
+L_ITER_INTERSPERSE_WITH_FIRST_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_intersperse_with_first_value_%out_vec
+    !__iter_intersperse_with_first_value_%out_vec
+    !__iter_intersperse_with_first_has_%out_vec
+    jmp L_ITER_INTERSPERSE_WITH_HEAD_%out_vec
+L_ITER_INTERSPERSE_WITH_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_intersperse_with_has_%out_vec, __iter_intersperse_with_value_%out_vec, %iter_reg
+    br __iter_intersperse_with_has_%out_vec -> L_ITER_INTERSPERSE_WITH_PUSH_PAIR_%out_vec, L_ITER_INTERSPERSE_WITH_DONE_%out_vec
+L_ITER_INTERSPERSE_WITH_PUSH_PAIR_%out_vec:
+    __iter_intersperse_with_sep_%out_vec = call %sep_fn()
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_intersperse_with_sep_%out_vec
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_intersperse_with_value_%out_vec
+    !__iter_intersperse_with_sep_%out_vec
+    !__iter_intersperse_with_value_%out_vec
+    !__iter_intersperse_with_has_%out_vec
+    jmp L_ITER_INTERSPERSE_WITH_HEAD_%out_vec
+L_ITER_INTERSPERSE_WITH_DONE_EMPTY_%out_vec:
+    !__iter_intersperse_with_first_value_%out_vec
+    !__iter_intersperse_with_first_has_%out_vec
+    jmp L_ITER_INTERSPERSE_WITH_END_%out_vec
+L_ITER_INTERSPERSE_WITH_DONE_%out_vec:
+    !__iter_intersperse_with_value_%out_vec
+    !__iter_intersperse_with_has_%out_vec
+L_ITER_INTERSPERSE_WITH_END_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_INTERSPERSE_WITH_COLLECT_U64.
+[MACRO] ITER_INTERSPERSE_WITH_COLLECT %out_vec, %iter_reg, %sep_fn
+    EXPAND ITER_INTERSPERSE_WITH_COLLECT_U64 %out_vec, %iter_reg, %sep_fn
+[END_MACRO]
+
+[MACRO] ITER_TRY_STEP_BY_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %step
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_step_zero_%out_ok = eq %step, 0
+    br __iter_step_zero_%out_ok -> L_ITER_STEP_BY_INVALID_%out_ok, L_ITER_STEP_BY_INIT_%out_ok
+L_ITER_STEP_BY_INIT_%out_ok:
+    __iter_step_skip_%out_ok = sub %step, 1
+    %out_ok = add 0, 1
+    jmp L_ITER_STEP_BY_HEAD_%out_ok
+L_ITER_STEP_BY_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_step_has_%out_ok, __iter_step_value_%out_ok, %iter_reg
+    br __iter_step_has_%out_ok -> L_ITER_STEP_BY_PUSH_%out_ok, L_ITER_STEP_BY_DONE_%out_ok
+L_ITER_STEP_BY_PUSH_%out_ok:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_step_value_%out_ok
+    EXPAND ITER_ADVANCE_BY __iter_step_adv_ok_%out_ok, __iter_step_adv_remaining_%out_ok, %iter_reg, __iter_step_skip_%out_ok
+    !__iter_step_adv_remaining_%out_ok
+    !__iter_step_adv_ok_%out_ok
+    !__iter_step_value_%out_ok
+    !__iter_step_has_%out_ok
+    jmp L_ITER_STEP_BY_HEAD_%out_ok
+L_ITER_STEP_BY_INVALID_%out_ok:
+    %out_ok = add 0, 0
+    !__iter_step_zero_%out_ok
+    jmp L_ITER_STEP_BY_END_%out_ok
+L_ITER_STEP_BY_DONE_%out_ok:
+    !__iter_step_value_%out_ok
+    !__iter_step_has_%out_ok
+    !__iter_step_skip_%out_ok
+    !__iter_step_zero_%out_ok
+L_ITER_STEP_BY_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TRY_STEP_BY_COLLECT_U64.
+[MACRO] ITER_TRY_STEP_BY_COLLECT %out_ok, %out_vec, %iter_reg, %step
+    EXPAND ITER_TRY_STEP_BY_COLLECT_U64 %out_ok, %out_vec, %iter_reg, %step
+[END_MACRO]
+
+[MACRO] ITER_STEP_BY_COLLECT_U64 %out_vec, %iter_reg, %step
+    EXPAND ITER_TRY_STEP_BY_COLLECT_U64 __iter_step_by_ok_%out_vec, %out_vec, %iter_reg, %step
+    !__iter_step_by_ok_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_STEP_BY_COLLECT_U64.
+[MACRO] ITER_STEP_BY_COLLECT %out_vec, %iter_reg, %step
+    EXPAND ITER_STEP_BY_COLLECT_U64 %out_vec, %iter_reg, %step
+[END_MACRO]
+
+[MACRO] ITER_CYCLE_TAKE_COLLECT_U64 %out_vec, %iter_reg, %count
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_cycle_count_zero_%out_vec = eq %count, 0
+    br __iter_cycle_count_zero_%out_vec -> L_ITER_CYCLE_TAKE_DONE_ZERO_%out_vec, L_ITER_CYCLE_TAKE_INIT_%out_vec
+L_ITER_CYCLE_TAKE_INIT_%out_vec:
+    __iter_cycle_ptr_%out_vec = load %iter_reg+Iter_ptr as ptr
+    __iter_cycle_len_%out_vec = load %iter_reg+Iter_len as u64
+    __iter_cycle_start_%out_vec = load %iter_reg+Iter_index as u64
+    __iter_cycle_rem_%out_vec = sub __iter_cycle_len_%out_vec, __iter_cycle_start_%out_vec
+    __iter_cycle_empty_%out_vec = eq __iter_cycle_rem_%out_vec, 0
+    __iter_cycle_taken_%out_vec = add 0, 0
+    br __iter_cycle_empty_%out_vec -> L_ITER_CYCLE_TAKE_DONE_EMPTY_%out_vec, L_ITER_CYCLE_TAKE_HEAD_%out_vec
+L_ITER_CYCLE_TAKE_HEAD_%out_vec:
+    __iter_cycle_more_%out_vec = ult __iter_cycle_taken_%out_vec, %count
+    br __iter_cycle_more_%out_vec -> L_ITER_CYCLE_TAKE_PUSH_%out_vec, L_ITER_CYCLE_TAKE_DONE_COUNT_%out_vec
+L_ITER_CYCLE_TAKE_PUSH_%out_vec:
+    __iter_cycle_mod_%out_vec = urem __iter_cycle_taken_%out_vec, __iter_cycle_rem_%out_vec
+    __iter_cycle_index_%out_vec = add __iter_cycle_start_%out_vec, __iter_cycle_mod_%out_vec
+    __iter_cycle_off_%out_vec = mul __iter_cycle_index_%out_vec, 8
+    __iter_cycle_item_%out_vec = ptr_add __iter_cycle_ptr_%out_vec, __iter_cycle_off_%out_vec
+    __iter_cycle_value_%out_vec = load __iter_cycle_item_%out_vec+0 as u64
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_cycle_value_%out_vec
+    __iter_cycle_next_taken_%out_vec = add __iter_cycle_taken_%out_vec, 1
+    !__iter_cycle_taken_%out_vec
+    __iter_cycle_taken_%out_vec = add __iter_cycle_next_taken_%out_vec, 0
+    !__iter_cycle_next_taken_%out_vec
+    !__iter_cycle_value_%out_vec
+    !__iter_cycle_item_%out_vec
+    !__iter_cycle_off_%out_vec
+    !__iter_cycle_index_%out_vec
+    !__iter_cycle_mod_%out_vec
+    !__iter_cycle_more_%out_vec
+    jmp L_ITER_CYCLE_TAKE_HEAD_%out_vec
+L_ITER_CYCLE_TAKE_DONE_COUNT_%out_vec:
+    store %iter_reg+Iter_index, __iter_cycle_len_%out_vec as u64
+    !__iter_cycle_more_%out_vec
+    jmp L_ITER_CYCLE_TAKE_DONE_%out_vec
+L_ITER_CYCLE_TAKE_DONE_EMPTY_%out_vec:
+    jmp L_ITER_CYCLE_TAKE_DONE_%out_vec
+L_ITER_CYCLE_TAKE_DONE_ZERO_%out_vec:
+    !__iter_cycle_count_zero_%out_vec
+    jmp L_ITER_CYCLE_TAKE_END_%out_vec
+L_ITER_CYCLE_TAKE_DONE_%out_vec:
+    !__iter_cycle_taken_%out_vec
+    !__iter_cycle_empty_%out_vec
+    !__iter_cycle_rem_%out_vec
+    !__iter_cycle_start_%out_vec
+    !__iter_cycle_len_%out_vec
+    !__iter_cycle_ptr_%out_vec
+    !__iter_cycle_count_zero_%out_vec
+L_ITER_CYCLE_TAKE_END_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_CYCLE_TAKE_COLLECT_U64.
+[MACRO] ITER_CYCLE_TAKE_COLLECT %out_vec, %iter_reg, %count
+    EXPAND ITER_CYCLE_TAKE_COLLECT_U64 %out_vec, %iter_reg, %count
+[END_MACRO]
+
+[MACRO] ITER_REV_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_REV_COLLECT_HEAD_%out_vec
+L_ITER_REV_COLLECT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_BACK_U64 __iter_rev_collect_has_%out_vec, __iter_rev_collect_value_%out_vec, %iter_reg
+    br __iter_rev_collect_has_%out_vec -> L_ITER_REV_COLLECT_PUSH_%out_vec, L_ITER_REV_COLLECT_DONE_%out_vec
+L_ITER_REV_COLLECT_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_rev_collect_value_%out_vec
+    !__iter_rev_collect_value_%out_vec
+    !__iter_rev_collect_has_%out_vec
+    jmp L_ITER_REV_COLLECT_HEAD_%out_vec
+L_ITER_REV_COLLECT_DONE_%out_vec:
+    !__iter_rev_collect_value_%out_vec
+    !__iter_rev_collect_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_REV_COLLECT_U64.
+[MACRO] ITER_REV_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_REV_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_TAKE_WHILE_COLLECT_U64 %out_vec, %iter_reg, %pred_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_TAKE_WHILE_HEAD_%out_vec
+L_ITER_TAKE_WHILE_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_take_while_has_%out_vec, __iter_take_while_value_%out_vec, %iter_reg
+    br __iter_take_while_has_%out_vec -> L_ITER_TAKE_WHILE_CHECK_%out_vec, L_ITER_TAKE_WHILE_DONE_EMPTY_%out_vec
+L_ITER_TAKE_WHILE_CHECK_%out_vec:
+    __iter_take_while_pred_%out_vec = call %pred_fn(__iter_take_while_value_%out_vec)
+    __iter_take_while_keep_%out_vec = ne __iter_take_while_pred_%out_vec, 0
+    br __iter_take_while_keep_%out_vec -> L_ITER_TAKE_WHILE_PUSH_%out_vec, L_ITER_TAKE_WHILE_STOP_%out_vec
+L_ITER_TAKE_WHILE_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_take_while_value_%out_vec
+    !__iter_take_while_keep_%out_vec
+    !__iter_take_while_pred_%out_vec
+    !__iter_take_while_value_%out_vec
+    !__iter_take_while_has_%out_vec
+    jmp L_ITER_TAKE_WHILE_HEAD_%out_vec
+L_ITER_TAKE_WHILE_STOP_%out_vec:
+    !__iter_take_while_keep_%out_vec
+    !__iter_take_while_pred_%out_vec
+    !__iter_take_while_value_%out_vec
+    !__iter_take_while_has_%out_vec
+    jmp L_ITER_TAKE_WHILE_DONE_%out_vec
+L_ITER_TAKE_WHILE_DONE_EMPTY_%out_vec:
+    !__iter_take_while_value_%out_vec
+    !__iter_take_while_has_%out_vec
+    jmp L_ITER_TAKE_WHILE_DONE_%out_vec
+L_ITER_TAKE_WHILE_DONE_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_TAKE_WHILE_COLLECT_U64.
+[MACRO] ITER_TAKE_WHILE_COLLECT %out_vec, %iter_reg, %pred_fn
+    EXPAND ITER_TAKE_WHILE_COLLECT_U64 %out_vec, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_SKIP_WHILE_COLLECT_U64 %out_vec, %iter_reg, %pred_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_SKIP_WHILE_HEAD_%out_vec
+L_ITER_SKIP_WHILE_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_skip_while_has_%out_vec, __iter_skip_while_value_%out_vec, %iter_reg
+    br __iter_skip_while_has_%out_vec -> L_ITER_SKIP_WHILE_CHECK_%out_vec, L_ITER_SKIP_WHILE_DONE_EMPTY_%out_vec
+L_ITER_SKIP_WHILE_CHECK_%out_vec:
+    __iter_skip_while_pred_%out_vec = call %pred_fn(__iter_skip_while_value_%out_vec)
+    __iter_skip_while_drop_%out_vec = ne __iter_skip_while_pred_%out_vec, 0
+    br __iter_skip_while_drop_%out_vec -> L_ITER_SKIP_WHILE_DROP_%out_vec, L_ITER_SKIP_WHILE_FIRST_PUSH_%out_vec
+L_ITER_SKIP_WHILE_DROP_%out_vec:
+    !__iter_skip_while_drop_%out_vec
+    !__iter_skip_while_pred_%out_vec
+    !__iter_skip_while_value_%out_vec
+    !__iter_skip_while_has_%out_vec
+    jmp L_ITER_SKIP_WHILE_HEAD_%out_vec
+L_ITER_SKIP_WHILE_FIRST_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_skip_while_value_%out_vec
+    !__iter_skip_while_drop_%out_vec
+    !__iter_skip_while_pred_%out_vec
+    !__iter_skip_while_value_%out_vec
+    !__iter_skip_while_has_%out_vec
+    jmp L_ITER_SKIP_WHILE_TAIL_HEAD_%out_vec
+L_ITER_SKIP_WHILE_TAIL_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_skip_tail_has_%out_vec, __iter_skip_tail_value_%out_vec, %iter_reg
+    br __iter_skip_tail_has_%out_vec -> L_ITER_SKIP_WHILE_TAIL_PUSH_%out_vec, L_ITER_SKIP_WHILE_TAIL_DONE_%out_vec
+L_ITER_SKIP_WHILE_TAIL_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_skip_tail_value_%out_vec
+    !__iter_skip_tail_value_%out_vec
+    !__iter_skip_tail_has_%out_vec
+    jmp L_ITER_SKIP_WHILE_TAIL_HEAD_%out_vec
+L_ITER_SKIP_WHILE_TAIL_DONE_%out_vec:
+    !__iter_skip_tail_value_%out_vec
+    !__iter_skip_tail_has_%out_vec
+    jmp L_ITER_SKIP_WHILE_DONE_%out_vec
+L_ITER_SKIP_WHILE_DONE_EMPTY_%out_vec:
+    !__iter_skip_while_value_%out_vec
+    !__iter_skip_while_has_%out_vec
+    jmp L_ITER_SKIP_WHILE_DONE_%out_vec
+L_ITER_SKIP_WHILE_DONE_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_SKIP_WHILE_COLLECT_U64.
+[MACRO] ITER_SKIP_WHILE_COLLECT %out_vec, %iter_reg, %pred_fn
+    EXPAND ITER_SKIP_WHILE_COLLECT_U64 %out_vec, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_ENUMERATE_COLLECT_U64 %out_vec, %iter_reg
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_enumerate_index_%out_vec = add 0, 0
+    jmp L_ITER_ENUMERATE_HEAD_%out_vec
+L_ITER_ENUMERATE_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_enumerate_has_%out_vec, __iter_enumerate_value_%out_vec, %iter_reg
+    br __iter_enumerate_has_%out_vec -> L_ITER_ENUMERATE_PUSH_%out_vec, L_ITER_ENUMERATE_DONE_%out_vec
+L_ITER_ENUMERATE_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_enumerate_index_%out_vec
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_enumerate_value_%out_vec
+    __iter_enumerate_next_index_%out_vec = add __iter_enumerate_index_%out_vec, 1
+    !__iter_enumerate_index_%out_vec
+    __iter_enumerate_index_%out_vec = add __iter_enumerate_next_index_%out_vec, 0
+    !__iter_enumerate_next_index_%out_vec
+    !__iter_enumerate_value_%out_vec
+    !__iter_enumerate_has_%out_vec
+    jmp L_ITER_ENUMERATE_HEAD_%out_vec
+L_ITER_ENUMERATE_DONE_%out_vec:
+    !__iter_enumerate_value_%out_vec
+    !__iter_enumerate_has_%out_vec
+    !__iter_enumerate_index_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_ENUMERATE_COLLECT_U64.
+[MACRO] ITER_ENUMERATE_COLLECT %out_vec, %iter_reg
+    EXPAND ITER_ENUMERATE_COLLECT_U64 %out_vec, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_ZIP_COLLECT_U64 %out_vec, %left_iter, %right_iter
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_ZIP_HEAD_%out_vec
+L_ITER_ZIP_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_zip_left_has_%out_vec, __iter_zip_left_value_%out_vec, %left_iter
+    br __iter_zip_left_has_%out_vec -> L_ITER_ZIP_RIGHT_%out_vec, L_ITER_ZIP_DONE_LEFT_%out_vec
+L_ITER_ZIP_RIGHT_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_zip_right_has_%out_vec, __iter_zip_right_value_%out_vec, %right_iter
+    br __iter_zip_right_has_%out_vec -> L_ITER_ZIP_PUSH_%out_vec, L_ITER_ZIP_DONE_RIGHT_%out_vec
+L_ITER_ZIP_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_zip_left_value_%out_vec
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_zip_right_value_%out_vec
+    !__iter_zip_right_value_%out_vec
+    !__iter_zip_right_has_%out_vec
+    !__iter_zip_left_value_%out_vec
+    !__iter_zip_left_has_%out_vec
+    jmp L_ITER_ZIP_HEAD_%out_vec
+L_ITER_ZIP_DONE_RIGHT_%out_vec:
+    !__iter_zip_right_value_%out_vec
+    !__iter_zip_right_has_%out_vec
+    !__iter_zip_left_value_%out_vec
+    !__iter_zip_left_has_%out_vec
+    jmp L_ITER_ZIP_DONE_%out_vec
+L_ITER_ZIP_DONE_LEFT_%out_vec:
+    !__iter_zip_left_value_%out_vec
+    !__iter_zip_left_has_%out_vec
+    jmp L_ITER_ZIP_DONE_%out_vec
+L_ITER_ZIP_DONE_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_ZIP_COLLECT_U64.
+[MACRO] ITER_ZIP_COLLECT %out_vec, %left_iter, %right_iter
+    EXPAND ITER_ZIP_COLLECT_U64 %out_vec, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_CHAIN_COLLECT_U64 %out_vec, %left_iter, %right_iter
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_CHAIN_LEFT_HEAD_%out_vec
+L_ITER_CHAIN_LEFT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_chain_left_has_%out_vec, __iter_chain_left_value_%out_vec, %left_iter
+    br __iter_chain_left_has_%out_vec -> L_ITER_CHAIN_LEFT_PUSH_%out_vec, L_ITER_CHAIN_RIGHT_HEAD_%out_vec
+L_ITER_CHAIN_LEFT_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_chain_left_value_%out_vec
+    !__iter_chain_left_value_%out_vec
+    !__iter_chain_left_has_%out_vec
+    jmp L_ITER_CHAIN_LEFT_HEAD_%out_vec
+L_ITER_CHAIN_RIGHT_HEAD_%out_vec:
+    !__iter_chain_left_value_%out_vec
+    !__iter_chain_left_has_%out_vec
+    jmp L_ITER_CHAIN_RIGHT_NEXT_%out_vec
+L_ITER_CHAIN_RIGHT_NEXT_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_chain_right_has_%out_vec, __iter_chain_right_value_%out_vec, %right_iter
+    br __iter_chain_right_has_%out_vec -> L_ITER_CHAIN_RIGHT_PUSH_%out_vec, L_ITER_CHAIN_DONE_%out_vec
+L_ITER_CHAIN_RIGHT_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_chain_right_value_%out_vec
+    !__iter_chain_right_value_%out_vec
+    !__iter_chain_right_has_%out_vec
+    jmp L_ITER_CHAIN_RIGHT_NEXT_%out_vec
+L_ITER_CHAIN_DONE_%out_vec:
+    !__iter_chain_right_value_%out_vec
+    !__iter_chain_right_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_CHAIN_COLLECT_U64.
+[MACRO] ITER_CHAIN_COLLECT %out_vec, %left_iter, %right_iter
+    EXPAND ITER_CHAIN_COLLECT_U64 %out_vec, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_MAP_COLLECT_U64 %out_vec, %iter_reg, %map_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_MAP_COLLECT_HEAD_%out_vec
+L_ITER_MAP_COLLECT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_map_collect_has_%out_vec, __iter_map_collect_value_%out_vec, %iter_reg
+    br __iter_map_collect_has_%out_vec -> L_ITER_MAP_COLLECT_PUSH_%out_vec, L_ITER_MAP_COLLECT_DONE_%out_vec
+L_ITER_MAP_COLLECT_PUSH_%out_vec:
+    __iter_map_collect_mapped_%out_vec = call %map_fn(__iter_map_collect_value_%out_vec)
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_map_collect_mapped_%out_vec
+    !__iter_map_collect_mapped_%out_vec
+    !__iter_map_collect_value_%out_vec
+    !__iter_map_collect_has_%out_vec
+    jmp L_ITER_MAP_COLLECT_HEAD_%out_vec
+L_ITER_MAP_COLLECT_DONE_%out_vec:
+    !__iter_map_collect_value_%out_vec
+    !__iter_map_collect_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_MAP_COLLECT_U64.
+[MACRO] ITER_MAP_COLLECT %out_vec, %iter_reg, %map_fn
+    EXPAND ITER_MAP_COLLECT_U64 %out_vec, %iter_reg, %map_fn
+[END_MACRO]
+
+[MACRO] ITER_INSPECT_COLLECT_U64 %out_vec, %iter_reg, %inspect_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_INSPECT_COLLECT_HEAD_%out_vec
+L_ITER_INSPECT_COLLECT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_inspect_collect_has_%out_vec, __iter_inspect_collect_value_%out_vec, %iter_reg
+    br __iter_inspect_collect_has_%out_vec -> L_ITER_INSPECT_COLLECT_PUSH_%out_vec, L_ITER_INSPECT_COLLECT_DONE_%out_vec
+L_ITER_INSPECT_COLLECT_PUSH_%out_vec:
+    __iter_inspect_collect_result_%out_vec = call %inspect_fn(__iter_inspect_collect_value_%out_vec)
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_inspect_collect_value_%out_vec
+    !__iter_inspect_collect_result_%out_vec
+    !__iter_inspect_collect_value_%out_vec
+    !__iter_inspect_collect_has_%out_vec
+    jmp L_ITER_INSPECT_COLLECT_HEAD_%out_vec
+L_ITER_INSPECT_COLLECT_DONE_%out_vec:
+    !__iter_inspect_collect_value_%out_vec
+    !__iter_inspect_collect_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_INSPECT_COLLECT_U64.
+[MACRO] ITER_INSPECT_COLLECT %out_vec, %iter_reg, %inspect_fn
+    EXPAND ITER_INSPECT_COLLECT_U64 %out_vec, %iter_reg, %inspect_fn
+[END_MACRO]
+
+[MACRO] ITER_SCAN_COLLECT_U64 %out_vec, %iter_reg, %initial_state, %scan_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_scan_state_%out_vec = stack_alloc 8
+    __iter_scan_collect_slot_%out_vec = stack_alloc 8
+    store __iter_scan_state_%out_vec+0, %initial_state as u64
+    jmp L_ITER_SCAN_COLLECT_HEAD_%out_vec
+L_ITER_SCAN_COLLECT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_scan_collect_has_%out_vec, __iter_scan_collect_value_%out_vec, %iter_reg
+    br __iter_scan_collect_has_%out_vec -> L_ITER_SCAN_COLLECT_CHECK_%out_vec, L_ITER_SCAN_COLLECT_DONE_EMPTY_%out_vec
+L_ITER_SCAN_COLLECT_CHECK_%out_vec:
+    __iter_scan_collect_yielded_%out_vec = call %scan_fn(&__iter_scan_state_%out_vec, __iter_scan_collect_value_%out_vec, &__iter_scan_collect_slot_%out_vec)
+    __iter_scan_collect_keep_%out_vec = ne __iter_scan_collect_yielded_%out_vec, 0
+    br __iter_scan_collect_keep_%out_vec -> L_ITER_SCAN_COLLECT_PUSH_%out_vec, L_ITER_SCAN_COLLECT_STOP_%out_vec
+L_ITER_SCAN_COLLECT_PUSH_%out_vec:
+    __iter_scan_collect_mapped_%out_vec = load __iter_scan_collect_slot_%out_vec+0 as u64
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_scan_collect_mapped_%out_vec
+    !__iter_scan_collect_mapped_%out_vec
+    !__iter_scan_collect_keep_%out_vec
+    !__iter_scan_collect_yielded_%out_vec
+    !__iter_scan_collect_value_%out_vec
+    !__iter_scan_collect_has_%out_vec
+    jmp L_ITER_SCAN_COLLECT_HEAD_%out_vec
+L_ITER_SCAN_COLLECT_STOP_%out_vec:
+    !__iter_scan_collect_keep_%out_vec
+    !__iter_scan_collect_yielded_%out_vec
+    !__iter_scan_collect_value_%out_vec
+    !__iter_scan_collect_has_%out_vec
+    jmp L_ITER_SCAN_COLLECT_DONE_%out_vec
+L_ITER_SCAN_COLLECT_DONE_EMPTY_%out_vec:
+    !__iter_scan_collect_value_%out_vec
+    !__iter_scan_collect_has_%out_vec
+    jmp L_ITER_SCAN_COLLECT_DONE_%out_vec
+L_ITER_SCAN_COLLECT_DONE_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_SCAN_COLLECT_U64.
+[MACRO] ITER_SCAN_COLLECT %out_vec, %iter_reg, %initial_state, %scan_fn
+    EXPAND ITER_SCAN_COLLECT_U64 %out_vec, %iter_reg, %initial_state, %scan_fn
+[END_MACRO]
+
+[MACRO] ITER_FILTER_COLLECT_U64 %out_vec, %iter_reg, %pred_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    jmp L_ITER_FILTER_COLLECT_HEAD_%out_vec
+L_ITER_FILTER_COLLECT_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_filter_collect_has_%out_vec, __iter_filter_collect_value_%out_vec, %iter_reg
+    br __iter_filter_collect_has_%out_vec -> L_ITER_FILTER_COLLECT_CHECK_%out_vec, L_ITER_FILTER_COLLECT_DONE_%out_vec
+L_ITER_FILTER_COLLECT_CHECK_%out_vec:
+    __iter_filter_collect_pred_%out_vec = call %pred_fn(__iter_filter_collect_value_%out_vec)
+    __iter_filter_collect_keep_%out_vec = ne __iter_filter_collect_pred_%out_vec, 0
+    br __iter_filter_collect_keep_%out_vec -> L_ITER_FILTER_COLLECT_PUSH_%out_vec, L_ITER_FILTER_COLLECT_NEXT_%out_vec
+L_ITER_FILTER_COLLECT_PUSH_%out_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_filter_collect_value_%out_vec
+    !__iter_filter_collect_keep_%out_vec
+    !__iter_filter_collect_pred_%out_vec
+    !__iter_filter_collect_value_%out_vec
+    !__iter_filter_collect_has_%out_vec
+    jmp L_ITER_FILTER_COLLECT_HEAD_%out_vec
+L_ITER_FILTER_COLLECT_NEXT_%out_vec:
+    !__iter_filter_collect_keep_%out_vec
+    !__iter_filter_collect_pred_%out_vec
+    !__iter_filter_collect_value_%out_vec
+    !__iter_filter_collect_has_%out_vec
+    jmp L_ITER_FILTER_COLLECT_HEAD_%out_vec
+L_ITER_FILTER_COLLECT_DONE_%out_vec:
+    !__iter_filter_collect_value_%out_vec
+    !__iter_filter_collect_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_FILTER_COLLECT_U64.
+[MACRO] ITER_FILTER_COLLECT %out_vec, %iter_reg, %pred_fn
+    EXPAND ITER_FILTER_COLLECT_U64 %out_vec, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_FILTER_MAP_COLLECT_U64 %out_vec, %iter_reg, %map_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_filter_map_slot_%out_vec = stack_alloc 8
+    jmp L_ITER_FILTER_MAP_HEAD_%out_vec
+L_ITER_FILTER_MAP_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_filter_map_has_%out_vec, __iter_filter_map_value_%out_vec, %iter_reg
+    br __iter_filter_map_has_%out_vec -> L_ITER_FILTER_MAP_CHECK_%out_vec, L_ITER_FILTER_MAP_DONE_%out_vec
+L_ITER_FILTER_MAP_CHECK_%out_vec:
+    __iter_filter_map_found_%out_vec = call %map_fn(__iter_filter_map_value_%out_vec, &__iter_filter_map_slot_%out_vec)
+    __iter_filter_map_match_%out_vec = ne __iter_filter_map_found_%out_vec, 0
+    br __iter_filter_map_match_%out_vec -> L_ITER_FILTER_MAP_PUSH_%out_vec, L_ITER_FILTER_MAP_NEXT_%out_vec
+L_ITER_FILTER_MAP_PUSH_%out_vec:
+    __iter_filter_map_mapped_%out_vec = load __iter_filter_map_slot_%out_vec+0 as u64
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_filter_map_mapped_%out_vec
+    !__iter_filter_map_mapped_%out_vec
+    !__iter_filter_map_match_%out_vec
+    !__iter_filter_map_found_%out_vec
+    !__iter_filter_map_value_%out_vec
+    !__iter_filter_map_has_%out_vec
+    jmp L_ITER_FILTER_MAP_HEAD_%out_vec
+L_ITER_FILTER_MAP_NEXT_%out_vec:
+    !__iter_filter_map_match_%out_vec
+    !__iter_filter_map_found_%out_vec
+    !__iter_filter_map_value_%out_vec
+    !__iter_filter_map_has_%out_vec
+    jmp L_ITER_FILTER_MAP_HEAD_%out_vec
+L_ITER_FILTER_MAP_DONE_%out_vec:
+    !__iter_filter_map_value_%out_vec
+    !__iter_filter_map_has_%out_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_FILTER_MAP_COLLECT_U64.
+[MACRO] ITER_FILTER_MAP_COLLECT %out_vec, %iter_reg, %map_fn
+    EXPAND ITER_FILTER_MAP_COLLECT_U64 %out_vec, %iter_reg, %map_fn
+[END_MACRO]
+
+[MACRO] ITER_MAP_WHILE_COLLECT_U64 %out_vec, %iter_reg, %map_fn
+    EXPAND ITER_VEC_NEW %out_vec
+    __iter_map_while_slot_%out_vec = stack_alloc 8
+    jmp L_ITER_MAP_WHILE_HEAD_%out_vec
+L_ITER_MAP_WHILE_HEAD_%out_vec:
+    EXPAND ITER_NEXT_U64 __iter_map_while_has_%out_vec, __iter_map_while_value_%out_vec, %iter_reg
+    br __iter_map_while_has_%out_vec -> L_ITER_MAP_WHILE_CHECK_%out_vec, L_ITER_MAP_WHILE_DONE_EMPTY_%out_vec
+L_ITER_MAP_WHILE_CHECK_%out_vec:
+    __iter_map_while_found_%out_vec = call %map_fn(__iter_map_while_value_%out_vec, &__iter_map_while_slot_%out_vec)
+    __iter_map_while_keep_%out_vec = ne __iter_map_while_found_%out_vec, 0
+    br __iter_map_while_keep_%out_vec -> L_ITER_MAP_WHILE_PUSH_%out_vec, L_ITER_MAP_WHILE_STOP_%out_vec
+L_ITER_MAP_WHILE_PUSH_%out_vec:
+    __iter_map_while_mapped_%out_vec = load __iter_map_while_slot_%out_vec+0 as u64
+    EXPAND ITER_VEC_PUSH_U64 %out_vec, __iter_map_while_mapped_%out_vec
+    !__iter_map_while_mapped_%out_vec
+    !__iter_map_while_keep_%out_vec
+    !__iter_map_while_found_%out_vec
+    !__iter_map_while_value_%out_vec
+    !__iter_map_while_has_%out_vec
+    jmp L_ITER_MAP_WHILE_HEAD_%out_vec
+L_ITER_MAP_WHILE_STOP_%out_vec:
+    !__iter_map_while_keep_%out_vec
+    !__iter_map_while_found_%out_vec
+    !__iter_map_while_value_%out_vec
+    !__iter_map_while_has_%out_vec
+    jmp L_ITER_MAP_WHILE_DONE_%out_vec
+L_ITER_MAP_WHILE_DONE_EMPTY_%out_vec:
+    !__iter_map_while_value_%out_vec
+    !__iter_map_while_has_%out_vec
+    jmp L_ITER_MAP_WHILE_DONE_%out_vec
+L_ITER_MAP_WHILE_DONE_%out_vec:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MAP_WHILE_COLLECT_U64.
+[MACRO] ITER_MAP_WHILE_COLLECT %out_vec, %iter_reg, %map_fn
+    EXPAND ITER_MAP_WHILE_COLLECT_U64 %out_vec, %iter_reg, %map_fn
+[END_MACRO]
+
+[MACRO] ITER_PARTITION_U64 %out_true_vec, %out_false_vec, %iter_reg, %pred_fn
+    EXPAND ITER_VEC_NEW %out_true_vec
+    EXPAND ITER_VEC_NEW %out_false_vec
+    jmp L_ITER_PARTITION_HEAD_%out_true_vec
+L_ITER_PARTITION_HEAD_%out_true_vec:
+    EXPAND ITER_NEXT_U64 __iter_partition_has_%out_true_vec, __iter_partition_value_%out_true_vec, %iter_reg
+    br __iter_partition_has_%out_true_vec -> L_ITER_PARTITION_CHECK_%out_true_vec, L_ITER_PARTITION_DONE_%out_true_vec
+L_ITER_PARTITION_CHECK_%out_true_vec:
+    __iter_partition_pred_%out_true_vec = call %pred_fn(__iter_partition_value_%out_true_vec)
+    __iter_partition_take_true_%out_true_vec = ne __iter_partition_pred_%out_true_vec, 0
+    br __iter_partition_take_true_%out_true_vec -> L_ITER_PARTITION_PUSH_TRUE_%out_true_vec, L_ITER_PARTITION_PUSH_FALSE_%out_true_vec
+L_ITER_PARTITION_PUSH_TRUE_%out_true_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_true_vec, __iter_partition_value_%out_true_vec
+    !__iter_partition_take_true_%out_true_vec
+    !__iter_partition_pred_%out_true_vec
+    !__iter_partition_value_%out_true_vec
+    !__iter_partition_has_%out_true_vec
+    jmp L_ITER_PARTITION_HEAD_%out_true_vec
+L_ITER_PARTITION_PUSH_FALSE_%out_true_vec:
+    EXPAND ITER_VEC_PUSH_U64 %out_false_vec, __iter_partition_value_%out_true_vec
+    !__iter_partition_take_true_%out_true_vec
+    !__iter_partition_pred_%out_true_vec
+    !__iter_partition_value_%out_true_vec
+    !__iter_partition_has_%out_true_vec
+    jmp L_ITER_PARTITION_HEAD_%out_true_vec
+L_ITER_PARTITION_DONE_%out_true_vec:
+    !__iter_partition_value_%out_true_vec
+    !__iter_partition_has_%out_true_vec
+[END_MACRO]
+
+// Rust method-name alias over ITER_PARTITION_U64.
+[MACRO] ITER_PARTITION %out_true_vec, %out_false_vec, %iter_reg, %pred_fn
+    EXPAND ITER_PARTITION_U64 %out_true_vec, %out_false_vec, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_PARTITION_IN_PLACE_U64 %out_count, %iter_reg, %pred_fn
+    __iter_partition_in_place_ptr_%out_count = load %iter_reg+Iter_ptr as ptr
+    __iter_partition_in_place_len_%out_count = load %iter_reg+Iter_len as u64
+    __iter_partition_in_place_left_%out_count = load %iter_reg+Iter_index as u64
+    __iter_partition_in_place_right_%out_count = add __iter_partition_in_place_len_%out_count, 0
+    %out_count = add 0, 0
+    jmp L_ITER_PARTITION_IN_PLACE_HEAD_%out_count
+L_ITER_PARTITION_IN_PLACE_HEAD_%out_count:
+    __iter_partition_in_place_head_done_%out_count = uge __iter_partition_in_place_left_%out_count, __iter_partition_in_place_right_%out_count
+    br __iter_partition_in_place_head_done_%out_count -> L_ITER_PARTITION_IN_PLACE_HEAD_DONE_%out_count, L_ITER_PARTITION_IN_PLACE_CHECK_HEAD_%out_count
+L_ITER_PARTITION_IN_PLACE_CHECK_HEAD_%out_count:
+    !__iter_partition_in_place_head_done_%out_count
+    __iter_partition_in_place_head_off_%out_count = mul __iter_partition_in_place_left_%out_count, 8
+    __iter_partition_in_place_head_ptr_%out_count = ptr_add __iter_partition_in_place_ptr_%out_count, __iter_partition_in_place_head_off_%out_count
+    __iter_partition_in_place_head_value_%out_count = load __iter_partition_in_place_head_ptr_%out_count+0 as u64
+    __iter_partition_in_place_head_pred_%out_count = call %pred_fn(__iter_partition_in_place_head_value_%out_count)
+    __iter_partition_in_place_head_true_%out_count = ne __iter_partition_in_place_head_pred_%out_count, 0
+    br __iter_partition_in_place_head_true_%out_count -> L_ITER_PARTITION_IN_PLACE_ADVANCE_TRUE_%out_count, L_ITER_PARTITION_IN_PLACE_TAIL_START_%out_count
+L_ITER_PARTITION_IN_PLACE_ADVANCE_TRUE_%out_count:
+    __iter_partition_in_place_next_count_%out_count = add %out_count, 1
+    !%out_count
+    %out_count = add __iter_partition_in_place_next_count_%out_count, 0
+    __iter_partition_in_place_next_left_%out_count = add __iter_partition_in_place_left_%out_count, 1
+    !__iter_partition_in_place_left_%out_count
+    __iter_partition_in_place_left_%out_count = add __iter_partition_in_place_next_left_%out_count, 0
+    !__iter_partition_in_place_next_left_%out_count
+    !__iter_partition_in_place_next_count_%out_count
+    !__iter_partition_in_place_head_true_%out_count
+    !__iter_partition_in_place_head_pred_%out_count
+    !__iter_partition_in_place_head_value_%out_count
+    !__iter_partition_in_place_head_ptr_%out_count
+    !__iter_partition_in_place_head_off_%out_count
+    jmp L_ITER_PARTITION_IN_PLACE_HEAD_%out_count
+L_ITER_PARTITION_IN_PLACE_TAIL_START_%out_count:
+    !__iter_partition_in_place_head_true_%out_count
+    !__iter_partition_in_place_head_pred_%out_count
+    !__iter_partition_in_place_head_value_%out_count
+    !__iter_partition_in_place_head_ptr_%out_count
+    !__iter_partition_in_place_head_off_%out_count
+    jmp L_ITER_PARTITION_IN_PLACE_TAIL_HEAD_%out_count
+L_ITER_PARTITION_IN_PLACE_TAIL_HEAD_%out_count:
+    __iter_partition_in_place_tail_min_%out_count = add __iter_partition_in_place_left_%out_count, 1
+    __iter_partition_in_place_tail_done_%out_count = ule __iter_partition_in_place_right_%out_count, __iter_partition_in_place_tail_min_%out_count
+    br __iter_partition_in_place_tail_done_%out_count -> L_ITER_PARTITION_IN_PLACE_TAIL_DONE_%out_count, L_ITER_PARTITION_IN_PLACE_CHECK_TAIL_%out_count
+L_ITER_PARTITION_IN_PLACE_CHECK_TAIL_%out_count:
+    !__iter_partition_in_place_tail_done_%out_count
+    !__iter_partition_in_place_tail_min_%out_count
+    __iter_partition_in_place_tail_index_%out_count = sub __iter_partition_in_place_right_%out_count, 1
+    __iter_partition_in_place_tail_off_%out_count = mul __iter_partition_in_place_tail_index_%out_count, 8
+    __iter_partition_in_place_tail_ptr_%out_count = ptr_add __iter_partition_in_place_ptr_%out_count, __iter_partition_in_place_tail_off_%out_count
+    __iter_partition_in_place_tail_value_%out_count = load __iter_partition_in_place_tail_ptr_%out_count+0 as u64
+    __iter_partition_in_place_tail_pred_%out_count = call %pred_fn(__iter_partition_in_place_tail_value_%out_count)
+    __iter_partition_in_place_tail_true_%out_count = ne __iter_partition_in_place_tail_pred_%out_count, 0
+    br __iter_partition_in_place_tail_true_%out_count -> L_ITER_PARTITION_IN_PLACE_SWAP_%out_count, L_ITER_PARTITION_IN_PLACE_DROP_TAIL_%out_count
+L_ITER_PARTITION_IN_PLACE_DROP_TAIL_%out_count:
+    !__iter_partition_in_place_right_%out_count
+    __iter_partition_in_place_right_%out_count = add __iter_partition_in_place_tail_index_%out_count, 0
+    !__iter_partition_in_place_tail_true_%out_count
+    !__iter_partition_in_place_tail_pred_%out_count
+    !__iter_partition_in_place_tail_value_%out_count
+    !__iter_partition_in_place_tail_ptr_%out_count
+    !__iter_partition_in_place_tail_off_%out_count
+    !__iter_partition_in_place_tail_index_%out_count
+    jmp L_ITER_PARTITION_IN_PLACE_TAIL_HEAD_%out_count
+L_ITER_PARTITION_IN_PLACE_SWAP_%out_count:
+    __iter_partition_in_place_left_off_%out_count = mul __iter_partition_in_place_left_%out_count, 8
+    __iter_partition_in_place_left_ptr_%out_count = ptr_add __iter_partition_in_place_ptr_%out_count, __iter_partition_in_place_left_off_%out_count
+    __iter_partition_in_place_left_value_%out_count = load __iter_partition_in_place_left_ptr_%out_count+0 as u64
+    store __iter_partition_in_place_left_ptr_%out_count+0, __iter_partition_in_place_tail_value_%out_count as u64
+    store __iter_partition_in_place_tail_ptr_%out_count+0, __iter_partition_in_place_left_value_%out_count as u64
+    __iter_partition_in_place_swap_count_%out_count = add %out_count, 1
+    !%out_count
+    %out_count = add __iter_partition_in_place_swap_count_%out_count, 0
+    __iter_partition_in_place_swap_left_%out_count = add __iter_partition_in_place_left_%out_count, 1
+    !__iter_partition_in_place_left_%out_count
+    __iter_partition_in_place_left_%out_count = add __iter_partition_in_place_swap_left_%out_count, 0
+    !__iter_partition_in_place_right_%out_count
+    __iter_partition_in_place_right_%out_count = add __iter_partition_in_place_tail_index_%out_count, 0
+    !__iter_partition_in_place_swap_left_%out_count
+    !__iter_partition_in_place_swap_count_%out_count
+    !__iter_partition_in_place_left_value_%out_count
+    !__iter_partition_in_place_left_ptr_%out_count
+    !__iter_partition_in_place_left_off_%out_count
+    !__iter_partition_in_place_tail_true_%out_count
+    !__iter_partition_in_place_tail_pred_%out_count
+    !__iter_partition_in_place_tail_value_%out_count
+    !__iter_partition_in_place_tail_ptr_%out_count
+    !__iter_partition_in_place_tail_off_%out_count
+    !__iter_partition_in_place_tail_index_%out_count
+    jmp L_ITER_PARTITION_IN_PLACE_HEAD_%out_count
+L_ITER_PARTITION_IN_PLACE_TAIL_DONE_%out_count:
+    !__iter_partition_in_place_tail_done_%out_count
+    !__iter_partition_in_place_tail_min_%out_count
+    jmp L_ITER_PARTITION_IN_PLACE_DONE_%out_count
+L_ITER_PARTITION_IN_PLACE_HEAD_DONE_%out_count:
+    !__iter_partition_in_place_head_done_%out_count
+    jmp L_ITER_PARTITION_IN_PLACE_DONE_%out_count
+L_ITER_PARTITION_IN_PLACE_DONE_%out_count:
+    store %iter_reg+Iter_index, __iter_partition_in_place_len_%out_count as u64
+    !__iter_partition_in_place_right_%out_count
+    !__iter_partition_in_place_left_%out_count
+    !__iter_partition_in_place_len_%out_count
+    !__iter_partition_in_place_ptr_%out_count
+[END_MACRO]
+
+// Rust method-name alias over ITER_PARTITION_IN_PLACE_U64.
+[MACRO] ITER_PARTITION_IN_PLACE %out_count, %iter_reg, %pred_fn
+    EXPAND ITER_PARTITION_IN_PLACE_U64 %out_count, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_IS_PARTITIONED_U64 %out_bool, %iter_reg, %pred_fn
+    EXPAND ITER_ALL_U64 __iter_partitioned_all_%out_bool, %iter_reg, %pred_fn
+    br __iter_partitioned_all_%out_bool -> L_ITER_IS_PARTITIONED_TRUE_%out_bool, L_ITER_IS_PARTITIONED_CHECK_REST_%out_bool
+L_ITER_IS_PARTITIONED_TRUE_%out_bool:
+    %out_bool = add 0, 1
+    !__iter_partitioned_all_%out_bool
+    jmp L_ITER_IS_PARTITIONED_END_%out_bool
+L_ITER_IS_PARTITIONED_CHECK_REST_%out_bool:
+    EXPAND ITER_ANY_U64 __iter_partitioned_any_%out_bool, %iter_reg, %pred_fn
+    %out_bool = eq __iter_partitioned_any_%out_bool, 0
+    !__iter_partitioned_any_%out_bool
+    !__iter_partitioned_all_%out_bool
+L_ITER_IS_PARTITIONED_END_%out_bool:
+[END_MACRO]
+
+// Rust method-name alias over ITER_IS_PARTITIONED_U64.
+[MACRO] ITER_IS_PARTITIONED %out_bool, %iter_reg, %pred_fn
+    EXPAND ITER_IS_PARTITIONED_U64 %out_bool, %iter_reg, %pred_fn
+[END_MACRO]
+
+[MACRO] ITER_MIN_BY_U64 %out_has, %out_value, %iter_reg, %compare_fn
+    EXPAND ITER_NEXT_U64 __iter_min_by_has_%out_has, __iter_min_by_value_%out_has, %iter_reg
+    br __iter_min_by_has_%out_has -> L_ITER_MIN_BY_INIT_%out_has, L_ITER_MIN_BY_NONE_%out_has
+L_ITER_MIN_BY_INIT_%out_has:
+    __iter_min_by_slot_%out_has = stack_alloc 8
+    store __iter_min_by_slot_%out_has+0, __iter_min_by_value_%out_has as u64
+    !__iter_min_by_value_%out_has
+    !__iter_min_by_has_%out_has
+    jmp L_ITER_MIN_BY_HEAD_%out_has
+L_ITER_MIN_BY_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_min_by_next_has_%out_has, __iter_min_by_next_value_%out_has, %iter_reg
+    br __iter_min_by_next_has_%out_has -> L_ITER_MIN_BY_BODY_%out_has, L_ITER_MIN_BY_DONE_%out_has
+L_ITER_MIN_BY_BODY_%out_has:
+    __iter_min_by_current_%out_has = load __iter_min_by_slot_%out_has+0 as u64
+    __iter_min_by_order_%out_has = call %compare_fn(__iter_min_by_next_value_%out_has, __iter_min_by_current_%out_has)
+    __iter_min_by_take_%out_has = slt __iter_min_by_order_%out_has, 0
+    br __iter_min_by_take_%out_has -> L_ITER_MIN_BY_STORE_%out_has, L_ITER_MIN_BY_KEEP_%out_has
+L_ITER_MIN_BY_STORE_%out_has:
+    store __iter_min_by_slot_%out_has+0, __iter_min_by_next_value_%out_has as u64
+    jmp L_ITER_MIN_BY_NEXT_%out_has
+L_ITER_MIN_BY_KEEP_%out_has:
+    jmp L_ITER_MIN_BY_NEXT_%out_has
+L_ITER_MIN_BY_NEXT_%out_has:
+    !__iter_min_by_take_%out_has
+    !__iter_min_by_order_%out_has
+    !__iter_min_by_current_%out_has
+    !__iter_min_by_next_value_%out_has
+    !__iter_min_by_next_has_%out_has
+    jmp L_ITER_MIN_BY_HEAD_%out_has
+L_ITER_MIN_BY_DONE_%out_has:
+    %out_value = load __iter_min_by_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_min_by_next_value_%out_has
+    !__iter_min_by_next_has_%out_has
+    jmp L_ITER_MIN_BY_END_%out_has
+L_ITER_MIN_BY_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_min_by_value_%out_has
+    !__iter_min_by_has_%out_has
+L_ITER_MIN_BY_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MIN_BY_U64.
+[MACRO] ITER_MIN_BY %out_has, %out_value, %iter_reg, %compare_fn
+    EXPAND ITER_MIN_BY_U64 %out_has, %out_value, %iter_reg, %compare_fn
+[END_MACRO]
+
+[MACRO] ITER_MAX_BY_U64 %out_has, %out_value, %iter_reg, %compare_fn
+    EXPAND ITER_NEXT_U64 __iter_max_by_has_%out_has, __iter_max_by_value_%out_has, %iter_reg
+    br __iter_max_by_has_%out_has -> L_ITER_MAX_BY_INIT_%out_has, L_ITER_MAX_BY_NONE_%out_has
+L_ITER_MAX_BY_INIT_%out_has:
+    __iter_max_by_slot_%out_has = stack_alloc 8
+    store __iter_max_by_slot_%out_has+0, __iter_max_by_value_%out_has as u64
+    !__iter_max_by_value_%out_has
+    !__iter_max_by_has_%out_has
+    jmp L_ITER_MAX_BY_HEAD_%out_has
+L_ITER_MAX_BY_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_max_by_next_has_%out_has, __iter_max_by_next_value_%out_has, %iter_reg
+    br __iter_max_by_next_has_%out_has -> L_ITER_MAX_BY_BODY_%out_has, L_ITER_MAX_BY_DONE_%out_has
+L_ITER_MAX_BY_BODY_%out_has:
+    __iter_max_by_current_%out_has = load __iter_max_by_slot_%out_has+0 as u64
+    __iter_max_by_order_%out_has = call %compare_fn(__iter_max_by_next_value_%out_has, __iter_max_by_current_%out_has)
+    __iter_max_by_take_%out_has = sgt __iter_max_by_order_%out_has, 0
+    br __iter_max_by_take_%out_has -> L_ITER_MAX_BY_STORE_%out_has, L_ITER_MAX_BY_KEEP_%out_has
+L_ITER_MAX_BY_STORE_%out_has:
+    store __iter_max_by_slot_%out_has+0, __iter_max_by_next_value_%out_has as u64
+    jmp L_ITER_MAX_BY_NEXT_%out_has
+L_ITER_MAX_BY_KEEP_%out_has:
+    jmp L_ITER_MAX_BY_NEXT_%out_has
+L_ITER_MAX_BY_NEXT_%out_has:
+    !__iter_max_by_take_%out_has
+    !__iter_max_by_order_%out_has
+    !__iter_max_by_current_%out_has
+    !__iter_max_by_next_value_%out_has
+    !__iter_max_by_next_has_%out_has
+    jmp L_ITER_MAX_BY_HEAD_%out_has
+L_ITER_MAX_BY_DONE_%out_has:
+    %out_value = load __iter_max_by_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_max_by_next_value_%out_has
+    !__iter_max_by_next_has_%out_has
+    jmp L_ITER_MAX_BY_END_%out_has
+L_ITER_MAX_BY_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_max_by_value_%out_has
+    !__iter_max_by_has_%out_has
+L_ITER_MAX_BY_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MAX_BY_U64.
+[MACRO] ITER_MAX_BY %out_has, %out_value, %iter_reg, %compare_fn
+    EXPAND ITER_MAX_BY_U64 %out_has, %out_value, %iter_reg, %compare_fn
+[END_MACRO]
+
+[MACRO] ITER_MIN_BY_KEY_U64 %out_has, %out_value, %iter_reg, %key_fn
+    EXPAND ITER_NEXT_U64 __iter_min_key_has_%out_has, __iter_min_key_value_%out_has, %iter_reg
+    br __iter_min_key_has_%out_has -> L_ITER_MIN_KEY_INIT_%out_has, L_ITER_MIN_KEY_NONE_%out_has
+L_ITER_MIN_KEY_INIT_%out_has:
+    __iter_min_key_slot_%out_has = stack_alloc 8
+    store __iter_min_key_slot_%out_has+0, __iter_min_key_value_%out_has as u64
+    !__iter_min_key_value_%out_has
+    !__iter_min_key_has_%out_has
+    jmp L_ITER_MIN_KEY_HEAD_%out_has
+L_ITER_MIN_KEY_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_min_key_next_has_%out_has, __iter_min_key_next_value_%out_has, %iter_reg
+    br __iter_min_key_next_has_%out_has -> L_ITER_MIN_KEY_BODY_%out_has, L_ITER_MIN_KEY_DONE_%out_has
+L_ITER_MIN_KEY_BODY_%out_has:
+    __iter_min_key_current_%out_has = load __iter_min_key_slot_%out_has+0 as u64
+    __iter_min_key_current_key_%out_has = call %key_fn(__iter_min_key_current_%out_has)
+    __iter_min_key_next_key_%out_has = call %key_fn(__iter_min_key_next_value_%out_has)
+    __iter_min_key_take_%out_has = ult __iter_min_key_next_key_%out_has, __iter_min_key_current_key_%out_has
+    br __iter_min_key_take_%out_has -> L_ITER_MIN_KEY_STORE_%out_has, L_ITER_MIN_KEY_KEEP_%out_has
+L_ITER_MIN_KEY_STORE_%out_has:
+    store __iter_min_key_slot_%out_has+0, __iter_min_key_next_value_%out_has as u64
+    jmp L_ITER_MIN_KEY_NEXT_%out_has
+L_ITER_MIN_KEY_KEEP_%out_has:
+    jmp L_ITER_MIN_KEY_NEXT_%out_has
+L_ITER_MIN_KEY_NEXT_%out_has:
+    !__iter_min_key_take_%out_has
+    !__iter_min_key_next_key_%out_has
+    !__iter_min_key_current_key_%out_has
+    !__iter_min_key_current_%out_has
+    !__iter_min_key_next_value_%out_has
+    !__iter_min_key_next_has_%out_has
+    jmp L_ITER_MIN_KEY_HEAD_%out_has
+L_ITER_MIN_KEY_DONE_%out_has:
+    %out_value = load __iter_min_key_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_min_key_next_value_%out_has
+    !__iter_min_key_next_has_%out_has
+    jmp L_ITER_MIN_KEY_END_%out_has
+L_ITER_MIN_KEY_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_min_key_value_%out_has
+    !__iter_min_key_has_%out_has
+L_ITER_MIN_KEY_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MIN_BY_KEY_U64.
+[MACRO] ITER_MIN_BY_KEY %out_has, %out_value, %iter_reg, %key_fn
+    EXPAND ITER_MIN_BY_KEY_U64 %out_has, %out_value, %iter_reg, %key_fn
+[END_MACRO]
+
+[MACRO] ITER_MAX_BY_KEY_U64 %out_has, %out_value, %iter_reg, %key_fn
+    EXPAND ITER_NEXT_U64 __iter_max_key_has_%out_has, __iter_max_key_value_%out_has, %iter_reg
+    br __iter_max_key_has_%out_has -> L_ITER_MAX_KEY_INIT_%out_has, L_ITER_MAX_KEY_NONE_%out_has
+L_ITER_MAX_KEY_INIT_%out_has:
+    __iter_max_key_slot_%out_has = stack_alloc 8
+    store __iter_max_key_slot_%out_has+0, __iter_max_key_value_%out_has as u64
+    !__iter_max_key_value_%out_has
+    !__iter_max_key_has_%out_has
+    jmp L_ITER_MAX_KEY_HEAD_%out_has
+L_ITER_MAX_KEY_HEAD_%out_has:
+    EXPAND ITER_NEXT_U64 __iter_max_key_next_has_%out_has, __iter_max_key_next_value_%out_has, %iter_reg
+    br __iter_max_key_next_has_%out_has -> L_ITER_MAX_KEY_BODY_%out_has, L_ITER_MAX_KEY_DONE_%out_has
+L_ITER_MAX_KEY_BODY_%out_has:
+    __iter_max_key_current_%out_has = load __iter_max_key_slot_%out_has+0 as u64
+    __iter_max_key_current_key_%out_has = call %key_fn(__iter_max_key_current_%out_has)
+    __iter_max_key_next_key_%out_has = call %key_fn(__iter_max_key_next_value_%out_has)
+    __iter_max_key_take_%out_has = ugt __iter_max_key_next_key_%out_has, __iter_max_key_current_key_%out_has
+    br __iter_max_key_take_%out_has -> L_ITER_MAX_KEY_STORE_%out_has, L_ITER_MAX_KEY_KEEP_%out_has
+L_ITER_MAX_KEY_STORE_%out_has:
+    store __iter_max_key_slot_%out_has+0, __iter_max_key_next_value_%out_has as u64
+    jmp L_ITER_MAX_KEY_NEXT_%out_has
+L_ITER_MAX_KEY_KEEP_%out_has:
+    jmp L_ITER_MAX_KEY_NEXT_%out_has
+L_ITER_MAX_KEY_NEXT_%out_has:
+    !__iter_max_key_take_%out_has
+    !__iter_max_key_next_key_%out_has
+    !__iter_max_key_current_key_%out_has
+    !__iter_max_key_current_%out_has
+    !__iter_max_key_next_value_%out_has
+    !__iter_max_key_next_has_%out_has
+    jmp L_ITER_MAX_KEY_HEAD_%out_has
+L_ITER_MAX_KEY_DONE_%out_has:
+    %out_value = load __iter_max_key_slot_%out_has+0 as u64
+    %out_has = add 0, 1
+    !__iter_max_key_next_value_%out_has
+    !__iter_max_key_next_has_%out_has
+    jmp L_ITER_MAX_KEY_END_%out_has
+L_ITER_MAX_KEY_NONE_%out_has:
+    %out_value = add 0, 0
+    %out_has = add 0, 0
+    !__iter_max_key_value_%out_has
+    !__iter_max_key_has_%out_has
+L_ITER_MAX_KEY_END_%out_has:
+[END_MACRO]
+
+// Rust method-name alias over ITER_MAX_BY_KEY_U64.
+[MACRO] ITER_MAX_BY_KEY %out_has, %out_value, %iter_reg, %key_fn
+    EXPAND ITER_MAX_BY_KEY_U64 %out_has, %out_value, %iter_reg, %key_fn
+[END_MACRO]
+
+[MACRO] ITER_CMP_U64 %out_ordering, %left_iter, %right_iter
+    jmp L_ITER_CMP_HEAD_%out_ordering
+L_ITER_CMP_HEAD_%out_ordering:
+    EXPAND ITER_NEXT_U64 __iter_cmp_left_has_%out_ordering, __iter_cmp_left_value_%out_ordering, %left_iter
+    EXPAND ITER_NEXT_U64 __iter_cmp_right_has_%out_ordering, __iter_cmp_right_value_%out_ordering, %right_iter
+    br __iter_cmp_left_has_%out_ordering -> L_ITER_CMP_LEFT_SOME_%out_ordering, L_ITER_CMP_LEFT_NONE_%out_ordering
+L_ITER_CMP_LEFT_SOME_%out_ordering:
+    br __iter_cmp_right_has_%out_ordering -> L_ITER_CMP_BOTH_SOME_%out_ordering, L_ITER_CMP_RIGHT_NONE_%out_ordering
+L_ITER_CMP_BOTH_SOME_%out_ordering:
+    __iter_cmp_less_%out_ordering = ult __iter_cmp_left_value_%out_ordering, __iter_cmp_right_value_%out_ordering
+    br __iter_cmp_less_%out_ordering -> L_ITER_CMP_LESS_%out_ordering, L_ITER_CMP_CHECK_GREATER_%out_ordering
+L_ITER_CMP_CHECK_GREATER_%out_ordering:
+    __iter_cmp_greater_%out_ordering = ugt __iter_cmp_left_value_%out_ordering, __iter_cmp_right_value_%out_ordering
+    br __iter_cmp_greater_%out_ordering -> L_ITER_CMP_GREATER_%out_ordering, L_ITER_CMP_EQUAL_ITEM_%out_ordering
+L_ITER_CMP_EQUAL_ITEM_%out_ordering:
+    !__iter_cmp_greater_%out_ordering
+    !__iter_cmp_less_%out_ordering
+    !__iter_cmp_right_value_%out_ordering
+    !__iter_cmp_right_has_%out_ordering
+    !__iter_cmp_left_value_%out_ordering
+    !__iter_cmp_left_has_%out_ordering
+    jmp L_ITER_CMP_HEAD_%out_ordering
+L_ITER_CMP_LESS_%out_ordering:
+    %out_ordering = sub 0, 1
+    !__iter_cmp_less_%out_ordering
+    !__iter_cmp_right_value_%out_ordering
+    !__iter_cmp_right_has_%out_ordering
+    !__iter_cmp_left_value_%out_ordering
+    !__iter_cmp_left_has_%out_ordering
+    jmp L_ITER_CMP_END_%out_ordering
+L_ITER_CMP_GREATER_%out_ordering:
+    %out_ordering = add 0, 1
+    !__iter_cmp_greater_%out_ordering
+    !__iter_cmp_less_%out_ordering
+    !__iter_cmp_right_value_%out_ordering
+    !__iter_cmp_right_has_%out_ordering
+    !__iter_cmp_left_value_%out_ordering
+    !__iter_cmp_left_has_%out_ordering
+    jmp L_ITER_CMP_END_%out_ordering
+L_ITER_CMP_RIGHT_NONE_%out_ordering:
+    %out_ordering = add 0, 1
+    !__iter_cmp_right_value_%out_ordering
+    !__iter_cmp_right_has_%out_ordering
+    !__iter_cmp_left_value_%out_ordering
+    !__iter_cmp_left_has_%out_ordering
+    jmp L_ITER_CMP_END_%out_ordering
+L_ITER_CMP_LEFT_NONE_%out_ordering:
+    br __iter_cmp_right_has_%out_ordering -> L_ITER_CMP_LEFT_SHORT_%out_ordering, L_ITER_CMP_BOTH_DONE_%out_ordering
+L_ITER_CMP_LEFT_SHORT_%out_ordering:
+    %out_ordering = sub 0, 1
+    !__iter_cmp_right_value_%out_ordering
+    !__iter_cmp_right_has_%out_ordering
+    !__iter_cmp_left_value_%out_ordering
+    !__iter_cmp_left_has_%out_ordering
+    jmp L_ITER_CMP_END_%out_ordering
+L_ITER_CMP_BOTH_DONE_%out_ordering:
+    %out_ordering = add 0, 0
+    !__iter_cmp_right_value_%out_ordering
+    !__iter_cmp_right_has_%out_ordering
+    !__iter_cmp_left_value_%out_ordering
+    !__iter_cmp_left_has_%out_ordering
+L_ITER_CMP_END_%out_ordering:
+[END_MACRO]
+
+// Rust method-name alias over ITER_CMP_U64.
+[MACRO] ITER_CMP %out_ordering, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 %out_ordering, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_CMP_BY_U64 %out_ordering, %left_iter, %right_iter, %compare_fn
+    jmp L_ITER_CMP_BY_HEAD_%out_ordering
+L_ITER_CMP_BY_HEAD_%out_ordering:
+    EXPAND ITER_NEXT_U64 __iter_cmp_by_left_has_%out_ordering, __iter_cmp_by_left_value_%out_ordering, %left_iter
+    EXPAND ITER_NEXT_U64 __iter_cmp_by_right_has_%out_ordering, __iter_cmp_by_right_value_%out_ordering, %right_iter
+    br __iter_cmp_by_left_has_%out_ordering -> L_ITER_CMP_BY_LEFT_SOME_%out_ordering, L_ITER_CMP_BY_LEFT_NONE_%out_ordering
+L_ITER_CMP_BY_LEFT_SOME_%out_ordering:
+    br __iter_cmp_by_right_has_%out_ordering -> L_ITER_CMP_BY_BOTH_SOME_%out_ordering, L_ITER_CMP_BY_RIGHT_NONE_%out_ordering
+L_ITER_CMP_BY_BOTH_SOME_%out_ordering:
+    __iter_cmp_by_order_%out_ordering = call %compare_fn(__iter_cmp_by_left_value_%out_ordering, __iter_cmp_by_right_value_%out_ordering)
+    __iter_cmp_by_equal_%out_ordering = eq __iter_cmp_by_order_%out_ordering, 0
+    br __iter_cmp_by_equal_%out_ordering -> L_ITER_CMP_BY_EQUAL_ITEM_%out_ordering, L_ITER_CMP_BY_NON_EQUAL_%out_ordering
+L_ITER_CMP_BY_EQUAL_ITEM_%out_ordering:
+    !__iter_cmp_by_equal_%out_ordering
+    !__iter_cmp_by_order_%out_ordering
+    !__iter_cmp_by_right_value_%out_ordering
+    !__iter_cmp_by_right_has_%out_ordering
+    !__iter_cmp_by_left_value_%out_ordering
+    !__iter_cmp_by_left_has_%out_ordering
+    jmp L_ITER_CMP_BY_HEAD_%out_ordering
+L_ITER_CMP_BY_NON_EQUAL_%out_ordering:
+    %out_ordering = add __iter_cmp_by_order_%out_ordering, 0
+    !__iter_cmp_by_equal_%out_ordering
+    !__iter_cmp_by_order_%out_ordering
+    !__iter_cmp_by_right_value_%out_ordering
+    !__iter_cmp_by_right_has_%out_ordering
+    !__iter_cmp_by_left_value_%out_ordering
+    !__iter_cmp_by_left_has_%out_ordering
+    jmp L_ITER_CMP_BY_END_%out_ordering
+L_ITER_CMP_BY_RIGHT_NONE_%out_ordering:
+    %out_ordering = add 0, 1
+    !__iter_cmp_by_right_value_%out_ordering
+    !__iter_cmp_by_right_has_%out_ordering
+    !__iter_cmp_by_left_value_%out_ordering
+    !__iter_cmp_by_left_has_%out_ordering
+    jmp L_ITER_CMP_BY_END_%out_ordering
+L_ITER_CMP_BY_LEFT_NONE_%out_ordering:
+    br __iter_cmp_by_right_has_%out_ordering -> L_ITER_CMP_BY_LEFT_SHORT_%out_ordering, L_ITER_CMP_BY_BOTH_DONE_%out_ordering
+L_ITER_CMP_BY_LEFT_SHORT_%out_ordering:
+    %out_ordering = sub 0, 1
+    !__iter_cmp_by_right_value_%out_ordering
+    !__iter_cmp_by_right_has_%out_ordering
+    !__iter_cmp_by_left_value_%out_ordering
+    !__iter_cmp_by_left_has_%out_ordering
+    jmp L_ITER_CMP_BY_END_%out_ordering
+L_ITER_CMP_BY_BOTH_DONE_%out_ordering:
+    %out_ordering = add 0, 0
+    !__iter_cmp_by_right_value_%out_ordering
+    !__iter_cmp_by_right_has_%out_ordering
+    !__iter_cmp_by_left_value_%out_ordering
+    !__iter_cmp_by_left_has_%out_ordering
+L_ITER_CMP_BY_END_%out_ordering:
+[END_MACRO]
+
+// Rust method-name alias over ITER_CMP_BY_U64.
+[MACRO] ITER_CMP_BY %out_ordering, %left_iter, %right_iter, %compare_fn
+    EXPAND ITER_CMP_BY_U64 %out_ordering, %left_iter, %right_iter, %compare_fn
+[END_MACRO]
+
+[MACRO] ITER_PARTIAL_CMP_BY_U64 %out_ok, %out_ordering, %left_iter, %right_iter, %compare_fn
+    __iter_partial_cmp_by_order_slot_%out_ok = stack_alloc 8
+    jmp L_ITER_PARTIAL_CMP_BY_HEAD_%out_ok
+L_ITER_PARTIAL_CMP_BY_HEAD_%out_ok:
+    EXPAND ITER_NEXT_U64 __iter_partial_cmp_by_left_has_%out_ok, __iter_partial_cmp_by_left_value_%out_ok, %left_iter
+    EXPAND ITER_NEXT_U64 __iter_partial_cmp_by_right_has_%out_ok, __iter_partial_cmp_by_right_value_%out_ok, %right_iter
+    br __iter_partial_cmp_by_left_has_%out_ok -> L_ITER_PARTIAL_CMP_BY_LEFT_SOME_%out_ok, L_ITER_PARTIAL_CMP_BY_LEFT_NONE_%out_ok
+L_ITER_PARTIAL_CMP_BY_LEFT_SOME_%out_ok:
+    br __iter_partial_cmp_by_right_has_%out_ok -> L_ITER_PARTIAL_CMP_BY_BOTH_SOME_%out_ok, L_ITER_PARTIAL_CMP_BY_RIGHT_NONE_%out_ok
+L_ITER_PARTIAL_CMP_BY_BOTH_SOME_%out_ok:
+    __iter_partial_cmp_by_ok_%out_ok = call %compare_fn(__iter_partial_cmp_by_left_value_%out_ok, __iter_partial_cmp_by_right_value_%out_ok, &__iter_partial_cmp_by_order_slot_%out_ok)
+    __iter_partial_cmp_by_has_order_%out_ok = ne __iter_partial_cmp_by_ok_%out_ok, 0
+    br __iter_partial_cmp_by_has_order_%out_ok -> L_ITER_PARTIAL_CMP_BY_CHECK_ORDER_%out_ok, L_ITER_PARTIAL_CMP_BY_NONE_%out_ok
+L_ITER_PARTIAL_CMP_BY_CHECK_ORDER_%out_ok:
+    __iter_partial_cmp_by_order_%out_ok = load __iter_partial_cmp_by_order_slot_%out_ok+0 as i64
+    __iter_partial_cmp_by_equal_%out_ok = eq __iter_partial_cmp_by_order_%out_ok, 0
+    br __iter_partial_cmp_by_equal_%out_ok -> L_ITER_PARTIAL_CMP_BY_EQUAL_ITEM_%out_ok, L_ITER_PARTIAL_CMP_BY_NON_EQUAL_%out_ok
+L_ITER_PARTIAL_CMP_BY_EQUAL_ITEM_%out_ok:
+    !__iter_partial_cmp_by_equal_%out_ok
+    !__iter_partial_cmp_by_order_%out_ok
+    !__iter_partial_cmp_by_has_order_%out_ok
+    !__iter_partial_cmp_by_ok_%out_ok
+    !__iter_partial_cmp_by_right_value_%out_ok
+    !__iter_partial_cmp_by_right_has_%out_ok
+    !__iter_partial_cmp_by_left_value_%out_ok
+    !__iter_partial_cmp_by_left_has_%out_ok
+    jmp L_ITER_PARTIAL_CMP_BY_HEAD_%out_ok
+L_ITER_PARTIAL_CMP_BY_NON_EQUAL_%out_ok:
+    %out_ordering = add __iter_partial_cmp_by_order_%out_ok, 0
+    %out_ok = add 0, 1
+    !__iter_partial_cmp_by_equal_%out_ok
+    !__iter_partial_cmp_by_order_%out_ok
+    !__iter_partial_cmp_by_has_order_%out_ok
+    !__iter_partial_cmp_by_ok_%out_ok
+    !__iter_partial_cmp_by_right_value_%out_ok
+    !__iter_partial_cmp_by_right_has_%out_ok
+    !__iter_partial_cmp_by_left_value_%out_ok
+    !__iter_partial_cmp_by_left_has_%out_ok
+    jmp L_ITER_PARTIAL_CMP_BY_END_%out_ok
+L_ITER_PARTIAL_CMP_BY_NONE_%out_ok:
+    %out_ordering = add 0, 0
+    %out_ok = add 0, 0
+    !__iter_partial_cmp_by_has_order_%out_ok
+    !__iter_partial_cmp_by_ok_%out_ok
+    !__iter_partial_cmp_by_right_value_%out_ok
+    !__iter_partial_cmp_by_right_has_%out_ok
+    !__iter_partial_cmp_by_left_value_%out_ok
+    !__iter_partial_cmp_by_left_has_%out_ok
+    jmp L_ITER_PARTIAL_CMP_BY_END_%out_ok
+L_ITER_PARTIAL_CMP_BY_RIGHT_NONE_%out_ok:
+    %out_ordering = add 0, 1
+    %out_ok = add 0, 1
+    !__iter_partial_cmp_by_right_value_%out_ok
+    !__iter_partial_cmp_by_right_has_%out_ok
+    !__iter_partial_cmp_by_left_value_%out_ok
+    !__iter_partial_cmp_by_left_has_%out_ok
+    jmp L_ITER_PARTIAL_CMP_BY_END_%out_ok
+L_ITER_PARTIAL_CMP_BY_LEFT_NONE_%out_ok:
+    br __iter_partial_cmp_by_right_has_%out_ok -> L_ITER_PARTIAL_CMP_BY_LEFT_SHORT_%out_ok, L_ITER_PARTIAL_CMP_BY_BOTH_DONE_%out_ok
+L_ITER_PARTIAL_CMP_BY_LEFT_SHORT_%out_ok:
+    %out_ordering = sub 0, 1
+    %out_ok = add 0, 1
+    !__iter_partial_cmp_by_right_value_%out_ok
+    !__iter_partial_cmp_by_right_has_%out_ok
+    !__iter_partial_cmp_by_left_value_%out_ok
+    !__iter_partial_cmp_by_left_has_%out_ok
+    jmp L_ITER_PARTIAL_CMP_BY_END_%out_ok
+L_ITER_PARTIAL_CMP_BY_BOTH_DONE_%out_ok:
+    %out_ordering = add 0, 0
+    %out_ok = add 0, 1
+    !__iter_partial_cmp_by_right_value_%out_ok
+    !__iter_partial_cmp_by_right_has_%out_ok
+    !__iter_partial_cmp_by_left_value_%out_ok
+    !__iter_partial_cmp_by_left_has_%out_ok
+L_ITER_PARTIAL_CMP_BY_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over ITER_PARTIAL_CMP_BY_U64.
+[MACRO] ITER_PARTIAL_CMP_BY %out_ok, %out_ordering, %left_iter, %right_iter, %compare_fn
+    EXPAND ITER_PARTIAL_CMP_BY_U64 %out_ok, %out_ordering, %left_iter, %right_iter, %compare_fn
+[END_MACRO]
+
+[MACRO] ITER_EQ_BY_U64 %out_bool, %left_iter, %right_iter, %eq_fn
+    jmp L_ITER_EQ_BY_HEAD_%out_bool
+L_ITER_EQ_BY_HEAD_%out_bool:
+    EXPAND ITER_NEXT_U64 __iter_eq_by_left_has_%out_bool, __iter_eq_by_left_value_%out_bool, %left_iter
+    EXPAND ITER_NEXT_U64 __iter_eq_by_right_has_%out_bool, __iter_eq_by_right_value_%out_bool, %right_iter
+    br __iter_eq_by_left_has_%out_bool -> L_ITER_EQ_BY_LEFT_SOME_%out_bool, L_ITER_EQ_BY_LEFT_NONE_%out_bool
+L_ITER_EQ_BY_LEFT_SOME_%out_bool:
+    br __iter_eq_by_right_has_%out_bool -> L_ITER_EQ_BY_BOTH_SOME_%out_bool, L_ITER_EQ_BY_RIGHT_NONE_%out_bool
+L_ITER_EQ_BY_BOTH_SOME_%out_bool:
+    __iter_eq_by_same_%out_bool = call %eq_fn(__iter_eq_by_left_value_%out_bool, __iter_eq_by_right_value_%out_bool)
+    __iter_eq_by_matches_%out_bool = ne __iter_eq_by_same_%out_bool, 0
+    br __iter_eq_by_matches_%out_bool -> L_ITER_EQ_BY_EQUAL_ITEM_%out_bool, L_ITER_EQ_BY_FALSE_%out_bool
+L_ITER_EQ_BY_EQUAL_ITEM_%out_bool:
+    !__iter_eq_by_matches_%out_bool
+    !__iter_eq_by_same_%out_bool
+    !__iter_eq_by_right_value_%out_bool
+    !__iter_eq_by_right_has_%out_bool
+    !__iter_eq_by_left_value_%out_bool
+    !__iter_eq_by_left_has_%out_bool
+    jmp L_ITER_EQ_BY_HEAD_%out_bool
+L_ITER_EQ_BY_FALSE_%out_bool:
+    %out_bool = add 0, 0
+    !__iter_eq_by_matches_%out_bool
+    !__iter_eq_by_same_%out_bool
+    !__iter_eq_by_right_value_%out_bool
+    !__iter_eq_by_right_has_%out_bool
+    !__iter_eq_by_left_value_%out_bool
+    !__iter_eq_by_left_has_%out_bool
+    jmp L_ITER_EQ_BY_END_%out_bool
+L_ITER_EQ_BY_RIGHT_NONE_%out_bool:
+    %out_bool = add 0, 0
+    !__iter_eq_by_right_value_%out_bool
+    !__iter_eq_by_right_has_%out_bool
+    !__iter_eq_by_left_value_%out_bool
+    !__iter_eq_by_left_has_%out_bool
+    jmp L_ITER_EQ_BY_END_%out_bool
+L_ITER_EQ_BY_LEFT_NONE_%out_bool:
+    br __iter_eq_by_right_has_%out_bool -> L_ITER_EQ_BY_LEFT_SHORT_%out_bool, L_ITER_EQ_BY_BOTH_DONE_%out_bool
+L_ITER_EQ_BY_LEFT_SHORT_%out_bool:
+    %out_bool = add 0, 0
+    !__iter_eq_by_right_value_%out_bool
+    !__iter_eq_by_right_has_%out_bool
+    !__iter_eq_by_left_value_%out_bool
+    !__iter_eq_by_left_has_%out_bool
+    jmp L_ITER_EQ_BY_END_%out_bool
+L_ITER_EQ_BY_BOTH_DONE_%out_bool:
+    %out_bool = add 0, 1
+    !__iter_eq_by_right_value_%out_bool
+    !__iter_eq_by_right_has_%out_bool
+    !__iter_eq_by_left_value_%out_bool
+    !__iter_eq_by_left_has_%out_bool
+L_ITER_EQ_BY_END_%out_bool:
+[END_MACRO]
+
+// Rust method-name alias over ITER_EQ_BY_U64.
+[MACRO] ITER_EQ_BY %out_bool, %left_iter, %right_iter, %eq_fn
+    EXPAND ITER_EQ_BY_U64 %out_bool, %left_iter, %right_iter, %eq_fn
+[END_MACRO]
+
+[MACRO] ITER_EQ_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 __iter_eq_order_%out_bool, %left_iter, %right_iter
+    %out_bool = eq __iter_eq_order_%out_bool, 0
+    !__iter_eq_order_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_EQ_U64.
+[MACRO] ITER_EQ %out_bool, %left_iter, %right_iter
+    EXPAND ITER_EQ_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_NE_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 __iter_ne_order_%out_bool, %left_iter, %right_iter
+    __iter_ne_is_eq_%out_bool = eq __iter_ne_order_%out_bool, 0
+    %out_bool = eq __iter_ne_is_eq_%out_bool, 0
+    !__iter_ne_is_eq_%out_bool
+    !__iter_ne_order_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_NE_U64.
+[MACRO] ITER_NE %out_bool, %left_iter, %right_iter
+    EXPAND ITER_NE_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_LT_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 __iter_lt_order_%out_bool, %left_iter, %right_iter
+    %out_bool = slt __iter_lt_order_%out_bool, 0
+    !__iter_lt_order_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_LT_U64.
+[MACRO] ITER_LT %out_bool, %left_iter, %right_iter
+    EXPAND ITER_LT_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_LE_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 __iter_le_order_%out_bool, %left_iter, %right_iter
+    %out_bool = sle __iter_le_order_%out_bool, 0
+    !__iter_le_order_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_LE_U64.
+[MACRO] ITER_LE %out_bool, %left_iter, %right_iter
+    EXPAND ITER_LE_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_GT_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 __iter_gt_order_%out_bool, %left_iter, %right_iter
+    %out_bool = sgt __iter_gt_order_%out_bool, 0
+    !__iter_gt_order_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_GT_U64.
+[MACRO] ITER_GT %out_bool, %left_iter, %right_iter
+    EXPAND ITER_GT_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_GE_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 __iter_ge_order_%out_bool, %left_iter, %right_iter
+    %out_bool = sge __iter_ge_order_%out_bool, 0
+    !__iter_ge_order_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_GE_U64.
+[MACRO] ITER_GE %out_bool, %left_iter, %right_iter
+    EXPAND ITER_GE_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_EXACT_SIZE_LEN %out_len, %iter_reg
+    EXPAND ITER_LEN %out_len, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_EXACT_SIZE_IS_EMPTY %out_bool, %iter_reg
+    EXPAND ITER_IS_EMPTY %out_bool, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_PARTIAL_EQ_U64 %out_bool, %left_iter, %right_iter
+    EXPAND ITER_EQ_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+// Rust method-name alias over ITER_PARTIAL_EQ_U64.
+[MACRO] ITER_PARTIAL_EQ %out_bool, %left_iter, %right_iter
+    EXPAND ITER_PARTIAL_EQ_U64 %out_bool, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_PARTIAL_CMP_U64 %out_ordering, %left_iter, %right_iter
+    EXPAND ITER_CMP_U64 %out_ordering, %left_iter, %right_iter
+[END_MACRO]
+
+// Rust method-name alias over ITER_PARTIAL_CMP_U64.
+[MACRO] ITER_PARTIAL_CMP %out_ordering, %left_iter, %right_iter
+    EXPAND ITER_PARTIAL_CMP_U64 %out_ordering, %left_iter, %right_iter
+[END_MACRO]
+
+[MACRO] ITER_IS_SORTED_U64 %out_bool, %iter_reg
+    __iter_sorted_slice_%out_bool = stack_alloc Slice_SIZE
+    EXPAND ITER_AS_SLICE_U64 __iter_sorted_slice_%out_bool, %iter_reg
+    EXPAND SLICE_IS_SORTED_U64 %out_bool, __iter_sorted_slice_%out_bool
+    __iter_sorted_len_%out_bool = load %iter_reg+Iter_len as u64
+    store %iter_reg+Iter_index, __iter_sorted_len_%out_bool as u64
+    !__iter_sorted_len_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_IS_SORTED_U64.
+[MACRO] ITER_IS_SORTED %out_bool, %iter_reg
+    EXPAND ITER_IS_SORTED_U64 %out_bool, %iter_reg
+[END_MACRO]
+
+[MACRO] ITER_IS_SORTED_BY_U64 %out_bool, %iter_reg, %compare_fn
+    __iter_sorted_by_slice_%out_bool = stack_alloc Slice_SIZE
+    EXPAND ITER_AS_SLICE_U64 __iter_sorted_by_slice_%out_bool, %iter_reg
+    EXPAND SLICE_IS_SORTED_BY_U64 %out_bool, __iter_sorted_by_slice_%out_bool, %compare_fn
+    __iter_sorted_by_len_%out_bool = load %iter_reg+Iter_len as u64
+    store %iter_reg+Iter_index, __iter_sorted_by_len_%out_bool as u64
+    !__iter_sorted_by_len_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_IS_SORTED_BY_U64.
+[MACRO] ITER_IS_SORTED_BY %out_bool, %iter_reg, %compare_fn
+    EXPAND ITER_IS_SORTED_BY_U64 %out_bool, %iter_reg, %compare_fn
+[END_MACRO]
+
+[MACRO] ITER_IS_SORTED_BY_KEY_U64 %out_bool, %iter_reg, %key_fn
+    __iter_sorted_key_slice_%out_bool = stack_alloc Slice_SIZE
+    EXPAND ITER_AS_SLICE_U64 __iter_sorted_key_slice_%out_bool, %iter_reg
+    EXPAND SLICE_IS_SORTED_BY_KEY_U64 %out_bool, __iter_sorted_key_slice_%out_bool, %key_fn
+    __iter_sorted_key_len_%out_bool = load %iter_reg+Iter_len as u64
+    store %iter_reg+Iter_index, __iter_sorted_key_len_%out_bool as u64
+    !__iter_sorted_key_len_%out_bool
+[END_MACRO]
+
+// Rust method-name alias over ITER_IS_SORTED_BY_KEY_U64.
+[MACRO] ITER_IS_SORTED_BY_KEY %out_bool, %iter_reg, %key_fn
+    EXPAND ITER_IS_SORTED_BY_KEY_U64 %out_bool, %iter_reg, %key_fn
+[END_MACRO]

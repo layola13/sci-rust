@@ -1,0 +1,121 @@
+@import "sa_std/hash.sars"
+@import "sa_std/core/slice.sars"
+
+@test "sa_std hash RandomState macros"():
+L_ENTRY:
+    state = stack_alloc RandomState_SIZE
+    default_state = stack_alloc RandomState_SIZE
+    cloned_state = stack_alloc RandomState_SIZE
+    seeded_a = stack_alloc RandomState_SIZE
+    seeded_b = stack_alloc RandomState_SIZE
+    EXPAND RANDOM_STATE_NEW state
+    EXPAND RANDOM_STATE_DEFAULT default_state
+    EXPAND RANDOM_STATE_CLONE cloned_state, state
+    EXPAND RANDOM_STATE_WITH_SEEDS seeded_a, 11, 22
+    EXPAND RANDOM_STATE_WITH_SEEDS seeded_b, 12, 22
+
+    hasher_state = stack_alloc DefaultHasher_SIZE
+    cloned_hasher = stack_alloc DefaultHasher_SIZE
+    default_hasher = stack_alloc DefaultHasher_SIZE
+    seeded_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD hasher_state, state
+    EXPAND DEFAULT_HASHER_WRITE_U64 hasher_state, 77
+    EXPAND DEFAULT_HASHER_FINISH state_hash, hasher_state
+
+    EXPAND RANDOM_STATE_BUILD cloned_hasher, cloned_state
+    EXPAND DEFAULT_HASHER_WRITE_U64 cloned_hasher, 77
+    EXPAND DEFAULT_HASHER_FINISH cloned_hash, cloned_hasher
+
+    EXPAND RANDOM_STATE_BUILD default_hasher, default_state
+    EXPAND DEFAULT_HASHER_WRITE_U64 default_hasher, 77
+    EXPAND DEFAULT_HASHER_FINISH default_hash, default_hasher
+
+    EXPAND RANDOM_STATE_BUILD seeded_hasher, seeded_a
+    EXPAND DEFAULT_HASHER_WRITE_U64 seeded_hasher, 77
+    EXPAND DEFAULT_HASHER_FINISH seeded_manual_hash, seeded_hasher
+
+    EXPAND RANDOM_STATE_HASH_ONE_U64 state_one_u64, state, 77
+    EXPAND RANDOM_STATE_HASH_ONE_U64 seeded_one_a, seeded_a, 77
+    EXPAND RANDOM_STATE_HASH_ONE_U64 seeded_one_b, seeded_b, 77
+
+    bytes = stack_alloc 3
+    store bytes+0, 104 as u8
+    store bytes+1, 97 as u8
+    store bytes+2, 115 as u8
+    bytes_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW bytes_slice, bytes, 3
+    EXPAND RANDOM_STATE_HASH_ONE_STR state_one_str, state, bytes_slice
+    EXPAND RANDOM_STATE_HASH_ONE_SLICE_U8 state_one_slice_u8, state, bytes_slice
+
+    str_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD str_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_STR str_hasher, bytes_slice
+    EXPAND DEFAULT_HASHER_FINISH manual_str_hash, str_hasher
+
+    nums = stack_alloc 24
+    store nums+0, 1 as u64
+    store nums+8, 2 as u64
+    store nums+16, 3 as u64
+    nums_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW nums_slice, nums, 3
+    EXPAND RANDOM_STATE_HASH_ONE_SLICE_U64 state_one_slice_u64, state, nums_slice
+
+    nums_hasher = stack_alloc DefaultHasher_SIZE
+    EXPAND RANDOM_STATE_BUILD nums_hasher, state
+    EXPAND DEFAULT_HASHER_WRITE_SLICE_U64 nums_hasher, nums_slice
+    EXPAND DEFAULT_HASHER_FINISH manual_nums_hash, nums_hasher
+
+    clone_same = eq state_hash, cloned_hash
+    default_same = eq state_hash, default_hash
+    hash_one_matches = eq state_hash, state_one_u64
+    seeded_matches = eq seeded_manual_hash, seeded_one_a
+    seeded_diff = ne seeded_one_a, seeded_one_b
+    str_matches = eq state_one_str, manual_str_hash
+    str_domain_sep = ne state_one_str, state_one_slice_u8
+    nums_matches = eq state_one_slice_u64, manual_nums_hash
+
+    c01 = and clone_same, default_same
+    c02 = and c01, hash_one_matches
+    c03 = and c02, seeded_matches
+    c04 = and c03, seeded_diff
+    c05 = and c04, str_matches
+    c06 = and c05, str_domain_sep
+    ok = and c06, nums_matches
+
+    !state_hash
+    !cloned_hash
+    !default_hash
+    !seeded_manual_hash
+    !state_one_u64
+    !seeded_one_a
+    !seeded_one_b
+    !state_one_str
+    !state_one_slice_u8
+    !manual_str_hash
+    !state_one_slice_u64
+    !manual_nums_hash
+    !clone_same
+    !default_same
+    !hash_one_matches
+    !seeded_matches
+    !seeded_diff
+    !str_matches
+    !str_domain_sep
+    !nums_matches
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !nums_slice
+    !bytes_slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10554)
+
+L_PASS:
+    !ok
+    return 0

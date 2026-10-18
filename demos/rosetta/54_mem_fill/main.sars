@@ -1,0 +1,21 @@
+@import "sa_std/io/print.sai"
+@import "sa_std/core/mem.sars"
+
+@const RESULT_OK = utf8:"7,7,7,7\n"
+@const RESULT_ERR = utf8:"error\n"
+
+@main() -> i32:
+L_ENTRY:
+    buffer = alloc 4
+    call @sa_mem_set(&buffer, 7, 4)
+    b0 = load buffer+0 as u8
+    b1 = load buffer+1 as u8
+    b2 = load buffer+2 as u8
+    b3 = load buffer+3 as u8
+    call @sa_print_bytes(&RESULT_OK, 8)
+    !b0
+    !b1
+    !b2
+    !b3
+    !buffer
+    return 0

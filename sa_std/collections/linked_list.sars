@@ -1,0 +1,1120 @@
+// Concrete LinkedList<u64> facade over heap nodes.
+// Models supportable Rust LinkedList push/pop/front/back/len/clear/append/contains.
+@import "linked_list.sal"
+@import "../vec.sars"
+@import "../core/slice.sal"
+
+@sa_linked_list_new() -> ^ptr:
+L_ENTRY:
+    list = alloc LinkedList_SIZE
+    null_ptr = 0 as ptr
+    store list+LinkedList_head, null_ptr as ptr
+    store list+LinkedList_tail, null_ptr as ptr
+    store list+LinkedList_len, 0 as u64
+    !null_ptr
+    return list
+
+@sa_linked_list_clear(&list: ptr) -> void:
+L_CLEAR_HEAD:
+    head = load list+LinkedList_head as ptr
+    null_ptr = 0 as ptr
+    done = eq head, null_ptr
+    br done -> L_CLEAR_DONE, L_CLEAR_BODY
+L_CLEAR_BODY:
+    next = load head+LinkedListNode_next as ptr
+    !head
+    store list+LinkedList_head, next as ptr
+    !next
+    !done
+    !null_ptr
+    jmp L_CLEAR_HEAD
+L_CLEAR_DONE:
+    null2 = 0 as ptr
+    store list+LinkedList_head, null2 as ptr
+    store list+LinkedList_tail, null2 as ptr
+    store list+LinkedList_len, 0 as u64
+    !null2
+    !done
+    !null_ptr
+    !head
+    return
+
+@sa_linked_list_free(^list: ptr) -> void:
+L_ENTRY:
+    call @sa_linked_list_clear(&list)
+    !list
+    return
+
+@sa_linked_list_push_front(&list: ptr, value: u64) -> void:
+L_ENTRY:
+    node = alloc LinkedListNode_SIZE
+    null_ptr = 0 as ptr
+    store node+LinkedListNode_prev, null_ptr as ptr
+    store node+LinkedListNode_value, value as u64
+    old_head = load list+LinkedList_head as ptr
+    store node+LinkedListNode_next, old_head as ptr
+    empty = eq old_head, null_ptr
+    br empty -> L_PF_EMPTY, L_PF_LINK
+L_PF_LINK:
+    store old_head+LinkedListNode_prev, node as ptr
+    jmp L_PF_STORE
+L_PF_EMPTY:
+    store list+LinkedList_tail, node as ptr
+    jmp L_PF_STORE
+L_PF_STORE:
+    store list+LinkedList_head, node as ptr
+    len = load list+LinkedList_len as u64
+    next_len = add len, 1
+    store list+LinkedList_len, next_len as u64
+    !next_len
+    !len
+    !empty
+    !old_head
+    !null_ptr
+    !node
+    !value
+    return
+
+@sa_linked_list_push_back(&list: ptr, value: u64) -> void:
+L_ENTRY:
+    node = alloc LinkedListNode_SIZE
+    null_ptr = 0 as ptr
+    store node+LinkedListNode_next, null_ptr as ptr
+    store node+LinkedListNode_value, value as u64
+    old_tail = load list+LinkedList_tail as ptr
+    store node+LinkedListNode_prev, old_tail as ptr
+    empty = eq old_tail, null_ptr
+    br empty -> L_PB_EMPTY, L_PB_LINK
+L_PB_LINK:
+    store old_tail+LinkedListNode_next, node as ptr
+    jmp L_PB_STORE
+L_PB_EMPTY:
+    store list+LinkedList_head, node as ptr
+    jmp L_PB_STORE
+L_PB_STORE:
+    store list+LinkedList_tail, node as ptr
+    len = load list+LinkedList_len as u64
+    next_len = add len, 1
+    store list+LinkedList_len, next_len as u64
+    !next_len
+    !len
+    !empty
+    !old_tail
+    !null_ptr
+    !node
+    !value
+    return
+
+@sa_linked_list_try_pop_front(&list: ptr, &out_value: ptr) -> i32:
+L_ENTRY:
+    head = load list+LinkedList_head as ptr
+    null_ptr = 0 as ptr
+    empty = eq head, null_ptr
+    br empty -> L_POPF_EMPTY, L_POPF_BODY
+L_POPF_BODY:
+    value = load head+LinkedListNode_value as u64
+    store out_value+0, value as u64
+    next = load head+LinkedListNode_next as ptr
+    store list+LinkedList_head, next as ptr
+    was_last = eq next, null_ptr
+    br was_last -> L_POPF_LAST, L_POPF_RELINK
+L_POPF_RELINK:
+    store next+LinkedListNode_prev, null_ptr as ptr
+    jmp L_POPF_LEN
+L_POPF_LAST:
+    store list+LinkedList_tail, null_ptr as ptr
+    jmp L_POPF_LEN
+L_POPF_LEN:
+    !head
+    len = load list+LinkedList_len as u64
+    next_len = sub len, 1
+    store list+LinkedList_len, next_len as u64
+    !next_len
+    !len
+    !was_last
+    !next
+    !value
+    !empty
+    !null_ptr
+    !out_value
+    return 1
+L_POPF_EMPTY:
+    store out_value+0, 0 as u64
+    !empty
+    !null_ptr
+    !head
+    !out_value
+    return 0
+
+@sa_linked_list_try_pop_back(&list: ptr, &out_value: ptr) -> i32:
+L_ENTRY:
+    tail = load list+LinkedList_tail as ptr
+    null_ptr = 0 as ptr
+    empty = eq tail, null_ptr
+    br empty -> L_POPB_EMPTY, L_POPB_BODY
+L_POPB_BODY:
+    value = load tail+LinkedListNode_value as u64
+    store out_value+0, value as u64
+    prev = load tail+LinkedListNode_prev as ptr
+    store list+LinkedList_tail, prev as ptr
+    was_last = eq prev, null_ptr
+    br was_last -> L_POPB_LAST, L_POPB_RELINK
+L_POPB_RELINK:
+    store prev+LinkedListNode_next, null_ptr as ptr
+    jmp L_POPB_LEN
+L_POPB_LAST:
+    store list+LinkedList_head, null_ptr as ptr
+    jmp L_POPB_LEN
+L_POPB_LEN:
+    !tail
+    len = load list+LinkedList_len as u64
+    next_len = sub len, 1
+    store list+LinkedList_len, next_len as u64
+    !next_len
+    !len
+    !was_last
+    !prev
+    !value
+    !empty
+    !null_ptr
+    !out_value
+    return 1
+L_POPB_EMPTY:
+    store out_value+0, 0 as u64
+    !empty
+    !null_ptr
+    !tail
+    !out_value
+    return 0
+
+@sa_linked_list_try_front(&list: ptr, &out_value: ptr) -> i32:
+L_ENTRY:
+    head = load list+LinkedList_head as ptr
+    null_ptr = 0 as ptr
+    empty = eq head, null_ptr
+    br empty -> L_FRONT_EMPTY, L_FRONT_OK
+L_FRONT_OK:
+    value = load head+LinkedListNode_value as u64
+    store out_value+0, value as u64
+    !value
+    !empty
+    !null_ptr
+    !head
+    !out_value
+    return 1
+L_FRONT_EMPTY:
+    store out_value+0, 0 as u64
+    !empty
+    !null_ptr
+    !head
+    !out_value
+    return 0
+
+@sa_linked_list_try_back(&list: ptr, &out_value: ptr) -> i32:
+L_ENTRY:
+    tail = load list+LinkedList_tail as ptr
+    null_ptr = 0 as ptr
+    empty = eq tail, null_ptr
+    br empty -> L_BACK_EMPTY, L_BACK_OK
+L_BACK_OK:
+    value = load tail+LinkedListNode_value as u64
+    store out_value+0, value as u64
+    !value
+    !empty
+    !null_ptr
+    !tail
+    !out_value
+    return 1
+L_BACK_EMPTY:
+    store out_value+0, 0 as u64
+    !empty
+    !null_ptr
+    !tail
+    !out_value
+    return 0
+
+@sa_linked_list_contains(&list: ptr, needle: u64) -> i32:
+L_ENTRY:
+    node_slot = stack_alloc 8
+    head = load list+LinkedList_head as ptr
+    store node_slot+0, head as ptr
+    !head
+    jmp L_CONTAINS_HEAD
+L_CONTAINS_HEAD:
+    node = load node_slot+0 as ptr
+    null_ptr = 0 as ptr
+    done = eq node, null_ptr
+    br done -> L_CONTAINS_MISS, L_CONTAINS_BODY
+L_CONTAINS_BODY:
+    val = load node+LinkedListNode_value as u64
+    hit = eq val, needle
+    br hit -> L_CONTAINS_HIT, L_CONTAINS_NEXT
+L_CONTAINS_HIT:
+    !hit
+    !val
+    !null_ptr
+    !done
+    !node
+    !needle
+    return 1
+L_CONTAINS_NEXT:
+    next = load node+LinkedListNode_next as ptr
+    store node_slot+0, next as ptr
+    !next
+    !hit
+    !val
+    !null_ptr
+    !done
+    !node
+    jmp L_CONTAINS_HEAD
+L_CONTAINS_MISS:
+    !done
+    !null_ptr
+    !node
+    !needle
+    return 0
+
+@sa_linked_list_append(&list: ptr, &other: ptr) -> void:
+L_APPEND_HEAD:
+    value_slot = stack_alloc 8
+    ok = call @sa_linked_list_try_pop_front(&other, &value_slot)
+    br ok -> L_APPEND_BODY, L_APPEND_DONE
+L_APPEND_BODY:
+    value = load value_slot+0 as u64
+    call @sa_linked_list_push_back(&list, value)
+    !value
+    !ok
+    jmp L_APPEND_HEAD
+L_APPEND_DONE:
+    !ok
+    return
+
+
+@sa_linked_list_try_remove(&list: ptr, index: u64, &out_value: ptr) -> i32:
+L_ENTRY:
+    len = load list+LinkedList_len as u64
+    oob = uge index, len
+    br oob -> L_REM_OOB, L_REM_SCAN
+L_REM_OOB:
+    store out_value+0, 0 as u64
+    !oob
+    !len
+    !out_value
+    !index
+    return 0
+L_REM_SCAN:
+    node_slot = stack_alloc 8
+    idx_slot = stack_alloc 8
+    head = load list+LinkedList_head as ptr
+    store node_slot+0, head as ptr
+    store idx_slot+0, 0 as u64
+    !head
+    jmp L_REM_HEAD
+L_REM_HEAD:
+    node = load node_slot+0 as ptr
+    i = load idx_slot+0 as u64
+    hit = eq i, index
+    br hit -> L_REM_HIT, L_REM_NEXT
+L_REM_NEXT:
+    next = load node+LinkedListNode_next as ptr
+    store node_slot+0, next as ptr
+    ni = add i, 1
+    store idx_slot+0, ni as u64
+    !ni
+    !next
+    !hit
+    !i
+    !node
+    jmp L_REM_HEAD
+L_REM_HIT:
+    value = load node+LinkedListNode_value as u64
+    store out_value+0, value as u64
+    prev = load node+LinkedListNode_prev as ptr
+    next2 = load node+LinkedListNode_next as ptr
+    null_ptr = 0 as ptr
+    prev_null = eq prev, null_ptr
+    br prev_null -> L_REM_NO_PREV, L_REM_HAS_PREV
+L_REM_HAS_PREV:
+    store prev+LinkedListNode_next, next2 as ptr
+    jmp L_REM_NEXT_LINK
+L_REM_NO_PREV:
+    store list+LinkedList_head, next2 as ptr
+    jmp L_REM_NEXT_LINK
+L_REM_NEXT_LINK:
+    next_null = eq next2, null_ptr
+    br next_null -> L_REM_NO_NEXT, L_REM_HAS_NEXT
+L_REM_HAS_NEXT:
+    store next2+LinkedListNode_prev, prev as ptr
+    jmp L_REM_LEN
+L_REM_NO_NEXT:
+    store list+LinkedList_tail, prev as ptr
+    jmp L_REM_LEN
+L_REM_LEN:
+    !node
+    len2 = load list+LinkedList_len as u64
+    nlen = sub len2, 1
+    store list+LinkedList_len, nlen as u64
+    !nlen
+    !len2
+    !next_null
+    !prev_null
+    !null_ptr
+    !next2
+    !prev
+    !value
+    !hit
+    !i
+    !oob
+    !len
+    !out_value
+    !index
+    return 1
+
+@sa_linked_list_split_off(&list: ptr, at: u64) -> ^ptr:
+L_ENTRY:
+    out = call @sa_linked_list_new()
+    len = load list+LinkedList_len as u64
+    // if at >= len, return empty out
+    ge = uge at, len
+    br ge -> L_SPLIT_DONE, L_SPLIT_LOOP_INIT
+L_SPLIT_LOOP_INIT:
+    // pop from `at` to end into out by first advancing to at via pops into temp then re-push? 
+    // Simpler: while len > at: pop_back from list, push_front to out (preserves order)
+    jmp L_SPLIT_LOOP
+L_SPLIT_LOOP:
+    cur_len = load list+LinkedList_len as u64
+    done = ule cur_len, at
+    br done -> L_SPLIT_DONE, L_SPLIT_BODY
+L_SPLIT_BODY:
+    slot = stack_alloc 8
+    ok = call @sa_linked_list_try_pop_back(&list, &slot)
+    val = load slot+0 as u64
+    call @sa_linked_list_push_front(&out, val)
+    !val
+    !ok
+    !done
+    !cur_len
+    jmp L_SPLIT_LOOP
+L_SPLIT_DONE:
+    !ge
+    !len
+    !at
+    return out
+
+
+@sa_linked_list_to_vec(&list: ptr) -> ^ptr:
+L_ENTRY:
+    len = load list+LinkedList_len as u64
+    out = call @sa_vec_with_capacity(len, 8)
+    node_slot = stack_alloc 8
+    head = load list+LinkedList_head as ptr
+    store node_slot+0, head as ptr
+    !head
+    !len
+    jmp L_TO_VEC_HEAD
+L_TO_VEC_HEAD:
+    node = load node_slot+0 as ptr
+    null_ptr = 0 as ptr
+    done = eq node, null_ptr
+    br done -> L_TO_VEC_DONE, L_TO_VEC_BODY
+L_TO_VEC_BODY:
+    val = load node+LinkedListNode_value as u64
+    out = call @sa_vec_push(^out, val, 8)
+    next = load node+LinkedListNode_next as ptr
+    store node_slot+0, next as ptr
+    !next
+    !val
+    !null_ptr
+    !done
+    !node
+    jmp L_TO_VEC_HEAD
+L_TO_VEC_DONE:
+    !done
+    !null_ptr
+    !node
+    return out
+
+@sa_linked_list_from_slice(&slice: ptr) -> ^ptr:
+L_ENTRY:
+    list = call @sa_linked_list_new()
+    len = load slice+Slice_len as u64
+    ptr = load slice+Slice_ptr as ptr
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_FROM_HEAD
+L_FROM_HEAD:
+    i = load idx_slot+0 as u64
+    done = eq i, len
+    br done -> L_FROM_DONE, L_FROM_BODY
+L_FROM_BODY:
+    off = mul i, 8
+    p = ptr_add ptr, off
+    val = load p+0 as u64
+    call @sa_linked_list_push_back(&list, val)
+    ni = add i, 1
+    store idx_slot+0, ni as u64
+    !ni
+    !val
+    !p
+    !off
+    !done
+    !i
+    jmp L_FROM_HEAD
+L_FROM_DONE:
+    !done
+    !i
+    !ptr
+    !len
+    !slice
+    return list
+
+
+
+@sa_linked_list_try_get(&list: ptr, index: u64, &out_value: ptr) -> i32:
+L_ENTRY:
+    len = load list+LinkedList_len as u64
+    oob = uge index, len
+    br oob -> L_GET_OOB, L_GET_SCAN
+L_GET_OOB:
+    store out_value+0, 0 as u64
+    !oob
+    !len
+    !out_value
+    !index
+    return 0
+L_GET_SCAN:
+    node_slot = stack_alloc 8
+    idx_slot = stack_alloc 8
+    head = load list+LinkedList_head as ptr
+    store node_slot+0, head as ptr
+    store idx_slot+0, 0 as u64
+    !head
+    jmp L_GET_HEAD
+L_GET_HEAD:
+    node = load node_slot+0 as ptr
+    i = load idx_slot+0 as u64
+    hit = eq i, index
+    br hit -> L_GET_HIT, L_GET_NEXT
+L_GET_NEXT:
+    next = load node+LinkedListNode_next as ptr
+    store node_slot+0, next as ptr
+    ni = add i, 1
+    store idx_slot+0, ni as u64
+    !ni
+    !next
+    !hit
+    !i
+    !node
+    jmp L_GET_HEAD
+L_GET_HIT:
+    value = load node+LinkedListNode_value as u64
+    store out_value+0, value as u64
+    !value
+    !hit
+    !i
+    !node
+    !oob
+    !len
+    !out_value
+    !index
+    return 1
+
+
+@sa_linked_list_try_set(&list: ptr, index: u64, value: u64) -> i32:
+L_ENTRY:
+    len = load list+LinkedList_len as u64
+    oob = uge index, len
+    br oob -> L_SET_OOB, L_SET_SCAN
+L_SET_OOB:
+    !oob
+    !len
+    !value
+    !index
+    return 0
+L_SET_SCAN:
+    node_slot = stack_alloc 8
+    idx_slot = stack_alloc 8
+    head = load list+LinkedList_head as ptr
+    store node_slot+0, head as ptr
+    store idx_slot+0, 0 as u64
+    !head
+    jmp L_SET_HEAD
+L_SET_HEAD:
+    node = load node_slot+0 as ptr
+    i = load idx_slot+0 as u64
+    hit = eq i, index
+    br hit -> L_SET_HIT, L_SET_NEXT
+L_SET_NEXT:
+    next = load node+LinkedListNode_next as ptr
+    store node_slot+0, next as ptr
+    ni = add i, 1
+    store idx_slot+0, ni as u64
+    !ni
+    !next
+    !hit
+    !i
+    !node
+    jmp L_SET_HEAD
+L_SET_HIT:
+    store node+LinkedListNode_value, value as u64
+    !hit
+    !i
+    !node
+    !oob
+    !len
+    !value
+    !index
+    return 1
+
+
+@sa_linked_list_reverse(&list: ptr) -> void:
+L_ENTRY:
+    // swap head/tail and swap each node prev/next
+    head = load list+LinkedList_head as ptr
+    tail = load list+LinkedList_tail as ptr
+    store list+LinkedList_head, tail as ptr
+    store list+LinkedList_tail, head as ptr
+    node_slot = stack_alloc 8
+    store node_slot+0, head as ptr
+    !head
+    !tail
+    jmp L_REV_HEAD
+L_REV_HEAD:
+    node = load node_slot+0 as ptr
+    null_ptr = 0 as ptr
+    done = eq node, null_ptr
+    br done -> L_REV_DONE, L_REV_BODY
+L_REV_BODY:
+    prev = load node+LinkedListNode_prev as ptr
+    next = load node+LinkedListNode_next as ptr
+    store node+LinkedListNode_prev, next as ptr
+    store node+LinkedListNode_next, prev as ptr
+    // continue along original next (now in prev)
+    store node_slot+0, next as ptr
+    !prev
+    !next
+    !null_ptr
+    !done
+    !node
+    jmp L_REV_HEAD
+L_REV_DONE:
+    !done
+    !null_ptr
+    !node
+    return
+
+
+@sa_linked_list_insert_after(&list: ptr, node: ptr, value: u64) -> void:
+L_ENTRY:
+    new_node = alloc LinkedListNode_SIZE
+    next = load node+LinkedListNode_next as ptr
+    store new_node+LinkedListNode_value, value as u64
+    store new_node+LinkedListNode_prev, node as ptr
+    store new_node+LinkedListNode_next, next as ptr
+    store node+LinkedListNode_next, new_node as ptr
+    null_ptr = 0 as ptr
+    next_null = eq next, null_ptr
+    br next_null -> L_INS_TAIL, L_INS_MID
+L_INS_MID:
+    store next+LinkedListNode_prev, new_node as ptr
+    jmp L_INS_LEN
+L_INS_TAIL:
+    store list+LinkedList_tail, new_node as ptr
+    jmp L_INS_LEN
+L_INS_LEN:
+    len = load list+LinkedList_len as u64
+    nlen = add len, 1
+    store list+LinkedList_len, nlen as u64
+    !nlen
+    !len
+    !next_null
+    !null_ptr
+    !next
+    !new_node
+    !value
+    !node
+    return
+
+@sa_linked_list_insert_before(&list: ptr, node: ptr, value: u64) -> void:
+L_ENTRY:
+    new_node = alloc LinkedListNode_SIZE
+    prev = load node+LinkedListNode_prev as ptr
+    store new_node+LinkedListNode_value, value as u64
+    store new_node+LinkedListNode_next, node as ptr
+    store new_node+LinkedListNode_prev, prev as ptr
+    store node+LinkedListNode_prev, new_node as ptr
+    null_ptr = 0 as ptr
+    prev_null = eq prev, null_ptr
+    br prev_null -> L_INB_HEAD, L_INB_MID
+L_INB_MID:
+    store prev+LinkedListNode_next, new_node as ptr
+    jmp L_INB_LEN
+L_INB_HEAD:
+    store list+LinkedList_head, new_node as ptr
+    jmp L_INB_LEN
+L_INB_LEN:
+    len = load list+LinkedList_len as u64
+    nlen = add len, 1
+    store list+LinkedList_len, nlen as u64
+    !nlen
+    !len
+    !prev_null
+    !null_ptr
+    !prev
+    !new_node
+    !value
+    !node
+    return
+
+
+@sa_linked_list_clone(&list: ptr) -> ^ptr:
+L_ENTRY:
+    out = call @sa_linked_list_new()
+    node_slot = stack_alloc 8
+    head = load list+LinkedList_head as ptr
+    store node_slot+0, head as ptr
+    !head
+    jmp L_CL_HEAD
+L_CL_HEAD:
+    node = load node_slot+0 as ptr
+    null_ptr = 0 as ptr
+    done = eq node, null_ptr
+    br done -> L_CL_DONE, L_CL_BODY
+L_CL_BODY:
+    val = load node+LinkedListNode_value as u64
+    call @sa_linked_list_push_back(&out, val)
+    next = load node+LinkedListNode_next as ptr
+    store node_slot+0, next as ptr
+    !next
+    !val
+    !null_ptr
+    !done
+    !node
+    jmp L_CL_HEAD
+L_CL_DONE:
+    !done
+    !null_ptr
+    !node
+    !list
+    return out
+
+@sa_linked_list_eq(&left: ptr, &right: ptr) -> i32:
+L_ENTRY:
+    llen = load left+LinkedList_len as u64
+    rlen = load right+LinkedList_len as u64
+    same_len = eq llen, rlen
+    br same_len -> L_EQ_SCAN, L_EQ_NO
+L_EQ_NO:
+    !left
+    !right
+    !same_len
+    !rlen
+    !llen
+    return 0
+L_EQ_SCAN:
+    ln_slot = stack_alloc 8
+    rn_slot = stack_alloc 8
+    lh = load left+LinkedList_head as ptr
+    rh = load right+LinkedList_head as ptr
+    store ln_slot+0, lh as ptr
+    store rn_slot+0, rh as ptr
+    !lh
+    !rh
+    !same_len
+    !rlen
+    !llen
+    jmp L_EQ_HEAD
+L_EQ_HEAD:
+    ln = load ln_slot+0 as ptr
+    rn = load rn_slot+0 as ptr
+    null_ptr = 0 as ptr
+    done = eq ln, null_ptr
+    br done -> L_EQ_YES, L_EQ_BODY
+L_EQ_BODY:
+    lv = load ln+LinkedListNode_value as u64
+    rv = load rn+LinkedListNode_value as u64
+    same = eq lv, rv
+    br same -> L_EQ_NEXT, L_EQ_NO2
+L_EQ_NEXT:
+    lnext = load ln+LinkedListNode_next as ptr
+    rnext = load rn+LinkedListNode_next as ptr
+    store ln_slot+0, lnext as ptr
+    store rn_slot+0, rnext as ptr
+    !lnext
+    !rnext
+    !same
+    !lv
+    !rv
+    !null_ptr
+    !done
+    !ln
+    !rn
+    jmp L_EQ_HEAD
+L_EQ_NO2:
+    !left
+    !right
+    !same
+    !lv
+    !rv
+    !null_ptr
+    !done
+    !ln
+    !rn
+    return 0
+L_EQ_YES:
+    !left
+    !right
+    !null_ptr
+    !done
+    !ln
+    !rn
+    return 1
+
+[MACRO] LINKED_LIST_NEW %out_list
+    %out_list = call @sa_linked_list_new()
+[END_MACRO]
+
+[MACRO] LINKED_LIST_DEFAULT %out_list
+    EXPAND LINKED_LIST_NEW %out_list
+[END_MACRO]
+
+[MACRO] LINKED_LIST_LEN %out_len, %list_reg
+    %out_len = load %list_reg+LinkedList_len as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_IS_EMPTY %out_bool, %list_reg
+    __ll_len_%out_bool = load %list_reg+LinkedList_len as u64
+    %out_bool = eq __ll_len_%out_bool, 0
+    !__ll_len_%out_bool
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CLEAR %list_reg
+    call @sa_linked_list_clear(&%list_reg)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_FREE %list_reg
+    call @sa_linked_list_free(^%list_reg)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_PUSH_FRONT %list_reg, %value
+    call @sa_linked_list_push_front(&%list_reg, %value)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_PUSH_BACK %list_reg, %value
+    call @sa_linked_list_push_back(&%list_reg, %value)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_POP_FRONT %out_ok, %out_value, %list_reg
+    __ll_popf_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_linked_list_try_pop_front(&%list_reg, &__ll_popf_slot_%out_ok)
+    %out_value = load __ll_popf_slot_%out_ok+0 as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_POP_FRONT %out_ok, %out_value, %list_reg
+    EXPAND LINKED_LIST_TRY_POP_FRONT %out_ok, %out_value, %list_reg
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_POP_BACK %out_ok, %out_value, %list_reg
+    __ll_popb_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_linked_list_try_pop_back(&%list_reg, &__ll_popb_slot_%out_ok)
+    %out_value = load __ll_popb_slot_%out_ok+0 as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_POP_BACK %out_ok, %out_value, %list_reg
+    EXPAND LINKED_LIST_TRY_POP_BACK %out_ok, %out_value, %list_reg
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_FRONT %out_ok, %out_value, %list_reg
+    __ll_front_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_linked_list_try_front(&%list_reg, &__ll_front_slot_%out_ok)
+    %out_value = load __ll_front_slot_%out_ok+0 as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_FRONT %out_ok, %out_value, %list_reg
+    EXPAND LINKED_LIST_TRY_FRONT %out_ok, %out_value, %list_reg
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_BACK %out_ok, %out_value, %list_reg
+    __ll_back_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_linked_list_try_back(&%list_reg, &__ll_back_slot_%out_ok)
+    %out_value = load __ll_back_slot_%out_ok+0 as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_BACK %out_ok, %out_value, %list_reg
+    EXPAND LINKED_LIST_TRY_BACK %out_ok, %out_value, %list_reg
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CONTAINS_U64 %out_bool, %list_reg, %needle
+    %out_bool = call @sa_linked_list_contains(&%list_reg, %needle)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CONTAINS %out_bool, %list_reg, %needle
+    EXPAND LINKED_LIST_CONTAINS_U64 %out_bool, %list_reg, %needle
+[END_MACRO]
+
+[MACRO] LINKED_LIST_APPEND %list_reg, %other_list
+    call @sa_linked_list_append(&%list_reg, &%other_list)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_REMOVE %out_ok, %out_value, %list_reg, %index
+    __ll_rem_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_linked_list_try_remove(&%list_reg, %index, &__ll_rem_slot_%out_ok)
+    %out_value = load __ll_rem_slot_%out_ok+0 as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_REMOVE %out_ok, %out_value, %list_reg, %index
+    EXPAND LINKED_LIST_TRY_REMOVE %out_ok, %out_value, %list_reg, %index
+[END_MACRO]
+
+[MACRO] LINKED_LIST_SPLIT_OFF %out_list, %list_reg, %at
+    %out_list = call @sa_linked_list_split_off(&%list_reg, %at)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TO_VEC %out_vec, %list_reg
+    %out_vec = call @sa_linked_list_to_vec(&%list_reg)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_FROM_SLICE %out_list, %slice_reg
+    %out_list = call @sa_linked_list_from_slice(&%slice_reg)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_FROM_VEC %out_list, %vec_reg
+    EXPAND VEC_AS_SLICE __ll_fv_slice_%out_list, %vec_reg
+    EXPAND LINKED_LIST_FROM_SLICE %out_list, __ll_fv_slice_%out_list
+    !__ll_fv_slice_%out_list
+[END_MACRO]
+
+
+[MACRO] LINKED_LIST_RETAIN %out_len, %list_reg, %pred_fn
+    EXPAND LINKED_LIST_NEW __ll_ret_keep_%out_len
+    jmp L_LL_RET_HEAD_%out_len
+L_LL_RET_HEAD_%out_len:
+    EXPAND LINKED_LIST_TRY_POP_FRONT __ll_ret_ok_%out_len, __ll_ret_val_%out_len, %list_reg
+    br __ll_ret_ok_%out_len -> L_LL_RET_BODY_%out_len, L_LL_RET_DONE_%out_len
+L_LL_RET_BODY_%out_len:
+    __ll_ret_keep_flag_%out_len = call %pred_fn(__ll_ret_val_%out_len)
+    __ll_ret_keep_it_%out_len = ne __ll_ret_keep_flag_%out_len, 0
+    br __ll_ret_keep_it_%out_len -> L_LL_RET_KEEP_%out_len, L_LL_RET_DROP_%out_len
+L_LL_RET_KEEP_%out_len:
+    EXPAND LINKED_LIST_PUSH_BACK __ll_ret_keep_%out_len, __ll_ret_val_%out_len
+    jmp L_LL_RET_NEXT_%out_len
+L_LL_RET_DROP_%out_len:
+    jmp L_LL_RET_NEXT_%out_len
+L_LL_RET_NEXT_%out_len:
+    !__ll_ret_keep_it_%out_len
+    !__ll_ret_keep_flag_%out_len
+    !__ll_ret_val_%out_len
+    !__ll_ret_ok_%out_len
+    jmp L_LL_RET_HEAD_%out_len
+L_LL_RET_DONE_%out_len:
+    EXPAND LINKED_LIST_APPEND %list_reg, __ll_ret_keep_%out_len
+    EXPAND LINKED_LIST_LEN %out_len, %list_reg
+    !__ll_ret_val_%out_len
+    !__ll_ret_ok_%out_len
+    !__ll_ret_keep_%out_len
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_GET %out_ok, %out_value, %list_reg, %index
+    __ll_get_slot_%out_ok = stack_alloc 8
+    %out_ok = call @sa_linked_list_try_get(&%list_reg, %index, &__ll_get_slot_%out_ok)
+    %out_value = load __ll_get_slot_%out_ok+0 as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_GET %out_ok, %out_value, %list_reg, %index
+    EXPAND LINKED_LIST_TRY_GET %out_ok, %out_value, %list_reg, %index
+[END_MACRO]
+
+[MACRO] LINKED_LIST_TRY_SET %out_ok, %list_reg, %index, %value
+    %out_ok = call @sa_linked_list_try_set(&%list_reg, %index, %value)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_SET %out_ok, %list_reg, %index, %value
+    EXPAND LINKED_LIST_TRY_SET %out_ok, %list_reg, %index, %value
+[END_MACRO]
+
+[MACRO] LINKED_LIST_REVERSE %list_reg
+    call @sa_linked_list_reverse(&%list_reg)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_DRAIN %out_vec, %list_reg
+    EXPAND LINKED_LIST_TO_VEC %out_vec, %list_reg
+    EXPAND LINKED_LIST_CLEAR %list_reg
+[END_MACRO]
+
+[MACRO] LINKED_LIST_POP_FRONT_IF %out_ok, %out_value, %list_reg, %pred_fn
+    EXPAND LINKED_LIST_TRY_FRONT __ll_pfi_fok_%out_ok, __ll_pfi_fval_%out_ok, %list_reg
+    br __ll_pfi_fok_%out_ok -> L_LL_PFI_CHECK_%out_ok, L_LL_PFI_EMPTY_%out_ok
+L_LL_PFI_CHECK_%out_ok:
+    __ll_pfi_pred_%out_ok = call %pred_fn(__ll_pfi_fval_%out_ok)
+    __ll_pfi_take_%out_ok = ne __ll_pfi_pred_%out_ok, 0
+    br __ll_pfi_take_%out_ok -> L_LL_PFI_TAKE_%out_ok, L_LL_PFI_KEEP_%out_ok
+L_LL_PFI_TAKE_%out_ok:
+    EXPAND LINKED_LIST_TRY_POP_FRONT %out_ok, %out_value, %list_reg
+    !__ll_pfi_take_%out_ok
+    !__ll_pfi_pred_%out_ok
+    !__ll_pfi_fval_%out_ok
+    !__ll_pfi_fok_%out_ok
+    jmp L_LL_PFI_END_%out_ok
+L_LL_PFI_KEEP_%out_ok:
+    %out_ok = 0
+    %out_value = 0
+    !__ll_pfi_take_%out_ok
+    !__ll_pfi_pred_%out_ok
+    !__ll_pfi_fval_%out_ok
+    !__ll_pfi_fok_%out_ok
+    jmp L_LL_PFI_END_%out_ok
+L_LL_PFI_EMPTY_%out_ok:
+    %out_ok = 0
+    %out_value = 0
+    !__ll_pfi_fval_%out_ok
+    !__ll_pfi_fok_%out_ok
+L_LL_PFI_END_%out_ok:
+[END_MACRO]
+
+[MACRO] LINKED_LIST_POP_BACK_IF %out_ok, %out_value, %list_reg, %pred_fn
+    EXPAND LINKED_LIST_TRY_BACK __ll_pbi_bok_%out_ok, __ll_pbi_bval_%out_ok, %list_reg
+    br __ll_pbi_bok_%out_ok -> L_LL_PBI_CHECK_%out_ok, L_LL_PBI_EMPTY_%out_ok
+L_LL_PBI_CHECK_%out_ok:
+    __ll_pbi_pred_%out_ok = call %pred_fn(__ll_pbi_bval_%out_ok)
+    __ll_pbi_take_%out_ok = ne __ll_pbi_pred_%out_ok, 0
+    br __ll_pbi_take_%out_ok -> L_LL_PBI_TAKE_%out_ok, L_LL_PBI_KEEP_%out_ok
+L_LL_PBI_TAKE_%out_ok:
+    EXPAND LINKED_LIST_TRY_POP_BACK %out_ok, %out_value, %list_reg
+    !__ll_pbi_take_%out_ok
+    !__ll_pbi_pred_%out_ok
+    !__ll_pbi_bval_%out_ok
+    !__ll_pbi_bok_%out_ok
+    jmp L_LL_PBI_END_%out_ok
+L_LL_PBI_KEEP_%out_ok:
+    %out_ok = 0
+    %out_value = 0
+    !__ll_pbi_take_%out_ok
+    !__ll_pbi_pred_%out_ok
+    !__ll_pbi_bval_%out_ok
+    !__ll_pbi_bok_%out_ok
+    jmp L_LL_PBI_END_%out_ok
+L_LL_PBI_EMPTY_%out_ok:
+    %out_ok = 0
+    %out_value = 0
+    !__ll_pbi_bval_%out_ok
+    !__ll_pbi_bok_%out_ok
+L_LL_PBI_END_%out_ok:
+[END_MACRO]
+
+// Cursor-style raw node pointers (not Rust Cursor safety).
+[MACRO] LINKED_LIST_CURSOR_FRONT %out_ok, %out_node, %list_reg
+    %out_node = load %list_reg+LinkedList_head as ptr
+    __ll_cf_null_%out_ok = 0 as ptr
+    %out_ok = ne %out_node, __ll_cf_null_%out_ok
+    !__ll_cf_null_%out_ok
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CURSOR_BACK %out_ok, %out_node, %list_reg
+    %out_node = load %list_reg+LinkedList_tail as ptr
+    __ll_cb_null_%out_ok = 0 as ptr
+    %out_ok = ne %out_node, __ll_cb_null_%out_ok
+    !__ll_cb_null_%out_ok
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CURSOR_NEXT %out_ok, %out_node, %node_reg
+    %out_node = load %node_reg+LinkedListNode_next as ptr
+    __ll_cn_null_%out_ok = 0 as ptr
+    %out_ok = ne %out_node, __ll_cn_null_%out_ok
+    !__ll_cn_null_%out_ok
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CURSOR_PREV %out_ok, %out_node, %node_reg
+    %out_node = load %node_reg+LinkedListNode_prev as ptr
+    __ll_cp_null_%out_ok = 0 as ptr
+    %out_ok = ne %out_node, __ll_cp_null_%out_ok
+    !__ll_cp_null_%out_ok
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CURSOR_VALUE %out_value, %node_reg
+    %out_value = load %node_reg+LinkedListNode_value as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CURSOR_SET_VALUE %node_reg, %value
+    store %node_reg+LinkedListNode_value, %value as u64
+[END_MACRO]
+
+[MACRO] LINKED_LIST_EXTRACT_IF %out_len, %out_list, %list_reg, %pred_fn
+    EXPAND LINKED_LIST_NEW %out_list
+    EXPAND LINKED_LIST_NEW __ll_ei_keep_%out_len
+    jmp L_LL_EI_HEAD_%out_len
+L_LL_EI_HEAD_%out_len:
+    EXPAND LINKED_LIST_TRY_POP_FRONT __ll_ei_ok_%out_len, __ll_ei_val_%out_len, %list_reg
+    br __ll_ei_ok_%out_len -> L_LL_EI_BODY_%out_len, L_LL_EI_DONE_%out_len
+L_LL_EI_BODY_%out_len:
+    __ll_ei_pred_%out_len = call %pred_fn(__ll_ei_val_%out_len)
+    __ll_ei_take_%out_len = ne __ll_ei_pred_%out_len, 0
+    br __ll_ei_take_%out_len -> L_LL_EI_TAKE_%out_len, L_LL_EI_KEEP_%out_len
+L_LL_EI_TAKE_%out_len:
+    EXPAND LINKED_LIST_PUSH_BACK %out_list, __ll_ei_val_%out_len
+    jmp L_LL_EI_NEXT_%out_len
+L_LL_EI_KEEP_%out_len:
+    EXPAND LINKED_LIST_PUSH_BACK __ll_ei_keep_%out_len, __ll_ei_val_%out_len
+    jmp L_LL_EI_NEXT_%out_len
+L_LL_EI_NEXT_%out_len:
+    !__ll_ei_take_%out_len
+    !__ll_ei_pred_%out_len
+    !__ll_ei_val_%out_len
+    !__ll_ei_ok_%out_len
+    jmp L_LL_EI_HEAD_%out_len
+L_LL_EI_DONE_%out_len:
+    EXPAND LINKED_LIST_APPEND %list_reg, __ll_ei_keep_%out_len
+    EXPAND LINKED_LIST_LEN %out_len, %out_list
+    !__ll_ei_val_%out_len
+    !__ll_ei_ok_%out_len
+    !__ll_ei_keep_%out_len
+[END_MACRO]
+
+[MACRO] LINKED_LIST_FROM_ARRAY %out_list, %array_ptr, %length
+    EXPAND LINKED_LIST_NEW %out_list
+    __ll_fa_i_slot_%out_list = stack_alloc 8
+    store __ll_fa_i_slot_%out_list+0, 0 as u64
+    jmp L_LL_FA_HEAD_%out_list
+L_LL_FA_HEAD_%out_list:
+    __ll_fa_i_%out_list = load __ll_fa_i_slot_%out_list+0 as u64
+    __ll_fa_done_%out_list = eq __ll_fa_i_%out_list, %length
+    br __ll_fa_done_%out_list -> L_LL_FA_DONE_%out_list, L_LL_FA_BODY_%out_list
+L_LL_FA_BODY_%out_list:
+    __ll_fa_off_%out_list = mul __ll_fa_i_%out_list, 8
+    __ll_fa_ptr_%out_list = ptr_add %array_ptr, __ll_fa_off_%out_list
+    __ll_fa_val_%out_list = load __ll_fa_ptr_%out_list+0 as u64
+    EXPAND LINKED_LIST_PUSH_BACK %out_list, __ll_fa_val_%out_list
+    __ll_fa_ni_%out_list = add __ll_fa_i_%out_list, 1
+    store __ll_fa_i_slot_%out_list+0, __ll_fa_ni_%out_list as u64
+    !__ll_fa_ni_%out_list
+    !__ll_fa_val_%out_list
+    !__ll_fa_ptr_%out_list
+    !__ll_fa_off_%out_list
+    !__ll_fa_done_%out_list
+    !__ll_fa_i_%out_list
+    jmp L_LL_FA_HEAD_%out_list
+L_LL_FA_DONE_%out_list:
+    !__ll_fa_done_%out_list
+    !__ll_fa_i_%out_list
+[END_MACRO]
+
+[MACRO] LINKED_LIST_INSERT_AFTER %list_reg, %node_reg, %value
+    call @sa_linked_list_insert_after(&%list_reg, %node_reg, %value)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_INSERT_BEFORE %list_reg, %node_reg, %value
+    call @sa_linked_list_insert_before(&%list_reg, %node_reg, %value)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_CLONE %out_list, %list_reg
+    %out_list = call @sa_linked_list_clone(&%list_reg)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_EQ %out_bool, %left_list, %right_list
+    %out_bool = call @sa_linked_list_eq(&%left_list, &%right_list)
+[END_MACRO]
+
+[MACRO] LINKED_LIST_NE %out_bool, %left_list, %right_list
+    __ll_ne_eq_%out_bool = call @sa_linked_list_eq(&%left_list, &%right_list)
+    %out_bool = eq __ll_ne_eq_%out_bool, 0
+    !__ll_ne_eq_%out_bool
+[END_MACRO]

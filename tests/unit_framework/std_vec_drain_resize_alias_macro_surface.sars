@@ -1,0 +1,432 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec drain resize splice append split_off aliases"():
+L_ENTRY:
+    // --- VEC_DRAIN bare alias ---
+    EXPAND VEC_WITH_CAPACITY_U64 drain_vec, 5
+    EXPAND VEC_PUSH_U64 drain_vec, 1
+    EXPAND VEC_PUSH_U64 drain_vec, 2
+    EXPAND VEC_PUSH_U64 drain_vec, 3
+    EXPAND VEC_PUSH_U64 drain_vec, 4
+    EXPAND VEC_PUSH_U64 drain_vec, 5
+    EXPAND VEC_DRAIN drain_ok, drained, drain_vec, 1, 2
+    EXPAND VEC_LEN drain_vec_len, drain_vec
+    EXPAND VEC_LEN drained_len, drained
+    EXPAND VEC_TRY_GET_U64 d_v0_ok, d_v0, drain_vec, 0
+    EXPAND VEC_TRY_GET_U64 d_v1_ok, d_v1, drain_vec, 1
+    EXPAND VEC_TRY_GET_U64 d_v2_ok, d_v2, drain_vec, 2
+    EXPAND VEC_TRY_GET_U64 d_out0_ok, d_out0, drained, 0
+    EXPAND VEC_TRY_GET_U64 d_out1_ok, d_out1, drained, 1
+    EXPAND VEC_DRAIN drain_miss_ok, drain_miss, drain_vec, 9, 1
+    EXPAND VEC_LEN drain_miss_len, drain_miss
+    EXPAND VEC_FREE drained
+    EXPAND VEC_FREE drain_miss
+    EXPAND VEC_FREE drain_vec
+
+    // --- VEC_SPLICE bare alias ---
+    repl_mem = stack_alloc 16
+    store repl_mem+0, 77 as u64
+    store repl_mem+8, 88 as u64
+    repl_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW repl_slice, repl_mem, 2
+    EXPAND VEC_WITH_CAPACITY_U64 splice_vec, 4
+    EXPAND VEC_PUSH_U64 splice_vec, 10
+    EXPAND VEC_PUSH_U64 splice_vec, 20
+    EXPAND VEC_PUSH_U64 splice_vec, 30
+    EXPAND VEC_PUSH_U64 splice_vec, 40
+    EXPAND VEC_SPLICE splice_ok, spliced, splice_vec, 1, 2, repl_slice
+    EXPAND VEC_LEN splice_vec_len, splice_vec
+    EXPAND VEC_LEN spliced_len, spliced
+    EXPAND VEC_TRY_GET_U64 s_v0_ok, s_v0, splice_vec, 0
+    EXPAND VEC_TRY_GET_U64 s_v1_ok, s_v1, splice_vec, 1
+    EXPAND VEC_TRY_GET_U64 s_v2_ok, s_v2, splice_vec, 2
+    EXPAND VEC_TRY_GET_U64 s_v3_ok, s_v3, splice_vec, 3
+    EXPAND VEC_TRY_GET_U64 s_out0_ok, s_out0, spliced, 0
+    EXPAND VEC_TRY_GET_U64 s_out1_ok, s_out1, spliced, 1
+    EXPAND VEC_FREE spliced
+    EXPAND VEC_FREE splice_vec
+    !repl_slice
+
+    // --- VEC_RESIZE bare (elem_size form) ---
+    EXPAND VEC_WITH_CAPACITY_U64 resize_vec, 4
+    EXPAND VEC_PUSH_U64 resize_vec, 1
+    EXPAND VEC_PUSH_U64 resize_vec, 2
+    EXPAND VEC_PUSH_U64 resize_vec, 3
+    EXPAND VEC_RESIZE resize_vec, 5, 123, 8
+    EXPAND VEC_LEN resize_len, resize_vec
+    EXPAND VEC_TRY_GET_U64 r_f0_ok, r_f0, resize_vec, 3
+    EXPAND VEC_TRY_GET_U64 r_f1_ok, r_f1, resize_vec, 4
+    EXPAND VEC_RESIZE resize_vec, 2, 0, 8
+    EXPAND VEC_LEN resize_trunc_len, resize_vec
+    EXPAND VEC_TRY_GET_U64 r_t0_ok, r_t0, resize_vec, 0
+    EXPAND VEC_TRY_GET_U64 r_t1_ok, r_t1, resize_vec, 1
+    EXPAND VEC_FREE resize_vec
+
+    // --- VEC_APPEND bare (elem_size form) ---
+    EXPAND VEC_WITH_CAPACITY_U64 append_dst, 4
+    EXPAND VEC_PUSH_U64 append_dst, 11
+    EXPAND VEC_PUSH_U64 append_dst, 22
+    EXPAND VEC_WITH_CAPACITY_U64 append_src, 2
+    EXPAND VEC_PUSH_U64 append_src, 33
+    EXPAND VEC_PUSH_U64 append_src, 44
+    EXPAND VEC_APPEND append_dst, append_src, 8
+    EXPAND VEC_LEN append_dst_len, append_dst
+    EXPAND VEC_LEN append_src_len, append_src
+    EXPAND VEC_TRY_GET_U64 a_v0_ok, a_v0, append_dst, 0
+    EXPAND VEC_TRY_GET_U64 a_v1_ok, a_v1, append_dst, 1
+    EXPAND VEC_TRY_GET_U64 a_v2_ok, a_v2, append_dst, 2
+    EXPAND VEC_TRY_GET_U64 a_v3_ok, a_v3, append_dst, 3
+    EXPAND VEC_FREE append_src
+    EXPAND VEC_FREE append_dst
+
+    // --- VEC_SPLIT_OFF bare (elem_size form) ---
+    EXPAND VEC_WITH_CAPACITY_U64 split_vec, 4
+    EXPAND VEC_PUSH_U64 split_vec, 10
+    EXPAND VEC_PUSH_U64 split_vec, 20
+    EXPAND VEC_PUSH_U64 split_vec, 30
+    EXPAND VEC_PUSH_U64 split_vec, 40
+    EXPAND VEC_SPLIT_OFF split_ok, split_right, split_vec, 2, 8
+    EXPAND VEC_LEN split_left_len, split_vec
+    EXPAND VEC_LEN split_right_len, split_right
+    EXPAND VEC_TRY_GET_U64 so_l0_ok, so_l0, split_vec, 0
+    EXPAND VEC_TRY_GET_U64 so_l1_ok, so_l1, split_vec, 1
+    EXPAND VEC_TRY_GET_U64 so_r0_ok, so_r0, split_right, 0
+    EXPAND VEC_TRY_GET_U64 so_r1_ok, so_r1, split_right, 1
+    EXPAND VEC_SPLIT_OFF split_miss_ok, split_miss, split_vec, 9, 8
+    EXPAND VEC_LEN split_miss_left_len, split_vec
+    EXPAND VEC_FREE split_right
+    EXPAND VEC_FREE split_vec
+    !split_miss
+
+    // --- checks: drain ---
+    drain_flag_ok = eq drain_ok, 1
+    drain_vec_len_ok = eq drain_vec_len, 3
+    drained_len_ok = eq drained_len, 2
+    d_v0_flag_ok = eq d_v0_ok, 1
+    d_v0_value_ok = eq d_v0, 1
+    d_v1_flag_ok = eq d_v1_ok, 1
+    d_v1_value_ok = eq d_v1, 4
+    d_v2_flag_ok = eq d_v2_ok, 1
+    d_v2_value_ok = eq d_v2, 5
+    d_out0_flag_ok = eq d_out0_ok, 1
+    d_out0_value_ok = eq d_out0, 2
+    d_out1_flag_ok = eq d_out1_ok, 1
+    d_out1_value_ok = eq d_out1, 3
+    drain_miss_flag_ok = eq drain_miss_ok, 0
+    drain_miss_len_ok = eq drain_miss_len, 0
+
+    // --- checks: splice ---
+    splice_flag_ok = eq splice_ok, 1
+    splice_vec_len_ok = eq splice_vec_len, 4
+    spliced_len_ok = eq spliced_len, 2
+    s_v0_flag_ok = eq s_v0_ok, 1
+    s_v0_value_ok = eq s_v0, 10
+    s_v1_flag_ok = eq s_v1_ok, 1
+    s_v1_value_ok = eq s_v1, 77
+    s_v2_flag_ok = eq s_v2_ok, 1
+    s_v2_value_ok = eq s_v2, 88
+    s_v3_flag_ok = eq s_v3_ok, 1
+    s_v3_value_ok = eq s_v3, 40
+    s_out0_flag_ok = eq s_out0_ok, 1
+    s_out0_value_ok = eq s_out0, 20
+    s_out1_flag_ok = eq s_out1_ok, 1
+    s_out1_value_ok = eq s_out1, 30
+
+    // --- checks: resize ---
+    resize_len_ok = eq resize_len, 5
+    r_f0_flag_ok = eq r_f0_ok, 1
+    r_f0_value_ok = eq r_f0, 123
+    r_f1_flag_ok = eq r_f1_ok, 1
+    r_f1_value_ok = eq r_f1, 123
+    resize_trunc_len_ok = eq resize_trunc_len, 2
+    r_t0_flag_ok = eq r_t0_ok, 1
+    r_t0_value_ok = eq r_t0, 1
+    r_t1_flag_ok = eq r_t1_ok, 1
+    r_t1_value_ok = eq r_t1, 2
+
+    // --- checks: append ---
+    append_dst_len_ok = eq append_dst_len, 4
+    append_src_len_ok = eq append_src_len, 0
+    a_v0_flag_ok = eq a_v0_ok, 1
+    a_v0_value_ok = eq a_v0, 11
+    a_v1_flag_ok = eq a_v1_ok, 1
+    a_v1_value_ok = eq a_v1, 22
+    a_v2_flag_ok = eq a_v2_ok, 1
+    a_v2_value_ok = eq a_v2, 33
+    a_v3_flag_ok = eq a_v3_ok, 1
+    a_v3_value_ok = eq a_v3, 44
+
+    // --- checks: split_off ---
+    split_flag_ok = eq split_ok, 1
+    split_left_len_ok = eq split_left_len, 2
+    split_right_len_ok = eq split_right_len, 2
+    so_l0_flag_ok = eq so_l0_ok, 1
+    so_l0_value_ok = eq so_l0, 10
+    so_l1_flag_ok = eq so_l1_ok, 1
+    so_l1_value_ok = eq so_l1, 20
+    so_r0_flag_ok = eq so_r0_ok, 1
+    so_r0_value_ok = eq so_r0, 30
+    so_r1_flag_ok = eq so_r1_ok, 1
+    so_r1_value_ok = eq so_r1, 40
+    split_miss_flag_ok = eq split_miss_ok, 0
+    split_miss_left_len_ok = eq split_miss_left_len, 2
+
+    ok01 = and drain_flag_ok, drain_vec_len_ok
+    ok02 = and ok01, drained_len_ok
+    ok03 = and ok02, d_v0_flag_ok
+    ok04 = and ok03, d_v0_value_ok
+    ok05 = and ok04, d_v1_flag_ok
+    ok06 = and ok05, d_v1_value_ok
+    ok07 = and ok06, d_v2_flag_ok
+    ok08 = and ok07, d_v2_value_ok
+    ok09 = and ok08, d_out0_flag_ok
+    ok10 = and ok09, d_out0_value_ok
+    ok11 = and ok10, d_out1_flag_ok
+    ok12 = and ok11, d_out1_value_ok
+    ok13 = and ok12, drain_miss_flag_ok
+    ok14 = and ok13, drain_miss_len_ok
+    ok15 = and ok14, splice_flag_ok
+    ok16 = and ok15, splice_vec_len_ok
+    ok17 = and ok16, spliced_len_ok
+    ok18 = and ok17, s_v0_flag_ok
+    ok19 = and ok18, s_v0_value_ok
+    ok20 = and ok19, s_v1_flag_ok
+    ok21 = and ok20, s_v1_value_ok
+    ok22 = and ok21, s_v2_flag_ok
+    ok23 = and ok22, s_v2_value_ok
+    ok24 = and ok23, s_v3_flag_ok
+    ok25 = and ok24, s_v3_value_ok
+    ok26 = and ok25, s_out0_flag_ok
+    ok27 = and ok26, s_out0_value_ok
+    ok28 = and ok27, s_out1_flag_ok
+    ok29 = and ok28, s_out1_value_ok
+    ok30 = and ok29, resize_len_ok
+    ok31 = and ok30, r_f0_flag_ok
+    ok32 = and ok31, r_f0_value_ok
+    ok33 = and ok32, r_f1_flag_ok
+    ok34 = and ok33, r_f1_value_ok
+    ok35 = and ok34, resize_trunc_len_ok
+    ok36 = and ok35, r_t0_flag_ok
+    ok37 = and ok36, r_t0_value_ok
+    ok38 = and ok37, r_t1_flag_ok
+    ok39 = and ok38, r_t1_value_ok
+    ok40 = and ok39, append_dst_len_ok
+    ok41 = and ok40, append_src_len_ok
+    ok42 = and ok41, a_v0_flag_ok
+    ok43 = and ok42, a_v0_value_ok
+    ok44 = and ok43, a_v1_flag_ok
+    ok45 = and ok44, a_v1_value_ok
+    ok46 = and ok45, a_v2_flag_ok
+    ok47 = and ok46, a_v2_value_ok
+    ok48 = and ok47, a_v3_flag_ok
+    ok49 = and ok48, a_v3_value_ok
+    ok50 = and ok49, split_flag_ok
+    ok51 = and ok50, split_left_len_ok
+    ok52 = and ok51, split_right_len_ok
+    ok53 = and ok52, so_l0_flag_ok
+    ok54 = and ok53, so_l0_value_ok
+    ok55 = and ok54, so_l1_flag_ok
+    ok56 = and ok55, so_l1_value_ok
+    ok57 = and ok56, so_r0_flag_ok
+    ok58 = and ok57, so_r0_value_ok
+    ok59 = and ok58, so_r1_flag_ok
+    ok60 = and ok59, so_r1_value_ok
+    ok61 = and ok60, split_miss_flag_ok
+    ok = and ok61, split_miss_left_len_ok
+
+    !drain_ok
+    !drain_vec_len
+    !drained_len
+    !d_v0_ok
+    !d_v0
+    !d_v1_ok
+    !d_v1
+    !d_v2_ok
+    !d_v2
+    !d_out0_ok
+    !d_out0
+    !d_out1_ok
+    !d_out1
+    !drain_miss_ok
+    !drain_miss_len
+    !splice_ok
+    !splice_vec_len
+    !spliced_len
+    !s_v0_ok
+    !s_v0
+    !s_v1_ok
+    !s_v1
+    !s_v2_ok
+    !s_v2
+    !s_v3_ok
+    !s_v3
+    !s_out0_ok
+    !s_out0
+    !s_out1_ok
+    !s_out1
+    !resize_len
+    !r_f0_ok
+    !r_f0
+    !r_f1_ok
+    !r_f1
+    !resize_trunc_len
+    !r_t0_ok
+    !r_t0
+    !r_t1_ok
+    !r_t1
+    !append_dst_len
+    !append_src_len
+    !a_v0_ok
+    !a_v0
+    !a_v1_ok
+    !a_v1
+    !a_v2_ok
+    !a_v2
+    !a_v3_ok
+    !a_v3
+    !split_ok
+    !split_left_len
+    !split_right_len
+    !so_l0_ok
+    !so_l0
+    !so_l1_ok
+    !so_l1
+    !so_r0_ok
+    !so_r0
+    !so_r1_ok
+    !so_r1
+    !split_miss_ok
+    !split_miss_left_len
+    !drain_flag_ok
+    !drain_vec_len_ok
+    !drained_len_ok
+    !d_v0_flag_ok
+    !d_v0_value_ok
+    !d_v1_flag_ok
+    !d_v1_value_ok
+    !d_v2_flag_ok
+    !d_v2_value_ok
+    !d_out0_flag_ok
+    !d_out0_value_ok
+    !d_out1_flag_ok
+    !d_out1_value_ok
+    !drain_miss_flag_ok
+    !drain_miss_len_ok
+    !splice_flag_ok
+    !splice_vec_len_ok
+    !spliced_len_ok
+    !s_v0_flag_ok
+    !s_v0_value_ok
+    !s_v1_flag_ok
+    !s_v1_value_ok
+    !s_v2_flag_ok
+    !s_v2_value_ok
+    !s_v3_flag_ok
+    !s_v3_value_ok
+    !s_out0_flag_ok
+    !s_out0_value_ok
+    !s_out1_flag_ok
+    !s_out1_value_ok
+    !resize_len_ok
+    !r_f0_flag_ok
+    !r_f0_value_ok
+    !r_f1_flag_ok
+    !r_f1_value_ok
+    !resize_trunc_len_ok
+    !r_t0_flag_ok
+    !r_t0_value_ok
+    !r_t1_flag_ok
+    !r_t1_value_ok
+    !append_dst_len_ok
+    !append_src_len_ok
+    !a_v0_flag_ok
+    !a_v0_value_ok
+    !a_v1_flag_ok
+    !a_v1_value_ok
+    !a_v2_flag_ok
+    !a_v2_value_ok
+    !a_v3_flag_ok
+    !a_v3_value_ok
+    !split_flag_ok
+    !split_left_len_ok
+    !split_right_len_ok
+    !so_l0_flag_ok
+    !so_l0_value_ok
+    !so_l1_flag_ok
+    !so_l1_value_ok
+    !so_r0_flag_ok
+    !so_r0_value_ok
+    !so_r1_flag_ok
+    !so_r1_value_ok
+    !split_miss_flag_ok
+    !split_miss_left_len_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    !ok26
+    !ok27
+    !ok28
+    !ok29
+    !ok30
+    !ok31
+    !ok32
+    !ok33
+    !ok34
+    !ok35
+    !ok36
+    !ok37
+    !ok38
+    !ok39
+    !ok40
+    !ok41
+    !ok42
+    !ok43
+    !ok44
+    !ok45
+    !ok46
+    !ok47
+    !ok48
+    !ok49
+    !ok50
+    !ok51
+    !ok52
+    !ok53
+    !ok54
+    !ok55
+    !ok56
+    !ok57
+    !ok58
+    !ok59
+    !ok60
+    !ok61
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10840)
+
+L_OK:
+    !ok
+    return

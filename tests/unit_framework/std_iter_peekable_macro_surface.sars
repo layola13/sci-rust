@@ -1,0 +1,123 @@
+@import "sa_std/core/slice.sars"
+@import "sa_std/iter.sars"
+@import "sa_std/vec.sars"
+
+@test "sa_std iter peekable macro surface"():
+L_ENTRY:
+    values = stack_alloc 24
+    empty_values = stack_alloc 8
+
+    store values+0, 3 as u64
+    store values+8, 5 as u64
+    store values+16, 8 as u64
+
+    slice = alloc Slice_SIZE
+    empty_slice = alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, values, 3
+    EXPAND SLICE_NEW empty_slice, empty_values, 0
+
+    EXPAND ITER_FROM_SLICE iter, slice
+    EXPAND ITER_TRY_PEEK_U64 peek1_has, peek1_value, iter
+    EXPAND ITER_LEN len_after_peek1, iter
+    EXPAND ITER_NEXT_U64 next1_has, next1_value, iter
+    EXPAND ITER_TRY_PEEK_U64 peek2_has, peek2_value, iter
+    EXPAND ITER_PEEKABLE_COLLECT_U64 collected, iter
+    EXPAND ITER_TRY_PEEK_U64 peek_after_has, peek_after_value, iter
+    EXPAND VEC_LEN collected_len, collected
+    EXPAND VEC_GET_U64 collected_0, collected, 0
+    EXPAND VEC_GET_U64 collected_1, collected, 1
+
+    EXPAND ITER_FROM_SLICE empty_iter, empty_slice
+    EXPAND ITER_TRY_PEEK_U64 empty_peek_has, empty_peek_value, empty_iter
+    EXPAND ITER_PEEKABLE_COLLECT_U64 empty_collected, empty_iter
+    EXPAND VEC_LEN empty_collected_len, empty_collected
+
+    ok_peek1_has = eq peek1_has, 1
+    ok_peek1_value = eq peek1_value, 3
+    ok_len_after_peek1 = eq len_after_peek1, 3
+    ok_next1_has = eq next1_has, 1
+    ok_next1_value = eq next1_value, 3
+    ok_peek2_has = eq peek2_has, 1
+    ok_peek2_value = eq peek2_value, 5
+    ok_peek_after_has = eq peek_after_has, 0
+    ok_peek_after_value = eq peek_after_value, 0
+    ok_collected_len = eq collected_len, 2
+    ok_collected_0 = eq collected_0, 5
+    ok_collected_1 = eq collected_1, 8
+    ok_empty_peek_has = eq empty_peek_has, 0
+    ok_empty_peek_value = eq empty_peek_value, 0
+    ok_empty_collected_len = eq empty_collected_len, 0
+
+    c01 = and ok_peek1_has, ok_peek1_value
+    c02 = and c01, ok_len_after_peek1
+    c03 = and c02, ok_next1_has
+    c04 = and c03, ok_next1_value
+    c05 = and c04, ok_peek2_has
+    c06 = and c05, ok_peek2_value
+    c07 = and c06, ok_peek_after_has
+    c08 = and c07, ok_peek_after_value
+    c09 = and c08, ok_collected_len
+    c10 = and c09, ok_collected_0
+    c11 = and c10, ok_collected_1
+    c12 = and c11, ok_empty_peek_has
+    c13 = and c12, ok_empty_peek_value
+    ok = and c13, ok_empty_collected_len
+
+    !peek1_has
+    !peek1_value
+    !len_after_peek1
+    !next1_has
+    !next1_value
+    !peek2_has
+    !peek2_value
+    !peek_after_has
+    !peek_after_value
+    !collected_len
+    !collected_0
+    !collected_1
+    !empty_peek_has
+    !empty_peek_value
+    !empty_collected_len
+    !ok_peek1_has
+    !ok_peek1_value
+    !ok_len_after_peek1
+    !ok_next1_has
+    !ok_next1_value
+    !ok_peek2_has
+    !ok_peek2_value
+    !ok_peek_after_has
+    !ok_peek_after_value
+    !ok_collected_len
+    !ok_collected_0
+    !ok_collected_1
+    !ok_empty_peek_has
+    !ok_empty_peek_value
+    !ok_empty_collected_len
+    !c01
+    !c02
+    !c03
+    !c04
+    !c05
+    !c06
+    !c07
+    !c08
+    !c09
+    !c10
+    !c11
+    !c12
+    !c13
+    !empty_collected
+    !empty_iter
+    !collected
+    !iter
+    !empty_slice
+    !slice
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10549)
+
+L_PASS:
+    !ok
+    return 0

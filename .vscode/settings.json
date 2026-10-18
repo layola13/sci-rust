@@ -1,6 +1,6 @@
 {
     "files.associations": {
-        "*.sa": "cpp",
+        "*.sars": "cpp",
         "*.sal": "cpp",
         "*.sai": "cpp",
         "*.sla":"rs"

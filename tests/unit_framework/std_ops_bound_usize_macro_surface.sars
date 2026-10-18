@@ -1,0 +1,84 @@
+@import "sa_std/ops.sars"
+
+@test "sa_std ops Bound usize layout and macros"():
+L_ENTRY:
+    unbounded = stack_alloc BoundUsize_SIZE
+    included = stack_alloc BoundUsize_SIZE
+    excluded = stack_alloc BoundUsize_SIZE
+    default_bound = stack_alloc BoundUsize_SIZE
+
+    EXPAND BOUND_USIZE_UNBOUNDED_NEW unbounded
+    EXPAND BOUND_USIZE_INCLUDED_NEW included, 8
+    EXPAND BOUND_USIZE_EXCLUDED_NEW excluded, 13
+    EXPAND BOUND_USIZE_DEFAULT default_bound
+
+    EXPAND BOUND_USIZE_TAG included_tag, included
+    EXPAND BOUND_USIZE_VALUE included_value, included
+    EXPAND BOUND_USIZE_IS_UNBOUNDED is_unbounded, unbounded
+    EXPAND BOUND_USIZE_IS_INCLUDED is_included, included
+    EXPAND BOUND_USIZE_IS_EXCLUDED is_excluded, excluded
+    EXPAND BOUND_USIZE_IS_UNBOUNDED is_default_unbounded, default_bound
+
+    EXPAND BOUND_USIZE_CONTAINS_START start_has8, included, 8
+    EXPAND BOUND_USIZE_CONTAINS_START start_has7, included, 7
+    EXPAND BOUND_USIZE_CONTAINS_START excl_start_has13, excluded, 13
+    EXPAND BOUND_USIZE_CONTAINS_START excl_start_has14, excluded, 14
+    EXPAND BOUND_USIZE_CONTAINS_END end_has12, excluded, 12
+    EXPAND BOUND_USIZE_CONTAINS_END end_has13, excluded, 13
+    EXPAND BOUND_USIZE_CONTAINS_END inc_end_has8, included, 8
+    EXPAND BOUND_USIZE_CONTAINS_END inc_end_has9, included, 9
+    EXPAND BOUND_USIZE_RANGE_CONTAINS range_has12, included, excluded, 12
+    EXPAND BOUND_USIZE_RANGE_CONTAINS range_has13, included, excluded, 13
+
+    ok_size = eq BoundUsize_SIZE, 16
+    ok_tag_off = eq BoundUsize_tag, +0
+    ok_value_off = eq BoundUsize_value, +8
+    ok_unbounded_disc = eq BOUND_USIZE_UNBOUNDED, 0
+    ok_included_disc = eq BOUND_USIZE_INCLUDED, 1
+    ok_excluded_disc = eq BOUND_USIZE_EXCLUDED, 2
+    ok_tag = eq included_tag, BOUND_USIZE_INCLUDED
+    ok_value = eq included_value, 8
+    ok_is_unbounded = eq is_unbounded, 1
+    ok_is_included = eq is_included, 1
+    ok_is_excluded = eq is_excluded, 1
+    ok_default = eq is_default_unbounded, 1
+    ok_start_has8 = eq start_has8, 1
+    ok_start_has7 = eq start_has7, 0
+    ok_excl_start_has13 = eq excl_start_has13, 0
+    ok_excl_start_has14 = eq excl_start_has14, 1
+    ok_end_has12 = eq end_has12, 1
+    ok_end_has13 = eq end_has13, 0
+    ok_inc_end_has8 = eq inc_end_has8, 1
+    ok_inc_end_has9 = eq inc_end_has9, 0
+    ok_range_has12 = eq range_has12, 1
+    ok_range_has13 = eq range_has13, 0
+
+    c01 = and ok_size, ok_tag_off
+    c02 = and c01, ok_value_off
+    c03 = and c02, ok_unbounded_disc
+    c04 = and c03, ok_included_disc
+    c05 = and c04, ok_excluded_disc
+    c06 = and c05, ok_tag
+    c07 = and c06, ok_value
+    c08 = and c07, ok_is_unbounded
+    c09 = and c08, ok_is_included
+    c10 = and c09, ok_is_excluded
+    c11 = and c10, ok_default
+    c12 = and c11, ok_start_has8
+    c13 = and c12, ok_start_has7
+    c14 = and c13, ok_excl_start_has13
+    c15 = and c14, ok_excl_start_has14
+    c16 = and c15, ok_end_has12
+    c17 = and c16, ok_end_has13
+    c18 = and c17, ok_inc_end_has8
+    c19 = and c18, ok_inc_end_has9
+    c20 = and c19, ok_range_has12
+    ok = and c20, ok_range_has13
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    panic(10508)
+
+L_PASS:
+    return 0

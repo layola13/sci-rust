@@ -1,0 +1,134 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/vec.sars"
+@import "sa_std/collections/btree_set.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+
+@test "sa_std btree_set owned into-iterator alias"():
+L_ENTRY:
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+
+    EXPAND BTREE_SET_NEW set
+    EXPAND BTREE_SET_INSERT ins_charlie, set, charlie
+    EXPAND BTREE_SET_INSERT ins_alpha, set, alpha
+    EXPAND BTREE_SET_INSERT ins_bravo, set, bravo
+    EXPAND BTREE_SET_INTO_ITER into_iter_vec, set
+    EXPAND VEC_LEN into_iter_len, into_iter_vec
+    EXPAND VEC_GET_U64 alpha_ptr_bits, into_iter_vec, 0
+    EXPAND VEC_GET_U64 alpha_len, into_iter_vec, 1
+    EXPAND VEC_GET_U64 bravo_ptr_bits, into_iter_vec, 2
+    EXPAND VEC_GET_U64 bravo_len, into_iter_vec, 3
+    EXPAND VEC_GET_U64 charlie_ptr_bits, into_iter_vec, 4
+    EXPAND VEC_GET_U64 charlie_len, into_iter_vec, 5
+    EXPAND BTREE_SET_LEN set_len_after, set
+    EXPAND BTREE_SET_CONTAINS has_alpha_after, set, alpha
+
+    expected_alpha_ptr = load alpha+Slice_ptr as ptr
+    expected_bravo_ptr = load bravo+Slice_ptr as ptr
+    expected_charlie_ptr = load charlie+Slice_ptr as ptr
+    expected_alpha_bits = bitcast expected_alpha_ptr as u64
+    expected_bravo_bits = bitcast expected_bravo_ptr as u64
+    expected_charlie_bits = bitcast expected_charlie_ptr as u64
+
+    EXPAND BTREE_SET_NEW empty_set
+    EXPAND BTREE_SET_INTO_ITER empty_into_iter_vec, empty_set
+    EXPAND VEC_LEN empty_into_iter_len, empty_into_iter_vec
+    EXPAND BTREE_SET_LEN empty_len_after, empty_set
+
+    ok_ins_charlie = eq ins_charlie, 1
+    ok_ins_alpha = eq ins_alpha, 1
+    ok_ins_bravo = eq ins_bravo, 1
+    ok_len = eq into_iter_len, 6
+    ok_alpha_ptr = eq alpha_ptr_bits, expected_alpha_bits
+    ok_alpha_len = eq alpha_len, 5
+    ok_bravo_ptr = eq bravo_ptr_bits, expected_bravo_bits
+    ok_bravo_len = eq bravo_len, 5
+    ok_charlie_ptr = eq charlie_ptr_bits, expected_charlie_bits
+    ok_charlie_len = eq charlie_len, 7
+    ok_set_empty = eq set_len_after, 0
+    ok_alpha_absent = eq has_alpha_after, 0
+    ok_empty_iter = eq empty_into_iter_len, 0
+    ok_empty_set = eq empty_len_after, 0
+
+    ok01 = and ok_ins_charlie, ok_ins_alpha
+    ok02 = and ok01, ok_ins_bravo
+    ok03 = and ok02, ok_len
+    ok04 = and ok03, ok_alpha_ptr
+    ok05 = and ok04, ok_alpha_len
+    ok06 = and ok05, ok_bravo_ptr
+    ok07 = and ok06, ok_bravo_len
+    ok08 = and ok07, ok_charlie_ptr
+    ok09 = and ok08, ok_charlie_len
+    ok10 = and ok09, ok_set_empty
+    ok11 = and ok10, ok_alpha_absent
+    ok12 = and ok11, ok_empty_iter
+    ok = and ok12, ok_empty_set
+
+    !ins_charlie
+    !ins_alpha
+    !ins_bravo
+    !into_iter_vec
+    !into_iter_len
+    !alpha_ptr_bits
+    !alpha_len
+    !bravo_ptr_bits
+    !bravo_len
+    !charlie_ptr_bits
+    !charlie_len
+    !set_len_after
+    !has_alpha_after
+    !expected_alpha_ptr
+    !expected_bravo_ptr
+    !expected_charlie_ptr
+    !expected_alpha_bits
+    !expected_bravo_bits
+    !expected_charlie_bits
+    !empty_into_iter_vec
+    !empty_into_iter_len
+    !empty_len_after
+    !ok_ins_charlie
+    !ok_ins_alpha
+    !ok_ins_bravo
+    !ok_len
+    !ok_alpha_ptr
+    !ok_alpha_len
+    !ok_bravo_ptr
+    !ok_bravo_len
+    !ok_charlie_ptr
+    !ok_charlie_len
+    !ok_set_empty
+    !ok_alpha_absent
+    !ok_empty_iter
+    !ok_empty_set
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !charlie
+    !bravo
+    !alpha
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND BTREE_SET_FREE empty_set
+    EXPAND BTREE_SET_FREE set
+    return 0
+
+L_FAIL:
+    panic(10815)

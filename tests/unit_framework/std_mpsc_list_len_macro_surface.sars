@@ -1,0 +1,40 @@
+@import "sa_std/sync/mpsc_list.sars"
+
+@test "sa_std mpsc_list len empty"():
+L_ENTRY:
+    EXPAND MPSC_LIST_NEW chan
+    EXPAND MPSC_LIST_SEND chan, 1
+    EXPAND MPSC_LIST_SEND chan, 2
+    EXPAND MPSC_LIST_LEN n, chan
+    EXPAND MPSC_LIST_IS_EMPTY empty, chan
+    EXPAND MPSC_LIST_TRY_RECV r_ok, r, chan
+    EXPAND MPSC_LIST_LEN n2, chan
+    a = eq n, 2
+    b = eq empty, 0
+    c = eq r_ok, 1
+    d = eq r, 1
+    e = eq n2, 1
+    ok01 = and a, b
+    ok02 = and ok01, c
+    ok03 = and ok02, d
+    ok = and ok03, e
+    !n
+    !empty
+    !r_ok
+    !r
+    !n2
+    !a
+    !b
+    !c
+    !d
+    !e
+    !ok01
+    !ok02
+    !ok03
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10909)

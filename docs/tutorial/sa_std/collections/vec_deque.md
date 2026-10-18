@@ -6,7 +6,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/vec_deque.sa"
+@import "sa_std/vec_deque.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@
 下面的完整 SA 程序展示了新建双端队列、从首尾两侧交替推入和弹出数据，并在无数据时执行安全异常跳出的验证：
 
 ```sa
-@import "sa_std/vec_deque.sa"
+@import "sa_std/vec_deque.sars"
 
 @main() -> i32:
 L_ENTRY:

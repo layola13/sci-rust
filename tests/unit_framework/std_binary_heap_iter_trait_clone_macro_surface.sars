@@ -1,0 +1,158 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap iter trait and clone macro surface"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 4
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 9
+    EXPAND BINARY_HEAP_PUSH_U64 heap, 1
+    EXPAND BINARY_HEAP_ITER_U64 iter, heap
+    EXPAND BINARY_HEAP_ITER_SIZE_HINT_U64 hint_lower_initial, hint_upper_initial, iter
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_LEN_U64 exact_len_initial, iter
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_IS_EMPTY_U64 empty_initial, iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 first_has, first, iter
+    EXPAND BINARY_HEAP_ITER_CLONE_U64 clone_iter, iter
+    EXPAND BINARY_HEAP_ITER_SIZE_HINT_U64 clone_hint_lower, clone_hint_upper, clone_iter
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_LEN_U64 original_len_after_clone, iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 clone_first_has, clone_first, clone_iter
+    EXPAND BINARY_HEAP_ITER_NEXT_BACK_U64 clone_back_has, clone_back, clone_iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 clone_done_has, clone_done, clone_iter
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_LEN_U64 original_len_after_clone_consumed, iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 original_next_has, original_next, iter
+    EXPAND BINARY_HEAP_ITER_NEXT_BACK_U64 original_back_has, original_back, iter
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_IS_EMPTY_U64 original_empty_done, iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 original_done_has, original_done, iter
+    EXPAND BINARY_HEAP_FREE heap
+
+    EXPAND BINARY_HEAP_ITER_DEFAULT_U64 default_iter
+    EXPAND BINARY_HEAP_ITER_CLONE_U64 default_clone_iter, default_iter
+    EXPAND BINARY_HEAP_ITER_SIZE_HINT_U64 default_clone_hint_lower, default_clone_hint_upper, default_clone_iter
+    EXPAND BINARY_HEAP_ITER_EXACT_SIZE_IS_EMPTY_U64 default_clone_empty, default_clone_iter
+    EXPAND BINARY_HEAP_ITER_NEXT_U64 default_clone_next_has, default_clone_next, default_clone_iter
+
+    ok_hint_lower_initial = eq hint_lower_initial, 3
+    ok_hint_upper_initial = eq hint_upper_initial, 3
+    ok_exact_len_initial = eq exact_len_initial, 3
+    ok_empty_initial = eq empty_initial, 0
+    ok_first_has = eq first_has, 1
+    ok_first = eq first, 9
+    ok_clone_hint_lower = eq clone_hint_lower, 2
+    ok_clone_hint_upper = eq clone_hint_upper, 2
+    ok_original_len_after_clone = eq original_len_after_clone, 2
+    ok_clone_first_has = eq clone_first_has, 1
+    ok_clone_first = eq clone_first, 4
+    ok_clone_back_has = eq clone_back_has, 1
+    ok_clone_back = eq clone_back, 1
+    ok_clone_done_has = eq clone_done_has, 0
+    ok_clone_done = eq clone_done, 0
+    ok_original_len_after_clone_consumed = eq original_len_after_clone_consumed, 2
+    ok_original_next_has = eq original_next_has, 1
+    ok_original_next = eq original_next, 4
+    ok_original_back_has = eq original_back_has, 1
+    ok_original_back = eq original_back, 1
+    ok_original_empty_done = eq original_empty_done, 1
+    ok_original_done_has = eq original_done_has, 0
+    ok_original_done = eq original_done, 0
+    ok_default_clone_hint_lower = eq default_clone_hint_lower, 0
+    ok_default_clone_hint_upper = eq default_clone_hint_upper, 0
+    ok_default_clone_empty = eq default_clone_empty, 1
+    ok_default_clone_next_has = eq default_clone_next_has, 0
+    ok_default_clone_next = eq default_clone_next, 0
+
+    ok = and ok_hint_lower_initial, ok_hint_upper_initial
+    ok = and ok, ok_exact_len_initial
+    ok = and ok, ok_empty_initial
+    ok = and ok, ok_first_has
+    ok = and ok, ok_first
+    ok = and ok, ok_clone_hint_lower
+    ok = and ok, ok_clone_hint_upper
+    ok = and ok, ok_original_len_after_clone
+    ok = and ok, ok_clone_first_has
+    ok = and ok, ok_clone_first
+    ok = and ok, ok_clone_back_has
+    ok = and ok, ok_clone_back
+    ok = and ok, ok_clone_done_has
+    ok = and ok, ok_clone_done
+    ok = and ok, ok_original_len_after_clone_consumed
+    ok = and ok, ok_original_next_has
+    ok = and ok, ok_original_next
+    ok = and ok, ok_original_back_has
+    ok = and ok, ok_original_back
+    ok = and ok, ok_original_empty_done
+    ok = and ok, ok_original_done_has
+    ok = and ok, ok_original_done
+    ok = and ok, ok_default_clone_hint_lower
+    ok = and ok, ok_default_clone_hint_upper
+    ok = and ok, ok_default_clone_empty
+    ok = and ok, ok_default_clone_next_has
+    ok = and ok, ok_default_clone_next
+
+    !hint_lower_initial
+    !hint_upper_initial
+    !exact_len_initial
+    !empty_initial
+    !first_has
+    !first
+    !clone_hint_lower
+    !clone_hint_upper
+    !original_len_after_clone
+    !clone_first_has
+    !clone_first
+    !clone_back_has
+    !clone_back
+    !clone_done_has
+    !clone_done
+    !original_len_after_clone_consumed
+    !original_next_has
+    !original_next
+    !original_back_has
+    !original_back
+    !original_empty_done
+    !original_done_has
+    !original_done
+    !default_clone_hint_lower
+    !default_clone_hint_upper
+    !default_clone_empty
+    !default_clone_next_has
+    !default_clone_next
+    !ok_hint_lower_initial
+    !ok_hint_upper_initial
+    !ok_exact_len_initial
+    !ok_empty_initial
+    !ok_first_has
+    !ok_first
+    !ok_clone_hint_lower
+    !ok_clone_hint_upper
+    !ok_original_len_after_clone
+    !ok_clone_first_has
+    !ok_clone_first
+    !ok_clone_back_has
+    !ok_clone_back
+    !ok_clone_done_has
+    !ok_clone_done
+    !ok_original_len_after_clone_consumed
+    !ok_original_next_has
+    !ok_original_next
+    !ok_original_back_has
+    !ok_original_back
+    !ok_original_empty_done
+    !ok_original_done_has
+    !ok_original_done
+    !ok_default_clone_hint_lower
+    !ok_default_clone_hint_upper
+    !ok_default_clone_empty
+    !ok_default_clone_next_has
+    !ok_default_clone_next
+    !iter
+    !clone_iter
+    !default_iter
+    !default_clone_iter
+    br ok -> L_BINARY_HEAP_ITER_TRAIT_CLONE_OK, L_BINARY_HEAP_ITER_TRAIT_CLONE_FAIL
+
+L_BINARY_HEAP_ITER_TRAIT_CLONE_FAIL:
+    !ok
+    panic(10733)
+
+L_BINARY_HEAP_ITER_TRAIT_CLONE_OK:
+    !ok
+    return

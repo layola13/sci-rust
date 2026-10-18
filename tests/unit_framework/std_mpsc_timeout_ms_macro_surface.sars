@@ -1,0 +1,71 @@
+@import "sa_std/sync/mpsc.sars"
+
+@test "sa_std mpsc timeout millisecond aliases"():
+L_ENTRY:
+    EXPAND MPSC_NEW chan, 1
+    EXPAND MPSC_TRY_RECV_TIMEOUT_MS recv_ok, recv_value, chan, 0
+    EXPAND MPSC_TRY_SEND_TIMEOUT_MS send0_ok, chan, 7, 0
+    EXPAND MPSC_TRY_RECV_TIMEOUT_MS recv1_ok, recv1_value, chan, 1
+    EXPAND MPSC_TRY_SEND_TIMEOUT_MS send1_ok, chan, 9, 1
+    EXPAND MPSC_TRY_RECV_TIMEOUT_MS recv2_ok, recv2_value, chan, 1
+    EXPAND MPSC_TRY_RECV_TIMEOUT_MS overflow_ok, overflow_value, chan, 18446744073709551615
+    EXPAND MPSC_TRY_SEND_TIMEOUT_MS send_overflow_ok, chan, 11, 18446744073709551615
+    EXPAND MPSC_FREE chan
+
+    ok0 = eq recv_ok, 0
+    ok1 = eq recv_value, 0
+    ok2 = eq send0_ok, 1
+    ok3 = eq recv1_ok, 1
+    ok4 = eq recv1_value, 7
+    ok5 = eq send1_ok, 1
+    ok6 = eq recv2_ok, 1
+    ok7 = eq recv2_value, 9
+    ok8 = eq overflow_ok, 0
+    ok9 = eq overflow_value, 0
+    ok10 = eq send_overflow_ok, 0
+    all0 = and ok0, ok1
+    all1 = and all0, ok2
+    all2 = and all1, ok3
+    all3 = and all2, ok4
+    all4 = and all3, ok5
+    all5 = and all4, ok6
+    all6 = and all5, ok7
+    all7 = and all6, ok8
+    all8 = and all7, ok9
+    ok = and all8, ok10
+
+    !recv_ok
+    !recv_value
+    !send0_ok
+    !recv1_ok
+    !recv1_value
+    !send1_ok
+    !recv2_ok
+    !recv2_value
+    !overflow_ok
+    !overflow_value
+    !send_overflow_ok
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !ok7
+    !all0
+    !all1
+    !all2
+    !all3
+    !all4
+    !all5
+    !all6
+    !all7
+    !all8
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10993)

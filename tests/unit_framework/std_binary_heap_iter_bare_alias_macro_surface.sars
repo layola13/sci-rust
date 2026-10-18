@@ -1,0 +1,77 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap iter bare alias macro surface"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_NEW heap
+    EXPAND BINARY_HEAP_PUSH heap, 1
+    EXPAND BINARY_HEAP_PUSH heap, 5
+    EXPAND BINARY_HEAP_PUSH heap, 3
+    EXPAND BINARY_HEAP_PUSH heap, 7
+
+    EXPAND BINARY_HEAP_ITER iter, heap
+    EXPAND BINARY_HEAP_ITER_NEXT first_ok, first, iter
+    EXPAND BINARY_HEAP_ITER_NEXT second_ok, second, iter
+    EXPAND BINARY_HEAP_ITER_NEXT third_ok, third, iter
+    EXPAND BINARY_HEAP_ITER_NEXT fourth_ok, fourth, iter
+    EXPAND BINARY_HEAP_ITER_NEXT done_ok, done_value, iter
+    EXPAND BINARY_HEAP_LEN heap_len_after, heap
+    EXPAND BINARY_HEAP_PEEK peek_after, heap
+    EXPAND BINARY_HEAP_FREE heap
+
+    ok_first_flag = eq first_ok, 1
+    ok_first = eq first, 7
+    ok_second_flag = eq second_ok, 1
+    ok_third_flag = eq third_ok, 1
+    ok_fourth_flag = eq fourth_ok, 1
+    ok_done_flag = eq done_ok, 0
+    ok_done_value = eq done_value, 0
+    ok_heap_len = eq heap_len_after, 4
+    ok_peek = eq peek_after, 7
+
+    ok01 = and ok_first_flag, ok_first
+    ok02 = and ok01, ok_second_flag
+    ok03 = and ok02, ok_third_flag
+    ok04 = and ok03, ok_fourth_flag
+    ok05 = and ok04, ok_done_flag
+    ok06 = and ok05, ok_done_value
+    ok07 = and ok06, ok_heap_len
+    ok = and ok07, ok_peek
+
+    !first_ok
+    !first
+    !second_ok
+    !second
+    !third_ok
+    !third
+    !fourth_ok
+    !fourth
+    !done_ok
+    !done_value
+    !heap_len_after
+    !peek_after
+    !ok_first_flag
+    !ok_first
+    !ok_second_flag
+    !ok_third_flag
+    !ok_fourth_flag
+    !ok_done_flag
+    !ok_done_value
+    !ok_heap_len
+    !ok_peek
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !iter
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10844)
+
+L_OK:
+    !ok
+    return

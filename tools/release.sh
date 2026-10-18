@@ -181,9 +181,9 @@ build_target() {
     fi
 
     [ -f "$TARGET_DIR/std/io/print.sai" ] || error "Package std payload missing std/io/print.sai"
-    [ -f "$TARGET_DIR/std/core/sa_core.sa" ] || error "Package std payload missing std/core/sa_core.sa"
-    [ -f "$TARGET_DIR/std/core/result.sa" ] || error "Package std payload missing std/core/result.sa"
-    [ -f "$TARGET_DIR/std/core/option.sa" ] || error "Package std payload missing std/core/option.sa"
+    [ -f "$TARGET_DIR/std/core/sa_core.sars" ] || error "Package std payload missing std/core/sa_core.sars"
+    [ -f "$TARGET_DIR/std/core/result.sars" ] || error "Package std payload missing std/core/result.sars"
+    [ -f "$TARGET_DIR/std/core/option.sars" ] || error "Package std payload missing std/core/option.sars"
     [ -f "$TARGET_DIR/std/$LIB_FILE" ] || error "Package std payload missing std/$LIB_FILE"
     [ -f "$TARGET_DIR/std/sa_std.h" ] || error "Package std payload missing std/sa_std.h"
     [ -f "$TARGET_DIR/SUPPORT_LEVEL.txt" ] || error "Package support-level file missing"

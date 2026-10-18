@@ -6,7 +6,7 @@ SA 的 `RwLock` 经过架构重构：修复了读者计数可能会引发的下�
 
 ## 导入
 ```sa
-@import "sa_std/sync/rwlock.sa"
+@import "sa_std/sync/rwlock.sars"
 ```
 
 ## 核心宏与完整用法示例
@@ -14,7 +14,7 @@ SA 的 `RwLock` 经过架构重构：修复了读者计数可能会引发的下�
 下面的完整 SA 程序演示了在一个读写锁实例上发生写独占、读共享验证、多重只读借用等的综合机制：
 
 ```sa
-@import "sa_std/sync/rwlock.sa"
+@import "sa_std/sync/rwlock.sars"
 
 @main() -> i32:
 L_ENTRY:

@@ -1,0 +1,209 @@
+@import "sa_std/vec.sars"
+
+@vec_extract_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    is_even = eq rem, 0
+    !rem
+    !value
+    return is_even
+
+@vec_pop_if_even(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    is_even = eq rem, 0
+    !rem
+    !value
+    return is_even
+
+@vec_pop_if_odd(value: u64) -> u64:
+L_ENTRY:
+    rem = urem value, 2
+    is_odd = eq rem, 1
+    !rem
+    !value
+    return is_odd
+
+@test "sa_std vec extract_if and pop_if aliases"():
+L_ENTRY:
+    EXPAND VEC_WITH_CAPACITY_U64 vec, 6
+    EXPAND VEC_PUSH_U64 vec, 1
+    EXPAND VEC_PUSH_U64 vec, 2
+    EXPAND VEC_PUSH_U64 vec, 3
+    EXPAND VEC_PUSH_U64 vec, 4
+    EXPAND VEC_PUSH_U64 vec, 5
+    EXPAND VEC_PUSH_U64 vec, 6
+    EXPAND VEC_EXTRACT_IF remain_len, extracted, vec, @vec_extract_even
+    EXPAND VEC_LEN vec_len_after, vec
+    EXPAND VEC_LEN extracted_len, extracted
+    EXPAND VEC_TRY_GET_U64 remain0_ok, remain0, vec, 0
+    EXPAND VEC_TRY_GET_U64 remain1_ok, remain1, vec, 1
+    EXPAND VEC_TRY_GET_U64 remain2_ok, remain2, vec, 2
+    EXPAND VEC_TRY_GET_U64 remain3_ok, remain3, vec, 3
+    EXPAND VEC_TRY_GET_U64 extracted0_ok, extracted0, extracted, 0
+    EXPAND VEC_TRY_GET_U64 extracted1_ok, extracted1, extracted, 1
+    EXPAND VEC_TRY_GET_U64 extracted2_ok, extracted2, extracted, 2
+    EXPAND VEC_TRY_GET_U64 extracted3_ok, extracted3, extracted, 3
+    EXPAND VEC_FREE extracted
+    EXPAND VEC_FREE vec
+
+    EXPAND VEC_WITH_CAPACITY_U64 pop_vec, 3
+    EXPAND VEC_PUSH_U64 pop_vec, 10
+    EXPAND VEC_PUSH_U64 pop_vec, 11
+    EXPAND VEC_PUSH_U64 pop_vec, 12
+    EXPAND VEC_POP_IF odd_miss_ok, odd_miss, pop_vec, @vec_pop_if_odd
+    EXPAND VEC_LEN len_after_odd_miss, pop_vec
+    EXPAND VEC_POP_IF even_hit_ok, even_hit, pop_vec, @vec_pop_if_even
+    EXPAND VEC_LEN len_after_even_hit, pop_vec
+    EXPAND VEC_TRY_GET_U64 tail_ok, tail, pop_vec, 1
+    EXPAND VEC_FREE pop_vec
+
+    EXPAND VEC_WITH_CAPACITY_U64 empty_vec, 0
+    EXPAND VEC_POP_IF empty_ok, empty_value, empty_vec, @vec_pop_if_even
+    EXPAND VEC_FREE empty_vec
+
+    remain_len_ok = eq remain_len, 3
+    vec_len_after_ok = eq vec_len_after, 3
+    extracted_len_ok = eq extracted_len, 3
+    remain0_flag_ok = eq remain0_ok, 1
+    remain0_value_ok = eq remain0, 1
+    remain1_flag_ok = eq remain1_ok, 1
+    remain1_value_ok = eq remain1, 3
+    remain2_flag_ok = eq remain2_ok, 1
+    remain2_value_ok = eq remain2, 5
+    remain3_flag_ok = eq remain3_ok, 0
+    extracted0_flag_ok = eq extracted0_ok, 1
+    extracted0_value_ok = eq extracted0, 2
+    extracted1_flag_ok = eq extracted1_ok, 1
+    extracted1_value_ok = eq extracted1, 4
+    extracted2_flag_ok = eq extracted2_ok, 1
+    extracted2_value_ok = eq extracted2, 6
+    extracted3_flag_ok = eq extracted3_ok, 0
+    odd_miss_flag_ok = eq odd_miss_ok, 0
+    odd_miss_value_ok = eq odd_miss, 0
+    len_after_odd_miss_ok = eq len_after_odd_miss, 3
+    even_hit_flag_ok = eq even_hit_ok, 1
+    even_hit_value_ok = eq even_hit, 12
+    len_after_even_hit_ok = eq len_after_even_hit, 2
+    tail_flag_ok = eq tail_ok, 1
+    tail_value_ok = eq tail, 11
+    empty_flag_ok = eq empty_ok, 0
+    empty_value_ok = eq empty_value, 0
+
+    ok01 = and remain_len_ok, vec_len_after_ok
+    ok02 = and ok01, extracted_len_ok
+    ok03 = and ok02, remain0_flag_ok
+    ok04 = and ok03, remain0_value_ok
+    ok05 = and ok04, remain1_flag_ok
+    ok06 = and ok05, remain1_value_ok
+    ok07 = and ok06, remain2_flag_ok
+    ok08 = and ok07, remain2_value_ok
+    ok09 = and ok08, remain3_flag_ok
+    ok10 = and ok09, extracted0_flag_ok
+    ok11 = and ok10, extracted0_value_ok
+    ok12 = and ok11, extracted1_flag_ok
+    ok13 = and ok12, extracted1_value_ok
+    ok14 = and ok13, extracted2_flag_ok
+    ok15 = and ok14, extracted2_value_ok
+    ok16 = and ok15, extracted3_flag_ok
+    ok17 = and ok16, odd_miss_flag_ok
+    ok18 = and ok17, odd_miss_value_ok
+    ok19 = and ok18, len_after_odd_miss_ok
+    ok20 = and ok19, even_hit_flag_ok
+    ok21 = and ok20, even_hit_value_ok
+    ok22 = and ok21, len_after_even_hit_ok
+    ok23 = and ok22, tail_flag_ok
+    ok24 = and ok23, tail_value_ok
+    ok25 = and ok24, empty_flag_ok
+    ok = and ok25, empty_value_ok
+
+    !remain_len
+    !vec_len_after
+    !extracted_len
+    !remain0_ok
+    !remain0
+    !remain1_ok
+    !remain1
+    !remain2_ok
+    !remain2
+    !remain3_ok
+    !remain3
+    !extracted0_ok
+    !extracted0
+    !extracted1_ok
+    !extracted1
+    !extracted2_ok
+    !extracted2
+    !extracted3_ok
+    !extracted3
+    !odd_miss_ok
+    !odd_miss
+    !len_after_odd_miss
+    !even_hit_ok
+    !even_hit
+    !len_after_even_hit
+    !tail_ok
+    !tail
+    !empty_ok
+    !empty_value
+    !remain_len_ok
+    !vec_len_after_ok
+    !extracted_len_ok
+    !remain0_flag_ok
+    !remain0_value_ok
+    !remain1_flag_ok
+    !remain1_value_ok
+    !remain2_flag_ok
+    !remain2_value_ok
+    !remain3_flag_ok
+    !extracted0_flag_ok
+    !extracted0_value_ok
+    !extracted1_flag_ok
+    !extracted1_value_ok
+    !extracted2_flag_ok
+    !extracted2_value_ok
+    !extracted3_flag_ok
+    !odd_miss_flag_ok
+    !odd_miss_value_ok
+    !len_after_odd_miss_ok
+    !even_hit_flag_ok
+    !even_hit_value_ok
+    !len_after_even_hit_ok
+    !tail_flag_ok
+    !tail_value_ok
+    !empty_flag_ok
+    !empty_value_ok
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !ok19
+    !ok20
+    !ok21
+    !ok22
+    !ok23
+    !ok24
+    !ok25
+    br ok -> L_OK, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10831)
+
+L_OK:
+    !ok
+    return

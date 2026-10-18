@@ -4,7 +4,7 @@
 
 ## 导入
 ```sa
-@import "sa_std/sync/once.sa"
+@import "sa_std/sync/once.sars"
 ```
 
 ## 核心宏与用法

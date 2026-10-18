@@ -1,0 +1,19 @@
+@import "sa_std/http2.sars"
+
+@test "sa_std http2 constants and namespace import"():
+L_ENTRY:
+    frame_ok = eq HTTP2_FRAME_SETTINGS, 4
+    flag_ok = eq HTTP2_FLAG_END_HEADERS, 4
+    err_ok = eq SA_H2_ERR_UNSUPPORTED, -1
+    ok = and frame_ok, flag_ok
+    ok = and ok, err_ok
+    !frame_ok
+    !flag_ok
+    !err_ok
+    br ok -> L_PASS, L_FAIL
+L_FAIL:
+    !ok
+    panic(11153)
+L_PASS:
+    !ok
+    return 0

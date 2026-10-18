@@ -1,0 +1,79 @@
+@import "sa_std/net.sars"
+
+@test "sa_std network status error kind mapping"():
+L_ENTRY:
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_invalid_arg, SA_NET_STATUS_INVALID_ARGUMENT
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_invalid_handle, SA_NET_STATUS_INVALID_HANDLE
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_not_found, SA_NET_STATUS_NOT_FOUND
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_access, SA_NET_STATUS_ACCESS
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_no_memory, SA_NET_STATUS_NO_MEMORY
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_io, SA_NET_STATUS_IO
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_net, SA_NET_STATUS_NET
+    EXPAND NET_ERROR_KIND_FROM_STATUS kind_unsupported, SA_NET_STATUS_UNSUPPORTED
+
+    ok1 = eq kind_invalid_arg, IO_ERROR_KIND_INVALID_INPUT
+    ok2 = eq kind_invalid_handle, IO_ERROR_KIND_NOT_CONNECTED
+    ok3 = eq kind_not_found, IO_ERROR_KIND_NOT_FOUND
+    ok4 = eq kind_access, IO_ERROR_KIND_PERMISSION_DENIED
+    ok5 = eq kind_no_memory, IO_ERROR_KIND_OUT_OF_MEMORY
+    ok6 = eq kind_io, IO_ERROR_KIND_OTHER
+    ok7 = eq kind_net, IO_ERROR_KIND_NETWORK_UNREACHABLE
+    ok8 = eq kind_unsupported, IO_ERROR_KIND_UNSUPPORTED
+    ok12 = and ok1, ok2
+    ok34 = and ok3, ok4
+    ok56 = and ok5, ok6
+    ok78 = and ok7, ok8
+    ok1234 = and ok12, ok34
+    ok5678 = and ok56, ok78
+    ok = and ok1234, ok5678
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    !ok5678
+    !ok1234
+    !ok78
+    !ok56
+    !ok34
+    !ok12
+    !ok8
+    !ok7
+    !ok6
+    !ok5
+    !ok4
+    !ok3
+    !ok2
+    !ok1
+    !kind_unsupported
+    !kind_net
+    !kind_io
+    !kind_no_memory
+    !kind_access
+    !kind_not_found
+    !kind_invalid_handle
+    !kind_invalid_arg
+    panic(10091)
+L_OK:
+    !ok
+    !ok5678
+    !ok1234
+    !ok78
+    !ok56
+    !ok34
+    !ok12
+    !ok8
+    !ok7
+    !ok6
+    !ok5
+    !ok4
+    !ok3
+    !ok2
+    !ok1
+    !kind_unsupported
+    !kind_net
+    !kind_io
+    !kind_no_memory
+    !kind_access
+    !kind_not_found
+    !kind_invalid_handle
+    !kind_invalid_arg
+    return

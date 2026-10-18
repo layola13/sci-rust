@@ -1,0 +1,28 @@
+@import "sa_std/io/print.sai"
+@import "bridge/static_gate.sars"
+
+@const RESULT_OK = utf8:"282\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 282 - Ffi Link Static C Lib
+// A static archive is represented by bridge code plus host-side archive notes.
+
+@main() -> i32:
+L_ENTRY:
+    probe = alloc 4
+    store probe+0, 282 as i32
+    value = call @static_probe_gate(*probe)
+    ok = eq value, 282
+    !value
+    !probe
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

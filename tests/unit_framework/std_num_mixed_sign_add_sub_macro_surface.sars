@@ -1,0 +1,253 @@
+@import "sa_std/num.sars"
+
+@test "sa_std primitive mixed sign add sub macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_CHECKED_ADD_SIGNED u8_add_ok, u8_add, 10, 5
+    EXPAND NUM_U8_STRICT_ADD_SIGNED u8_strict_add, 10, -3
+    EXPAND NUM_U8_CHECKED_SUB_SIGNED u8_sub_ok, u8_sub, 10, 4
+    EXPAND NUM_U8_STRICT_SUB_SIGNED u8_strict_sub, 10, -6
+    EXPAND NUM_U16_CHECKED_ADD_SIGNED u16_add_ok, u16_add, 10, 5
+    EXPAND NUM_U16_STRICT_ADD_SIGNED u16_strict_add, 10, -3
+    EXPAND NUM_U16_CHECKED_SUB_SIGNED u16_sub_ok, u16_sub, 10, 4
+    EXPAND NUM_U16_STRICT_SUB_SIGNED u16_strict_sub, 10, -6
+    EXPAND NUM_U32_CHECKED_ADD_SIGNED u32_add_ok, u32_add, 10, 5
+    EXPAND NUM_U32_STRICT_ADD_SIGNED u32_strict_add, 10, -3
+    EXPAND NUM_U32_CHECKED_SUB_SIGNED u32_sub_ok, u32_sub, 10, 4
+    EXPAND NUM_U32_STRICT_SUB_SIGNED u32_strict_sub, 10, -6
+    EXPAND NUM_U64_CHECKED_ADD_SIGNED u64_add_ok, u64_add, 10, 5
+    EXPAND NUM_U64_STRICT_ADD_SIGNED u64_strict_add, 10, -3
+    EXPAND NUM_U64_CHECKED_SUB_SIGNED u64_sub_ok, u64_sub, 10, 4
+    EXPAND NUM_U64_STRICT_SUB_SIGNED u64_strict_sub, 10, -6
+    EXPAND NUM_USIZE_CHECKED_ADD_SIGNED usize_add_ok, usize_add, 10, 5
+    EXPAND NUM_USIZE_STRICT_ADD_SIGNED usize_strict_add, 10, -3
+    EXPAND NUM_USIZE_CHECKED_SUB_SIGNED usize_sub_ok, usize_sub, 10, 4
+    EXPAND NUM_USIZE_STRICT_SUB_SIGNED usize_strict_sub, 10, -6
+
+    EXPAND NUM_I8_CHECKED_ADD_UNSIGNED i8_add_ok, i8_add, 10, 5
+    EXPAND NUM_I8_STRICT_ADD_UNSIGNED i8_strict_add, -10, 5
+    EXPAND NUM_I8_CHECKED_SUB_UNSIGNED i8_sub_ok, i8_sub, 10, 5
+    EXPAND NUM_I8_STRICT_SUB_UNSIGNED i8_strict_sub, -10, 5
+    EXPAND NUM_I16_CHECKED_ADD_UNSIGNED i16_add_ok, i16_add, 10, 5
+    EXPAND NUM_I16_STRICT_ADD_UNSIGNED i16_strict_add, -10, 5
+    EXPAND NUM_I16_CHECKED_SUB_UNSIGNED i16_sub_ok, i16_sub, 10, 5
+    EXPAND NUM_I16_STRICT_SUB_UNSIGNED i16_strict_sub, -10, 5
+    EXPAND NUM_I32_CHECKED_ADD_UNSIGNED i32_add_ok, i32_add, 10, 5
+    EXPAND NUM_I32_STRICT_ADD_UNSIGNED i32_strict_add, -10, 5
+    EXPAND NUM_I32_CHECKED_SUB_UNSIGNED i32_sub_ok, i32_sub, 10, 5
+    EXPAND NUM_I32_STRICT_SUB_UNSIGNED i32_strict_sub, -10, 5
+    EXPAND NUM_I64_CHECKED_ADD_UNSIGNED i64_add_ok, i64_add, 10, 5
+    EXPAND NUM_I64_STRICT_ADD_UNSIGNED i64_strict_add, -10, 5
+    EXPAND NUM_I64_CHECKED_SUB_UNSIGNED i64_sub_ok, i64_sub, 10, 5
+    EXPAND NUM_I64_STRICT_SUB_UNSIGNED i64_strict_sub, -10, 5
+    EXPAND NUM_ISIZE_CHECKED_ADD_UNSIGNED isize_add_ok, isize_add, 10, 5
+    EXPAND NUM_ISIZE_STRICT_ADD_UNSIGNED isize_strict_add, -10, 5
+    EXPAND NUM_ISIZE_CHECKED_SUB_UNSIGNED isize_sub_ok, isize_sub, 10, 5
+    EXPAND NUM_ISIZE_STRICT_SUB_UNSIGNED isize_strict_sub, -10, 5
+
+    EXPAND NUM_I64_CHECKED_ADD_UNSIGNED i64_edge_add_ok, i64_edge_add, NUM_I64_MIN, NUM_U64_MAX
+    EXPAND NUM_I64_CHECKED_SUB_UNSIGNED i64_edge_sub_ok, i64_edge_sub, NUM_I64_MAX, NUM_U64_MAX
+
+    EXPAND NUM_U8_CHECKED_ADD_SIGNED u8_add_under_ok, u8_add_under, 1, -2
+    EXPAND NUM_U8_CHECKED_ADD_SIGNED u8_add_over_ok, u8_add_over, 250, 10
+    EXPAND NUM_U8_CHECKED_SUB_SIGNED u8_sub_under_ok, u8_sub_under, 1, 2
+    EXPAND NUM_U8_CHECKED_SUB_SIGNED u8_sub_over_ok, u8_sub_over, 250, -10
+    EXPAND NUM_I8_CHECKED_ADD_UNSIGNED i8_add_over_ok, i8_add_over, 120, 10
+    EXPAND NUM_I8_CHECKED_SUB_UNSIGNED i8_sub_under_ok, i8_sub_under, -120, 10
+
+    ok_01 = eq u8_add_ok, 1
+    ok_02 = eq u8_add, 15
+    ok_03 = eq u8_strict_add, 7
+    ok_04 = eq u8_sub_ok, 1
+    ok_05 = eq u8_sub, 6
+    ok_06 = eq u8_strict_sub, 16
+    ok_07 = eq u16_add_ok, 1
+    ok_08 = eq u16_add, 15
+    ok_09 = eq u16_strict_add, 7
+    ok_10 = eq u16_sub_ok, 1
+    ok_11 = eq u16_sub, 6
+    ok_12 = eq u16_strict_sub, 16
+    ok_13 = eq u32_add_ok, 1
+    ok_14 = eq u32_add, 15
+    ok_15 = eq u32_strict_add, 7
+    ok_16 = eq u32_sub_ok, 1
+    ok_17 = eq u32_sub, 6
+    ok_18 = eq u32_strict_sub, 16
+    ok_19 = eq u64_add_ok, 1
+    ok_20 = eq u64_add, 15
+    ok_21 = eq u64_strict_add, 7
+    ok_22 = eq u64_sub_ok, 1
+    ok_23 = eq u64_sub, 6
+    ok_24 = eq u64_strict_sub, 16
+    ok_25 = eq usize_add_ok, 1
+    ok_26 = eq usize_add, 15
+    ok_27 = eq usize_strict_add, 7
+    ok_28 = eq usize_sub_ok, 1
+    ok_29 = eq usize_sub, 6
+    ok_30 = eq usize_strict_sub, 16
+    ok_31 = eq i8_add_ok, 1
+    ok_32 = eq i8_add, 15
+    ok_33 = eq i8_strict_add, -5
+    ok_34 = eq i8_sub_ok, 1
+    ok_35 = eq i8_sub, 5
+    ok_36 = eq i8_strict_sub, -15
+    ok_37 = eq i16_add_ok, 1
+    ok_38 = eq i16_add, 15
+    ok_39 = eq i16_strict_add, -5
+    ok_40 = eq i16_sub_ok, 1
+    ok_41 = eq i16_sub, 5
+    ok_42 = eq i16_strict_sub, -15
+    ok_43 = eq i32_add_ok, 1
+    ok_44 = eq i32_add, 15
+    ok_45 = eq i32_strict_add, -5
+    ok_46 = eq i32_sub_ok, 1
+    ok_47 = eq i32_sub, 5
+    ok_48 = eq i32_strict_sub, -15
+    ok_49 = eq i64_add_ok, 1
+    ok_50 = eq i64_add, 15
+    ok_51 = eq i64_strict_add, -5
+    ok_52 = eq i64_sub_ok, 1
+    ok_53 = eq i64_sub, 5
+    ok_54 = eq i64_strict_sub, -15
+    ok_55 = eq isize_add_ok, 1
+    ok_56 = eq isize_add, 15
+    ok_57 = eq isize_strict_add, -5
+    ok_58 = eq isize_sub_ok, 1
+    ok_59 = eq isize_sub, 5
+    ok_60 = eq isize_strict_sub, -15
+    ok_61 = eq i64_edge_add_ok, 1
+    ok_62 = eq i64_edge_add, NUM_I64_MAX
+    ok_63 = eq i64_edge_sub_ok, 1
+    ok_64 = eq i64_edge_sub, NUM_I64_MIN
+    ok_65 = eq u8_add_under_ok, 0
+    ok_66 = eq u8_add_under, 0
+    ok_67 = eq u8_add_over_ok, 0
+    ok_68 = eq u8_add_over, 0
+    ok_69 = eq u8_sub_under_ok, 0
+    ok_70 = eq u8_sub_under, 0
+    ok_71 = eq u8_sub_over_ok, 0
+    ok_72 = eq u8_sub_over, 0
+    ok_73 = eq i8_add_over_ok, 0
+    ok_74 = eq i8_add_over, 0
+    ok_75 = eq i8_sub_under_ok, 0
+    ok_76 = eq i8_sub_under, 0
+
+    acc_01 = and ok_01, ok_02
+    acc_02 = and acc_01, ok_03
+    acc_03 = and acc_02, ok_04
+    acc_04 = and acc_03, ok_05
+    acc_05 = and acc_04, ok_06
+    acc_06 = and acc_05, ok_07
+    acc_07 = and acc_06, ok_08
+    acc_08 = and acc_07, ok_09
+    acc_09 = and acc_08, ok_10
+    acc_10 = and acc_09, ok_11
+    acc_11 = and acc_10, ok_12
+    acc_12 = and acc_11, ok_13
+    acc_13 = and acc_12, ok_14
+    acc_14 = and acc_13, ok_15
+    acc_15 = and acc_14, ok_16
+    acc_16 = and acc_15, ok_17
+    acc_17 = and acc_16, ok_18
+    acc_18 = and acc_17, ok_19
+    acc_19 = and acc_18, ok_20
+    acc_20 = and acc_19, ok_21
+    acc_21 = and acc_20, ok_22
+    acc_22 = and acc_21, ok_23
+    acc_23 = and acc_22, ok_24
+    acc_24 = and acc_23, ok_25
+    acc_25 = and acc_24, ok_26
+    acc_26 = and acc_25, ok_27
+    acc_27 = and acc_26, ok_28
+    acc_28 = and acc_27, ok_29
+    acc_29 = and acc_28, ok_30
+    acc_30 = and acc_29, ok_31
+    acc_31 = and acc_30, ok_32
+    acc_32 = and acc_31, ok_33
+    acc_33 = and acc_32, ok_34
+    acc_34 = and acc_33, ok_35
+    acc_35 = and acc_34, ok_36
+    acc_36 = and acc_35, ok_37
+    acc_37 = and acc_36, ok_38
+    acc_38 = and acc_37, ok_39
+    acc_39 = and acc_38, ok_40
+    acc_40 = and acc_39, ok_41
+    acc_41 = and acc_40, ok_42
+    acc_42 = and acc_41, ok_43
+    acc_43 = and acc_42, ok_44
+    acc_44 = and acc_43, ok_45
+    acc_45 = and acc_44, ok_46
+    acc_46 = and acc_45, ok_47
+    acc_47 = and acc_46, ok_48
+    acc_48 = and acc_47, ok_49
+    acc_49 = and acc_48, ok_50
+    acc_50 = and acc_49, ok_51
+    acc_51 = and acc_50, ok_52
+    acc_52 = and acc_51, ok_53
+    acc_53 = and acc_52, ok_54
+    acc_54 = and acc_53, ok_55
+    acc_55 = and acc_54, ok_56
+    acc_56 = and acc_55, ok_57
+    acc_57 = and acc_56, ok_58
+    acc_58 = and acc_57, ok_59
+    acc_59 = and acc_58, ok_60
+    acc_60 = and acc_59, ok_61
+    acc_61 = and acc_60, ok_62
+    acc_62 = and acc_61, ok_63
+    acc_63 = and acc_62, ok_64
+    acc_64 = and acc_63, ok_65
+    acc_65 = and acc_64, ok_66
+    acc_66 = and acc_65, ok_67
+    acc_67 = and acc_66, ok_68
+    acc_68 = and acc_67, ok_69
+    acc_69 = and acc_68, ok_70
+    acc_70 = and acc_69, ok_71
+    acc_71 = and acc_70, ok_72
+    acc_72 = and acc_71, ok_73
+    acc_73 = and acc_72, ok_74
+    acc_74 = and acc_73, ok_75
+    ok = and acc_74, ok_76
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10638)
+
+L_PASS:
+    !ok
+    return 0
+
+@test should_panic "sa_std unsigned strict_add_signed panics on underflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_ADD_SIGNED value, 1, -2
+    !value
+    return 0
+
+@test should_panic "sa_std unsigned strict_add_signed panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_ADD_SIGNED value, 250, 10
+    !value
+    return 0
+
+@test should_panic "sa_std unsigned strict_sub_signed panics on underflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_SUB_SIGNED value, 1, 2
+    !value
+    return 0
+
+@test should_panic "sa_std unsigned strict_sub_signed panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_U8_STRICT_SUB_SIGNED value, 250, -10
+    !value
+    return 0
+
+@test should_panic "sa_std signed strict_add_unsigned panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_I8_STRICT_ADD_UNSIGNED value, 120, 10
+    !value
+    return 0
+
+@test should_panic "sa_std signed strict_sub_unsigned panics on underflow"():
+L_ENTRY:
+    EXPAND NUM_I8_STRICT_SUB_UNSIGNED value, -120, 10
+    !value
+    return 0

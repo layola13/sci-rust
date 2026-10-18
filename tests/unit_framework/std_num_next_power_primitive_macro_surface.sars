@@ -1,0 +1,140 @@
+@import "sa_std/num.sars"
+
+@test "sa_std unsigned primitive checked and direct next_power_of_two macro surface"():
+L_ENTRY:
+    u32_high = shl 1, 31
+    u32_over = add u32_high, 1
+    u64_high = shl 1, 63
+    u64_over = add u64_high, 1
+
+    EXPAND NUM_U8_CHECKED_NEXT_POWER_OF_TWO u8_zero_ok, u8_zero, 0
+    EXPAND NUM_U8_CHECKED_NEXT_POWER_OF_TWO u8_three_ok, u8_three, 3
+    EXPAND NUM_U8_CHECKED_NEXT_POWER_OF_TWO u8_high_ok, u8_high, 128
+    EXPAND NUM_U8_CHECKED_NEXT_POWER_OF_TWO u8_over_ok, u8_over, 129
+    EXPAND NUM_U8_CHECKED_NEXT_POWER_OF_TWO u8_mask_ok, u8_mask, 259
+    EXPAND NUM_U8_NEXT_POWER_OF_TWO u8_direct_three, 3
+    EXPAND NUM_U8_NEXT_POWER_OF_TWO u8_direct_over, 129
+
+    EXPAND NUM_U16_CHECKED_NEXT_POWER_OF_TWO u16_zero_ok, u16_zero, 0
+    EXPAND NUM_U16_CHECKED_NEXT_POWER_OF_TWO u16_three_ok, u16_three, 3
+    EXPAND NUM_U16_CHECKED_NEXT_POWER_OF_TWO u16_high_ok, u16_high, 32768
+    EXPAND NUM_U16_CHECKED_NEXT_POWER_OF_TWO u16_over_ok, u16_over, 32769
+    EXPAND NUM_U16_CHECKED_NEXT_POWER_OF_TWO u16_mask_ok, u16_mask, 65539
+    EXPAND NUM_U16_NEXT_POWER_OF_TWO u16_direct_three, 3
+    EXPAND NUM_U16_NEXT_POWER_OF_TWO u16_direct_over, 32769
+
+    EXPAND NUM_U32_CHECKED_NEXT_POWER_OF_TWO u32_zero_ok, u32_zero, 0
+    EXPAND NUM_U32_CHECKED_NEXT_POWER_OF_TWO u32_three_ok, u32_three, 3
+    EXPAND NUM_U32_CHECKED_NEXT_POWER_OF_TWO u32_high_ok, u32_high_value, u32_high
+    EXPAND NUM_U32_CHECKED_NEXT_POWER_OF_TWO u32_over_ok, u32_over_value, u32_over
+    EXPAND NUM_U32_CHECKED_NEXT_POWER_OF_TWO u32_mask_ok, u32_mask, 4294967299
+    EXPAND NUM_U32_NEXT_POWER_OF_TWO u32_direct_three, 3
+    EXPAND NUM_U32_NEXT_POWER_OF_TWO u32_direct_over, u32_over
+
+    EXPAND NUM_USIZE_CHECKED_NEXT_POWER_OF_TWO usize_zero_ok, usize_zero, 0
+    EXPAND NUM_USIZE_CHECKED_NEXT_POWER_OF_TWO usize_three_ok, usize_three, 3
+    EXPAND NUM_USIZE_CHECKED_NEXT_POWER_OF_TWO usize_high_ok, usize_high, u64_high
+    EXPAND NUM_USIZE_CHECKED_NEXT_POWER_OF_TWO usize_over_ok, usize_over, u64_over
+    EXPAND NUM_USIZE_NEXT_POWER_OF_TWO usize_direct_three, 3
+    EXPAND NUM_USIZE_NEXT_POWER_OF_TWO usize_direct_over, u64_over
+
+    u8_over_ok_false = eq u8_over_ok, 0
+    u8_over_zero = eq u8_over, 0
+    u16_over_ok_false = eq u16_over_ok, 0
+    u16_over_zero = eq u16_over, 0
+    u32_over_ok_false = eq u32_over_ok, 0
+    u32_over_zero = eq u32_over_value, 0
+    usize_over_ok_false = eq usize_over_ok, 0
+    usize_over_zero = eq usize_over, 0
+
+    u8_zero_is_one = eq u8_zero, 1
+    u8_three_is_four = eq u8_three, 4
+    u8_high_is_high = eq u8_high, 128
+    u8_mask_is_four = eq u8_mask, 4
+    u16_zero_is_one = eq u16_zero, 1
+    u16_three_is_four = eq u16_three, 4
+    u16_high_is_high = eq u16_high, 32768
+    u16_mask_is_four = eq u16_mask, 4
+    u32_zero_is_one = eq u32_zero, 1
+    u32_three_is_four = eq u32_three, 4
+    u32_high_is_high = eq u32_high_value, u32_high
+    u32_mask_is_four = eq u32_mask, 4
+    usize_zero_is_one = eq usize_zero, 1
+    usize_three_is_four = eq usize_three, 4
+    usize_high_is_high = eq usize_high, u64_high
+
+    ok01 = and u8_zero_ok, u8_zero_is_one
+    ok02 = and u8_three_ok, u8_three_is_four
+    ok03 = and u8_high_ok, u8_high_is_high
+    ok04 = and u8_over_ok_false, u8_over_zero
+    ok05 = and u8_mask_ok, u8_mask_is_four
+    ok06 = eq u8_direct_three, 4
+    ok07 = eq u8_direct_over, 0
+
+    ok08 = and u16_zero_ok, u16_zero_is_one
+    ok09 = and u16_three_ok, u16_three_is_four
+    ok10 = and u16_high_ok, u16_high_is_high
+    ok11 = and u16_over_ok_false, u16_over_zero
+    ok12 = and u16_mask_ok, u16_mask_is_four
+    ok13 = eq u16_direct_three, 4
+    ok14 = eq u16_direct_over, 0
+
+    ok15 = and u32_zero_ok, u32_zero_is_one
+    ok16 = and u32_three_ok, u32_three_is_four
+    ok17 = and u32_high_ok, u32_high_is_high
+    ok18 = and u32_over_ok_false, u32_over_zero
+    ok19 = and u32_mask_ok, u32_mask_is_four
+    ok20 = eq u32_direct_three, 4
+    ok21 = eq u32_direct_over, 0
+
+    ok22 = and usize_zero_ok, usize_zero_is_one
+    ok23 = and usize_three_ok, usize_three_is_four
+    ok24 = and usize_high_ok, usize_high_is_high
+    ok25 = and usize_over_ok_false, usize_over_zero
+    ok26 = eq usize_direct_three, 4
+    ok27 = eq usize_direct_over, 0
+
+    chain01 = and ok01, ok02
+    chain02 = and chain01, ok03
+    chain03 = and chain02, ok04
+    chain04 = and chain03, ok05
+    chain05 = and chain04, ok06
+    chain06 = and chain05, ok07
+    chain07 = and chain06, ok08
+    chain08 = and chain07, ok09
+    chain09 = and chain08, ok10
+    chain10 = and chain09, ok11
+    chain11 = and chain10, ok12
+    chain12 = and chain11, ok13
+    chain13 = and chain12, ok14
+    chain14 = and chain13, ok15
+    chain15 = and chain14, ok16
+    chain16 = and chain15, ok17
+    chain17 = and chain16, ok18
+    chain18 = and chain17, ok19
+    chain19 = and chain18, ok20
+    chain20 = and chain19, ok21
+    chain21 = and chain20, ok22
+    chain22 = and chain21, ok23
+    chain23 = and chain22, ok24
+    chain24 = and chain23, ok25
+    chain25 = and chain24, ok26
+    ok = and chain25, ok27
+
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    !u32_high
+    !u32_over
+    !u64_high
+    !u64_over
+    panic(10661)
+
+L_PASS:
+    !ok
+    !u32_high
+    !u32_over
+    !u64_high
+    !u64_over
+    return 0

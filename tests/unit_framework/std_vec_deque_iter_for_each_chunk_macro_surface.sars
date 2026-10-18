@@ -1,0 +1,284 @@
+@import "sa_std/vec_deque.sars"
+
+@vec_deque_iter_for_each_noop(value: u64) -> u64:
+L_ENTRY:
+    !value
+    return 0
+
+@vec_deque_iter_try_each_lt_forty(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 40
+    !value
+    return out
+
+@vec_deque_iter_try_each_lt_hundred(value: u64) -> u64:
+L_ENTRY:
+    out = ult value, 100
+    !value
+    return out
+
+@test "sa_std vec_deque iterator for_each and chunk macro surface"():
+L_ENTRY:
+    EXPAND VEC_DEQUE_WITH_CAPACITY each_deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK each_deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK each_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK each_deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK each_deque, 40
+    EXPAND VEC_DEQUE_TRY_POP_FRONT each_pop_ok, each_pop, each_deque
+    EXPAND VEC_DEQUE_PUSH_BACK each_deque, 50
+    EXPAND VEC_DEQUE_ITER_U64 each_iter, each_backing, each_deque
+    EXPAND VEC_DEQUE_ITER_FOR_EACH_U64 each_iter, @vec_deque_iter_for_each_noop
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_IS_EMPTY_U64 each_empty, each_iter
+    EXPAND VEC_DEQUE_LEN each_deque_len, each_deque
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY try_all_deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK try_all_deque, 1
+    EXPAND VEC_DEQUE_PUSH_BACK try_all_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK try_all_deque, 3
+    EXPAND VEC_DEQUE_TRY_POP_FRONT try_all_pop_ok, try_all_pop, try_all_deque
+    EXPAND VEC_DEQUE_PUSH_BACK try_all_deque, 4
+    EXPAND VEC_DEQUE_ITER_U64 try_all_iter, try_all_backing, try_all_deque
+    EXPAND VEC_DEQUE_ITER_TRY_FOR_EACH_U64 try_all_ok, try_all_iter, @vec_deque_iter_try_each_lt_hundred
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_IS_EMPTY_U64 try_all_empty, try_all_iter
+
+    EXPAND VEC_DEQUE_WITH_CAPACITY try_stop_deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK try_stop_deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK try_stop_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK try_stop_deque, 40
+    EXPAND VEC_DEQUE_PUSH_BACK try_stop_deque, 50
+    EXPAND VEC_DEQUE_TRY_POP_FRONT try_stop_pop_ok, try_stop_pop, try_stop_deque
+    EXPAND VEC_DEQUE_PUSH_BACK try_stop_deque, 60
+    EXPAND VEC_DEQUE_ITER_U64 try_stop_iter, try_stop_backing, try_stop_deque
+    EXPAND VEC_DEQUE_ITER_TRY_FOR_EACH_U64 try_stop_ok, try_stop_iter, @vec_deque_iter_try_each_lt_forty
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_LEN_U64 try_stop_remaining, try_stop_iter
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 try_stop_next_has, try_stop_next, try_stop_iter
+
+    chunk_buf = stack_alloc 24
+    EXPAND VEC_DEQUE_WITH_CAPACITY chunk_deque, 5
+    EXPAND VEC_DEQUE_PUSH_BACK chunk_deque, 1
+    EXPAND VEC_DEQUE_PUSH_BACK chunk_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK chunk_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK chunk_deque, 4
+    EXPAND VEC_DEQUE_PUSH_BACK chunk_deque, 5
+    EXPAND VEC_DEQUE_TRY_POP_FRONT chunk_pop_ok, chunk_pop, chunk_deque
+    EXPAND VEC_DEQUE_PUSH_BACK chunk_deque, 6
+    EXPAND VEC_DEQUE_ITER_U64 chunk_iter, chunk_backing, chunk_deque
+    EXPAND VEC_DEQUE_ITER_TRY_NEXT_CHUNK_U64 chunk_ok, chunk_filled, chunk_iter, chunk_buf, 3
+    chunk_0 = load chunk_buf+0 as u64
+    chunk_1 = load chunk_buf+8 as u64
+    chunk_2 = load chunk_buf+16 as u64
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_LEN_U64 chunk_remaining, chunk_iter
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 chunk_next_has, chunk_next, chunk_iter
+
+    short_buf = stack_alloc 32
+    EXPAND VEC_DEQUE_WITH_CAPACITY short_deque, 5
+    EXPAND VEC_DEQUE_PUSH_BACK short_deque, 10
+    EXPAND VEC_DEQUE_PUSH_BACK short_deque, 20
+    EXPAND VEC_DEQUE_PUSH_BACK short_deque, 30
+    EXPAND VEC_DEQUE_PUSH_BACK short_deque, 40
+    EXPAND VEC_DEQUE_PUSH_BACK short_deque, 50
+    EXPAND VEC_DEQUE_TRY_POP_FRONT short_pop_ok, short_pop, short_deque
+    EXPAND VEC_DEQUE_PUSH_BACK short_deque, 60
+    EXPAND VEC_DEQUE_ITER_U64 short_iter, short_backing, short_deque
+    EXPAND VEC_DEQUE_ITER_ADVANCE_BY short_skip_ok, short_skip_remaining, short_iter, 3
+    EXPAND VEC_DEQUE_ITER_TRY_NEXT_CHUNK_U64 short_ok, short_filled, short_iter, short_buf, 4
+    short_0 = load short_buf+0 as u64
+    short_1 = load short_buf+8 as u64
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_IS_EMPTY_U64 short_empty, short_iter
+
+    zero_buf = stack_alloc 8
+    EXPAND VEC_DEQUE_WITH_CAPACITY zero_deque, 2
+    EXPAND VEC_DEQUE_PUSH_BACK zero_deque, 7
+    EXPAND VEC_DEQUE_PUSH_BACK zero_deque, 8
+    EXPAND VEC_DEQUE_ITER_U64 zero_iter, zero_backing, zero_deque
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 zero_first_has, zero_first, zero_iter
+    EXPAND VEC_DEQUE_ITER_TRY_NEXT_CHUNK_U64 zero_ok, zero_filled, zero_iter, zero_buf, 0
+    EXPAND VEC_DEQUE_ITER_EXACT_SIZE_LEN_U64 zero_remaining, zero_iter
+    EXPAND VEC_DEQUE_ITER_NEXT_U64 zero_next_has, zero_next, zero_iter
+
+    into_buf = stack_alloc 16
+    EXPAND VEC_DEQUE_WITH_CAPACITY into_deque, 3
+    EXPAND VEC_DEQUE_PUSH_BACK into_deque, 70
+    EXPAND VEC_DEQUE_PUSH_BACK into_deque, 80
+    EXPAND VEC_DEQUE_PUSH_BACK into_deque, 90
+    EXPAND VEC_DEQUE_INTO_ITER_U64 into_iter, into_backing, into_deque
+    EXPAND VEC_DEQUE_INTO_ITER_TRY_NEXT_CHUNK_U64 into_ok, into_filled, into_iter, into_buf, 2
+    into_0 = load into_buf+0 as u64
+    into_1 = load into_buf+8 as u64
+    EXPAND VEC_DEQUE_INTO_ITER_TRY_FOR_EACH_U64 into_each_ok, into_iter, @vec_deque_iter_try_each_lt_hundred
+    EXPAND VEC_DEQUE_INTO_ITER_EXACT_SIZE_IS_EMPTY_U64 into_empty, into_iter
+    EXPAND VEC_DEQUE_IS_EMPTY into_deque_empty, into_deque
+
+    EXPAND VEC_FREE each_backing
+    EXPAND VEC_FREE try_all_backing
+    EXPAND VEC_FREE try_stop_backing
+    EXPAND VEC_FREE chunk_backing
+    EXPAND VEC_FREE short_backing
+    EXPAND VEC_FREE zero_backing
+    EXPAND VEC_FREE into_backing
+    EXPAND VEC_DEQUE_FREE each_deque
+    EXPAND VEC_DEQUE_FREE try_all_deque
+    EXPAND VEC_DEQUE_FREE try_stop_deque
+    EXPAND VEC_DEQUE_FREE chunk_deque
+    EXPAND VEC_DEQUE_FREE short_deque
+    EXPAND VEC_DEQUE_FREE zero_deque
+    EXPAND VEC_DEQUE_FREE into_deque
+
+    ok = eq each_pop_ok, 1
+    check = eq each_pop, 10
+    ok = and ok, check
+    check = eq each_empty, 1
+    ok = and ok, check
+    check = eq each_deque_len, 4
+    ok = and ok, check
+    check = eq try_all_pop_ok, 1
+    ok = and ok, check
+    check = eq try_all_pop, 1
+    ok = and ok, check
+    check = eq try_all_ok, 1
+    ok = and ok, check
+    check = eq try_all_empty, 1
+    ok = and ok, check
+    check = eq try_stop_pop_ok, 1
+    ok = and ok, check
+    check = eq try_stop_pop, 10
+    ok = and ok, check
+    check = eq try_stop_ok, 0
+    ok = and ok, check
+    check = eq try_stop_remaining, 2
+    ok = and ok, check
+    check = eq try_stop_next_has, 1
+    ok = and ok, check
+    check = eq try_stop_next, 50
+    ok = and ok, check
+    check = eq chunk_pop_ok, 1
+    ok = and ok, check
+    check = eq chunk_pop, 1
+    ok = and ok, check
+    check = eq chunk_ok, 1
+    ok = and ok, check
+    check = eq chunk_filled, 3
+    ok = and ok, check
+    check = eq chunk_0, 2
+    ok = and ok, check
+    check = eq chunk_1, 3
+    ok = and ok, check
+    check = eq chunk_2, 4
+    ok = and ok, check
+    check = eq chunk_remaining, 2
+    ok = and ok, check
+    check = eq chunk_next_has, 1
+    ok = and ok, check
+    check = eq chunk_next, 5
+    ok = and ok, check
+    check = eq short_pop_ok, 1
+    ok = and ok, check
+    check = eq short_pop, 10
+    ok = and ok, check
+    check = eq short_skip_ok, 1
+    ok = and ok, check
+    check = eq short_skip_remaining, 0
+    ok = and ok, check
+    check = eq short_ok, 0
+    ok = and ok, check
+    check = eq short_filled, 2
+    ok = and ok, check
+    check = eq short_0, 50
+    ok = and ok, check
+    check = eq short_1, 60
+    ok = and ok, check
+    check = eq short_empty, 1
+    ok = and ok, check
+    check = eq zero_first_has, 1
+    ok = and ok, check
+    check = eq zero_first, 7
+    ok = and ok, check
+    check = eq zero_ok, 1
+    ok = and ok, check
+    check = eq zero_filled, 0
+    ok = and ok, check
+    check = eq zero_remaining, 1
+    ok = and ok, check
+    check = eq zero_next_has, 1
+    ok = and ok, check
+    check = eq zero_next, 8
+    ok = and ok, check
+    check = eq into_ok, 1
+    ok = and ok, check
+    check = eq into_filled, 2
+    ok = and ok, check
+    check = eq into_0, 70
+    ok = and ok, check
+    check = eq into_1, 80
+    ok = and ok, check
+    check = eq into_each_ok, 1
+    ok = and ok, check
+    check = eq into_empty, 1
+    ok = and ok, check
+    check = eq into_deque_empty, 1
+    ok = and ok, check
+
+    !each_pop_ok
+    !each_pop
+    !each_empty
+    !each_deque_len
+    !try_all_pop_ok
+    !try_all_pop
+    !try_all_ok
+    !try_all_empty
+    !try_stop_pop_ok
+    !try_stop_pop
+    !try_stop_ok
+    !try_stop_remaining
+    !try_stop_next_has
+    !try_stop_next
+    !chunk_pop_ok
+    !chunk_pop
+    !chunk_ok
+    !chunk_filled
+    !chunk_0
+    !chunk_1
+    !chunk_2
+    !chunk_remaining
+    !chunk_next_has
+    !chunk_next
+    !short_pop_ok
+    !short_pop
+    !short_skip_ok
+    !short_skip_remaining
+    !short_ok
+    !short_filled
+    !short_0
+    !short_1
+    !short_empty
+    !zero_first_has
+    !zero_first
+    !zero_ok
+    !zero_filled
+    !zero_remaining
+    !zero_next_has
+    !zero_next
+    !into_ok
+    !into_filled
+    !into_0
+    !into_1
+    !into_each_ok
+    !into_empty
+    !into_deque_empty
+    !check
+    !each_iter
+    !try_all_iter
+    !try_stop_iter
+    !chunk_iter
+    !short_iter
+    !zero_iter
+    !into_iter
+    br ok -> L_VEC_DEQUE_ITER_FOR_EACH_CHUNK_OK, L_VEC_DEQUE_ITER_FOR_EACH_CHUNK_FAIL
+
+L_VEC_DEQUE_ITER_FOR_EACH_CHUNK_FAIL:
+    !ok
+    panic(10800)
+
+L_VEC_DEQUE_ITER_FOR_EACH_CHUNK_OK:
+    !ok
+    return

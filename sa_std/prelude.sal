@@ -11,7 +11,7 @@
 @import "text/prelude.sal"
 
 @import "any.sal"
-@import "array.sa"
+@import "array.sars"
 @import "ascii.sal"
 @import "binary_heap.sal"
 @import "borrow.sal"

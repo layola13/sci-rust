@@ -1,0 +1,6 @@
+@import "consumer/../impl/impl_arith.sars"
+
+@impl_arith_consumer_value() -> f64:
+L_ENTRY:
+    v = call @impl_arith_value()
+    return v

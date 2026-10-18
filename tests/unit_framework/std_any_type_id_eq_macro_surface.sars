@@ -1,0 +1,27 @@
+@import "sa_std/any.sars"
+@import "sa_std/any.sal"
+
+@test "sa_std any type_id eq"():
+L_ENTRY:
+    a = stack_alloc TypeId_SIZE
+    b = stack_alloc TypeId_SIZE
+    c = stack_alloc TypeId_SIZE
+    EXPAND TYPE_ID_U64 a
+    EXPAND TYPE_ID_U64 b
+    EXPAND TYPE_ID_U32 c
+    EXPAND TYPE_ID_EQ eq1, a, b
+    EXPAND TYPE_ID_EQ eq2, a, c
+    x = eq eq1, 1
+    y = eq eq2, 0
+    ok = and x, y
+    !eq1
+    !eq2
+    !x
+    !y
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10944)

@@ -1,0 +1,1309 @@
+@import "char.sal"
+@import "ascii.sars"
+
+[MACRO] CHAR_IS_VALID_SCALAR %out_bool, %code
+    __char_in_max_%out_bool = ule %code, CHAR_MAX
+    __char_ge_sur_%out_bool = uge %code, CHAR_SURROGATE_MIN
+    __char_le_sur_%out_bool = ule %code, CHAR_SURROGATE_MAX
+    __char_is_sur_%out_bool = and __char_ge_sur_%out_bool, __char_le_sur_%out_bool
+    __char_not_sur_%out_bool = eq __char_is_sur_%out_bool, 0
+    %out_bool = and __char_in_max_%out_bool, __char_not_sur_%out_bool
+    !__char_not_sur_%out_bool
+    !__char_is_sur_%out_bool
+    !__char_le_sur_%out_bool
+    !__char_ge_sur_%out_bool
+    !__char_in_max_%out_bool
+[END_MACRO]
+
+[MACRO] CHAR_FROM_U32 %out_ok, %out_char, %code
+    EXPAND CHAR_IS_VALID_SCALAR __char_valid_%out_ok, %code
+    br __char_valid_%out_ok -> L_CHAR_FROM_U32_OK_%out_ok, L_CHAR_FROM_U32_ERR_%out_ok
+
+L_CHAR_FROM_U32_OK_%out_ok:
+    %out_char = add %code, 0
+    %out_ok = add 0, 1
+    !__char_valid_%out_ok
+    jmp L_CHAR_FROM_U32_END_%out_ok
+
+L_CHAR_FROM_U32_ERR_%out_ok:
+    %out_char = add 0, 0
+    %out_ok = add 0, 0
+    !__char_valid_%out_ok
+
+L_CHAR_FROM_U32_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_FROM_U32_UNCHECKED %out_char, %code
+    %out_char = add %code, 0
+[END_MACRO]
+
+[MACRO] CHAR_LEN_UTF8 %out_len, %code
+    __char_one_%out_len = ule %code, CHAR_UTF8_ONE_MAX
+    br __char_one_%out_len -> L_CHAR_LEN_UTF8_ONE_%out_len, L_CHAR_LEN_UTF8_CHECK_TWO_%out_len
+
+L_CHAR_LEN_UTF8_CHECK_TWO_%out_len:
+    __char_two_%out_len = ule %code, CHAR_UTF8_TWO_MAX
+    br __char_two_%out_len -> L_CHAR_LEN_UTF8_TWO_%out_len, L_CHAR_LEN_UTF8_CHECK_THREE_%out_len
+
+L_CHAR_LEN_UTF8_CHECK_THREE_%out_len:
+    __char_three_%out_len = ule %code, CHAR_UTF8_THREE_MAX
+    br __char_three_%out_len -> L_CHAR_LEN_UTF8_THREE_%out_len, L_CHAR_LEN_UTF8_FOUR_%out_len
+
+L_CHAR_LEN_UTF8_ONE_%out_len:
+    %out_len = add 0, 1
+    !__char_one_%out_len
+    jmp L_CHAR_LEN_UTF8_END_%out_len
+
+L_CHAR_LEN_UTF8_TWO_%out_len:
+    %out_len = add 0, 2
+    !__char_two_%out_len
+    !__char_one_%out_len
+    jmp L_CHAR_LEN_UTF8_END_%out_len
+
+L_CHAR_LEN_UTF8_THREE_%out_len:
+    %out_len = add 0, 3
+    !__char_three_%out_len
+    !__char_two_%out_len
+    !__char_one_%out_len
+    jmp L_CHAR_LEN_UTF8_END_%out_len
+
+L_CHAR_LEN_UTF8_FOUR_%out_len:
+    %out_len = add 0, 4
+    !__char_three_%out_len
+    !__char_two_%out_len
+    !__char_one_%out_len
+
+L_CHAR_LEN_UTF8_END_%out_len:
+[END_MACRO]
+
+[MACRO] CHAR_LEN_UTF16 %out_len, %code
+    __char_bmp_%out_len = ule %code, CHAR_UTF8_THREE_MAX
+    br __char_bmp_%out_len -> L_CHAR_LEN_UTF16_ONE_%out_len, L_CHAR_LEN_UTF16_TWO_%out_len
+
+L_CHAR_LEN_UTF16_ONE_%out_len:
+    %out_len = add 0, 1
+    !__char_bmp_%out_len
+    jmp L_CHAR_LEN_UTF16_END_%out_len
+
+L_CHAR_LEN_UTF16_TWO_%out_len:
+    %out_len = add 0, 2
+    !__char_bmp_%out_len
+
+L_CHAR_LEN_UTF16_END_%out_len:
+[END_MACRO]
+
+[MACRO] CHAR_IS_ASCII %out_bool, %code
+    EXPAND ASCII_IS_ASCII %out_bool, %code
+[END_MACRO]
+
+[MACRO] CHAR_IS_ASCII_ALPHABETIC %out_bool, %code
+    EXPAND ASCII_IS_ALPHABETIC %out_bool, %code
+[END_MACRO]
+
+[MACRO] CHAR_IS_ASCII_ALPHANUMERIC %out_bool, %code
+    EXPAND ASCII_IS_ALPHANUMERIC %out_bool, %code
+[END_MACRO]
+
+[MACRO] CHAR_IS_ASCII_DIGIT %out_bool, %code
+    EXPAND ASCII_IS_DIGIT %out_bool, %code
+[END_MACRO]
+
+[MACRO] CHAR_IS_ASCII_HEXDIGIT %out_bool, %code
+    EXPAND ASCII_IS_HEXDIGIT %out_bool, %code
+[END_MACRO]
+
+[MACRO] CHAR_IS_ASCII_WHITESPACE %out_bool, %code
+    EXPAND ASCII_IS_WHITESPACE %out_bool, %code
+[END_MACRO]
+
+[MACRO] CHAR_TO_ASCII_UPPERCASE %out_code, %code
+    EXPAND ASCII_TO_UPPERCASE %out_code, %code
+[END_MACRO]
+
+[MACRO] CHAR_TO_ASCII_LOWERCASE %out_code, %code
+    EXPAND ASCII_TO_LOWERCASE %out_code, %code
+[END_MACRO]
+
+[MACRO] CHAR_EQ_IGNORE_ASCII_CASE %out_bool, %left_code, %right_code
+    EXPAND ASCII_EQ_IGNORE_CASE %out_bool, %left_code, %right_code
+[END_MACRO]
+
+[MACRO] CHAR_TO_DIGIT %out_ok, %out_value, %code, %radix
+    __char_radix_ge_%out_ok = uge %radix, 2
+    __char_radix_le_%out_ok = ule %radix, 36
+    __char_radix_ok_%out_ok = and __char_radix_ge_%out_ok, __char_radix_le_%out_ok
+    br __char_radix_ok_%out_ok -> L_CHAR_TO_DIGIT_CHECK_DEC_%out_ok, L_CHAR_TO_DIGIT_NONE_%out_ok
+
+L_CHAR_TO_DIGIT_CHECK_DEC_%out_ok:
+    __char_digit_ge_%out_ok = uge %code, 48
+    __char_digit_le_%out_ok = ule %code, 57
+    __char_digit_dec_%out_ok = and __char_digit_ge_%out_ok, __char_digit_le_%out_ok
+    br __char_digit_dec_%out_ok -> L_CHAR_TO_DIGIT_DEC_%out_ok, L_CHAR_TO_DIGIT_CHECK_ALPHA_%out_ok
+
+L_CHAR_TO_DIGIT_DEC_%out_ok:
+    __char_dec_value_%out_ok = sub %code, 48
+    __char_dec_in_radix_%out_ok = ult __char_dec_value_%out_ok, %radix
+    br __char_dec_in_radix_%out_ok -> L_CHAR_TO_DIGIT_DEC_OK_%out_ok, L_CHAR_TO_DIGIT_DEC_BAD_%out_ok
+
+L_CHAR_TO_DIGIT_DEC_OK_%out_ok:
+    %out_value = add __char_dec_value_%out_ok, 0
+    %out_ok = add 0, 1
+    !__char_dec_in_radix_%out_ok
+    !__char_dec_value_%out_ok
+    !__char_digit_dec_%out_ok
+    !__char_digit_le_%out_ok
+    !__char_digit_ge_%out_ok
+    !__char_radix_ok_%out_ok
+    !__char_radix_le_%out_ok
+    !__char_radix_ge_%out_ok
+    jmp L_CHAR_TO_DIGIT_END_%out_ok
+
+L_CHAR_TO_DIGIT_DEC_BAD_%out_ok:
+    !__char_dec_in_radix_%out_ok
+    !__char_dec_value_%out_ok
+    jmp L_CHAR_TO_DIGIT_NONE_AFTER_DEC_%out_ok
+
+L_CHAR_TO_DIGIT_CHECK_ALPHA_%out_ok:
+    EXPAND ASCII_TO_UPPERCASE __char_upper_%out_ok, %code
+    __char_alpha_ge_%out_ok = uge __char_upper_%out_ok, 65
+    __char_alpha_le_%out_ok = ule __char_upper_%out_ok, 90
+    __char_alpha_%out_ok = and __char_alpha_ge_%out_ok, __char_alpha_le_%out_ok
+    br __char_alpha_%out_ok -> L_CHAR_TO_DIGIT_ALPHA_%out_ok, L_CHAR_TO_DIGIT_NONE_ALPHA_%out_ok
+
+L_CHAR_TO_DIGIT_ALPHA_%out_ok:
+    __char_alpha_base_%out_ok = sub __char_upper_%out_ok, 65
+    __char_alpha_value_%out_ok = add __char_alpha_base_%out_ok, 10
+    __char_alpha_in_radix_%out_ok = ult __char_alpha_value_%out_ok, %radix
+    br __char_alpha_in_radix_%out_ok -> L_CHAR_TO_DIGIT_ALPHA_OK_%out_ok, L_CHAR_TO_DIGIT_ALPHA_BAD_%out_ok
+
+L_CHAR_TO_DIGIT_ALPHA_OK_%out_ok:
+    %out_value = add __char_alpha_value_%out_ok, 0
+    %out_ok = add 0, 1
+    !__char_alpha_in_radix_%out_ok
+    !__char_alpha_value_%out_ok
+    !__char_alpha_base_%out_ok
+    !__char_alpha_%out_ok
+    !__char_alpha_le_%out_ok
+    !__char_alpha_ge_%out_ok
+    !__char_upper_%out_ok
+    !__char_digit_dec_%out_ok
+    !__char_digit_le_%out_ok
+    !__char_digit_ge_%out_ok
+    !__char_radix_ok_%out_ok
+    !__char_radix_le_%out_ok
+    !__char_radix_ge_%out_ok
+    jmp L_CHAR_TO_DIGIT_END_%out_ok
+
+L_CHAR_TO_DIGIT_ALPHA_BAD_%out_ok:
+    !__char_alpha_in_radix_%out_ok
+    !__char_alpha_value_%out_ok
+    !__char_alpha_base_%out_ok
+    jmp L_CHAR_TO_DIGIT_NONE_ALPHA_%out_ok
+
+L_CHAR_TO_DIGIT_NONE_ALPHA_%out_ok:
+    !__char_alpha_%out_ok
+    !__char_alpha_le_%out_ok
+    !__char_alpha_ge_%out_ok
+    !__char_upper_%out_ok
+    jmp L_CHAR_TO_DIGIT_NONE_AFTER_DEC_%out_ok
+
+L_CHAR_TO_DIGIT_NONE_AFTER_DEC_%out_ok:
+    !__char_digit_dec_%out_ok
+    !__char_digit_le_%out_ok
+    !__char_digit_ge_%out_ok
+
+L_CHAR_TO_DIGIT_NONE_%out_ok:
+    %out_value = add 0, 0
+    %out_ok = add 0, 0
+    !__char_radix_ok_%out_ok
+    !__char_radix_le_%out_ok
+    !__char_radix_ge_%out_ok
+
+L_CHAR_TO_DIGIT_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_IS_DIGIT %out_bool, %code, %radix
+    EXPAND CHAR_TO_DIGIT __char_digit_ok_%out_bool, __char_digit_value_%out_bool, %code, %radix
+    %out_bool = add __char_digit_ok_%out_bool, 0
+    !__char_digit_value_%out_bool
+    !__char_digit_ok_%out_bool
+[END_MACRO]
+
+[MACRO] CHAR_FROM_DIGIT %out_ok, %out_char, %digit, %radix
+    __char_from_radix_ge_%out_ok = uge %radix, 2
+    __char_from_radix_le_%out_ok = ule %radix, 36
+    __char_from_radix_ok_%out_ok = and __char_from_radix_ge_%out_ok, __char_from_radix_le_%out_ok
+    __char_from_in_radix_%out_ok = ult %digit, %radix
+    __char_from_ok_%out_ok = and __char_from_radix_ok_%out_ok, __char_from_in_radix_%out_ok
+    br __char_from_ok_%out_ok -> L_CHAR_FROM_DIGIT_OK_%out_ok, L_CHAR_FROM_DIGIT_NONE_%out_ok
+
+L_CHAR_FROM_DIGIT_OK_%out_ok:
+    __char_from_decimal_%out_ok = ult %digit, 10
+    br __char_from_decimal_%out_ok -> L_CHAR_FROM_DIGIT_DEC_%out_ok, L_CHAR_FROM_DIGIT_ALPHA_%out_ok
+
+L_CHAR_FROM_DIGIT_DEC_%out_ok:
+    %out_char = add %digit, 48
+    %out_ok = add 0, 1
+    !__char_from_decimal_%out_ok
+    !__char_from_ok_%out_ok
+    !__char_from_in_radix_%out_ok
+    !__char_from_radix_ok_%out_ok
+    !__char_from_radix_le_%out_ok
+    !__char_from_radix_ge_%out_ok
+    jmp L_CHAR_FROM_DIGIT_END_%out_ok
+
+L_CHAR_FROM_DIGIT_ALPHA_%out_ok:
+    __char_from_alpha_base_%out_ok = sub %digit, 10
+    %out_char = add __char_from_alpha_base_%out_ok, 97
+    %out_ok = add 0, 1
+    !__char_from_alpha_base_%out_ok
+    !__char_from_decimal_%out_ok
+    !__char_from_ok_%out_ok
+    !__char_from_in_radix_%out_ok
+    !__char_from_radix_ok_%out_ok
+    !__char_from_radix_le_%out_ok
+    !__char_from_radix_ge_%out_ok
+    jmp L_CHAR_FROM_DIGIT_END_%out_ok
+
+L_CHAR_FROM_DIGIT_NONE_%out_ok:
+    %out_char = add 0, 0
+    %out_ok = add 0, 0
+    !__char_from_ok_%out_ok
+    !__char_from_in_radix_%out_ok
+    !__char_from_radix_ok_%out_ok
+    !__char_from_radix_le_%out_ok
+    !__char_from_radix_ge_%out_ok
+
+L_CHAR_FROM_DIGIT_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    EXPAND CHAR_IS_VALID_SCALAR __char_escape_valid_%out_ok, %code
+    br __char_escape_valid_%out_ok -> L_CHAR_ESCAPE_CHECK_1_%out_ok, L_CHAR_ESCAPE_FAIL_%out_ok
+
+L_CHAR_ESCAPE_CHECK_1_%out_ok:
+    __char_escape_le_1_%out_ok = ule %code, 15
+    br __char_escape_le_1_%out_ok -> L_CHAR_ESCAPE_WRITE_1_%out_ok, L_CHAR_ESCAPE_CHECK_2_%out_ok
+
+L_CHAR_ESCAPE_WRITE_1_%out_ok:
+    !__char_escape_le_1_%out_ok
+    !__char_escape_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE_1 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_ESCAPE_END_%out_ok
+
+L_CHAR_ESCAPE_CHECK_2_%out_ok:
+    __char_escape_le_2_%out_ok = ule %code, 255
+    br __char_escape_le_2_%out_ok -> L_CHAR_ESCAPE_WRITE_2_%out_ok, L_CHAR_ESCAPE_CHECK_3_%out_ok
+
+L_CHAR_ESCAPE_WRITE_2_%out_ok:
+    !__char_escape_le_2_%out_ok
+    !__char_escape_le_1_%out_ok
+    !__char_escape_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE_2 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_ESCAPE_END_%out_ok
+
+L_CHAR_ESCAPE_CHECK_3_%out_ok:
+    __char_escape_le_3_%out_ok = ule %code, 4095
+    br __char_escape_le_3_%out_ok -> L_CHAR_ESCAPE_WRITE_3_%out_ok, L_CHAR_ESCAPE_CHECK_4_%out_ok
+
+L_CHAR_ESCAPE_WRITE_3_%out_ok:
+    !__char_escape_le_3_%out_ok
+    !__char_escape_le_2_%out_ok
+    !__char_escape_le_1_%out_ok
+    !__char_escape_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE_3 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_ESCAPE_END_%out_ok
+
+L_CHAR_ESCAPE_CHECK_4_%out_ok:
+    __char_escape_le_4_%out_ok = ule %code, 65535
+    br __char_escape_le_4_%out_ok -> L_CHAR_ESCAPE_WRITE_4_%out_ok, L_CHAR_ESCAPE_CHECK_5_%out_ok
+
+L_CHAR_ESCAPE_WRITE_4_%out_ok:
+    !__char_escape_le_4_%out_ok
+    !__char_escape_le_3_%out_ok
+    !__char_escape_le_2_%out_ok
+    !__char_escape_le_1_%out_ok
+    !__char_escape_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE_4 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_ESCAPE_END_%out_ok
+
+L_CHAR_ESCAPE_CHECK_5_%out_ok:
+    __char_escape_le_5_%out_ok = ule %code, 1048575
+    br __char_escape_le_5_%out_ok -> L_CHAR_ESCAPE_WRITE_5_%out_ok, L_CHAR_ESCAPE_WRITE_6_%out_ok
+
+L_CHAR_ESCAPE_WRITE_5_%out_ok:
+    !__char_escape_le_5_%out_ok
+    !__char_escape_le_4_%out_ok
+    !__char_escape_le_3_%out_ok
+    !__char_escape_le_2_%out_ok
+    !__char_escape_le_1_%out_ok
+    !__char_escape_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE_5 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_ESCAPE_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE_6_%out_ok:
+    !__char_escape_le_5_%out_ok
+    !__char_escape_le_4_%out_ok
+    !__char_escape_le_3_%out_ok
+    !__char_escape_le_2_%out_ok
+    !__char_escape_le_1_%out_ok
+    !__char_escape_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE_6 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_ESCAPE_END_%out_ok
+
+L_CHAR_ESCAPE_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_valid_%out_ok
+
+L_CHAR_ESCAPE_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE_1 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_escape_fits1_%out_ok = uge %dst_len, 5
+    br __char_escape_fits1_%out_ok -> L_CHAR_ESCAPE_WRITE1_OK_%out_ok, L_CHAR_ESCAPE_WRITE1_FAIL_%out_ok
+
+L_CHAR_ESCAPE_WRITE1_OK_%out_ok:
+    __char_escape_n0_1_%out_ok = and %code, 15
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d0_1_%out_ok, __char_escape_n0_1_%out_ok
+    store %dst_ptr+0, CHAR_ESCAPE_BACKSLASH as u8
+    __char_escape_p1_1_%out_ok = ptr_add %dst_ptr, 1
+    __char_escape_p2_1_%out_ok = ptr_add %dst_ptr, 2
+    __char_escape_p3_1_%out_ok = ptr_add %dst_ptr, 3
+    __char_escape_p4_1_%out_ok = ptr_add %dst_ptr, 4
+    store __char_escape_p1_1_%out_ok+0, CHAR_ESCAPE_U as u8
+    store __char_escape_p2_1_%out_ok+0, CHAR_ESCAPE_LBRACE as u8
+    store __char_escape_p3_1_%out_ok+0, __char_escape_d0_1_%out_ok as u8
+    store __char_escape_p4_1_%out_ok+0, CHAR_ESCAPE_RBRACE as u8
+    %out_len = add 0, 5
+    %out_ok = add 0, 1
+    !__char_escape_p4_1_%out_ok
+    !__char_escape_p3_1_%out_ok
+    !__char_escape_p2_1_%out_ok
+    !__char_escape_p1_1_%out_ok
+    !__char_escape_d0_1_%out_ok
+    !__char_escape_n0_1_%out_ok
+    !__char_escape_fits1_%out_ok
+    jmp L_CHAR_ESCAPE_WRITE1_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE1_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_fits1_%out_ok
+
+L_CHAR_ESCAPE_WRITE1_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE_2 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_escape_fits2_%out_ok = uge %dst_len, 6
+    br __char_escape_fits2_%out_ok -> L_CHAR_ESCAPE_WRITE2_OK_%out_ok, L_CHAR_ESCAPE_WRITE2_FAIL_%out_ok
+
+L_CHAR_ESCAPE_WRITE2_OK_%out_ok:
+    __char_escape_s4_2_%out_ok = shr %code, 4
+    __char_escape_n1_2_%out_ok = and __char_escape_s4_2_%out_ok, 15
+    __char_escape_n0_2_%out_ok = and %code, 15
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d1_2_%out_ok, __char_escape_n1_2_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d0_2_%out_ok, __char_escape_n0_2_%out_ok
+    store %dst_ptr+0, CHAR_ESCAPE_BACKSLASH as u8
+    __char_escape_p1_2_%out_ok = ptr_add %dst_ptr, 1
+    __char_escape_p2_2_%out_ok = ptr_add %dst_ptr, 2
+    __char_escape_p3_2_%out_ok = ptr_add %dst_ptr, 3
+    __char_escape_p4_2_%out_ok = ptr_add %dst_ptr, 4
+    __char_escape_p5_2_%out_ok = ptr_add %dst_ptr, 5
+    store __char_escape_p1_2_%out_ok+0, CHAR_ESCAPE_U as u8
+    store __char_escape_p2_2_%out_ok+0, CHAR_ESCAPE_LBRACE as u8
+    store __char_escape_p3_2_%out_ok+0, __char_escape_d1_2_%out_ok as u8
+    store __char_escape_p4_2_%out_ok+0, __char_escape_d0_2_%out_ok as u8
+    store __char_escape_p5_2_%out_ok+0, CHAR_ESCAPE_RBRACE as u8
+    %out_len = add 0, 6
+    %out_ok = add 0, 1
+    !__char_escape_p5_2_%out_ok
+    !__char_escape_p4_2_%out_ok
+    !__char_escape_p3_2_%out_ok
+    !__char_escape_p2_2_%out_ok
+    !__char_escape_p1_2_%out_ok
+    !__char_escape_d0_2_%out_ok
+    !__char_escape_d1_2_%out_ok
+    !__char_escape_n0_2_%out_ok
+    !__char_escape_n1_2_%out_ok
+    !__char_escape_s4_2_%out_ok
+    !__char_escape_fits2_%out_ok
+    jmp L_CHAR_ESCAPE_WRITE2_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE2_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_fits2_%out_ok
+
+L_CHAR_ESCAPE_WRITE2_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE_3 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_escape_fits3_%out_ok = uge %dst_len, 7
+    br __char_escape_fits3_%out_ok -> L_CHAR_ESCAPE_WRITE3_OK_%out_ok, L_CHAR_ESCAPE_WRITE3_FAIL_%out_ok
+
+L_CHAR_ESCAPE_WRITE3_OK_%out_ok:
+    __char_escape_s8_3_%out_ok = shr %code, 8
+    __char_escape_s4_3_%out_ok = shr %code, 4
+    __char_escape_n2_3_%out_ok = and __char_escape_s8_3_%out_ok, 15
+    __char_escape_n1_3_%out_ok = and __char_escape_s4_3_%out_ok, 15
+    __char_escape_n0_3_%out_ok = and %code, 15
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d2_3_%out_ok, __char_escape_n2_3_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d1_3_%out_ok, __char_escape_n1_3_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d0_3_%out_ok, __char_escape_n0_3_%out_ok
+    store %dst_ptr+0, CHAR_ESCAPE_BACKSLASH as u8
+    __char_escape_p1_3_%out_ok = ptr_add %dst_ptr, 1
+    __char_escape_p2_3_%out_ok = ptr_add %dst_ptr, 2
+    __char_escape_p3_3_%out_ok = ptr_add %dst_ptr, 3
+    __char_escape_p4_3_%out_ok = ptr_add %dst_ptr, 4
+    __char_escape_p5_3_%out_ok = ptr_add %dst_ptr, 5
+    __char_escape_p6_3_%out_ok = ptr_add %dst_ptr, 6
+    store __char_escape_p1_3_%out_ok+0, CHAR_ESCAPE_U as u8
+    store __char_escape_p2_3_%out_ok+0, CHAR_ESCAPE_LBRACE as u8
+    store __char_escape_p3_3_%out_ok+0, __char_escape_d2_3_%out_ok as u8
+    store __char_escape_p4_3_%out_ok+0, __char_escape_d1_3_%out_ok as u8
+    store __char_escape_p5_3_%out_ok+0, __char_escape_d0_3_%out_ok as u8
+    store __char_escape_p6_3_%out_ok+0, CHAR_ESCAPE_RBRACE as u8
+    %out_len = add 0, 7
+    %out_ok = add 0, 1
+    !__char_escape_p6_3_%out_ok
+    !__char_escape_p5_3_%out_ok
+    !__char_escape_p4_3_%out_ok
+    !__char_escape_p3_3_%out_ok
+    !__char_escape_p2_3_%out_ok
+    !__char_escape_p1_3_%out_ok
+    !__char_escape_d0_3_%out_ok
+    !__char_escape_d1_3_%out_ok
+    !__char_escape_d2_3_%out_ok
+    !__char_escape_n0_3_%out_ok
+    !__char_escape_n1_3_%out_ok
+    !__char_escape_n2_3_%out_ok
+    !__char_escape_s4_3_%out_ok
+    !__char_escape_s8_3_%out_ok
+    !__char_escape_fits3_%out_ok
+    jmp L_CHAR_ESCAPE_WRITE3_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE3_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_fits3_%out_ok
+
+L_CHAR_ESCAPE_WRITE3_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE_4 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_escape_fits4_%out_ok = uge %dst_len, 8
+    br __char_escape_fits4_%out_ok -> L_CHAR_ESCAPE_WRITE4_OK_%out_ok, L_CHAR_ESCAPE_WRITE4_FAIL_%out_ok
+
+L_CHAR_ESCAPE_WRITE4_OK_%out_ok:
+    __char_escape_s12_4_%out_ok = shr %code, 12
+    __char_escape_s8_4_%out_ok = shr %code, 8
+    __char_escape_s4_4_%out_ok = shr %code, 4
+    __char_escape_n3_4_%out_ok = and __char_escape_s12_4_%out_ok, 15
+    __char_escape_n2_4_%out_ok = and __char_escape_s8_4_%out_ok, 15
+    __char_escape_n1_4_%out_ok = and __char_escape_s4_4_%out_ok, 15
+    __char_escape_n0_4_%out_ok = and %code, 15
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d3_4_%out_ok, __char_escape_n3_4_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d2_4_%out_ok, __char_escape_n2_4_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d1_4_%out_ok, __char_escape_n1_4_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d0_4_%out_ok, __char_escape_n0_4_%out_ok
+    store %dst_ptr+0, CHAR_ESCAPE_BACKSLASH as u8
+    __char_escape_p1_4_%out_ok = ptr_add %dst_ptr, 1
+    __char_escape_p2_4_%out_ok = ptr_add %dst_ptr, 2
+    __char_escape_p3_4_%out_ok = ptr_add %dst_ptr, 3
+    __char_escape_p4_4_%out_ok = ptr_add %dst_ptr, 4
+    __char_escape_p5_4_%out_ok = ptr_add %dst_ptr, 5
+    __char_escape_p6_4_%out_ok = ptr_add %dst_ptr, 6
+    __char_escape_p7_4_%out_ok = ptr_add %dst_ptr, 7
+    store __char_escape_p1_4_%out_ok+0, CHAR_ESCAPE_U as u8
+    store __char_escape_p2_4_%out_ok+0, CHAR_ESCAPE_LBRACE as u8
+    store __char_escape_p3_4_%out_ok+0, __char_escape_d3_4_%out_ok as u8
+    store __char_escape_p4_4_%out_ok+0, __char_escape_d2_4_%out_ok as u8
+    store __char_escape_p5_4_%out_ok+0, __char_escape_d1_4_%out_ok as u8
+    store __char_escape_p6_4_%out_ok+0, __char_escape_d0_4_%out_ok as u8
+    store __char_escape_p7_4_%out_ok+0, CHAR_ESCAPE_RBRACE as u8
+    %out_len = add 0, 8
+    %out_ok = add 0, 1
+    !__char_escape_p7_4_%out_ok
+    !__char_escape_p6_4_%out_ok
+    !__char_escape_p5_4_%out_ok
+    !__char_escape_p4_4_%out_ok
+    !__char_escape_p3_4_%out_ok
+    !__char_escape_p2_4_%out_ok
+    !__char_escape_p1_4_%out_ok
+    !__char_escape_d0_4_%out_ok
+    !__char_escape_d1_4_%out_ok
+    !__char_escape_d2_4_%out_ok
+    !__char_escape_d3_4_%out_ok
+    !__char_escape_n0_4_%out_ok
+    !__char_escape_n1_4_%out_ok
+    !__char_escape_n2_4_%out_ok
+    !__char_escape_n3_4_%out_ok
+    !__char_escape_s4_4_%out_ok
+    !__char_escape_s8_4_%out_ok
+    !__char_escape_s12_4_%out_ok
+    !__char_escape_fits4_%out_ok
+    jmp L_CHAR_ESCAPE_WRITE4_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE4_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_fits4_%out_ok
+
+L_CHAR_ESCAPE_WRITE4_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE_5 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_escape_fits5_%out_ok = uge %dst_len, 9
+    br __char_escape_fits5_%out_ok -> L_CHAR_ESCAPE_WRITE5_OK_%out_ok, L_CHAR_ESCAPE_WRITE5_FAIL_%out_ok
+
+L_CHAR_ESCAPE_WRITE5_OK_%out_ok:
+    __char_escape_s16_5_%out_ok = shr %code, 16
+    __char_escape_s12_5_%out_ok = shr %code, 12
+    __char_escape_s8_5_%out_ok = shr %code, 8
+    __char_escape_s4_5_%out_ok = shr %code, 4
+    __char_escape_n4_5_%out_ok = and __char_escape_s16_5_%out_ok, 15
+    __char_escape_n3_5_%out_ok = and __char_escape_s12_5_%out_ok, 15
+    __char_escape_n2_5_%out_ok = and __char_escape_s8_5_%out_ok, 15
+    __char_escape_n1_5_%out_ok = and __char_escape_s4_5_%out_ok, 15
+    __char_escape_n0_5_%out_ok = and %code, 15
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d4_5_%out_ok, __char_escape_n4_5_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d3_5_%out_ok, __char_escape_n3_5_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d2_5_%out_ok, __char_escape_n2_5_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d1_5_%out_ok, __char_escape_n1_5_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d0_5_%out_ok, __char_escape_n0_5_%out_ok
+    store %dst_ptr+0, CHAR_ESCAPE_BACKSLASH as u8
+    __char_escape_p1_5_%out_ok = ptr_add %dst_ptr, 1
+    __char_escape_p2_5_%out_ok = ptr_add %dst_ptr, 2
+    __char_escape_p3_5_%out_ok = ptr_add %dst_ptr, 3
+    __char_escape_p4_5_%out_ok = ptr_add %dst_ptr, 4
+    __char_escape_p5_5_%out_ok = ptr_add %dst_ptr, 5
+    __char_escape_p6_5_%out_ok = ptr_add %dst_ptr, 6
+    __char_escape_p7_5_%out_ok = ptr_add %dst_ptr, 7
+    __char_escape_p8_5_%out_ok = ptr_add %dst_ptr, 8
+    store __char_escape_p1_5_%out_ok+0, CHAR_ESCAPE_U as u8
+    store __char_escape_p2_5_%out_ok+0, CHAR_ESCAPE_LBRACE as u8
+    store __char_escape_p3_5_%out_ok+0, __char_escape_d4_5_%out_ok as u8
+    store __char_escape_p4_5_%out_ok+0, __char_escape_d3_5_%out_ok as u8
+    store __char_escape_p5_5_%out_ok+0, __char_escape_d2_5_%out_ok as u8
+    store __char_escape_p6_5_%out_ok+0, __char_escape_d1_5_%out_ok as u8
+    store __char_escape_p7_5_%out_ok+0, __char_escape_d0_5_%out_ok as u8
+    store __char_escape_p8_5_%out_ok+0, CHAR_ESCAPE_RBRACE as u8
+    %out_len = add 0, 9
+    %out_ok = add 0, 1
+    !__char_escape_p8_5_%out_ok
+    !__char_escape_p7_5_%out_ok
+    !__char_escape_p6_5_%out_ok
+    !__char_escape_p5_5_%out_ok
+    !__char_escape_p4_5_%out_ok
+    !__char_escape_p3_5_%out_ok
+    !__char_escape_p2_5_%out_ok
+    !__char_escape_p1_5_%out_ok
+    !__char_escape_d0_5_%out_ok
+    !__char_escape_d1_5_%out_ok
+    !__char_escape_d2_5_%out_ok
+    !__char_escape_d3_5_%out_ok
+    !__char_escape_d4_5_%out_ok
+    !__char_escape_n0_5_%out_ok
+    !__char_escape_n1_5_%out_ok
+    !__char_escape_n2_5_%out_ok
+    !__char_escape_n3_5_%out_ok
+    !__char_escape_n4_5_%out_ok
+    !__char_escape_s4_5_%out_ok
+    !__char_escape_s8_5_%out_ok
+    !__char_escape_s12_5_%out_ok
+    !__char_escape_s16_5_%out_ok
+    !__char_escape_fits5_%out_ok
+    jmp L_CHAR_ESCAPE_WRITE5_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE5_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_fits5_%out_ok
+
+L_CHAR_ESCAPE_WRITE5_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_UNICODE_WRITE_6 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_escape_fits6_%out_ok = uge %dst_len, 10
+    br __char_escape_fits6_%out_ok -> L_CHAR_ESCAPE_WRITE6_OK_%out_ok, L_CHAR_ESCAPE_WRITE6_FAIL_%out_ok
+
+L_CHAR_ESCAPE_WRITE6_OK_%out_ok:
+    __char_escape_s20_6_%out_ok = shr %code, 20
+    __char_escape_s16_6_%out_ok = shr %code, 16
+    __char_escape_s12_6_%out_ok = shr %code, 12
+    __char_escape_s8_6_%out_ok = shr %code, 8
+    __char_escape_s4_6_%out_ok = shr %code, 4
+    __char_escape_n5_6_%out_ok = and __char_escape_s20_6_%out_ok, 15
+    __char_escape_n4_6_%out_ok = and __char_escape_s16_6_%out_ok, 15
+    __char_escape_n3_6_%out_ok = and __char_escape_s12_6_%out_ok, 15
+    __char_escape_n2_6_%out_ok = and __char_escape_s8_6_%out_ok, 15
+    __char_escape_n1_6_%out_ok = and __char_escape_s4_6_%out_ok, 15
+    __char_escape_n0_6_%out_ok = and %code, 15
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d5_6_%out_ok, __char_escape_n5_6_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d4_6_%out_ok, __char_escape_n4_6_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d3_6_%out_ok, __char_escape_n3_6_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d2_6_%out_ok, __char_escape_n2_6_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d1_6_%out_ok, __char_escape_n1_6_%out_ok
+    EXPAND ASCII_NIBBLE_TO_LOWER_HEX __char_escape_d0_6_%out_ok, __char_escape_n0_6_%out_ok
+    store %dst_ptr+0, CHAR_ESCAPE_BACKSLASH as u8
+    __char_escape_p1_6_%out_ok = ptr_add %dst_ptr, 1
+    __char_escape_p2_6_%out_ok = ptr_add %dst_ptr, 2
+    __char_escape_p3_6_%out_ok = ptr_add %dst_ptr, 3
+    __char_escape_p4_6_%out_ok = ptr_add %dst_ptr, 4
+    __char_escape_p5_6_%out_ok = ptr_add %dst_ptr, 5
+    __char_escape_p6_6_%out_ok = ptr_add %dst_ptr, 6
+    __char_escape_p7_6_%out_ok = ptr_add %dst_ptr, 7
+    __char_escape_p8_6_%out_ok = ptr_add %dst_ptr, 8
+    __char_escape_p9_6_%out_ok = ptr_add %dst_ptr, 9
+    store __char_escape_p1_6_%out_ok+0, CHAR_ESCAPE_U as u8
+    store __char_escape_p2_6_%out_ok+0, CHAR_ESCAPE_LBRACE as u8
+    store __char_escape_p3_6_%out_ok+0, __char_escape_d5_6_%out_ok as u8
+    store __char_escape_p4_6_%out_ok+0, __char_escape_d4_6_%out_ok as u8
+    store __char_escape_p5_6_%out_ok+0, __char_escape_d3_6_%out_ok as u8
+    store __char_escape_p6_6_%out_ok+0, __char_escape_d2_6_%out_ok as u8
+    store __char_escape_p7_6_%out_ok+0, __char_escape_d1_6_%out_ok as u8
+    store __char_escape_p8_6_%out_ok+0, __char_escape_d0_6_%out_ok as u8
+    store __char_escape_p9_6_%out_ok+0, CHAR_ESCAPE_RBRACE as u8
+    %out_len = add 0, 10
+    %out_ok = add 0, 1
+    !__char_escape_p9_6_%out_ok
+    !__char_escape_p8_6_%out_ok
+    !__char_escape_p7_6_%out_ok
+    !__char_escape_p6_6_%out_ok
+    !__char_escape_p5_6_%out_ok
+    !__char_escape_p4_6_%out_ok
+    !__char_escape_p3_6_%out_ok
+    !__char_escape_p2_6_%out_ok
+    !__char_escape_p1_6_%out_ok
+    !__char_escape_d0_6_%out_ok
+    !__char_escape_d1_6_%out_ok
+    !__char_escape_d2_6_%out_ok
+    !__char_escape_d3_6_%out_ok
+    !__char_escape_d4_6_%out_ok
+    !__char_escape_d5_6_%out_ok
+    !__char_escape_n0_6_%out_ok
+    !__char_escape_n1_6_%out_ok
+    !__char_escape_n2_6_%out_ok
+    !__char_escape_n3_6_%out_ok
+    !__char_escape_n4_6_%out_ok
+    !__char_escape_n5_6_%out_ok
+    !__char_escape_s4_6_%out_ok
+    !__char_escape_s8_6_%out_ok
+    !__char_escape_s12_6_%out_ok
+    !__char_escape_s16_6_%out_ok
+    !__char_escape_s20_6_%out_ok
+    !__char_escape_fits6_%out_ok
+    jmp L_CHAR_ESCAPE_WRITE6_END_%out_ok
+
+L_CHAR_ESCAPE_WRITE6_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_escape_fits6_%out_ok
+
+L_CHAR_ESCAPE_WRITE6_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_DEFAULT_WRITE %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_default_pair_slot_%out_ok = stack_alloc 8
+    EXPAND CHAR_IS_VALID_SCALAR __char_default_valid_%out_ok, %code
+    br __char_default_valid_%out_ok -> L_CHAR_DEFAULT_CHECK_TAB_%out_ok, L_CHAR_DEFAULT_FAIL_%out_ok
+
+L_CHAR_DEFAULT_CHECK_TAB_%out_ok:
+    __char_default_is_tab_%out_ok = eq %code, ASCII_TAB
+    br __char_default_is_tab_%out_ok -> L_CHAR_DEFAULT_TAB_%out_ok, L_CHAR_DEFAULT_CHECK_LF_%out_ok
+
+L_CHAR_DEFAULT_CHECK_LF_%out_ok:
+    __char_default_is_lf_%out_ok = eq %code, ASCII_LF
+    br __char_default_is_lf_%out_ok -> L_CHAR_DEFAULT_LF_%out_ok, L_CHAR_DEFAULT_CHECK_CR_%out_ok
+
+L_CHAR_DEFAULT_CHECK_CR_%out_ok:
+    __char_default_is_cr_%out_ok = eq %code, ASCII_CR
+    br __char_default_is_cr_%out_ok -> L_CHAR_DEFAULT_CR_%out_ok, L_CHAR_DEFAULT_CHECK_BACKSLASH_%out_ok
+
+L_CHAR_DEFAULT_CHECK_BACKSLASH_%out_ok:
+    __char_default_is_backslash_%out_ok = eq %code, ASCII_BACKSLASH
+    br __char_default_is_backslash_%out_ok -> L_CHAR_DEFAULT_BACKSLASH_%out_ok, L_CHAR_DEFAULT_CHECK_SINGLE_%out_ok
+
+L_CHAR_DEFAULT_CHECK_SINGLE_%out_ok:
+    __char_default_is_single_%out_ok = eq %code, ASCII_SINGLE_QUOTE
+    br __char_default_is_single_%out_ok -> L_CHAR_DEFAULT_SINGLE_%out_ok, L_CHAR_DEFAULT_CHECK_DOUBLE_%out_ok
+
+L_CHAR_DEFAULT_CHECK_DOUBLE_%out_ok:
+    __char_default_is_double_%out_ok = eq %code, ASCII_DOUBLE_QUOTE
+    br __char_default_is_double_%out_ok -> L_CHAR_DEFAULT_DOUBLE_%out_ok, L_CHAR_DEFAULT_CHECK_PRINTABLE_%out_ok
+
+L_CHAR_DEFAULT_CHECK_PRINTABLE_%out_ok:
+    __char_default_ge_space_%out_ok = uge %code, ASCII_SPACE
+    __char_default_le_tilde_%out_ok = ule %code, ASCII_GRAPHIC_MAX
+    __char_default_printable_%out_ok = and __char_default_ge_space_%out_ok, __char_default_le_tilde_%out_ok
+    br __char_default_printable_%out_ok -> L_CHAR_DEFAULT_RAW_%out_ok, L_CHAR_DEFAULT_UNICODE_%out_ok
+
+L_CHAR_DEFAULT_TAB_%out_ok:
+    store __char_default_pair_slot_%out_ok+0, ASCII_ESCAPE_T as u8
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_PAIR_%out_ok
+
+L_CHAR_DEFAULT_LF_%out_ok:
+    store __char_default_pair_slot_%out_ok+0, ASCII_ESCAPE_N as u8
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_PAIR_%out_ok
+
+L_CHAR_DEFAULT_CR_%out_ok:
+    store __char_default_pair_slot_%out_ok+0, ASCII_ESCAPE_R as u8
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_PAIR_%out_ok
+
+L_CHAR_DEFAULT_BACKSLASH_%out_ok:
+    store __char_default_pair_slot_%out_ok+0, ASCII_BACKSLASH as u8
+    !__char_default_is_backslash_%out_ok
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_PAIR_%out_ok
+
+L_CHAR_DEFAULT_SINGLE_%out_ok:
+    store __char_default_pair_slot_%out_ok+0, ASCII_SINGLE_QUOTE as u8
+    !__char_default_is_single_%out_ok
+    !__char_default_is_backslash_%out_ok
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_PAIR_%out_ok
+
+L_CHAR_DEFAULT_DOUBLE_%out_ok:
+    store __char_default_pair_slot_%out_ok+0, ASCII_DOUBLE_QUOTE as u8
+    !__char_default_is_double_%out_ok
+    !__char_default_is_single_%out_ok
+    !__char_default_is_backslash_%out_ok
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_PAIR_%out_ok
+
+L_CHAR_DEFAULT_PAIR_%out_ok:
+    __char_default_pair_byte_%out_ok = load __char_default_pair_slot_%out_ok+0 as u8
+    EXPAND ASCII_ESCAPE_DEFAULT_WRITE_PAIR %out_ok, %out_len, %dst_ptr, %dst_len, __char_default_pair_byte_%out_ok
+    !__char_default_pair_byte_%out_ok
+    jmp L_CHAR_DEFAULT_END_%out_ok
+
+L_CHAR_DEFAULT_RAW_%out_ok:
+    __char_default_raw_fits_%out_ok = uge %dst_len, 1
+    br __char_default_raw_fits_%out_ok -> L_CHAR_DEFAULT_RAW_WRITE_%out_ok, L_CHAR_DEFAULT_RAW_FAIL_%out_ok
+
+L_CHAR_DEFAULT_RAW_WRITE_%out_ok:
+    store %dst_ptr+0, %code as u8
+    %out_len = add 0, 1
+    %out_ok = add 0, 1
+    !__char_default_raw_fits_%out_ok
+    !__char_default_printable_%out_ok
+    !__char_default_le_tilde_%out_ok
+    !__char_default_ge_space_%out_ok
+    !__char_default_is_double_%out_ok
+    !__char_default_is_single_%out_ok
+    !__char_default_is_backslash_%out_ok
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_END_%out_ok
+
+L_CHAR_DEFAULT_RAW_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_default_raw_fits_%out_ok
+    !__char_default_printable_%out_ok
+    !__char_default_le_tilde_%out_ok
+    !__char_default_ge_space_%out_ok
+    !__char_default_is_double_%out_ok
+    !__char_default_is_single_%out_ok
+    !__char_default_is_backslash_%out_ok
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    jmp L_CHAR_DEFAULT_END_%out_ok
+
+L_CHAR_DEFAULT_UNICODE_%out_ok:
+    !__char_default_printable_%out_ok
+    !__char_default_le_tilde_%out_ok
+    !__char_default_ge_space_%out_ok
+    !__char_default_is_double_%out_ok
+    !__char_default_is_single_%out_ok
+    !__char_default_is_backslash_%out_ok
+    !__char_default_is_cr_%out_ok
+    !__char_default_is_lf_%out_ok
+    !__char_default_is_tab_%out_ok
+    !__char_default_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_DEFAULT_END_%out_ok
+
+L_CHAR_DEFAULT_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_default_valid_%out_ok
+
+L_CHAR_DEFAULT_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_TRY_ENCODE_UTF8 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    EXPAND CHAR_IS_VALID_SCALAR __char_enc_valid_%out_ok, %code
+    EXPAND CHAR_LEN_UTF8 __char_enc_len_%out_ok, %code
+    __char_enc_fits_%out_ok = uge %dst_len, __char_enc_len_%out_ok
+    __char_enc_can_%out_ok = and __char_enc_valid_%out_ok, __char_enc_fits_%out_ok
+    br __char_enc_can_%out_ok -> L_CHAR_ENC_DISPATCH_%out_ok, L_CHAR_ENC_FAIL_%out_ok
+
+L_CHAR_ENC_DISPATCH_%out_ok:
+    __char_enc_is_one_%out_ok = eq __char_enc_len_%out_ok, 1
+    br __char_enc_is_one_%out_ok -> L_CHAR_ENC_ONE_%out_ok, L_CHAR_ENC_CHECK_TWO_%out_ok
+
+L_CHAR_ENC_CHECK_TWO_%out_ok:
+    __char_enc_is_two_%out_ok = eq __char_enc_len_%out_ok, 2
+    br __char_enc_is_two_%out_ok -> L_CHAR_ENC_TWO_%out_ok, L_CHAR_ENC_CHECK_THREE_%out_ok
+
+L_CHAR_ENC_CHECK_THREE_%out_ok:
+    __char_enc_is_three_%out_ok = eq __char_enc_len_%out_ok, 3
+    br __char_enc_is_three_%out_ok -> L_CHAR_ENC_THREE_%out_ok, L_CHAR_ENC_FOUR_%out_ok
+
+L_CHAR_ENC_ONE_%out_ok:
+    store %dst_ptr+0, %code as u8
+    %out_len = add 0, 1
+    %out_ok = add 0, 1
+    !__char_enc_is_one_%out_ok
+    !__char_enc_can_%out_ok
+    !__char_enc_fits_%out_ok
+    !__char_enc_len_%out_ok
+    !__char_enc_valid_%out_ok
+    jmp L_CHAR_ENC_END_%out_ok
+
+L_CHAR_ENC_TWO_%out_ok:
+    __char_enc_two_tail_raw_%out_ok = and %code, CHAR_UTF8_CONT_MASK
+    __char_enc_two_tail_%out_ok = or __char_enc_two_tail_raw_%out_ok, CHAR_UTF8_CONT_TAG
+    __char_enc_two_head_raw_%out_ok = shr %code, 6
+    __char_enc_two_head_%out_ok = or __char_enc_two_head_raw_%out_ok, CHAR_UTF8_TWO_TAG
+    store %dst_ptr+0, __char_enc_two_head_%out_ok as u8
+    __char_enc_two_p1_%out_ok = ptr_add %dst_ptr, 1
+    store __char_enc_two_p1_%out_ok+0, __char_enc_two_tail_%out_ok as u8
+    %out_len = add 0, 2
+    %out_ok = add 0, 1
+    !__char_enc_two_p1_%out_ok
+    !__char_enc_two_head_%out_ok
+    !__char_enc_two_head_raw_%out_ok
+    !__char_enc_two_tail_%out_ok
+    !__char_enc_two_tail_raw_%out_ok
+    !__char_enc_is_two_%out_ok
+    !__char_enc_is_one_%out_ok
+    !__char_enc_can_%out_ok
+    !__char_enc_fits_%out_ok
+    !__char_enc_len_%out_ok
+    !__char_enc_valid_%out_ok
+    jmp L_CHAR_ENC_END_%out_ok
+
+L_CHAR_ENC_THREE_%out_ok:
+    __char_enc_three_tail1_raw_%out_ok = and %code, CHAR_UTF8_CONT_MASK
+    __char_enc_three_tail1_%out_ok = or __char_enc_three_tail1_raw_%out_ok, CHAR_UTF8_CONT_TAG
+    __char_enc_three_mid_source_%out_ok = shr %code, 6
+    __char_enc_three_tail2_raw_%out_ok = and __char_enc_three_mid_source_%out_ok, CHAR_UTF8_CONT_MASK
+    __char_enc_three_tail2_%out_ok = or __char_enc_three_tail2_raw_%out_ok, CHAR_UTF8_CONT_TAG
+    __char_enc_three_head_raw_%out_ok = shr %code, 12
+    __char_enc_three_head_%out_ok = or __char_enc_three_head_raw_%out_ok, CHAR_UTF8_THREE_TAG
+    store %dst_ptr+0, __char_enc_three_head_%out_ok as u8
+    __char_enc_three_p1_%out_ok = ptr_add %dst_ptr, 1
+    __char_enc_three_p2_%out_ok = ptr_add %dst_ptr, 2
+    store __char_enc_three_p1_%out_ok+0, __char_enc_three_tail2_%out_ok as u8
+    store __char_enc_three_p2_%out_ok+0, __char_enc_three_tail1_%out_ok as u8
+    %out_len = add 0, 3
+    %out_ok = add 0, 1
+    !__char_enc_three_p2_%out_ok
+    !__char_enc_three_p1_%out_ok
+    !__char_enc_three_head_%out_ok
+    !__char_enc_three_head_raw_%out_ok
+    !__char_enc_three_tail2_%out_ok
+    !__char_enc_three_tail2_raw_%out_ok
+    !__char_enc_three_mid_source_%out_ok
+    !__char_enc_three_tail1_%out_ok
+    !__char_enc_three_tail1_raw_%out_ok
+    !__char_enc_is_three_%out_ok
+    !__char_enc_is_two_%out_ok
+    !__char_enc_is_one_%out_ok
+    !__char_enc_can_%out_ok
+    !__char_enc_fits_%out_ok
+    !__char_enc_len_%out_ok
+    !__char_enc_valid_%out_ok
+    jmp L_CHAR_ENC_END_%out_ok
+
+L_CHAR_ENC_FOUR_%out_ok:
+    __char_enc_four_tail1_raw_%out_ok = and %code, CHAR_UTF8_CONT_MASK
+    __char_enc_four_tail1_%out_ok = or __char_enc_four_tail1_raw_%out_ok, CHAR_UTF8_CONT_TAG
+    __char_enc_four_s6_%out_ok = shr %code, 6
+    __char_enc_four_tail2_raw_%out_ok = and __char_enc_four_s6_%out_ok, CHAR_UTF8_CONT_MASK
+    __char_enc_four_tail2_%out_ok = or __char_enc_four_tail2_raw_%out_ok, CHAR_UTF8_CONT_TAG
+    __char_enc_four_s12_%out_ok = shr %code, 12
+    __char_enc_four_tail3_raw_%out_ok = and __char_enc_four_s12_%out_ok, CHAR_UTF8_CONT_MASK
+    __char_enc_four_tail3_%out_ok = or __char_enc_four_tail3_raw_%out_ok, CHAR_UTF8_CONT_TAG
+    __char_enc_four_head_raw_%out_ok = shr %code, 18
+    __char_enc_four_head_%out_ok = or __char_enc_four_head_raw_%out_ok, CHAR_UTF8_FOUR_TAG
+    store %dst_ptr+0, __char_enc_four_head_%out_ok as u8
+    __char_enc_four_p1_%out_ok = ptr_add %dst_ptr, 1
+    __char_enc_four_p2_%out_ok = ptr_add %dst_ptr, 2
+    __char_enc_four_p3_%out_ok = ptr_add %dst_ptr, 3
+    store __char_enc_four_p1_%out_ok+0, __char_enc_four_tail3_%out_ok as u8
+    store __char_enc_four_p2_%out_ok+0, __char_enc_four_tail2_%out_ok as u8
+    store __char_enc_four_p3_%out_ok+0, __char_enc_four_tail1_%out_ok as u8
+    %out_len = add 0, 4
+    %out_ok = add 0, 1
+    !__char_enc_four_p3_%out_ok
+    !__char_enc_four_p2_%out_ok
+    !__char_enc_four_p1_%out_ok
+    !__char_enc_four_head_%out_ok
+    !__char_enc_four_head_raw_%out_ok
+    !__char_enc_four_tail3_%out_ok
+    !__char_enc_four_tail3_raw_%out_ok
+    !__char_enc_four_s12_%out_ok
+    !__char_enc_four_tail2_%out_ok
+    !__char_enc_four_tail2_raw_%out_ok
+    !__char_enc_four_s6_%out_ok
+    !__char_enc_four_tail1_%out_ok
+    !__char_enc_four_tail1_raw_%out_ok
+    !__char_enc_is_three_%out_ok
+    !__char_enc_is_two_%out_ok
+    !__char_enc_is_one_%out_ok
+    !__char_enc_can_%out_ok
+    !__char_enc_fits_%out_ok
+    !__char_enc_len_%out_ok
+    !__char_enc_valid_%out_ok
+    jmp L_CHAR_ENC_END_%out_ok
+
+L_CHAR_ENC_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_enc_can_%out_ok
+    !__char_enc_fits_%out_ok
+    !__char_enc_len_%out_ok
+    !__char_enc_valid_%out_ok
+
+L_CHAR_ENC_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over CHAR_TRY_ENCODE_UTF8.
+[MACRO] CHAR_ENCODE_UTF8 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    EXPAND CHAR_TRY_ENCODE_UTF8 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+[END_MACRO]
+
+[MACRO] CHAR_ESCAPE_DEBUG_WRITE %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    __char_debug_pair_slot_%out_ok = stack_alloc 8
+    EXPAND CHAR_IS_VALID_SCALAR __char_debug_valid_%out_ok, %code
+    br __char_debug_valid_%out_ok -> L_CHAR_DEBUG_CHECK_TAB_%out_ok, L_CHAR_DEBUG_FAIL_%out_ok
+
+L_CHAR_DEBUG_CHECK_TAB_%out_ok:
+    __char_debug_is_tab_%out_ok = eq %code, ASCII_TAB
+    br __char_debug_is_tab_%out_ok -> L_CHAR_DEBUG_TAB_%out_ok, L_CHAR_DEBUG_CHECK_LF_%out_ok
+
+L_CHAR_DEBUG_CHECK_LF_%out_ok:
+    __char_debug_is_lf_%out_ok = eq %code, ASCII_LF
+    br __char_debug_is_lf_%out_ok -> L_CHAR_DEBUG_LF_%out_ok, L_CHAR_DEBUG_CHECK_CR_%out_ok
+
+L_CHAR_DEBUG_CHECK_CR_%out_ok:
+    __char_debug_is_cr_%out_ok = eq %code, ASCII_CR
+    br __char_debug_is_cr_%out_ok -> L_CHAR_DEBUG_CR_%out_ok, L_CHAR_DEBUG_CHECK_BACKSLASH_%out_ok
+
+L_CHAR_DEBUG_CHECK_BACKSLASH_%out_ok:
+    __char_debug_is_backslash_%out_ok = eq %code, ASCII_BACKSLASH
+    br __char_debug_is_backslash_%out_ok -> L_CHAR_DEBUG_BACKSLASH_%out_ok, L_CHAR_DEBUG_CHECK_SINGLE_%out_ok
+
+L_CHAR_DEBUG_CHECK_SINGLE_%out_ok:
+    __char_debug_is_single_%out_ok = eq %code, ASCII_SINGLE_QUOTE
+    br __char_debug_is_single_%out_ok -> L_CHAR_DEBUG_SINGLE_%out_ok, L_CHAR_DEBUG_CHECK_DOUBLE_%out_ok
+
+L_CHAR_DEBUG_CHECK_DOUBLE_%out_ok:
+    __char_debug_is_double_%out_ok = eq %code, ASCII_DOUBLE_QUOTE
+    br __char_debug_is_double_%out_ok -> L_CHAR_DEBUG_DOUBLE_%out_ok, L_CHAR_DEBUG_CHECK_ASCII_PRINTABLE_%out_ok
+
+L_CHAR_DEBUG_CHECK_ASCII_PRINTABLE_%out_ok:
+    __char_debug_ge_space_%out_ok = uge %code, ASCII_SPACE
+    __char_debug_le_tilde_%out_ok = ule %code, ASCII_GRAPHIC_MAX
+    __char_debug_ascii_printable_%out_ok = and __char_debug_ge_space_%out_ok, __char_debug_le_tilde_%out_ok
+    br __char_debug_ascii_printable_%out_ok -> L_CHAR_DEBUG_ASCII_RAW_%out_ok, L_CHAR_DEBUG_CHECK_UNICODE_PRINTABLE_%out_ok
+
+L_CHAR_DEBUG_CHECK_UNICODE_PRINTABLE_%out_ok:
+    __char_debug_is_ascii_%out_ok = ule %code, 127
+    br __char_debug_is_ascii_%out_ok -> L_CHAR_DEBUG_UNICODE_%out_ok, L_CHAR_DEBUG_UNICODE_RAW_%out_ok
+
+L_CHAR_DEBUG_TAB_%out_ok:
+    store __char_debug_pair_slot_%out_ok+0, ASCII_ESCAPE_T as u8
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_PAIR_%out_ok
+
+L_CHAR_DEBUG_LF_%out_ok:
+    store __char_debug_pair_slot_%out_ok+0, ASCII_ESCAPE_N as u8
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_PAIR_%out_ok
+
+L_CHAR_DEBUG_CR_%out_ok:
+    store __char_debug_pair_slot_%out_ok+0, ASCII_ESCAPE_R as u8
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_PAIR_%out_ok
+
+L_CHAR_DEBUG_BACKSLASH_%out_ok:
+    store __char_debug_pair_slot_%out_ok+0, ASCII_BACKSLASH as u8
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_PAIR_%out_ok
+
+L_CHAR_DEBUG_SINGLE_%out_ok:
+    store __char_debug_pair_slot_%out_ok+0, ASCII_SINGLE_QUOTE as u8
+    !__char_debug_is_single_%out_ok
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_PAIR_%out_ok
+
+L_CHAR_DEBUG_DOUBLE_%out_ok:
+    store __char_debug_pair_slot_%out_ok+0, ASCII_DOUBLE_QUOTE as u8
+    !__char_debug_is_double_%out_ok
+    !__char_debug_is_single_%out_ok
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_PAIR_%out_ok
+
+L_CHAR_DEBUG_PAIR_%out_ok:
+    __char_debug_pair_byte_%out_ok = load __char_debug_pair_slot_%out_ok+0 as u8
+    EXPAND ASCII_ESCAPE_DEFAULT_WRITE_PAIR %out_ok, %out_len, %dst_ptr, %dst_len, __char_debug_pair_byte_%out_ok
+    !__char_debug_pair_byte_%out_ok
+    jmp L_CHAR_DEBUG_END_%out_ok
+
+L_CHAR_DEBUG_ASCII_RAW_%out_ok:
+    __char_debug_raw_fits_%out_ok = uge %dst_len, 1
+    br __char_debug_raw_fits_%out_ok -> L_CHAR_DEBUG_ASCII_RAW_WRITE_%out_ok, L_CHAR_DEBUG_ASCII_RAW_FAIL_%out_ok
+
+L_CHAR_DEBUG_ASCII_RAW_WRITE_%out_ok:
+    store %dst_ptr+0, %code as u8
+    %out_len = add 0, 1
+    %out_ok = add 0, 1
+    !__char_debug_raw_fits_%out_ok
+    !__char_debug_ascii_printable_%out_ok
+    !__char_debug_le_tilde_%out_ok
+    !__char_debug_ge_space_%out_ok
+    !__char_debug_is_double_%out_ok
+    !__char_debug_is_single_%out_ok
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_END_%out_ok
+
+L_CHAR_DEBUG_ASCII_RAW_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_debug_raw_fits_%out_ok
+    !__char_debug_ascii_printable_%out_ok
+    !__char_debug_le_tilde_%out_ok
+    !__char_debug_ge_space_%out_ok
+    !__char_debug_is_double_%out_ok
+    !__char_debug_is_single_%out_ok
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    jmp L_CHAR_DEBUG_END_%out_ok
+
+L_CHAR_DEBUG_UNICODE_RAW_%out_ok:
+    !__char_debug_is_ascii_%out_ok
+    !__char_debug_ascii_printable_%out_ok
+    !__char_debug_le_tilde_%out_ok
+    !__char_debug_ge_space_%out_ok
+    !__char_debug_is_double_%out_ok
+    !__char_debug_is_single_%out_ok
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    EXPAND CHAR_TRY_ENCODE_UTF8 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_DEBUG_END_%out_ok
+
+L_CHAR_DEBUG_UNICODE_%out_ok:
+    !__char_debug_is_ascii_%out_ok
+    !__char_debug_ascii_printable_%out_ok
+    !__char_debug_le_tilde_%out_ok
+    !__char_debug_ge_space_%out_ok
+    !__char_debug_is_double_%out_ok
+    !__char_debug_is_single_%out_ok
+    !__char_debug_is_backslash_%out_ok
+    !__char_debug_is_cr_%out_ok
+    !__char_debug_is_lf_%out_ok
+    !__char_debug_is_tab_%out_ok
+    !__char_debug_valid_%out_ok
+    EXPAND CHAR_ESCAPE_UNICODE_WRITE %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    jmp L_CHAR_DEBUG_END_%out_ok
+
+L_CHAR_DEBUG_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_debug_valid_%out_ok
+
+L_CHAR_DEBUG_END_%out_ok:
+[END_MACRO]
+
+[MACRO] CHAR_TRY_ENCODE_UTF16 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    EXPAND CHAR_IS_VALID_SCALAR __char_enc16_valid_%out_ok, %code
+    EXPAND CHAR_LEN_UTF16 __char_enc16_len_%out_ok, %code
+    __char_enc16_fits_%out_ok = uge %dst_len, __char_enc16_len_%out_ok
+    __char_enc16_can_%out_ok = and __char_enc16_valid_%out_ok, __char_enc16_fits_%out_ok
+    br __char_enc16_can_%out_ok -> L_CHAR_ENC16_DISPATCH_%out_ok, L_CHAR_ENC16_FAIL_%out_ok
+
+L_CHAR_ENC16_DISPATCH_%out_ok:
+    __char_enc16_one_%out_ok = eq __char_enc16_len_%out_ok, 1
+    br __char_enc16_one_%out_ok -> L_CHAR_ENC16_ONE_%out_ok, L_CHAR_ENC16_PAIR_%out_ok
+
+L_CHAR_ENC16_ONE_%out_ok:
+    store %dst_ptr+0, %code as u16
+    %out_len = add 0, 1
+    %out_ok = add 0, 1
+    !__char_enc16_one_%out_ok
+    !__char_enc16_can_%out_ok
+    !__char_enc16_fits_%out_ok
+    !__char_enc16_len_%out_ok
+    !__char_enc16_valid_%out_ok
+    jmp L_CHAR_ENC16_END_%out_ok
+
+L_CHAR_ENC16_PAIR_%out_ok:
+    __char_enc16_shifted_%out_ok = sub %code, CHAR_UTF16_SUPPLEMENTARY_BASE
+    __char_enc16_high_bits_%out_ok = shr __char_enc16_shifted_%out_ok, 10
+    __char_enc16_high_%out_ok = add __char_enc16_high_bits_%out_ok, CHAR_UTF16_HIGH_SURROGATE_MIN
+    __char_enc16_low_bits_%out_ok = and __char_enc16_shifted_%out_ok, CHAR_UTF16_TRAIL_MASK
+    __char_enc16_low_%out_ok = add __char_enc16_low_bits_%out_ok, CHAR_UTF16_LOW_SURROGATE_MIN
+    store %dst_ptr+0, __char_enc16_high_%out_ok as u16
+    __char_enc16_p1_%out_ok = ptr_add %dst_ptr, 2
+    store __char_enc16_p1_%out_ok+0, __char_enc16_low_%out_ok as u16
+    %out_len = add 0, 2
+    %out_ok = add 0, 1
+    !__char_enc16_p1_%out_ok
+    !__char_enc16_low_%out_ok
+    !__char_enc16_low_bits_%out_ok
+    !__char_enc16_high_%out_ok
+    !__char_enc16_high_bits_%out_ok
+    !__char_enc16_shifted_%out_ok
+    !__char_enc16_one_%out_ok
+    !__char_enc16_can_%out_ok
+    !__char_enc16_fits_%out_ok
+    !__char_enc16_len_%out_ok
+    !__char_enc16_valid_%out_ok
+    jmp L_CHAR_ENC16_END_%out_ok
+
+L_CHAR_ENC16_FAIL_%out_ok:
+    %out_len = add 0, 0
+    %out_ok = add 0, 0
+    !__char_enc16_can_%out_ok
+    !__char_enc16_fits_%out_ok
+    !__char_enc16_len_%out_ok
+    !__char_enc16_valid_%out_ok
+
+L_CHAR_ENC16_END_%out_ok:
+[END_MACRO]
+
+// Rust method-name alias over CHAR_TRY_ENCODE_UTF16.
+[MACRO] CHAR_ENCODE_UTF16 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+    EXPAND CHAR_TRY_ENCODE_UTF16 %out_ok, %out_len, %dst_ptr, %dst_len, %code
+[END_MACRO]
+
+[MACRO] CHAR_DECODE_UTF16_UNIT %out_ok, %out_char, %out_units, %lead, %trail
+    __char_dec16_high_ge_%out_ok = uge %lead, CHAR_UTF16_HIGH_SURROGATE_MIN
+    __char_dec16_high_le_%out_ok = ule %lead, CHAR_UTF16_HIGH_SURROGATE_MAX
+    __char_dec16_is_high_%out_ok = and __char_dec16_high_ge_%out_ok, __char_dec16_high_le_%out_ok
+    br __char_dec16_is_high_%out_ok -> L_CHAR_DEC16_HIGH_%out_ok, L_CHAR_DEC16_NOT_HIGH_%out_ok
+
+L_CHAR_DEC16_NOT_HIGH_%out_ok:
+    __char_dec16_low_ge_alone_%out_ok = uge %lead, CHAR_UTF16_LOW_SURROGATE_MIN
+    __char_dec16_low_le_alone_%out_ok = ule %lead, CHAR_UTF16_LOW_SURROGATE_MAX
+    __char_dec16_is_low_alone_%out_ok = and __char_dec16_low_ge_alone_%out_ok, __char_dec16_low_le_alone_%out_ok
+    br __char_dec16_is_low_alone_%out_ok -> L_CHAR_DEC16_ERR_LOW_%out_ok, L_CHAR_DEC16_BMP_%out_ok
+
+L_CHAR_DEC16_BMP_%out_ok:
+    %out_char = add %lead, 0
+    %out_units = add 0, 1
+    %out_ok = add 0, 1
+    !__char_dec16_is_low_alone_%out_ok
+    !__char_dec16_low_le_alone_%out_ok
+    !__char_dec16_low_ge_alone_%out_ok
+    !__char_dec16_is_high_%out_ok
+    !__char_dec16_high_le_%out_ok
+    !__char_dec16_high_ge_%out_ok
+    jmp L_CHAR_DEC16_END_%out_ok
+
+L_CHAR_DEC16_ERR_LOW_%out_ok:
+    %out_char = add 0, 0
+    %out_units = add 0, 1
+    %out_ok = add 0, 0
+    !__char_dec16_is_low_alone_%out_ok
+    !__char_dec16_low_le_alone_%out_ok
+    !__char_dec16_low_ge_alone_%out_ok
+    !__char_dec16_is_high_%out_ok
+    !__char_dec16_high_le_%out_ok
+    !__char_dec16_high_ge_%out_ok
+    jmp L_CHAR_DEC16_END_%out_ok
+
+L_CHAR_DEC16_HIGH_%out_ok:
+    __char_dec16_trail_ge_%out_ok = uge %trail, CHAR_UTF16_LOW_SURROGATE_MIN
+    __char_dec16_trail_le_%out_ok = ule %trail, CHAR_UTF16_LOW_SURROGATE_MAX
+    __char_dec16_trail_ok_%out_ok = and __char_dec16_trail_ge_%out_ok, __char_dec16_trail_le_%out_ok
+    br __char_dec16_trail_ok_%out_ok -> L_CHAR_DEC16_PAIR_%out_ok, L_CHAR_DEC16_ERR_HIGH_%out_ok
+
+L_CHAR_DEC16_PAIR_%out_ok:
+    __char_dec16_high_part_%out_ok = sub %lead, CHAR_UTF16_HIGH_SURROGATE_MIN
+    __char_dec16_high_shift_%out_ok = shl __char_dec16_high_part_%out_ok, 10
+    __char_dec16_low_part_%out_ok = sub %trail, CHAR_UTF16_LOW_SURROGATE_MIN
+    __char_dec16_pair_payload_%out_ok = or __char_dec16_high_shift_%out_ok, __char_dec16_low_part_%out_ok
+    %out_char = add __char_dec16_pair_payload_%out_ok, CHAR_UTF16_SUPPLEMENTARY_BASE
+    %out_units = add 0, 2
+    %out_ok = add 0, 1
+    !__char_dec16_pair_payload_%out_ok
+    !__char_dec16_low_part_%out_ok
+    !__char_dec16_high_shift_%out_ok
+    !__char_dec16_high_part_%out_ok
+    !__char_dec16_trail_ok_%out_ok
+    !__char_dec16_trail_le_%out_ok
+    !__char_dec16_trail_ge_%out_ok
+    !__char_dec16_is_high_%out_ok
+    !__char_dec16_high_le_%out_ok
+    !__char_dec16_high_ge_%out_ok
+    jmp L_CHAR_DEC16_END_%out_ok
+
+L_CHAR_DEC16_ERR_HIGH_%out_ok:
+    %out_char = add 0, 0
+    %out_units = add 0, 1
+    %out_ok = add 0, 0
+    !__char_dec16_trail_ok_%out_ok
+    !__char_dec16_trail_le_%out_ok
+    !__char_dec16_trail_ge_%out_ok
+    !__char_dec16_is_high_%out_ok
+    !__char_dec16_high_le_%out_ok
+    !__char_dec16_high_ge_%out_ok
+
+L_CHAR_DEC16_END_%out_ok:
+[END_MACRO]

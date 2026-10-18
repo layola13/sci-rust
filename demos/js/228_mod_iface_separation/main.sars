@@ -1,0 +1,30 @@
+@import "sa_std/io/print.sai"
+@import "api/contract.sai"
+@import "layout/contract.sal"
+@import "impl/contract.sars"
+
+@const RESULT_OK = utf8:"228\n"
+@const RESULT_ERR = utf8:"error\n"
+
+// 228 - Mod Iface Separation
+// main imports the iface, layout, and implementation as separate files.
+
+@main() -> i32:
+L_ENTRY:
+    slot = alloc Contract_SIZE
+    store slot+Contract_value, 228 as i32
+    value = call @contract_score(&slot)
+    ok = eq value, 228
+    !value
+    !slot
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    call @sa_print_bytes(&RESULT_OK, 4)
+    return 0
+
+L_ERR:
+    !ok
+    call @sa_print_bytes(&RESULT_ERR, 6)
+    return 1

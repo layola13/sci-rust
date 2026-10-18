@@ -1,0 +1,117 @@
+@import "sa_std/net.sars"
+
+@const NET_LIST_HOST = utf8:"localhost"
+
+@test "sa_std concrete socket address list iterator"():
+L_ENTRY:
+    EXPAND NET_TO_SOCKET_ADDR_LIST open_status, list, NET_LIST_HOST, 9, 0
+    open_ok = eq open_status, SA_NET_OK
+    list_ok = ne list, 0
+    open_all = and open_ok, list_ok
+    br open_all -> L_NEXT, L_FAIL_OPEN
+L_FAIL_OPEN:
+    !open_all
+    !list_ok
+    !open_ok
+    !list
+    !open_status
+    panic(10102)
+L_NEXT:
+    EXPAND NET_ADDR_LIST_NEXT next_status, next_ok, addr, list
+    next_status_ok = eq next_status, SA_NET_OK
+    next_ok_value = eq next_ok, 1
+    addr_ok = ne addr, 0
+    next_all = and next_status_ok, next_ok_value
+    next_all2 = and next_all, addr_ok
+    br next_all2 -> L_FREE_ADDR, L_FAIL_NEXT
+L_FAIL_NEXT:
+    !next_all2
+    !next_all
+    !addr_ok
+    !next_ok_value
+    !next_status_ok
+    !addr
+    !next_ok
+    !next_status
+    EXPAND NET_ADDR_LIST_FREE close_failed_status, list
+    !close_failed_status
+    !list
+    panic(10103)
+L_FREE_ADDR:
+    EXPAND NET_ADDR_FAMILY family, addr
+    family_v4 = eq family, SA_NET_AF_INET
+    family_v6 = eq family, SA_NET_AF_INET6
+    family_ok = or family_v4, family_v6
+    EXPAND NET_ADDR_FREE addr_free_status, addr
+    addr_free_ok = eq addr_free_status, SA_NET_OK
+    EXPAND NET_ADDR_LIST_FREE list_free_status, list
+    list_free_ok = eq list_free_status, SA_NET_OK
+    EXPAND NET_ADDR_LIST_NEXT after_free_status, after_free_ok, after_free_addr, list
+    after_free_status_ok = eq after_free_status, SA_NET_STATUS_INVALID_HANDLE
+    after_free_ok_zero = eq after_free_ok, 0
+    after_free_addr_zero = eq after_free_addr, 0
+    ok1 = and next_all2, family_ok
+    ok2 = and ok1, addr_free_ok
+    ok3 = and ok2, list_free_ok
+    ok4 = and ok3, after_free_status_ok
+    ok5 = and ok4, after_free_ok_zero
+    ok = and ok5, after_free_addr_zero
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !ok
+    !ok2
+    !ok1
+    !after_free_addr_zero
+    !after_free_ok_zero
+    !after_free_status_ok
+    !after_free_addr
+    !after_free_ok
+    !after_free_status
+    !list_free_ok
+    !addr_free_ok
+    !family_ok
+    !next_all2
+    !next_all
+    !addr_ok
+    !next_ok_value
+    !next_status_ok
+    !list_ok
+    !open_ok
+    !list_free_status
+    !addr_free_status
+    !family
+    !addr
+    !list
+    !next_ok
+    !next_status
+    !open_status
+    panic(10104)
+L_OK:
+    !ok
+    !ok2
+    !ok1
+    !after_free_addr_zero
+    !after_free_ok_zero
+    !after_free_status_ok
+    !after_free_addr
+    !after_free_ok
+    !after_free_status
+    !list_free_ok
+    !addr_free_ok
+    !family_ok
+    !next_all2
+    !next_all
+    !addr_ok
+    !next_ok_value
+    !next_status_ok
+    !list_ok
+    !open_ok
+    !list_free_status
+    !addr_free_status
+    !family
+    !addr
+    !list
+    !next_ok
+    !next_status
+    !open_status
+    return

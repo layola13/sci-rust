@@ -1,0 +1,219 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_EXACT_SHIFT_EQ %out_acc, %prev_acc, %value, %expected
+    __test_exact_shift_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_exact_shift_eq_%out_acc
+    !__test_exact_shift_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std unsigned primitive exact shift macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_SHL_EXACT u8_shl_ok, u8_shl, 1, 4
+    EXPAND NUM_U16_SHL_EXACT u16_shl_ok, u16_shl, 1, 4
+    EXPAND NUM_U32_SHL_EXACT u32_shl_ok, u32_shl, 1, 4
+    EXPAND NUM_U64_SHL_EXACT u64_shl_ok, u64_shl, 1, 4
+    EXPAND NUM_USIZE_SHL_EXACT usize_shl_ok, usize_shl, 1, 4
+
+    EXPAND NUM_U8_SHL_EXACT u8_shl_loss_ok, u8_shl_loss, 3, 7
+    EXPAND NUM_U16_SHL_EXACT u16_shl_loss_ok, u16_shl_loss, 3, 15
+    EXPAND NUM_U32_SHL_EXACT u32_shl_loss_ok, u32_shl_loss, 3, 31
+    EXPAND NUM_U64_SHL_EXACT u64_shl_loss_ok, u64_shl_loss, 3, 63
+    EXPAND NUM_USIZE_SHL_EXACT usize_shl_loss_ok, usize_shl_loss, 3, 63
+
+    EXPAND NUM_U8_SHR_EXACT u8_shr_ok, u8_shr, 16, 4
+    EXPAND NUM_U16_SHR_EXACT u16_shr_ok, u16_shr, 16, 4
+    EXPAND NUM_U32_SHR_EXACT u32_shr_ok, u32_shr, 16, 4
+    EXPAND NUM_U64_SHR_EXACT u64_shr_ok, u64_shr, 16, 4
+    EXPAND NUM_USIZE_SHR_EXACT usize_shr_ok, usize_shr, 16, 4
+
+    EXPAND NUM_U8_SHR_EXACT u8_shr_loss_ok, u8_shr_loss, 18, 4
+    EXPAND NUM_U16_SHR_EXACT u16_shr_loss_ok, u16_shr_loss, 18, 4
+    EXPAND NUM_U32_SHR_EXACT u32_shr_loss_ok, u32_shr_loss, 18, 4
+    EXPAND NUM_U64_SHR_EXACT u64_shr_loss_ok, u64_shr_loss, 18, 4
+    EXPAND NUM_USIZE_SHR_EXACT usize_shr_loss_ok, usize_shr_loss, 18, 4
+
+    EXPAND NUM_U8_SHL_EXACT u8_shl_over_ok, u8_shl_over, 1, 8
+    EXPAND NUM_U64_SHR_EXACT u64_shr_over_ok, u64_shr_over, 16, 64
+
+    EXPAND NUM_U8_UNCHECKED_SHL_EXACT u8_ushl, 1, 4
+    EXPAND NUM_U16_UNCHECKED_SHL_EXACT u16_ushl, 1, 4
+    EXPAND NUM_U32_UNCHECKED_SHL_EXACT u32_ushl, 1, 4
+    EXPAND NUM_U64_UNCHECKED_SHL_EXACT u64_ushl, 1, 4
+    EXPAND NUM_USIZE_UNCHECKED_SHL_EXACT usize_ushl, 1, 4
+
+    EXPAND NUM_U8_UNCHECKED_SHR_EXACT u8_ushr, 16, 4
+    EXPAND NUM_U16_UNCHECKED_SHR_EXACT u16_ushr, 16, 4
+    EXPAND NUM_U32_UNCHECKED_SHR_EXACT u32_ushr, 16, 4
+    EXPAND NUM_U64_UNCHECKED_SHR_EXACT u64_ushr, 16, 4
+    EXPAND NUM_USIZE_UNCHECKED_SHR_EXACT usize_ushr, 16, 4
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_01, acc_00, u8_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_02, acc_01, u8_shl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_03, acc_02, u16_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_04, acc_03, u16_shl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_05, acc_04, u32_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_06, acc_05, u32_shl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_07, acc_06, u64_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_08, acc_07, u64_shl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_09, acc_08, usize_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_10, acc_09, usize_shl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_11, acc_10, u8_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_12, acc_11, u8_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_13, acc_12, u16_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_14, acc_13, u16_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_15, acc_14, u32_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_16, acc_15, u32_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_17, acc_16, u64_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_18, acc_17, u64_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_19, acc_18, usize_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_20, acc_19, usize_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_21, acc_20, u8_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_22, acc_21, u8_shr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_23, acc_22, u16_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_24, acc_23, u16_shr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_25, acc_24, u32_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_26, acc_25, u32_shr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_27, acc_26, u64_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_28, acc_27, u64_shr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_29, acc_28, usize_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_30, acc_29, usize_shr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_31, acc_30, u8_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_32, acc_31, u8_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_33, acc_32, u16_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_34, acc_33, u16_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_35, acc_34, u32_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_36, acc_35, u32_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_37, acc_36, u64_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_38, acc_37, u64_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_39, acc_38, usize_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_40, acc_39, usize_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_41, acc_40, u8_shl_over_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_42, acc_41, u8_shl_over, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_43, acc_42, u64_shr_over_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_44, acc_43, u64_shr_over, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_45, acc_44, u8_ushl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_46, acc_45, u16_ushl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_47, acc_46, u32_ushl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_48, acc_47, u64_ushl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_49, acc_48, usize_ushl, 16
+    EXPAND TEST_EXACT_SHIFT_EQ acc_50, acc_49, u8_ushr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_51, acc_50, u16_ushr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_52, acc_51, u32_ushr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_53, acc_52, u64_ushr, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_54, acc_53, usize_ushr, 1
+    br acc_54 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_54
+    panic(10641)
+
+L_PASS:
+    !acc_54
+    return 0
+
+@test "sa_std signed primitive exact shift macro surface"():
+L_ENTRY:
+    EXPAND NUM_I8_SHL_EXACT i8_shl_ok, i8_shl, -2, 1
+    EXPAND NUM_I16_SHL_EXACT i16_shl_ok, i16_shl, -2, 1
+    EXPAND NUM_I32_SHL_EXACT i32_shl_ok, i32_shl, -2, 1
+    EXPAND NUM_I64_SHL_EXACT i64_shl_ok, i64_shl, -2, 1
+    EXPAND NUM_ISIZE_SHL_EXACT isize_shl_ok, isize_shl, -2, 1
+
+    EXPAND NUM_I8_SHL_EXACT i8_shl_loss_ok, i8_shl_loss, -2, 7
+    EXPAND NUM_I16_SHL_EXACT i16_shl_loss_ok, i16_shl_loss, -2, 15
+    EXPAND NUM_I32_SHL_EXACT i32_shl_loss_ok, i32_shl_loss, -2, 31
+    EXPAND NUM_I64_SHL_EXACT i64_shl_loss_ok, i64_shl_loss, -2, 63
+    EXPAND NUM_ISIZE_SHL_EXACT isize_shl_loss_ok, isize_shl_loss, -2, 63
+
+    EXPAND NUM_I8_SHR_EXACT i8_shr_ok, i8_shr, -16, 2
+    EXPAND NUM_I16_SHR_EXACT i16_shr_ok, i16_shr, -16, 2
+    EXPAND NUM_I32_SHR_EXACT i32_shr_ok, i32_shr, -16, 2
+    EXPAND NUM_I64_SHR_EXACT i64_shr_ok, i64_shr, -16, 2
+    EXPAND NUM_ISIZE_SHR_EXACT isize_shr_ok, isize_shr, -16, 2
+
+    EXPAND NUM_I8_SHR_EXACT i8_shr_loss_ok, i8_shr_loss, -13, 2
+    EXPAND NUM_I16_SHR_EXACT i16_shr_loss_ok, i16_shr_loss, -13, 2
+    EXPAND NUM_I32_SHR_EXACT i32_shr_loss_ok, i32_shr_loss, -13, 2
+    EXPAND NUM_I64_SHR_EXACT i64_shr_loss_ok, i64_shr_loss, -13, 2
+    EXPAND NUM_ISIZE_SHR_EXACT isize_shr_loss_ok, isize_shr_loss, -13, 2
+
+    EXPAND NUM_I8_SHR_EXACT i8_shr_over_ok, i8_shr_over, -16, 8
+    EXPAND NUM_I64_SHL_EXACT i64_shl_over_ok, i64_shl_over, -2, 64
+
+    EXPAND NUM_I8_UNCHECKED_SHL_EXACT i8_ushl, -2, 1
+    EXPAND NUM_I16_UNCHECKED_SHL_EXACT i16_ushl, -2, 1
+    EXPAND NUM_I32_UNCHECKED_SHL_EXACT i32_ushl, -2, 1
+    EXPAND NUM_I64_UNCHECKED_SHL_EXACT i64_ushl, -2, 1
+    EXPAND NUM_ISIZE_UNCHECKED_SHL_EXACT isize_ushl, -2, 1
+
+    EXPAND NUM_I8_UNCHECKED_SHR_EXACT i8_ushr, -16, 2
+    EXPAND NUM_I16_UNCHECKED_SHR_EXACT i16_ushr, -16, 2
+    EXPAND NUM_I32_UNCHECKED_SHR_EXACT i32_ushr, -16, 2
+    EXPAND NUM_I64_UNCHECKED_SHR_EXACT i64_ushr, -16, 2
+    EXPAND NUM_ISIZE_UNCHECKED_SHR_EXACT isize_ushr, -16, 2
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_01, acc_00, i8_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_02, acc_01, i8_shl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_03, acc_02, i16_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_04, acc_03, i16_shl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_05, acc_04, i32_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_06, acc_05, i32_shl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_07, acc_06, i64_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_08, acc_07, i64_shl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_09, acc_08, isize_shl_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_10, acc_09, isize_shl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_11, acc_10, i8_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_12, acc_11, i8_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_13, acc_12, i16_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_14, acc_13, i16_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_15, acc_14, i32_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_16, acc_15, i32_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_17, acc_16, i64_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_18, acc_17, i64_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_19, acc_18, isize_shl_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_20, acc_19, isize_shl_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_21, acc_20, i8_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_22, acc_21, i8_shr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_23, acc_22, i16_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_24, acc_23, i16_shr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_25, acc_24, i32_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_26, acc_25, i32_shr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_27, acc_26, i64_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_28, acc_27, i64_shr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_29, acc_28, isize_shr_ok, 1
+    EXPAND TEST_EXACT_SHIFT_EQ acc_30, acc_29, isize_shr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_31, acc_30, i8_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_32, acc_31, i8_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_33, acc_32, i16_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_34, acc_33, i16_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_35, acc_34, i32_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_36, acc_35, i32_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_37, acc_36, i64_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_38, acc_37, i64_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_39, acc_38, isize_shr_loss_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_40, acc_39, isize_shr_loss, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_41, acc_40, i8_shr_over_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_42, acc_41, i8_shr_over, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_43, acc_42, i64_shl_over_ok, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_44, acc_43, i64_shl_over, 0
+    EXPAND TEST_EXACT_SHIFT_EQ acc_45, acc_44, i8_ushl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_46, acc_45, i16_ushl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_47, acc_46, i32_ushl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_48, acc_47, i64_ushl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_49, acc_48, isize_ushl, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_50, acc_49, i8_ushr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_51, acc_50, i16_ushr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_52, acc_51, i32_ushr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_53, acc_52, i64_ushr, -4
+    EXPAND TEST_EXACT_SHIFT_EQ acc_54, acc_53, isize_ushr, -4
+    br acc_54 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_54
+    panic(10642)
+
+L_PASS:
+    !acc_54
+    return 0

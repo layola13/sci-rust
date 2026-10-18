@@ -124,16 +124,16 @@ fn assertCMatrixStdout(path: []const u8, expected_stdout: []const u8) !void {
 }
 
 test "c backend rosetta demos match expected output under cc" {
-    try assertCMatrixStdout("demos/c/01_hello_world/main.sa", "hello, saasm\n");
-    try assertCMatrixStdout("demos/rosetta/02_mutability/main.sa", "20\n");
-    try assertCMatrixStdout("demos/rosetta/03_if_else/main.sa", "20\n");
-    try assertCMatrixStdout("demos/rosetta/04_loop/main.sa", "[0,0,0,0]\n");
-    try assertCMatrixStdout("demos/rosetta/05_struct/main.sa", "(10,20)\n");
-    try assertCMatrixStdout("demos/rosetta/24_factorial/main.sa", "120\n");
-    try assertCMatrixStdout("demos/rosetta/25_fibonacci/main.sa", "21\n");
-    try assertCMatrixStdout("demos/rosetta/21_while_loop/main.sa", "15\n");
-    try assertCMatrixStdout("demos/rosetta/23_nested_loops/main.sa", "18\n");
-    try assertCMatrixStdout("demos/rosetta/13_array_sum/main.sa", "10\n");
+    try assertCMatrixStdout("demos/c/01_hello_world/main.sars", "hello, saasm\n");
+    try assertCMatrixStdout("demos/rosetta/02_mutability/main.sars", "20\n");
+    try assertCMatrixStdout("demos/rosetta/03_if_else/main.sars", "20\n");
+    try assertCMatrixStdout("demos/rosetta/04_loop/main.sars", "[0,0,0,0]\n");
+    try assertCMatrixStdout("demos/rosetta/05_struct/main.sars", "(10,20)\n");
+    try assertCMatrixStdout("demos/rosetta/24_factorial/main.sars", "120\n");
+    try assertCMatrixStdout("demos/rosetta/25_fibonacci/main.sars", "21\n");
+    try assertCMatrixStdout("demos/rosetta/21_while_loop/main.sars", "15\n");
+    try assertCMatrixStdout("demos/rosetta/23_nested_loops/main.sars", "18\n");
+    try assertCMatrixStdout("demos/rosetta/13_array_sum/main.sars", "10\n");
 }
 
 test "c backend emits sane C for hello world" {
@@ -142,7 +142,7 @@ test "c backend emits sane C for hello world" {
     defer original_cwd.close();
     const repo_root = try original_cwd.realpathAlloc(std.testing.allocator, ".");
     defer std.testing.allocator.free(repo_root);
-    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/c/01_hello_world/main.sa");
+    const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/c/01_hello_world/main.sars");
     defer std.testing.allocator.free(source_path);
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });

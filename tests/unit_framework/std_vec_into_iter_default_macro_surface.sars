@@ -1,0 +1,63 @@
+@import "sa_std/vec.sars"
+
+@test "sa_std vec into_iter default macro surface"():
+L_ENTRY:
+    EXPAND VEC_INTO_ITER_DEFAULT_U64 iter, backing_vec
+    EXPAND VEC_LEN backing_len, backing_vec
+    EXPAND VEC_CAPACITY backing_cap, backing_vec
+    EXPAND ITER_LEN iter_len, iter
+    EXPAND ITER_IS_EMPTY iter_empty, iter
+    rem_slice = stack_alloc Slice_SIZE
+    EXPAND ITER_AS_SLICE_U64 rem_slice, iter
+    rem_len = load rem_slice+Slice_len as u64
+    EXPAND ITER_NEXT_U64 next_ok, next_value, iter
+    EXPAND ITER_NEXT_BACK_U64 back_ok, back_value, iter
+    EXPAND VEC_FREE backing_vec
+
+    ok_backing_len = eq backing_len, 0
+    ok_backing_cap = eq backing_cap, 0
+    ok_iter_len = eq iter_len, 0
+    ok_iter_empty = eq iter_empty, 1
+    ok_rem_len = eq rem_len, 0
+    ok_next_flag = eq next_ok, 0
+    ok_next_value = eq next_value, 0
+    ok_back_flag = eq back_ok, 0
+    ok_back_value = eq back_value, 0
+
+    ok = and ok_backing_len, ok_backing_cap
+    ok = and ok, ok_iter_len
+    ok = and ok, ok_iter_empty
+    ok = and ok, ok_rem_len
+    ok = and ok, ok_next_flag
+    ok = and ok, ok_next_value
+    ok = and ok, ok_back_flag
+    ok = and ok, ok_back_value
+
+    !backing_len
+    !backing_cap
+    !iter_len
+    !iter_empty
+    !rem_len
+    !next_ok
+    !next_value
+    !back_ok
+    !back_value
+    !ok_backing_len
+    !ok_backing_cap
+    !ok_iter_len
+    !ok_iter_empty
+    !ok_rem_len
+    !ok_next_flag
+    !ok_next_value
+    !ok_back_flag
+    !ok_back_value
+    !iter
+    br ok -> L_VEC_INTO_ITER_DEFAULT_OK, L_VEC_INTO_ITER_DEFAULT_FAIL
+
+L_VEC_INTO_ITER_DEFAULT_FAIL:
+    !ok
+    panic(10708)
+
+L_VEC_INTO_ITER_DEFAULT_OK:
+    !ok
+    return

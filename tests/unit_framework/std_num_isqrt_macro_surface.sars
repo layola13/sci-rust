@@ -1,0 +1,88 @@
+@import "sa_std/num.sars"
+
+@test "sa_std unsigned isqrt macro surface"():
+L_ENTRY:
+    u8_nz = stack_alloc NonZeroU8_SIZE
+    u16_nz = stack_alloc NonZeroU16_SIZE
+    u32_nz = stack_alloc NonZeroU32_SIZE
+    u64_nz = stack_alloc NonZeroU64_SIZE
+    usize_nz = stack_alloc NonZeroUsize_SIZE
+
+    u8_out = stack_alloc NonZeroU8_SIZE
+    u16_out = stack_alloc NonZeroU16_SIZE
+    u32_out = stack_alloc NonZeroU32_SIZE
+    u64_out = stack_alloc NonZeroU64_SIZE
+    usize_out = stack_alloc NonZeroUsize_SIZE
+
+    EXPAND NUM_U64_ISQRT sqrt_zero, 0
+    EXPAND NUM_U64_ISQRT sqrt_one, 1
+    EXPAND NUM_U64_ISQRT sqrt_ten, 10
+    EXPAND NUM_U64_ISQRT sqrt_sixteen, 16
+    EXPAND NUM_U64_ISQRT sqrt_u64_max, NUM_U64_MAX
+    EXPAND NUM_U8_ISQRT sqrt_u8_max, NUM_U8_MAX
+    EXPAND NUM_U16_ISQRT sqrt_u16_max, NUM_U16_MAX
+    EXPAND NUM_U32_ISQRT sqrt_u32_max, NUM_U32_MAX
+    EXPAND NUM_USIZE_ISQRT sqrt_usize_max, NUM_U64_MAX
+
+    EXPAND NONZERO_U8_NEW ok_u8, u8_nz, NUM_U8_MAX
+    EXPAND NONZERO_U16_NEW ok_u16, u16_nz, NUM_U16_MAX
+    EXPAND NONZERO_U32_NEW ok_u32, u32_nz, NUM_U32_MAX
+    EXPAND NONZERO_U64_NEW ok_u64, u64_nz, NUM_U64_MAX
+    EXPAND NONZERO_USIZE_NEW ok_usize, usize_nz, 10
+
+    EXPAND NONZERO_U8_ISQRT u8_out, u8_nz
+    EXPAND NONZERO_U16_ISQRT u16_out, u16_nz
+    EXPAND NONZERO_U32_ISQRT u32_out, u32_nz
+    EXPAND NONZERO_U64_ISQRT u64_out, u64_nz
+    EXPAND NONZERO_USIZE_ISQRT usize_out, usize_nz
+
+    EXPAND NONZERO_U8_GET u8_value, u8_out
+    EXPAND NONZERO_U16_GET u16_value, u16_out
+    EXPAND NONZERO_U32_GET u32_value, u32_out
+    EXPAND NONZERO_U64_GET u64_value, u64_out
+    EXPAND NONZERO_USIZE_GET usize_value, usize_out
+
+    ok_primitive_01 = eq sqrt_zero, 0
+    ok_primitive_02 = eq sqrt_one, 1
+    ok_primitive_03 = eq sqrt_ten, 3
+    ok_primitive_04 = eq sqrt_sixteen, 4
+    ok_primitive_05 = eq sqrt_u64_max, 4294967295
+    ok_primitive_06 = eq sqrt_u8_max, 15
+    ok_primitive_07 = eq sqrt_u16_max, 255
+    ok_primitive_08 = eq sqrt_u32_max, 65535
+    ok_primitive_09 = eq sqrt_usize_max, 4294967295
+
+    ok_new_01 = and ok_u8, ok_u16
+    ok_new_02 = and ok_new_01, ok_u32
+    ok_new_03 = and ok_new_02, ok_u64
+    ok_new_all = and ok_new_03, ok_usize
+
+    ok_nonzero_01 = eq u8_value, 15
+    ok_nonzero_02 = eq u16_value, 255
+    ok_nonzero_03 = eq u32_value, 65535
+    ok_nonzero_04 = eq u64_value, 4294967295
+    ok_nonzero_05 = eq usize_value, 3
+
+    ok_value_01 = and ok_primitive_01, ok_primitive_02
+    ok_value_02 = and ok_value_01, ok_primitive_03
+    ok_value_03 = and ok_value_02, ok_primitive_04
+    ok_value_04 = and ok_value_03, ok_primitive_05
+    ok_value_05 = and ok_value_04, ok_primitive_06
+    ok_value_06 = and ok_value_05, ok_primitive_07
+    ok_value_07 = and ok_value_06, ok_primitive_08
+    ok_value_08 = and ok_value_07, ok_primitive_09
+    ok_value_09 = and ok_value_08, ok_new_all
+    ok_value_10 = and ok_value_09, ok_nonzero_01
+    ok_value_11 = and ok_value_10, ok_nonzero_02
+    ok_value_12 = and ok_value_11, ok_nonzero_03
+    ok_value_13 = and ok_value_12, ok_nonzero_04
+    ok = and ok_value_13, ok_nonzero_05
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10626)
+
+L_PASS:
+    !ok
+    return 0

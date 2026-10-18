@@ -1,0 +1,136 @@
+@import "sa_std/array.sars"
+
+@test "sa_std array bare iter alias macro surface"():
+L_ENTRY:
+    arr = stack_alloc 32
+    store arr+0, 11 as u64
+    store arr+8, 22 as u64
+    store arr+16, 33 as u64
+    store arr+24, 44 as u64
+
+    EXPAND ARRAY_ITER iter, arr, 4
+    EXPAND ARRAY_ITER_NEXT first_has, first, iter
+    EXPAND ARRAY_ITER_NEXT second_has, second, iter
+    EXPAND ARRAY_ITER_NEXT third_has, third, iter
+    EXPAND ARRAY_ITER_NEXT fourth_has, fourth, iter
+    EXPAND ARRAY_ITER_NEXT done_has, done_value, iter
+
+    EXPAND ARRAY_INTO_ITER into_iter, backing, arr, 4
+    store arr+0, 99 as u64
+    EXPAND ARRAY_INTO_ITER_NEXT into_first_has, into_first, into_iter
+    EXPAND ARRAY_INTO_ITER_NEXT into_second_has, into_second, into_iter
+    EXPAND ARRAY_INTO_ITER_NEXT into_third_has, into_third, into_iter
+    EXPAND ARRAY_INTO_ITER_NEXT into_fourth_has, into_fourth, into_iter
+    EXPAND ARRAY_INTO_ITER_NEXT into_done_has, into_done, into_iter
+    EXPAND VEC_FREE backing
+
+    ok_first_has = eq first_has, 1
+    ok_first = eq first, 11
+    ok_second_has = eq second_has, 1
+    ok_second = eq second, 22
+    ok_third_has = eq third_has, 1
+    ok_third = eq third, 33
+    ok_fourth_has = eq fourth_has, 1
+    ok_fourth = eq fourth, 44
+    ok_done_has = eq done_has, 0
+    ok_done_value = eq done_value, 0
+    ok_into_first_has = eq into_first_has, 1
+    ok_into_first = eq into_first, 11
+    ok_into_second_has = eq into_second_has, 1
+    ok_into_second = eq into_second, 22
+    ok_into_third_has = eq into_third_has, 1
+    ok_into_third = eq into_third, 33
+    ok_into_fourth_has = eq into_fourth_has, 1
+    ok_into_fourth = eq into_fourth, 44
+    ok_into_done_has = eq into_done_has, 0
+    ok_into_done = eq into_done, 0
+
+    ok01 = and ok_first_has, ok_first
+    ok02 = and ok01, ok_second_has
+    ok03 = and ok02, ok_second
+    ok04 = and ok03, ok_third_has
+    ok05 = and ok04, ok_third
+    ok06 = and ok05, ok_fourth_has
+    ok07 = and ok06, ok_fourth
+    ok08 = and ok07, ok_done_has
+    ok09 = and ok08, ok_done_value
+    ok10 = and ok09, ok_into_first_has
+    ok11 = and ok10, ok_into_first
+    ok12 = and ok11, ok_into_second_has
+    ok13 = and ok12, ok_into_second
+    ok14 = and ok13, ok_into_third_has
+    ok15 = and ok14, ok_into_third
+    ok16 = and ok15, ok_into_fourth_has
+    ok17 = and ok16, ok_into_fourth
+    ok18 = and ok17, ok_into_done_has
+    ok = and ok18, ok_into_done
+
+    !first_has
+    !first
+    !second_has
+    !second
+    !third_has
+    !third
+    !fourth_has
+    !fourth
+    !done_has
+    !done_value
+    !into_first_has
+    !into_first
+    !into_second_has
+    !into_second
+    !into_third_has
+    !into_third
+    !into_fourth_has
+    !into_fourth
+    !into_done_has
+    !into_done
+    !ok_first_has
+    !ok_first
+    !ok_second_has
+    !ok_second
+    !ok_third_has
+    !ok_third
+    !ok_fourth_has
+    !ok_fourth
+    !ok_done_has
+    !ok_done_value
+    !ok_into_first_has
+    !ok_into_first
+    !ok_into_second_has
+    !ok_into_second
+    !ok_into_third_has
+    !ok_into_third
+    !ok_into_fourth_has
+    !ok_into_fourth
+    !ok_into_done_has
+    !ok_into_done
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !ok17
+    !ok18
+    !iter
+    !into_iter
+    br ok -> L_PASS, L_FAIL
+
+L_FAIL:
+    !ok
+    panic(10852)
+
+L_PASS:
+    !ok
+    return 0

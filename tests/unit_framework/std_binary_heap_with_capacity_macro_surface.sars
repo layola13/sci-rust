@@ -1,0 +1,22 @@
+@import "sa_std/collections/binary_heap.sars"
+
+@test "sa_std binary_heap with_capacity"():
+L_ENTRY:
+    EXPAND BINARY_HEAP_WITH_CAPACITY heap, 8
+    EXPAND BINARY_HEAP_LEN ln, heap
+    EXPAND BINARY_HEAP_CAPACITY cap, heap
+    EXPAND BINARY_HEAP_FREE heap
+    a = eq ln, 0
+    b = uge cap, 8
+    ok = and a, b
+    !ln
+    !cap
+    !a
+    !b
+    br ok -> L_OK, L_FAIL
+L_OK:
+    !ok
+    return 0
+L_FAIL:
+    !ok
+    panic(10954)

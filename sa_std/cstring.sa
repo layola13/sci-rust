@@ -1,3 +1,0 @@
-// Public CStr/CString facade over the FFI string implementation.
-@import "ffi.sal"
-@import "ffi.sa"

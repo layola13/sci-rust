@@ -1,0 +1,32 @@
+@import "sa_std/prelude.sars"
+
+@test "sa_std explicit prelude import surface"():
+L_ENTRY:
+    return 0
+
+@test "sa_std explicit prelude exposes ffi namespace"():
+L_ENTRY:
+    bytes = stack_alloc 3
+    store bytes+0, 111 as u8
+    store bytes+1, 107 as u8
+    store bytes+2, 0 as u8
+    slice = stack_alloc Slice_SIZE
+    EXPAND SLICE_NEW slice, bytes, 3
+    cstring = stack_alloc CString_SIZE
+    EXPAND CSTRING_FROM_SLICE_WITH_NUL status, cstring, slice
+    EXPAND CSTRING_IS_EMPTY empty, cstring
+    ok_status = eq status, CSTR_FROM_BYTES_OK
+    ok_empty = eq empty, 0
+    ok = and ok_status, ok_empty
+    EXPAND CSTRING_FREE cstring
+    !status
+    !empty
+    !ok_status
+    !ok_empty
+    br ok -> L_FFI_PASS, L_FFI_FAIL
+L_FFI_FAIL:
+    !ok
+    panic(10994)
+L_FFI_PASS:
+    !ok
+    return 0

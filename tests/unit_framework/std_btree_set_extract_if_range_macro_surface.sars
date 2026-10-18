@@ -1,0 +1,153 @@
+@import "sa_std/core/slice.sal"
+@import "sa_std/core/slice.sars"
+@import "sa_std/collections/btree_set.sars"
+
+@const KEY_ALPHA = utf8:"alpha"
+@const KEY_BRAVO = utf8:"bravo"
+@const KEY_CHARLIE = utf8:"charlie"
+@const KEY_DELTA = utf8:"delta"
+
+@extract_range_len_five(&key: ptr) -> u64:
+L_ENTRY:
+    key_len = load key+Slice_len as u64
+    take = eq key_len, 5
+    !key_len
+    !key
+    return take
+
+@test "sa_std btree_set ranged eager extract_if"():
+L_ENTRY:
+    alpha = alloc Slice_SIZE
+    bravo = alloc Slice_SIZE
+    charlie = alloc Slice_SIZE
+    delta = alloc Slice_SIZE
+    EXPAND SLICE_NEW alpha, &KEY_ALPHA, 5
+    EXPAND SLICE_NEW bravo, &KEY_BRAVO, 5
+    EXPAND SLICE_NEW charlie, &KEY_CHARLIE, 7
+    EXPAND SLICE_NEW delta, &KEY_DELTA, 5
+
+    EXPAND BTREE_SET_NEW set
+    EXPAND BTREE_SET_INSERT ins_delta, set, delta
+    EXPAND BTREE_SET_INSERT ins_charlie, set, charlie
+    EXPAND BTREE_SET_INSERT ins_alpha, set, alpha
+    EXPAND BTREE_SET_INSERT ins_bravo, set, bravo
+    EXPAND BTREE_SET_EXTRACT_IF_RANGE remain_len, extracted, set, bravo, delta, @extract_range_len_five
+
+    EXPAND BTREE_SET_LEN source_len, set
+    EXPAND BTREE_SET_LEN extracted_len, extracted
+    EXPAND BTREE_SET_CONTAINS source_alpha, set, alpha
+    EXPAND BTREE_SET_CONTAINS source_bravo, set, bravo
+    EXPAND BTREE_SET_CONTAINS source_charlie, set, charlie
+    EXPAND BTREE_SET_CONTAINS source_delta, set, delta
+    EXPAND BTREE_SET_CONTAINS extracted_alpha, extracted, alpha
+    EXPAND BTREE_SET_CONTAINS extracted_bravo, extracted, bravo
+    EXPAND BTREE_SET_CONTAINS extracted_charlie, extracted, charlie
+    EXPAND BTREE_SET_CONTAINS extracted_delta, extracted, delta
+
+    EXPAND BTREE_SET_EXTRACT_IF_RANGE equal_remain_len, equal_extracted, set, delta, delta, @extract_range_len_five
+    EXPAND BTREE_SET_LEN equal_extracted_len, equal_extracted
+    EXPAND BTREE_SET_CONTAINS source_delta_after_equal, set, delta
+
+    ok_ins_delta = eq ins_delta, 1
+    ok_ins_charlie = eq ins_charlie, 1
+    ok_ins_alpha = eq ins_alpha, 1
+    ok_ins_bravo = eq ins_bravo, 1
+    ok_remain_len = eq remain_len, 3
+    ok_source_len = eq source_len, 3
+    ok_extracted_len = eq extracted_len, 1
+    ok_source_alpha = eq source_alpha, 1
+    ok_source_bravo = eq source_bravo, 0
+    ok_source_charlie = eq source_charlie, 1
+    ok_source_delta = eq source_delta, 1
+    ok_extracted_alpha = eq extracted_alpha, 0
+    ok_extracted_bravo = eq extracted_bravo, 1
+    ok_extracted_charlie = eq extracted_charlie, 0
+    ok_extracted_delta = eq extracted_delta, 0
+    ok_equal_remain = eq equal_remain_len, 3
+    ok_equal_extracted = eq equal_extracted_len, 0
+    ok_delta_after_equal = eq source_delta_after_equal, 1
+
+    ok01 = and ok_ins_delta, ok_ins_charlie
+    ok02 = and ok01, ok_ins_alpha
+    ok03 = and ok02, ok_ins_bravo
+    ok04 = and ok03, ok_remain_len
+    ok05 = and ok04, ok_source_len
+    ok06 = and ok05, ok_extracted_len
+    ok07 = and ok06, ok_source_alpha
+    ok08 = and ok07, ok_source_bravo
+    ok09 = and ok08, ok_source_charlie
+    ok10 = and ok09, ok_source_delta
+    ok11 = and ok10, ok_extracted_alpha
+    ok12 = and ok11, ok_extracted_bravo
+    ok13 = and ok12, ok_extracted_charlie
+    ok14 = and ok13, ok_extracted_delta
+    ok15 = and ok14, ok_equal_remain
+    ok16 = and ok15, ok_equal_extracted
+    ok = and ok16, ok_delta_after_equal
+
+    !ins_delta
+    !ins_charlie
+    !ins_alpha
+    !ins_bravo
+    !remain_len
+    !source_len
+    !extracted_len
+    !source_alpha
+    !source_bravo
+    !source_charlie
+    !source_delta
+    !extracted_alpha
+    !extracted_bravo
+    !extracted_charlie
+    !extracted_delta
+    !equal_remain_len
+    !equal_extracted_len
+    !source_delta_after_equal
+    !ok_ins_delta
+    !ok_ins_charlie
+    !ok_ins_alpha
+    !ok_ins_bravo
+    !ok_remain_len
+    !ok_source_len
+    !ok_extracted_len
+    !ok_source_alpha
+    !ok_source_bravo
+    !ok_source_charlie
+    !ok_source_delta
+    !ok_extracted_alpha
+    !ok_extracted_bravo
+    !ok_extracted_charlie
+    !ok_extracted_delta
+    !ok_equal_remain
+    !ok_equal_extracted
+    !ok_delta_after_equal
+    !ok01
+    !ok02
+    !ok03
+    !ok04
+    !ok05
+    !ok06
+    !ok07
+    !ok08
+    !ok09
+    !ok10
+    !ok11
+    !ok12
+    !ok13
+    !ok14
+    !ok15
+    !ok16
+    !delta
+    !charlie
+    !bravo
+    !alpha
+    br ok -> L_OK, L_FAIL
+
+L_OK:
+    EXPAND BTREE_SET_FREE equal_extracted
+    EXPAND BTREE_SET_FREE extracted
+    EXPAND BTREE_SET_FREE set
+    return 0
+
+L_FAIL:
+    panic(10820)

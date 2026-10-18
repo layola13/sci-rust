@@ -1,0 +1,162 @@
+@import "sa_std/num.sars"
+
+[MACRO] TEST_EXACT_DIV_EQ %out_acc, %prev_acc, %value, %expected
+    __test_exact_div_eq_%out_acc = eq %value, %expected
+    %out_acc = and %prev_acc, __test_exact_div_eq_%out_acc
+    !__test_exact_div_eq_%out_acc
+[END_MACRO]
+
+@test "sa_std unsigned primitive exact division macro surface"():
+L_ENTRY:
+    EXPAND NUM_U8_CHECKED_DIV_EXACT u8_checked_ok, u8_checked, 64, 2
+    EXPAND NUM_U16_CHECKED_DIV_EXACT u16_checked_ok, u16_checked, 64, 2
+    EXPAND NUM_U32_CHECKED_DIV_EXACT u32_checked_ok, u32_checked, 64, 2
+    EXPAND NUM_U64_CHECKED_DIV_EXACT u64_checked_ok, u64_checked, 64, 2
+    EXPAND NUM_USIZE_CHECKED_DIV_EXACT usize_checked_ok, usize_checked, 64, 2
+
+    EXPAND NUM_U8_DIV_EXACT u8_direct_ok, u8_direct, 64, 2
+    EXPAND NUM_U16_DIV_EXACT u16_direct_ok, u16_direct, 64, 2
+    EXPAND NUM_U32_DIV_EXACT u32_direct_ok, u32_direct, 64, 2
+    EXPAND NUM_U64_DIV_EXACT u64_direct_ok, u64_direct, 64, 2
+    EXPAND NUM_USIZE_DIV_EXACT usize_direct_ok, usize_direct, 64, 2
+
+    EXPAND NUM_U8_UNCHECKED_DIV_EXACT u8_unchecked, 64, 2
+    EXPAND NUM_U16_UNCHECKED_DIV_EXACT u16_unchecked, 64, 2
+    EXPAND NUM_U32_UNCHECKED_DIV_EXACT u32_unchecked, 64, 2
+    EXPAND NUM_U64_UNCHECKED_DIV_EXACT u64_unchecked, 64, 2
+    EXPAND NUM_USIZE_UNCHECKED_DIV_EXACT usize_unchecked, 64, 2
+
+    EXPAND NUM_U8_CHECKED_DIV_EXACT u8_inexact_ok, u8_inexact, 65, 2
+    EXPAND NUM_U64_CHECKED_DIV_EXACT u64_zero_ok, u64_zero, 64, 0
+    EXPAND NUM_U8_DIV_EXACT u8_direct_inexact_ok, u8_direct_inexact, 65, 2
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_01, acc_00, u8_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_02, acc_01, u8_checked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_03, acc_02, u16_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_04, acc_03, u16_checked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_05, acc_04, u32_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_06, acc_05, u32_checked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_07, acc_06, u64_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_08, acc_07, u64_checked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_09, acc_08, usize_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_10, acc_09, usize_checked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_11, acc_10, u8_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_12, acc_11, u8_direct, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_13, acc_12, u16_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_14, acc_13, u16_direct, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_15, acc_14, u32_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_16, acc_15, u32_direct, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_17, acc_16, u64_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_18, acc_17, u64_direct, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_19, acc_18, usize_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_20, acc_19, usize_direct, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_21, acc_20, u8_unchecked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_22, acc_21, u16_unchecked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_23, acc_22, u32_unchecked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_24, acc_23, u64_unchecked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_25, acc_24, usize_unchecked, 32
+    EXPAND TEST_EXACT_DIV_EQ acc_26, acc_25, u8_inexact_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_27, acc_26, u8_inexact, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_28, acc_27, u64_zero_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_29, acc_28, u64_zero, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_30, acc_29, u8_direct_inexact_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_31, acc_30, u8_direct_inexact, 0
+    br acc_31 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_31
+    panic(10643)
+
+L_PASS:
+    !acc_31
+    return 0
+
+@test "sa_std signed primitive exact division macro surface"():
+L_ENTRY:
+    EXPAND NUM_I8_CHECKED_DIV_EXACT i8_checked_ok, i8_checked, -64, 2
+    EXPAND NUM_I16_CHECKED_DIV_EXACT i16_checked_ok, i16_checked, -64, 2
+    EXPAND NUM_I32_CHECKED_DIV_EXACT i32_checked_ok, i32_checked, -64, 2
+    EXPAND NUM_I64_CHECKED_DIV_EXACT i64_checked_ok, i64_checked, -64, 2
+    EXPAND NUM_ISIZE_CHECKED_DIV_EXACT isize_checked_ok, isize_checked, -64, 2
+
+    EXPAND NUM_I8_DIV_EXACT i8_direct_ok, i8_direct, -64, 2
+    EXPAND NUM_I16_DIV_EXACT i16_direct_ok, i16_direct, -64, 2
+    EXPAND NUM_I32_DIV_EXACT i32_direct_ok, i32_direct, -64, 2
+    EXPAND NUM_I64_DIV_EXACT i64_direct_ok, i64_direct, -64, 2
+    EXPAND NUM_ISIZE_DIV_EXACT isize_direct_ok, isize_direct, -64, 2
+
+    EXPAND NUM_I8_UNCHECKED_DIV_EXACT i8_unchecked, -64, 2
+    EXPAND NUM_I16_UNCHECKED_DIV_EXACT i16_unchecked, -64, 2
+    EXPAND NUM_I32_UNCHECKED_DIV_EXACT i32_unchecked, -64, 2
+    EXPAND NUM_I64_UNCHECKED_DIV_EXACT i64_unchecked, -64, 2
+    EXPAND NUM_ISIZE_UNCHECKED_DIV_EXACT isize_unchecked, -64, 2
+
+    EXPAND NUM_I8_CHECKED_DIV_EXACT i8_inexact_ok, i8_inexact, -65, 2
+    EXPAND NUM_I64_CHECKED_DIV_EXACT i64_zero_ok, i64_zero, -64, 0
+    EXPAND NUM_I64_CHECKED_DIV_EXACT i64_over_ok, i64_over, NUM_I64_MIN, -1
+    EXPAND NUM_I8_DIV_EXACT i8_direct_inexact_ok, i8_direct_inexact, -65, 2
+    EXPAND NUM_I64_CHECKED_DIV_EXACT i64_neg_rhs_ok, i64_neg_rhs, -63, -3
+    EXPAND NUM_I64_DIV_EXACT i64_neg_direct_ok, i64_neg_direct, -63, -3
+
+    acc_00 = eq 0, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_01, acc_00, i8_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_02, acc_01, i8_checked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_03, acc_02, i16_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_04, acc_03, i16_checked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_05, acc_04, i32_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_06, acc_05, i32_checked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_07, acc_06, i64_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_08, acc_07, i64_checked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_09, acc_08, isize_checked_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_10, acc_09, isize_checked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_11, acc_10, i8_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_12, acc_11, i8_direct, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_13, acc_12, i16_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_14, acc_13, i16_direct, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_15, acc_14, i32_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_16, acc_15, i32_direct, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_17, acc_16, i64_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_18, acc_17, i64_direct, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_19, acc_18, isize_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_20, acc_19, isize_direct, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_21, acc_20, i8_unchecked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_22, acc_21, i16_unchecked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_23, acc_22, i32_unchecked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_24, acc_23, i64_unchecked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_25, acc_24, isize_unchecked, -32
+    EXPAND TEST_EXACT_DIV_EQ acc_26, acc_25, i8_inexact_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_27, acc_26, i8_inexact, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_28, acc_27, i64_zero_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_29, acc_28, i64_zero, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_30, acc_29, i64_over_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_31, acc_30, i64_over, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_32, acc_31, i8_direct_inexact_ok, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_33, acc_32, i8_direct_inexact, 0
+    EXPAND TEST_EXACT_DIV_EQ acc_34, acc_33, i64_neg_rhs_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_35, acc_34, i64_neg_rhs, 21
+    EXPAND TEST_EXACT_DIV_EQ acc_36, acc_35, i64_neg_direct_ok, 1
+    EXPAND TEST_EXACT_DIV_EQ acc_37, acc_36, i64_neg_direct, 21
+    br acc_37 -> L_PASS, L_FAIL
+
+L_FAIL:
+    !acc_37
+    panic(10644)
+
+L_PASS:
+    !acc_37
+    return 0
+
+@test should_panic "sa_std unsigned primitive div_exact panics on zero divisor"():
+L_ENTRY:
+    EXPAND NUM_U8_DIV_EXACT ok, value, 64, 0
+    !value
+    !ok
+    return 0
+
+@test should_panic "sa_std signed primitive div_exact panics on overflow"():
+L_ENTRY:
+    EXPAND NUM_I64_DIV_EXACT ok, value, NUM_I64_MIN, -1
+    !value
+    !ok
+    return 0
