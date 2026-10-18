@@ -81,7 +81,7 @@ fn assertJsMatrixStdout(path: []const u8, expected_stdout: []const u8) !void {
     const js_name = try std.fmt.allocPrint(std.testing.allocator, "{s}_{s}.mjs", .{ tag, stem });
     defer std.testing.allocator.free(js_name);
 
-    const build_js_argv = [_][]const u8{ "sa", "build-js", source_path, "-o", js_name, "--project-root", repo_root };
+    const build_js_argv = [_][]const u8{"sars", "build-js", source_path, "-o", js_name, "--project-root", repo_root };
     const build_js_code = saasm.cli.execute(std.testing.allocator, build_js_argv[0..]) catch |err| {
         std.debug.print("build-js errored: {s}: {s}\n", .{ path, @errorName(err) });
         return err;
@@ -1104,7 +1104,7 @@ fn assertJsBuildRejects(path: []const u8) !void {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_js_argv = [_][]const u8{ "sa", "build-js", source_path, "-o", "rejected.mjs", "--project-root", repo_root };
+    const build_js_argv = [_][]const u8{"sars", "build-js", source_path, "-o", "rejected.mjs", "--project-root", repo_root };
     const build_js_code = saasm.cli.execute(std.testing.allocator, build_js_argv[0..]) catch |err| {
         // A hard CLI error also counts as a rejection.
         std.debug.print("[js-negative] rejected via error: {s}: {s}\n", .{ path, @errorName(err) });
@@ -1156,7 +1156,7 @@ fn assertJsRuntimeTrap(path: []const u8, expected_stderr_substr: []const u8) !vo
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_js_argv = [_][]const u8{ "sa", "build-js", source_path, "-o", "trap.mjs", "--project-root", repo_root };
+    const build_js_argv = [_][]const u8{"sars", "build-js", source_path, "-o", "trap.mjs", "--project-root", repo_root };
     const build_js_code = saasm.cli.execute(std.testing.allocator, build_js_argv[0..]) catch |err| {
         std.debug.print("build-js errored: {s}: {s}\n", .{ path, @errorName(err) });
         return err;

@@ -109,35 +109,35 @@ test "cli command help covers built-in commands" {
         argv: []const []const u8,
         expected: []const u8,
     }{
-        .{ .argv = &.{ "sa", "init", "--help" }, .expected = "usage: sa init [path]" },
-        .{ .argv = &.{ "sa", "install", "--help" }, .expected = "usage: sa install [options] [identity]" },
-        .{ .argv = &.{ "sa", "plugin", "--help" }, .expected = "usage: sa plugin <install|list> [options]" },
-        .{ .argv = &.{ "sa", "plugin", "install", "--help" }, .expected = "usage: sa plugin install [--dev] [--review] <path|sap.json>" },
-        .{ .argv = &.{ "sa", "plugin", "list", "--help" }, .expected = "usage: sa plugin list" },
-        .{ .argv = &.{ "sa", "pkg", "--help" }, .expected = "usage: sa pkg <install|fetch|audit> [options]" },
-        .{ .argv = &.{ "sa", "pkg", "install", "--help" }, .expected = "usage: sa pkg install [options] [identity]" },
-        .{ .argv = &.{ "sa", "pkg", "fetch", "--help" }, .expected = "usage: sa pkg fetch [options] <identity>" },
-        .{ .argv = &.{ "sa", "pkg", "audit", "--help" }, .expected = "usage: sa pkg audit [options] <identity>" },
-        .{ .argv = &.{ "sa", "build", "--help" }, .expected = "usage: sa build <file> [options]" },
-        .{ .argv = &.{ "sa", "build-exe", "--help" }, .expected = "usage: sa build-exe <file> [options]" },
-        .{ .argv = &.{ "sa", "build-obj", "--help" }, .expected = "usage: sa build-obj <file> [options]" },
-        .{ .argv = &.{ "sa", "build-wasm", "--help" }, .expected = "usage: sa build-wasm <file> [options]" },
-        .{ .argv = &.{ "sa", "run", "--help" }, .expected = "usage: sa run <file> [compile-options] [args...]" },
-        .{ .argv = &.{ "sa", "fetch", "--help" }, .expected = "usage: sa fetch <identity>" },
-        .{ .argv = &.{ "sa", "audit", "--help" }, .expected = "usage: sa audit <identity>" },
-        .{ .argv = &.{ "sa", "graph", "--help" }, .expected = "usage: sa graph [path] [options]" },
-        .{ .argv = &.{ "sa", "layout", "--help" }, .expected = "usage: sa layout --name <TypeName> --fields <name:ty,...> [options]" },
-        .{ .argv = &.{ "sa", "size", "--help" }, .expected = "usage: sa size [path] [options]" },
-        .{ .argv = &.{ "sa", "test", "--help" }, .expected = "usage: sa test <file> [options]" },
-        .{ .argv = &.{ "sa", "test", "-h" }, .expected = "--filter <pattern>" },
-        .{ .argv = &.{ "sa", "bc2sa", "--help" }, .expected = "usage: sa bc2sa <file.bc>" },
-        .{ .argv = &.{ "sa", "explain", "--help" }, .expected = "usage: sa explain <code>" },
-        .{ .argv = &.{ "sa", "fix", "--help" }, .expected = "usage: sa fix [--plan] <code>" },
-        .{ .argv = &.{ "sa", "skills", "--help" }, .expected = "usage: sa skills [--json]" },
-        .{ .argv = &.{ "sa", "help", "--help" }, .expected = "usage: sa help [command]" },
-        .{ .argv = &.{ "sa", "version", "--help" }, .expected = "usage: sa version" },
-        .{ .argv = &.{ "sa", "help", "test" }, .expected = "usage: sa test <file> [options]" },
-        .{ .argv = &.{ "sa", "help", "pkg", "audit" }, .expected = "usage: sa pkg audit [options] <identity>" },
+        .{ .argv = &.{"sars", "init", "--help" }, .expected = "usage: sars init [path]" },
+        .{ .argv = &.{"sars", "install", "--help" }, .expected = "usage: sars install [options] [identity]" },
+        .{ .argv = &.{"sars", "plugin", "--help" }, .expected = "usage: sars plugin <install|list> [options]" },
+        .{ .argv = &.{"sars", "plugin", "install", "--help" }, .expected = "usage: sars plugin install [--dev] [--review] <path|sap.json>" },
+        .{ .argv = &.{"sars", "plugin", "list", "--help" }, .expected = "usage: sars plugin list" },
+        .{ .argv = &.{"sars", "pkg", "--help" }, .expected = "usage: sars pkg <install|fetch|audit> [options]" },
+        .{ .argv = &.{"sars", "pkg", "install", "--help" }, .expected = "usage: sars pkg install [options] [identity]" },
+        .{ .argv = &.{"sars", "pkg", "fetch", "--help" }, .expected = "usage: sars pkg fetch [options] <identity>" },
+        .{ .argv = &.{"sars", "pkg", "audit", "--help" }, .expected = "usage: sars pkg audit [options] <identity>" },
+        .{ .argv = &.{"sars", "build", "--help" }, .expected = "usage: sars build <file> [options]" },
+        .{ .argv = &.{"sars", "build-exe", "--help" }, .expected = "usage: sars build-exe <file> [options]" },
+        .{ .argv = &.{"sars", "build-obj", "--help" }, .expected = "usage: sars build-obj <file> [options]" },
+        .{ .argv = &.{"sars", "build-wasm", "--help" }, .expected = "usage: sars build-wasm <file> [options]" },
+        .{ .argv = &.{"sars", "run", "--help" }, .expected = "usage: sars run <file> [compile-options] [args...]" },
+        .{ .argv = &.{"sars", "fetch", "--help" }, .expected = "usage: sars fetch <identity>" },
+        .{ .argv = &.{"sars", "audit", "--help" }, .expected = "usage: sars audit <identity>" },
+        .{ .argv = &.{"sars", "graph", "--help" }, .expected = "usage: sars graph [path] [options]" },
+        .{ .argv = &.{"sars", "layout", "--help" }, .expected = "usage: sars layout --name <TypeName> --fields <name:ty,...> [options]" },
+        .{ .argv = &.{"sars", "size", "--help" }, .expected = "usage: sars size [path] [options]" },
+        .{ .argv = &.{"sars", "test", "--help" }, .expected = "usage: sars test <file> [options]" },
+        .{ .argv = &.{"sars", "test", "-h" }, .expected = "--filter <pattern>" },
+        .{ .argv = &.{"sars", "bc2sa", "--help" }, .expected = "usage: sars bc2sa <file.bc>" },
+        .{ .argv = &.{"sars", "explain", "--help" }, .expected = "usage: sars explain <code>" },
+        .{ .argv = &.{"sars", "fix", "--help" }, .expected = "usage: sars fix [--plan] <code>" },
+        .{ .argv = &.{"sars", "skills", "--help" }, .expected = "usage: sars skills [--json]" },
+        .{ .argv = &.{"sars", "help", "--help" }, .expected = "usage: sars help [command]" },
+        .{ .argv = &.{"sars", "version", "--help" }, .expected = "usage: sars version" },
+        .{ .argv = &.{"sars", "help", "test" }, .expected = "usage: sars test <file> [options]" },
+        .{ .argv = &.{"sars", "help", "pkg", "audit" }, .expected = "usage: sars pkg audit [options] <identity>" },
     };
 
     for (cases) |case| try expectCliHelp(case.argv, case.expected);
@@ -149,7 +149,7 @@ test "bc2sa rejects extra positional arguments" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const argv = [_][]const u8{ "sa", "bc2sa", "input.bc", "extra" };
+    const argv = [_][]const u8{"sars", "bc2sa", "input.bc", "extra" };
     try std.testing.expectError(error.UnexpectedArgument, saasm.cli.executeWithWriters(std.testing.allocator, argv[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer)));
     try std.testing.expectEqual(@as(usize, 0), stdout_buffer.items.len);
     try std.testing.expectEqual(@as(usize, 0), stderr_buffer.items.len);

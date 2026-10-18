@@ -2962,7 +2962,7 @@ fn writePluginHelpFallback(loaded: *const LoadedPlugin, writer: anytype, manifes
 }
 
 fn writeManifestHelpFallback(writer: anytype, plugin_name: []const u8, manifest_version: ?[]const u8) !void {
-    try writer.print("usage: sa {s} [--help]\n\n", .{plugin_name});
+    try writer.print("usage: sars {s} [--help]\n\n", .{plugin_name});
     if (manifest_version) |version| {
         try writer.print("{s} {s}\n", .{ plugin_name, version });
     } else {

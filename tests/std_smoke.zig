@@ -3857,7 +3857,7 @@ test "sa_std Deno JSON facade runs from SA" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "deno_json_facade.sa", "-o", "deno_json_facade" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "deno_json_facade.sa", "-o", "deno_json_facade" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3973,7 +3973,7 @@ test "sa_std Deno text and base64 facade runs from SA" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "deno_text_base64.sa", "-o", "deno_text_base64" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "deno_text_base64.sa", "-o", "deno_text_base64" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -4068,7 +4068,7 @@ test "sa_std Deno fallible status macros compile and run" {
     ;
     try writeSource(tmp.dir, "deno_fallible_status.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "deno_fallible_status.sa", "-o", "deno_fallible_status" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "deno_fallible_status.sa", "-o", "deno_fallible_status" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -4096,11 +4096,11 @@ test "std smoke fixture runs through the current compiler surface" {
 
     try writeSource(tmp.dir, "std_smoke.sa", fixture);
 
-    const run_argv = [_][]const u8{ "sa", "run", "std_smoke.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "std_smoke.sa" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 209), run_code);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "std_smoke.sa", "-o", "std_smoke.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "std_smoke.sa", "-o", "std_smoke.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 

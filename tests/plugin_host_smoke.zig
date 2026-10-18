@@ -449,7 +449,7 @@ test "plugin runtime loads descriptors, skills, commands, and skips bad librarie
         \\  }},
         \\  "interfaces": {{}},
         \\  "skills": [],
-        \\  "help": "usage: sa host-smoke <command> [options]\n\nCommands:\n  help-check    Show manifest-defined help\n",
+        \\  "help": "usage: sars host-smoke <command> [options]\n\nCommands:\n  help-check    Show manifest-defined help\n",
         \\  "permissions": {{"fs": [], "net": [], "env": [], "process": {{"spawn": false, "exec": []}}}},
         \\  "dependencies": {{}}
         \\}}
@@ -481,20 +481,20 @@ test "plugin runtime loads descriptors, skills, commands, and skips bad librarie
     defer stderr_buffer.deinit();
 
     const help_code = try runtime.dispatchCommand(
-        &.{ "sa", "host-smoke", "--help" },
+        &.{ "sars", "host-smoke", "--help" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
         false,
     );
     try std.testing.expectEqual(@as(?u8, 0), help_code);
-    try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "usage: sa host-smoke <command> [options]"));
+    try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "usage: sars host-smoke <command> [options]"));
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "help-check"));
     try std.testing.expectEqual(@as(usize, 0), stderr_buffer.items.len);
 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
     const code = try runtime.dispatchCommand(
-        &.{ "sa", "hello-plugin" },
+        &.{ "sars", "hello-plugin" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
         false,
@@ -522,12 +522,12 @@ test "plugin runtime loads descriptors, skills, commands, and skips bad librarie
 
     const cli_help_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "host-smoke", "--help" },
+        &.{ "sars", "host-smoke", "--help" },
         sio.managedWriter(&cli_stdout),
         sio.managedWriter(&cli_stderr),
     );
     try std.testing.expectEqual(@as(u8, 0), cli_help_code);
-    try std.testing.expect(std.mem.containsAtLeast(u8, cli_stdout.items, 1, "usage: sa host-smoke <command> [options]"));
+    try std.testing.expect(std.mem.containsAtLeast(u8, cli_stdout.items, 1, "usage: sars host-smoke <command> [options]"));
     try std.testing.expect(std.mem.containsAtLeast(u8, cli_stdout.items, 1, "help-check"));
     try std.testing.expectEqual(@as(usize, 0), cli_stderr.items.len);
 
@@ -535,7 +535,7 @@ test "plugin runtime loads descriptors, skills, commands, and skips bad librarie
     cli_stderr.clearRetainingCapacity();
     const cli_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "hello-plugin" },
+        &.{ "sars", "hello-plugin" },
         sio.managedWriter(&cli_stdout),
         sio.managedWriter(&cli_stderr),
     );
@@ -547,7 +547,7 @@ test "plugin runtime loads descriptors, skills, commands, and skips bad librarie
     cli_stderr.clearRetainingCapacity();
     const pkg_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "pkg", "audit", "demo" },
+        &.{"sars", "pkg", "audit", "demo" },
         sio.managedWriter(&cli_stdout),
         sio.managedWriter(&cli_stderr),
     );
@@ -559,7 +559,7 @@ test "plugin runtime loads descriptors, skills, commands, and skips bad librarie
     cli_stderr.clearRetainingCapacity();
     const skills_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "skills" },
+        &.{"sars", "skills" },
         sio.managedWriter(&cli_stdout),
         sio.managedWriter(&cli_stderr),
     );
@@ -823,7 +823,7 @@ test "native build and test link installed plugin exporting referenced extern" {
     defer stderr_buffer.deinit();
     const build_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "build-exe", "main.sa", "-o", "probe.out" },
+        &.{"sars", "build-exe", "main.sa", "-o", "probe.out" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
     );
@@ -841,7 +841,7 @@ test "native build and test link installed plugin exporting referenced extern" {
     stderr_buffer.clearRetainingCapacity();
     const test_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "test", "main_test.sa", "--jobs", "1" },
+        &.{"sars", "test", "main_test.sa", "--jobs", "1" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
     );
@@ -1343,7 +1343,7 @@ test "sa skills hides plugin capabilities until optional dependency is installed
     defer skills_stderr.deinit();
     const hidden_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "skills" },
+        &.{"sars", "skills" },
         sio.managedWriter(&skills_stdout),
         sio.managedWriter(&skills_stderr),
     );
@@ -1359,7 +1359,7 @@ test "sa skills hides plugin capabilities until optional dependency is installed
     skills_stderr.clearRetainingCapacity();
     const visible_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "skills" },
+        &.{"sars", "skills" },
         sio.managedWriter(&skills_stdout),
         sio.managedWriter(&skills_stderr),
     );

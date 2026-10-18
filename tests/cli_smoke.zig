@@ -326,7 +326,7 @@ fn assertRunStdout(path: []const u8, expected_stdout: []const u8) !void {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", path };
+    const run_argv = [_][]const u8{"sars", "run", path };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     if (run_code != 0 or stderr_buf.items.len != 0 or !std.mem.eql(u8, stdout_buf.items, expected_stdout)) {
         std.debug.print("demo run failed: {s}\nstdout:\n{s}\nstderr:\n{s}\n", .{ path, stdout_buf.items, stderr_buf.items });
@@ -356,7 +356,7 @@ fn assertBuildExeStdout(path: []const u8, expected_stdout: []const u8) !void {
     const out_path = try std.fmt.allocPrint(std.testing.allocator, "bin/{s}.out", .{demo_dir});
     defer std.testing.allocator.free(out_path);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", out_path, "--no-incremental" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", out_path, "--no-incremental" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     if (build_exe_code != 0) {
         std.debug.print("build-exe failed: {s}\n", .{path});
@@ -405,7 +405,7 @@ fn assertBuildExeStdoutPureBc(path: []const u8, expected_stdout: []const u8) !vo
     const out_path = try std.fmt.allocPrint(std.testing.allocator, "bin/{s}.out", .{demo_dir});
     defer std.testing.allocator.free(out_path);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", out_path };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", out_path };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     if (build_exe_code != 0) {
         std.debug.print("build-exe failed: {s}\n", .{path});
@@ -443,7 +443,7 @@ fn assertBuildExeTrap(path: []const u8, out_name: []const u8, expected_trap: []c
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", out_name };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", out_name };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -486,7 +486,7 @@ fn assertBuildExeLinkFailure(source_name: []const u8, source: []const u8, out_na
 
     try writeSource(tmp.dir, source_name, source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_name, "-o", out_name };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_name, "-o", out_name };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -513,7 +513,7 @@ fn assertRunStdoutWithArg(path: []const u8, arg: []const u8, expected_stdout: []
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", path, arg };
+    const run_argv = [_][]const u8{"sars", "run", path, arg };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     if (run_code != 0 or stderr_buf.items.len != 0 or !std.mem.eql(u8, stdout_buf.items, expected_stdout)) {
         std.debug.print("demo run failed: {s}\nstdout:\n{s}\nstderr:\n{s}\n", .{ path, stdout_buf.items, stderr_buf.items });
@@ -618,12 +618,12 @@ test "cli run/build-exe/build-wasm produce real artifacts" {
 
     try writeSource(tmp.dir, "sample.sa", source);
 
-    const run_argv = [_][]const u8{ "sa", "run", "sample.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "sample.sa" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 7), run_code);
 
     const exe_path = "sample.out";
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "sample.sa", "-o", exe_path, "-g" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "sample.sa", "-o", exe_path, "-g" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -657,7 +657,7 @@ test "cli run/build-exe/build-wasm produce real artifacts" {
     }
 
     const obj_path = "sample.o";
-    const build_obj_argv = [_][]const u8{ "sa", "build-obj", "sample.sa", "--jobs", "auto", "-o", obj_path };
+    const build_obj_argv = [_][]const u8{"sars", "build-obj", "sample.sa", "--jobs", "auto", "-o", obj_path };
     const obj_code = try saasm.cli.execute(std.testing.allocator, build_obj_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), obj_code);
 
@@ -668,7 +668,7 @@ test "cli run/build-exe/build-wasm produce real artifacts" {
     try std.testing.expect(obj_bytes.len > 0);
 
     const wasm_path = "sample.wasm";
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", "sample.sa", "--jobs", "auto", "-o", wasm_path, "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "sample.sa", "--jobs", "auto", "-o", wasm_path, "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -707,7 +707,7 @@ test "llvm disabled build-exe reports backend diagnostic" {
 
     try writeSource(tmp.dir, "minimal.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "minimal.sa" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "minimal.sa" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -748,7 +748,7 @@ test "cli build-obj incremental reuses local cache layout" {
 
     try writeSource(tmp.dir, "incremental.sa", source);
 
-    const build_argv = [_][]const u8{ "sa", "build-obj", "incremental.sa", "--incremental", "-o", "incremental.o" };
+    const build_argv = [_][]const u8{"sars", "build-obj", "incremental.sa", "--incremental", "-o", "incremental.o" };
     const first_code = try saasm.cli.execute(std.testing.allocator, build_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), first_code);
     const second_code = try saasm.cli.execute(std.testing.allocator, build_argv[0..]);
@@ -805,7 +805,7 @@ test "cli build-obj incremental reuses local cache layout" {
     defer stdout_buf.deinit();
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
-    const help_argv = [_][]const u8{ "sa", "build-obj", "--help" };
+    const help_argv = [_][]const u8{"sars", "build-obj", "--help" };
     const help_code = try saasm.cli.executeWithWriters(std.testing.allocator, help_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), help_code);
     try std.testing.expect(std.mem.indexOf(u8, stdout_buf.items, "--incremental") != null);
@@ -832,7 +832,7 @@ test "cli build project cache is default and can be disabled" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const build_argv = [_][]const u8{ "sa", "build-exe", "cached.sa", "-o", "cached.out", "--json", "--profile" };
+    const build_argv = [_][]const u8{"sars", "build-exe", "cached.sa", "-o", "cached.out", "--json", "--profile" };
     const first_code = try saasm.cli.executeWithWriters(std.testing.allocator, build_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), first_code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -855,7 +855,7 @@ test "cli build project cache is default and can be disabled" {
     try std.testing.expectEqual(true, try jsonBoolValue(try jsonObjectGetValue(second_cache, "hit")));
 
     stderr_buf.clearRetainingCapacity();
-    const no_cache_argv = [_][]const u8{ "sa", "build-exe", "cached.sa", "-o", "cached_no_cache.out", "--json", "--profile", "--no-incremental" };
+    const no_cache_argv = [_][]const u8{"sars", "build-exe", "cached.sa", "-o", "cached_no_cache.out", "--json", "--profile", "--no-incremental" };
     const no_cache_code = try saasm.cli.executeWithWriters(std.testing.allocator, no_cache_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), no_cache_code);
     var no_cache_json = try parseJsonValue(std.testing.allocator, stderr_buf.items);
@@ -865,7 +865,7 @@ test "cli build project cache is default and can be disabled" {
 
     stdout_buf.clearRetainingCapacity();
     stderr_buf.clearRetainingCapacity();
-    const help_argv = [_][]const u8{ "sa", "build-exe", "--help" };
+    const help_argv = [_][]const u8{"sars", "build-exe", "--help" };
     const help_code = try saasm.cli.executeWithWriters(std.testing.allocator, help_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), help_code);
     try std.testing.expect(std.mem.indexOf(u8, stdout_buf.items, "--no-incremental") != null);
@@ -901,7 +901,7 @@ test "cli cache clean removes invalid project cache entries" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const clean_argv = [_][]const u8{ "sa", "cache", "clean", "--max-age-days", "0" };
+    const clean_argv = [_][]const u8{"sars", "cache", "clean", "--max-age-days", "0" };
     const clean_code = try saasm.cli.executeWithWriters(std.testing.allocator, clean_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), clean_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buf.items.len);
@@ -913,7 +913,7 @@ test "cli cache clean removes invalid project cache entries" {
     try std.testing.expectError(error.FileNotFound, tmp.dir.access(std.testing.io, ".sa_cache/test/not-a-hex-key", .{}));
 
     stdout_buf.clearRetainingCapacity();
-    const help_argv = [_][]const u8{ "sa", "cache", "clean", "--help" };
+    const help_argv = [_][]const u8{"sars", "cache", "clean", "--help" };
     const help_code = try saasm.cli.executeWithWriters(std.testing.allocator, help_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), help_code);
     try std.testing.expect(std.mem.indexOf(u8, stdout_buf.items, "--max-age-days") != null);
@@ -940,7 +940,7 @@ test "sa test compile-only reuses and repairs project test cache" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const test_argv = [_][]const u8{ "sa", "test", "cached_test.sa", "--compile-only", "--jobs", "1" };
+    const test_argv = [_][]const u8{"sars", "test", "cached_test.sa", "--compile-only", "--jobs", "1" };
     const first_code = try saasm.cli.executeWithWriters(std.testing.allocator, test_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), first_code);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buf.items, 1, "compiled 1 selected tests (1 discovered)"));
@@ -1018,11 +1018,11 @@ test "cli build-exe with jobs 1 and auto produce bitcode artifacts" {
     const auto_out_path = try std.fs.path.join(std.testing.allocator, &.{ tmp_root, "auto.out" });
     defer std.testing.allocator.free(auto_out_path);
 
-    const serial_build_argv = [_][]const u8{ "sa", "build-exe", source_path, "--jobs", "1", "-o", serial_out_path };
+    const serial_build_argv = [_][]const u8{"sars", "build-exe", source_path, "--jobs", "1", "-o", serial_out_path };
     const serial_code = try saasm.cli.execute(std.testing.allocator, serial_build_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), serial_code);
 
-    const auto_build_argv = [_][]const u8{ "sa", "build-exe", source_path, "--jobs", "auto", "-o", auto_out_path };
+    const auto_build_argv = [_][]const u8{"sars", "build-exe", source_path, "--jobs", "auto", "-o", auto_out_path };
     const auto_code = try saasm.cli.execute(std.testing.allocator, auto_build_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), auto_code);
 
@@ -1064,7 +1064,7 @@ test "cli build-exe prunes unused imported functions before llvm emission" {
 
     try writeSource(tmp.dir, "unused_sort_import.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "unused_sort_import.sa", "-o", "unused_sort_import.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "unused_sort_import.sa", "-o", "unused_sort_import.out" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_exe_code);
 
@@ -1207,7 +1207,7 @@ test "cli run with jobs 2 keeps the earliest source-order trap" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", "parallel_trap.sa", "--jobs", "2" };
+    const run_argv = [_][]const u8{"sars", "run", "parallel_trap.sa", "--jobs", "2" };
     const code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 1), code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -1222,7 +1222,7 @@ test "hello world demo prints through sa run" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", "demos/rosetta/01_hello_world/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "demos/rosetta/01_hello_world/main.sa" };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), run_code);
     try std.testing.expectEqualStrings("hello, saasm\n", stdout_buf.items);
@@ -1252,7 +1252,7 @@ test "sa run reports unsupported extern symbol names" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", "extern_run.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "extern_run.sa" };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 1), run_code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -1284,11 +1284,11 @@ test "hello world demo prints through build-wasm and node wasi" {
     const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/01_hello_world/main.sa");
     defer std.testing.allocator.free(source_path);
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", source_path, "-o", "hello.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", source_path, "-o", "hello.wasm", "--target", "wasm32" };
     const build_wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_wasm_code);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "hello.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "hello.out" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_exe_code);
 
@@ -1336,7 +1336,7 @@ test "windows llvm builds and runs hello world executable" {
 
     const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/01_hello_world/main.sa");
     defer std.testing.allocator.free(source_path);
-    const build_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "hello.exe", "--no-incremental" };
+    const build_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "hello.exe", "--no-incremental" };
     try std.testing.expectEqual(@as(u8, 0), try saasm.cli.execute(std.testing.allocator, &build_argv));
 
     const file = try tmp.dir.openFile(std.testing.io, "hello.exe", .{});
@@ -1399,7 +1399,7 @@ test "hello world upstream line can break in gdb" {
     try writeSource(tmp.dir, "hello.sa", source);
     try writeSource(tmp.dir, "hello.rs", upstream_source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "hello.sa", "-o", "hello.out", "-g" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "hello.sa", "-o", "hello.out", "-g" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_exe_code);
 
@@ -1470,7 +1470,7 @@ test "hello compute demo prints through build-exe and build-wasm" {
     const source_path = try original_cwd.realpathAlloc(std.testing.allocator, "demos/rosetta/98_build_pipeline/main.sa");
     defer std.testing.allocator.free(source_path);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "hello_compute.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "hello_compute.out" };
     const build_exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_exe_code);
 
@@ -1489,7 +1489,7 @@ test "hello compute demo prints through build-exe and build-wasm" {
     try std.testing.expectEqualStrings("6\n", native_result.stdout);
     try std.testing.expectEqual(@as(usize, 0), native_result.stderr.len);
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", source_path, "-o", "hello_compute.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", source_path, "-o", "hello_compute.wasm", "--target", "wasm32" };
     const build_wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_wasm_code);
 
@@ -1515,7 +1515,7 @@ test "trait vtable demo runs through sa run" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", "demos/rosetta/07_trait_vtable/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "demos/rosetta/07_trait_vtable/main.sa" };
     const run_code = try saasm.cli.executeWithWriters(std.testing.allocator, run_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), run_code);
     try std.testing.expectEqualStrings("77\n", stdout_buf.items);
@@ -1552,11 +1552,11 @@ test "pkg lib dynamic demo compiles via object archive and prints through native
     const lib_archive = "220_pkg_lib_dynamic_lib.a";
     const out_path = "220_pkg_lib_dynamic.out";
 
-    const build_main_argv = [_][]const u8{ "sa", "build-obj", main_source, "-o", main_obj };
+    const build_main_argv = [_][]const u8{"sars", "build-obj", main_source, "-o", main_obj };
     const build_main_code = try saasm.cli.execute(std.testing.allocator, build_main_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_main_code);
 
-    const build_lib_argv = [_][]const u8{ "sa", "build-obj", lib_source, "-o", lib_obj };
+    const build_lib_argv = [_][]const u8{"sars", "build-obj", lib_source, "-o", lib_obj };
     const build_lib_code = try saasm.cli.execute(std.testing.allocator, build_lib_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_lib_code);
 
@@ -1913,7 +1913,7 @@ test "sys runtime demo prints and round-trips file contents" {
 
     try assertRunStdoutWithArg(source_path, "marker", "ok\n");
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "sys_runtime_probe.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "sys_runtime_probe.out" };
     const build_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_code);
 
@@ -1940,7 +1940,7 @@ test "sys runtime demo prints and round-trips file contents" {
 
     try tmp.dir.deleteFile(std.testing.io, "sys_io.txt");
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", source_path, "-o", "sys_runtime_probe.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", source_path, "-o", "sys_runtime_probe.wasm", "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -2006,7 +2006,7 @@ test "ffi airlock demo preserves pointer values through assume_* in sa run" {
 
     try assertRunStdout(source_path, "ok\n");
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "airlock_probe.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "airlock_probe.out" };
     const build_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_code);
 
@@ -2072,7 +2072,7 @@ test "http client saasm demo builds through native exe" {
     }.run, .{ server, body_seen, server_ready });
     while (!server_ready.load(.acquire)) std.Io.sleep(sio.io(), .fromMilliseconds(1), .awake) catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "http_client_saasm.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "http_client_saasm.out" };
     const build_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_code);
 
@@ -2106,7 +2106,7 @@ test "http server saasm demo builds through native exe" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "http_server_saasm.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "http_server_saasm.out" };
     const build_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_code);
 
@@ -2184,7 +2184,7 @@ test "panic builtins terminate through the interpreter" {
 
     try writeSource(tmp.dir, "panic.sa", plain_source);
 
-    const plain_argv = [_][]const u8{ "sa", "run", "panic.sa" };
+    const plain_argv = [_][]const u8{"sars", "run", "panic.sa" };
     const plain_code = try saasm.cli.execute(std.testing.allocator, plain_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), plain_code);
 
@@ -2199,7 +2199,7 @@ test "panic builtins terminate through the interpreter" {
 
     try writeSource(tmp.dir, "panic_msg.sa", msg_source);
 
-    const msg_argv = [_][]const u8{ "sa", "run", "panic_msg.sa" };
+    const msg_argv = [_][]const u8{"sars", "run", "panic_msg.sa" };
     const msg_code = try saasm.cli.execute(std.testing.allocator, msg_argv[0..]);
     try std.testing.expectEqual(@as(u8, 151), msg_code);
 
@@ -2230,7 +2230,7 @@ test "panic builtins terminate through the interpreter" {
 
     try writeSource(tmp.dir, "result_unwrap.sa", result_unwrap_source);
 
-    const result_unwrap_argv = [_][]const u8{ "sa", "run", "result_unwrap.sa" };
+    const result_unwrap_argv = [_][]const u8{"sars", "run", "result_unwrap.sa" };
     const result_unwrap_code = try saasm.cli.execute(std.testing.allocator, result_unwrap_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), result_unwrap_code);
 
@@ -2250,7 +2250,7 @@ test "panic builtins terminate through the interpreter" {
 
     try writeSource(tmp.dir, "option_unwrap.sa", option_unwrap_source);
 
-    const option_unwrap_argv = [_][]const u8{ "sa", "run", "option_unwrap.sa" };
+    const option_unwrap_argv = [_][]const u8{"sars", "run", "option_unwrap.sa" };
     const option_unwrap_code = try saasm.cli.execute(std.testing.allocator, option_unwrap_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), option_unwrap_code);
 
@@ -2270,7 +2270,7 @@ test "panic builtins terminate through the interpreter" {
 
     try writeSource(tmp.dir, "result_unwrap_err.sa", result_unwrap_err_source);
 
-    const result_unwrap_err_argv = [_][]const u8{ "sa", "run", "result_unwrap_err.sa" };
+    const result_unwrap_err_argv = [_][]const u8{"sars", "run", "result_unwrap_err.sa" };
     const result_unwrap_err_code = try saasm.cli.execute(std.testing.allocator, result_unwrap_err_argv[0..]);
     try std.testing.expectEqual(@as(u8, 145), result_unwrap_err_code);
 }
@@ -2292,7 +2292,7 @@ test "sa test covers include macro expansion fixture" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const test_argv = [_][]const u8{ "sa", "test", source_path, "--jobs", "1" };
+    const test_argv = [_][]const u8{"sars", "test", source_path, "--jobs", "1" };
     const test_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         test_argv[0..],
@@ -2325,7 +2325,7 @@ test "sa test covers module_path macro expansion fixture" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const test_argv = [_][]const u8{ "sa", "test", source_path, "--jobs", "1" };
+    const test_argv = [_][]const u8{"sars", "test", source_path, "--jobs", "1" };
     const test_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         test_argv[0..],
@@ -2358,7 +2358,7 @@ test "sa test runs isolated native tests with filterable names" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const test_argv = [_][]const u8{ "sa", "test", source_path, "--jobs", "1" };
+    const test_argv = [_][]const u8{"sars", "test", source_path, "--jobs", "1" };
     const test_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         test_argv[0..],
@@ -2377,7 +2377,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const list_argv = [_][]const u8{ "sa", "test", source_path, "--list", "--filter", "simple" };
+    const list_argv = [_][]const u8{"sars", "test", source_path, "--list", "--filter", "simple" };
     const list_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         list_argv[0..],
@@ -2404,7 +2404,7 @@ test "sa test runs isolated native tests with filterable names" {
         \\    return
     ;
     try writeSource(tmp.dir, "list_only.sa", list_only_source);
-    const list_only_argv = [_][]const u8{ "sa", "test", "list_only.sa", "--list" };
+    const list_only_argv = [_][]const u8{"sars", "test", "list_only.sa", "--list" };
     const list_only_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         list_only_argv[0..],
@@ -2419,7 +2419,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const filter_argv = [_][]const u8{ "sa", "test", source_path, "--filter", "another" };
+    const filter_argv = [_][]const u8{"sars", "test", source_path, "--filter", "another" };
     const filter_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         filter_argv[0..],
@@ -2433,7 +2433,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const exact_argv = [_][]const u8{ "sa", "test", source_path, "--exact", "--filter", "simple pass" };
+    const exact_argv = [_][]const u8{"sars", "test", source_path, "--exact", "--filter", "simple pass" };
     const exact_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         exact_argv[0..],
@@ -2451,7 +2451,7 @@ test "sa test runs isolated native tests with filterable names" {
     const should_panic_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_should_panic.sa");
     defer std.testing.allocator.free(should_panic_path);
 
-    const should_panic_argv = [_][]const u8{ "sa", "test", should_panic_path };
+    const should_panic_argv = [_][]const u8{"sars", "test", should_panic_path };
     const should_panic_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         should_panic_argv[0..],
@@ -2484,7 +2484,7 @@ test "sa test runs isolated native tests with filterable names" {
     ;
     try writeSource(tmp.dir, "assert_values.sa", assert_source);
 
-    const compile_only_argv = [_][]const u8{ "sa", "test", "assert_values.sa", "--compile-only" };
+    const compile_only_argv = [_][]const u8{"sars", "test", "assert_values.sa", "--compile-only" };
     const compile_only_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         compile_only_argv[0..],
@@ -2499,7 +2499,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const assert_argv = [_][]const u8{ "sa", "test", "assert_values.sa", "--jobs", "1", "--trace-panic" };
+    const assert_argv = [_][]const u8{"sars", "test", "assert_values.sa", "--jobs", "1", "--trace-panic" };
     const assert_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         assert_argv[0..],
@@ -2524,7 +2524,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const skip_argv = [_][]const u8{ "sa", "test", source_path, "--skip", "another" };
+    const skip_argv = [_][]const u8{"sars", "test", source_path, "--skip", "another" };
     const skip_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         skip_argv[0..],
@@ -2542,7 +2542,7 @@ test "sa test runs isolated native tests with filterable names" {
     const ignored_path = try original_cwd.realpathAlloc(std.testing.allocator, "tests/unit_test_ignored.sa");
     defer std.testing.allocator.free(ignored_path);
 
-    const ignored_default_argv = [_][]const u8{ "sa", "test", ignored_path };
+    const ignored_default_argv = [_][]const u8{"sars", "test", ignored_path };
     const ignored_default_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         ignored_default_argv[0..],
@@ -2557,7 +2557,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const ignored_only_argv = [_][]const u8{ "sa", "test", ignored_path, "--ignored" };
+    const ignored_only_argv = [_][]const u8{"sars", "test", ignored_path, "--ignored" };
     const ignored_only_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         ignored_only_argv[0..],
@@ -2572,7 +2572,7 @@ test "sa test runs isolated native tests with filterable names" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const include_ignored_argv = [_][]const u8{ "sa", "test", ignored_path, "--include-ignored" };
+    const include_ignored_argv = [_][]const u8{"sars", "test", ignored_path, "--include-ignored" };
     const include_ignored_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         include_ignored_argv[0..],
@@ -2610,7 +2610,7 @@ test "sa test runs isolated native tests with filterable names" {
     try writeSource(tmp.dir, "signal.sa", signal_source);
     const signal_path = "signal.sa";
 
-    const signal_argv = [_][]const u8{ "sa", "test", signal_path };
+    const signal_argv = [_][]const u8{"sars", "test", signal_path };
     const signal_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         signal_argv[0..],
@@ -2639,7 +2639,7 @@ test "sa test schedules native tests in parallel when jobs are higher" {
     defer stderr_buffer.deinit();
 
     const serial_start = sio.nanoTimestamp();
-    const serial_argv = [_][]const u8{ "sa", "test", source_path, "--jobs", "1" };
+    const serial_argv = [_][]const u8{"sars", "test", source_path, "--jobs", "1" };
     const serial_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         serial_argv[0..],
@@ -2665,7 +2665,7 @@ test "sa test schedules native tests in parallel when jobs are higher" {
     stderr_buffer.clearRetainingCapacity();
 
     const parallel_start = sio.nanoTimestamp();
-    const parallel_argv = [_][]const u8{ "sa", "test", source_path, "--jobs", "4" };
+    const parallel_argv = [_][]const u8{"sars", "test", source_path, "--jobs", "4" };
     const parallel_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         parallel_argv[0..],
@@ -2710,11 +2710,11 @@ test "fallible ABI and ? propagation work end to end" {
     defer original_cwd.setAsCwd() catch {};
     try writeSource(tmp.dir, "fallible.sa", source);
 
-    const run_argv = [_][]const u8{ "sa", "run", "fallible.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "fallible.sa" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), run_code);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "fallible.sa", "-o", "fallible.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible.sa", "-o", "fallible.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -2817,7 +2817,7 @@ test "extern u64 fallible return can be loaded from ABI payload offset" {
     try writeSource(tmp.dir, "fallible_u64_file.sa", source);
     try writeBytes(tmp.dir, "probe.env", "PORT=28080\n");
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "fallible_u64_file.sa", "-o", "fallible_u64_file.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible_u64_file.sa", "-o", "fallible_u64_file.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -2945,7 +2945,7 @@ test "extern i32 fallible return uses ABI-aligned payload offset" {
     try writeSource(tmp.dir, "fallible_i32_file.sa", source);
     try writeBytes(tmp.dir, "probe.env", "PORT=28080\n");
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "fallible_i32_file.sa", "-o", "fallible_i32_file.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "fallible_i32_file.sa", "-o", "fallible_i32_file.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3026,7 +3026,7 @@ test "result unwrap_or and map_or helpers branch on tags correctly" {
 
     try writeSource(tmp.dir, "result_helpers.sa", source);
 
-    const run_argv = [_][]const u8{ "sa", "run", "result_helpers.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "result_helpers.sa" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 142), run_code);
 }
@@ -3056,7 +3056,7 @@ test "const pointer stores survive load and print end to end" {
     defer original_cwd.setAsCwd() catch {};
     try writeSource(tmp.dir, "const_ptr_store.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "const_ptr_store.sa", "-o", "const_ptr_store.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "const_ptr_store.sa", "-o", "const_ptr_store.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3119,7 +3119,7 @@ test "vtable loads preserve indirect call provenance end to end" {
     defer original_cwd.setAsCwd() catch {};
     try writeSource(tmp.dir, "vtable_indirect.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "vtable_indirect.sa", "-o", "vtable_indirect.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "vtable_indirect.sa", "-o", "vtable_indirect.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3175,7 +3175,7 @@ test "bc2sa translates real llvm bitcode" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const bc2sa_argv = [_][]const u8{ "sa", "bc2sa", "sample.bc" };
+    const bc2sa_argv = [_][]const u8{"sars", "bc2sa", "sample.bc" };
     const bc2sa_code = try saasm.cli.executeWithWriters(std.testing.allocator, bc2sa_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), bc2sa_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buf.items.len);
@@ -3225,7 +3225,7 @@ test "bc2sa translates clang cmake bitcode demo" {
     const bc_path = try std.fs.path.join(std.testing.allocator, &.{ build_dir, "main.bc" });
     defer std.testing.allocator.free(bc_path);
 
-    const bc2sa_argv = [_][]const u8{ "sa", "bc2sa", bc_path };
+    const bc2sa_argv = [_][]const u8{"sars", "bc2sa", bc_path };
     const bc2sa_code = try saasm.cli.executeWithWriters(std.testing.allocator, bc2sa_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), bc2sa_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buf.items.len);
@@ -3270,7 +3270,7 @@ test "bc2sa translates sqlite3 api probe bitcode" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const bc2sa_argv = [_][]const u8{ "sa", "bc2sa", bc_path };
+    const bc2sa_argv = [_][]const u8{"sars", "bc2sa", bc_path };
     const bc2sa_code = try saasm.cli.executeWithWriters(std.testing.allocator, bc2sa_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 0), bc2sa_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buf.items.len);
@@ -3342,7 +3342,7 @@ test "bc2sa rejects static stack buffer overflow in clang cmake demo" {
     var stderr_buf = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buf.deinit();
 
-    const bc2sa_argv = [_][]const u8{ "sa", "bc2sa", "vulnerable.bc" };
+    const bc2sa_argv = [_][]const u8{"sars", "bc2sa", "vulnerable.bc" };
     const bc2sa_code = try saasm.cli.executeWithWriters(std.testing.allocator, bc2sa_argv[0..], sio.managedWriter(&stdout_buf), sio.managedWriter(&stderr_buf));
     try std.testing.expectEqual(@as(u8, 1), bc2sa_code);
     try std.testing.expectEqual(@as(usize, 0), stdout_buf.items.len);
@@ -3362,7 +3362,7 @@ test "import expansion keeps source paths alive end to end" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "impl_block_state.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "impl_block_state.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3404,11 +3404,11 @@ test "atomic instructions work end to end and emit real LLVM" {
 
     try writeSource(tmp.dir, "atomic.sa", source);
 
-    const run_argv = [_][]const u8{ "sa", "run", "atomic.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "atomic.sa" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 11), run_code);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "atomic.sa", "-o", "atomic.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "atomic.sa", "-o", "atomic.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3426,7 +3426,7 @@ test "atomic instructions work end to end and emit real LLVM" {
         else => return error.TestUnexpectedResult,
     }
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", "atomic.sa", "-o", "atomic.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "atomic.sa", "-o", "atomic.wasm", "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -3438,7 +3438,7 @@ test "atomic instructions work end to end and emit real LLVM" {
     try std.testing.expectEqualSlices(u8, &std.wasm.magic, wasm_bytes[0..4]);
     try std.testing.expectEqualSlices(u8, &std.wasm.version, wasm_bytes[4..8]);
 
-    const build_obj_argv = [_][]const u8{ "sa", "build-obj", "atomic.sa", "-o", "atomic.o" };
+    const build_obj_argv = [_][]const u8{"sars", "build-obj", "atomic.sa", "-o", "atomic.o" };
     const obj_code = try saasm.cli.execute(std.testing.allocator, build_obj_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), obj_code);
 
@@ -3476,11 +3476,11 @@ test "ptr arithmetic lowers to gep and runs through the interpreter" {
 
     try writeSource(tmp.dir, "ptr_add.sa", source);
 
-    const run_argv = [_][]const u8{ "sa", "run", "ptr_add.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "ptr_add.sa" };
     const run_code = try saasm.cli.execute(std.testing.allocator, run_argv[0..]);
     try std.testing.expectEqual(@as(u8, 65), run_code);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "ptr_add.sa", "-o", "ptr_add.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "ptr_add.sa", "-o", "ptr_add.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3554,7 +3554,7 @@ test "panic lowers to native executable failure code" {
 
     try writeSource(tmp.dir, "panic_native.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "panic_native.sa", "-o", "panic_native.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "panic_native.sa", "-o", "panic_native.out" };
     const exe_code = try saasm.cli.execute(std.testing.allocator, build_exe_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), exe_code);
 
@@ -3573,7 +3573,7 @@ test "panic lowers to native executable failure code" {
     }
     try std.testing.expect(std.mem.containsAtLeast(u8, exe_result.stderr, 1, "PANIC[77]: hi"));
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", "panic_native.sa", "-o", "panic_native.wasm", "--target", "wasm32" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "panic_native.sa", "-o", "panic_native.wasm", "--target", "wasm32" };
     const wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), wasm_code);
 
@@ -3631,7 +3631,7 @@ test "extern export ffi wrapper map to real declarations and symbols" {
     defer original_cwd.setAsCwd() catch {};
     try writeSource(tmp.dir, "contracts.sa", source);
 
-    const build_obj_argv = [_][]const u8{ "sa", "build-obj", "contracts.sa", "-o", "contracts.o" };
+    const build_obj_argv = [_][]const u8{"sars", "build-obj", "contracts.sa", "-o", "contracts.o" };
     const code = try saasm.cli.execute(std.testing.allocator, build_obj_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), code);
 
@@ -3666,7 +3666,7 @@ test "unknown sys intrinsic is rejected before emission" {
     defer original_cwd.setAsCwd() catch {};
     try writeSource(tmp.dir, "unsupported_sys.sa", source);
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "unsupported_sys.sa", "-o", "unsupported_sys.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "unsupported_sys.sa", "-o", "unsupported_sys.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3708,7 +3708,7 @@ test "unknown register demo is rejected with structured trap output" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "unknown_register.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "unknown_register.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3740,7 +3740,7 @@ test "memory leak demo is rejected with structured trap output" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "memory_leak.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "memory_leak.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3771,7 +3771,7 @@ test "fallthrough demo is rejected without a terminator" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "fallthrough.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "fallthrough.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3803,7 +3803,7 @@ test "duplicate label demo is rejected with structured trap output" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "duplicate_label.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "duplicate_label.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3835,7 +3835,7 @@ test "phi conflict demo is rejected on mismatched join states" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "phi_conflict.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "phi_conflict.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3866,7 +3866,7 @@ test "phi join AND demo runs through the join point" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", "phi_join_and.out" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", "phi_join_and.out" };
     var stdout_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stdout_buffer.deinit();
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -3906,7 +3906,7 @@ test "build-wasm supports wasm64 freestanding no-entry" {
     defer original_cwd.setAsCwd() catch {};
     try writeSource(tmp.dir, "wasm64.sa", source);
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", "wasm64.sa", "-o", "wasm64.wasm", "--target", "wasm64" };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", "wasm64.sa", "-o", "wasm64.wasm", "--target", "wasm64" };
     const build_wasm_code = try saasm.cli.execute(std.testing.allocator, build_wasm_argv[0..]);
     try std.testing.expectEqual(@as(u8, 0), build_wasm_code);
 
@@ -3950,7 +3950,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const init_argv = [_][]const u8{ "sa", "db", "init", "flash_sale.sadb-schema" };
+    const init_argv = [_][]const u8{ "sars", "db", "init", "flash_sale.sadb-schema" };
     const init_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         init_argv[0..],
@@ -3972,7 +3972,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const ingest_argv = [_][]const u8{ "sa", "db", "ingest", "flash_sale", "rows.csv" };
+    const ingest_argv = [_][]const u8{ "sars", "db", "ingest", "flash_sale", "rows.csv" };
     const ingest_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         ingest_argv[0..],
@@ -3992,7 +3992,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const snapshot_argv = [_][]const u8{ "sa", "db", "snapshot", "flash_sale" };
+    const snapshot_argv = [_][]const u8{ "sars", "db", "snapshot", "flash_sale" };
     const snapshot_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         snapshot_argv[0..],
@@ -4008,7 +4008,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const second_ingest_argv = [_][]const u8{ "sa", "db", "ingest", "flash_sale", "more.jsonl" };
+    const second_ingest_argv = [_][]const u8{ "sars", "db", "ingest", "flash_sale", "more.jsonl" };
     const second_ingest_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         second_ingest_argv[0..],
@@ -4028,7 +4028,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const verify_argv = [_][]const u8{ "sa", "db", "verify", "flash_sale" };
+    const verify_argv = [_][]const u8{ "sars", "db", "verify", "flash_sale" };
     const verify_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         verify_argv[0..],
@@ -4042,7 +4042,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const compact_argv = [_][]const u8{ "sa", "db", "compact", "flash_sale" };
+    const compact_argv = [_][]const u8{ "sars", "db", "compact", "flash_sale" };
     const compact_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         compact_argv[0..],
@@ -4056,7 +4056,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const restore_argv = [_][]const u8{ "sa", "db", "restore", "flash_sale", "1" };
+    const restore_argv = [_][]const u8{ "sars", "db", "restore", "flash_sale", "1" };
     const restore_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         restore_argv[0..],
@@ -4070,7 +4070,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const lock_argv = [_][]const u8{ "sa", "db", "lock", "flash_sale" };
+    const lock_argv = [_][]const u8{ "sars", "db", "lock", "flash_sale" };
     const lock_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         lock_argv[0..],
@@ -4084,7 +4084,7 @@ test "db cli init writes iface and table lifecycle commands update storage" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const locked_compact_argv = [_][]const u8{ "sa", "db", "compact", "flash_sale" };
+    const locked_compact_argv = [_][]const u8{ "sars", "db", "compact", "flash_sale" };
     const locked_compact_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         locked_compact_argv[0..],
@@ -4132,7 +4132,7 @@ test "db cli register inspect exec round trip through registry" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const register_argv = [_][]const u8{ "sa", "db", "register", "simple.query.sa" };
+    const register_argv = [_][]const u8{ "sars", "db", "register", "simple.query.sa" };
     const register_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         register_argv[0..],
@@ -4149,7 +4149,7 @@ test "db cli register inspect exec round trip through registry" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const inspect_argv = [_][]const u8{ "sa", "db", "inspect", hash_hex };
+    const inspect_argv = [_][]const u8{ "sars", "db", "inspect", hash_hex };
     const inspect_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         inspect_argv[0..],
@@ -4164,7 +4164,7 @@ test "db cli register inspect exec round trip through registry" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const exec_argv = [_][]const u8{ "sa", "db", "exec", hash_hex, "--params", "params.bin" };
+    const exec_argv = [_][]const u8{ "sars", "db", "exec", hash_hex, "--params", "params.bin" };
     const exec_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         exec_argv[0..],
@@ -4182,7 +4182,7 @@ test "layout cli prints text, json, and debug macro outputs" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const text_argv = [_][]const u8{ "sa", "layout", "--name", "Entity", "--fields", "id:u32, pos_x:f64, pos_y:f64, hp:i32" };
+    const text_argv = [_][]const u8{"sars", "layout", "--name", "Entity", "--fields", "id:u32, pos_x:f64, pos_y:f64, hp:i32" };
     const text_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         text_argv[0..],
@@ -4199,7 +4199,7 @@ test "layout cli prints text, json, and debug macro outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const json_argv = [_][]const u8{ "sa", "layout", "--name", "Pair", "--fields", "head:ptr, count:u32", "--format", "json", "--target", "32" };
+    const json_argv = [_][]const u8{"sars", "layout", "--name", "Pair", "--fields", "head:ptr, count:u32", "--format", "json", "--target", "32" };
     const json_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         json_argv[0..],
@@ -4216,7 +4216,7 @@ test "layout cli prints text, json, and debug macro outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const debug_argv = [_][]const u8{ "sa", "layout", "--name", "Entity", "--fields", "id:u64, pos:f64, active:i1", "--format", "debug" };
+    const debug_argv = [_][]const u8{"sars", "layout", "--name", "Entity", "--fields", "id:u64, pos:f64, active:i1", "--format", "debug" };
     const debug_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         debug_argv[0..],
@@ -4249,7 +4249,7 @@ test "layout cli prints text, json, and debug macro outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const dict_argv = [_][]const u8{ "sa", "layout", "--name", "Entity", "--fields", "id:u64, pos:f64", "--format", "dict" };
+    const dict_argv = [_][]const u8{"sars", "layout", "--name", "Entity", "--fields", "id:u64, pos:f64", "--format", "dict" };
     const dict_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         dict_argv[0..],
@@ -4279,7 +4279,7 @@ test "agent-first cli commands print explain fix and skills outputs" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const explain_argv = [_][]const u8{ "sa", "explain", "SA-CLI-001" };
+    const explain_argv = [_][]const u8{"sars", "explain", "SA-CLI-001" };
     const explain_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         explain_argv[0..],
@@ -4295,7 +4295,7 @@ test "agent-first cli commands print explain fix and skills outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const explain_json_argv = [_][]const u8{ "sa", "explain", "SA-CLI-001", "--json" };
+    const explain_json_argv = [_][]const u8{"sars", "explain", "SA-CLI-001", "--json" };
     const explain_json_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         explain_json_argv[0..],
@@ -4310,7 +4310,7 @@ test "agent-first cli commands print explain fix and skills outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const fix_argv = [_][]const u8{ "sa", "fix", "--plan", "SA-CLI-001", "--json" };
+    const fix_argv = [_][]const u8{"sars", "fix", "--plan", "SA-CLI-001", "--json" };
     const fix_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         fix_argv[0..],
@@ -4325,7 +4325,7 @@ test "agent-first cli commands print explain fix and skills outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const skills_argv = [_][]const u8{ "sa", "skills", "--json" };
+    const skills_argv = [_][]const u8{"sars", "skills", "--json" };
     const skills_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         skills_argv[0..],
@@ -4343,7 +4343,7 @@ test "agent-first cli commands print explain fix and skills outputs" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const skills_help_argv = [_][]const u8{ "sa", "skills", "--help" };
+    const skills_help_argv = [_][]const u8{"sars", "skills", "--help" };
     const skills_help_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         skills_help_argv[0..],
@@ -4352,7 +4352,7 @@ test "agent-first cli commands print explain fix and skills outputs" {
     );
     try std.testing.expectEqual(@as(u8, 0), skills_help_code);
     try std.testing.expectEqual(@as(usize, 0), stderr_buffer.items.len);
-    try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "usage: sa skills [--json]"));
+    try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "usage: sars skills [--json]"));
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "scans the current sa_std root"));
 }
 
@@ -4413,7 +4413,7 @@ test "sa skills writes Codex and Claude skill files for current project" {
 
     const code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
-        &.{ "sa", "skills" },
+        &.{"sars", "skills" },
         sio.managedWriter(&stdout_buffer),
         sio.managedWriter(&stderr_buffer),
     );
@@ -4511,7 +4511,7 @@ test "cli audit dispatches through runtime package plugin" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const audit_argv = [_][]const u8{ "sa", "audit", "--format", "json", pkg_root };
+    const audit_argv = [_][]const u8{"sars", "audit", "--format", "json", pkg_root };
     const audit_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         audit_argv[0..],
@@ -4548,7 +4548,7 @@ test "cli audit update-lock writes project lock through package flow" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const audit_argv = [_][]const u8{ "sa", "audit", "--update-lock", "--format", "json", "pkg" };
+    const audit_argv = [_][]const u8{"sars", "audit", "--update-lock", "--format", "json", "pkg" };
     const audit_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         audit_argv[0..],
@@ -4599,7 +4599,7 @@ test "cli init creates a binary project and install syncs manifest dependencies"
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const init_argv = [_][]const u8{ "sa", "init", "app" };
+    const init_argv = [_][]const u8{"sars", "init", "app" };
     const init_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         init_argv[0..],
@@ -4616,7 +4616,7 @@ test "cli init creates a binary project and install syncs manifest dependencies"
     var app_dir = try tmp.dir.openDir(std.testing.io, "app", .{});
     defer app_dir.close();
     try app_dir.setAsCwd();
-    const run_argv = [_][]const u8{ "sa", "run", "src/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sa" };
     const run_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -4647,7 +4647,7 @@ test "cli init creates a binary project and install syncs manifest dependencies"
     try app_dir.setAsCwd();
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
-    const install_argv = [_][]const u8{ "sa", "install" };
+    const install_argv = [_][]const u8{"sars", "install" };
     const install_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         install_argv[0..],
@@ -4749,7 +4749,7 @@ test "workspace install aggregates member manifests at root and pkg install fall
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const install_argv = [_][]const u8{ "sa", "install" };
+    const install_argv = [_][]const u8{"sars", "install" };
     const install_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         install_argv[0..],
@@ -4768,7 +4768,7 @@ test "workspace install aggregates member manifests at root and pkg install fall
 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
-    const pkg_install_argv = [_][]const u8{ "sa", "pkg", "install", "-p", "tool" };
+    const pkg_install_argv = [_][]const u8{"sars", "pkg", "install", "-p", "tool" };
     const pkg_install_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         pkg_install_argv[0..],
@@ -4822,7 +4822,7 @@ test "package preflight rejects tampered project sum as structured trap" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const install_argv = [_][]const u8{ "sa", "install" };
+    const install_argv = [_][]const u8{"sars", "install" };
     const install_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         install_argv[0..],
@@ -4840,7 +4840,7 @@ test "package preflight rejects tampered project sum as structured trap" {
 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
-    const run_argv = [_][]const u8{ "sa", "run", "src/main.sa", "--json" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sa", "--json" };
     const run_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -4887,7 +4887,7 @@ test "PkgMgr-Confirm-NonTty rejects risky package preflight before build output"
     defer stderr_buffer.deinit();
 
     var input = std.io.fixedBufferStream("");
-    const build_argv = [_][]const u8{ "sa", "build-exe", "src/main.sa", "-o", "blocked.out", "--json" };
+    const build_argv = [_][]const u8{"sars", "build-exe", "src/main.sa", "-o", "blocked.out", "--json" };
     const code = try saasm.cli.executeWithWritersAndOptions(
         std.testing.allocator,
         build_argv[0..],
@@ -4935,7 +4935,7 @@ test "PkgMgr-Confirm-Tty accepts exact URL through compile preflight" {
     defer stderr_buffer.deinit();
 
     var input = std.io.fixedBufferStream("risky/pkg\n");
-    const run_argv = [_][]const u8{ "sa", "run", "src/main.sa" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sa" };
     const code = try saasm.cli.executeWithWritersAndOptions(
         std.testing.allocator,
         run_argv[0..],
@@ -4986,7 +4986,7 @@ test "PkgMgr-CI-DualTrack rejects mismatched source and unauthorized primitives"
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const run_ci_argv = [_][]const u8{ "sa", "run", "src/main.sa", "--ci", "--json" };
+    const run_ci_argv = [_][]const u8{"sars", "run", "src/main.sa", "--ci", "--json" };
     var code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_ci_argv[0..],
@@ -5046,7 +5046,7 @@ test "PkgMgr-Offline-Build uses vendored sources and project sum" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", "src/main.sa", "--offline" };
+    const run_argv = [_][]const u8{"sars", "run", "src/main.sa", "--offline" };
     const code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -5077,7 +5077,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const run_argv = [_][]const u8{ "sa", "run", "json_success.sa", "--json" };
+    const run_argv = [_][]const u8{"sars", "run", "json_success.sa", "--json" };
     const run_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         run_argv[0..],
@@ -5091,7 +5091,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const build_exe_argv = [_][]const u8{ "sa", "build-exe", "json_success.sa", "-o", "json_success.out", "--json" };
+    const build_exe_argv = [_][]const u8{"sars", "build-exe", "json_success.sa", "-o", "json_success.out", "--json" };
     const build_exe_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         build_exe_argv[0..],
@@ -5106,7 +5106,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const build_mem_argv = [_][]const u8{ "sa", "build-exe", "json_success.sa", "-o", "json_success_mem.out", "--json", "--mem-report", "--no-incremental" };
+    const build_mem_argv = [_][]const u8{"sars", "build-exe", "json_success.sa", "-o", "json_success_mem.out", "--json", "--mem-report", "--no-incremental" };
     const build_mem_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         build_mem_argv[0..],
@@ -5139,7 +5139,7 @@ test "build and run json diagnostics emit structured success metrics on stderr" 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const build_mem_text_argv = [_][]const u8{ "sa", "build-exe", "json_success.sa", "-o", "json_success_mem_text.out", "--mem-report", "--no-incremental" };
+    const build_mem_text_argv = [_][]const u8{"sars", "build-exe", "json_success.sa", "-o", "json_success_mem_text.out", "--mem-report", "--no-incremental" };
     const build_mem_text_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         build_mem_text_argv[0..],
@@ -5178,7 +5178,7 @@ test "graph and size cli emit structured reports for a tiny project" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const graph_argv = [_][]const u8{ "sa", "graph", "--json" };
+    const graph_argv = [_][]const u8{"sars", "graph", "--json" };
     const graph_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         graph_argv[0..],
@@ -5207,7 +5207,7 @@ test "graph and size cli emit structured reports for a tiny project" {
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
 
-    const size_argv = [_][]const u8{ "sa", "size", "--json" };
+    const size_argv = [_][]const u8{"sars", "size", "--json" };
     const size_code = try saasm.cli.executeWithWriters(
         std.testing.allocator,
         size_argv[0..],
@@ -5239,7 +5239,7 @@ test "agent capability: check verdict cache and affected help" {
     var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
     defer stderr_buffer.deinit();
 
-    const help_argv = [_][]const u8{ "sa", "--help" };
+    const help_argv = [_][]const u8{ "sars", "--help" };
     const help_code = try saasm.cli.executeWithWriters(std.testing.allocator, help_argv[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
     try std.testing.expectEqual(@as(u8, 0), help_code);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "check"));
@@ -5250,7 +5250,7 @@ test "agent capability: check verdict cache and affected help" {
     stderr_buffer.clearRetainingCapacity();
 
     // In-process check hit: same process reuses verdict cache.
-    const check1 = [_][]const u8{ "sa", "check", "tests/agent_fixtures/check_ok.sa", "--json" };
+    const check1 = [_][]const u8{"sars", "check", "tests/agent_fixtures/check_ok.sa", "--json" };
     const c1 = try saasm.cli.executeWithWriters(std.testing.allocator, check1[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
     try std.testing.expectEqual(@as(u8, 0), c1);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "\"hit\":false") or std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "\"status\":\"ok\""));
@@ -5263,7 +5263,7 @@ test "agent capability: check verdict cache and affected help" {
 
     stdout_buffer.clearRetainingCapacity();
     stderr_buffer.clearRetainingCapacity();
-    const test_help = [_][]const u8{ "sa", "test", "--help" };
+    const test_help = [_][]const u8{"sars", "test", "--help" };
     const th = try saasm.cli.executeWithWriters(std.testing.allocator, test_help[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
     try std.testing.expectEqual(@as(u8, 0), th);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "--affected"));
@@ -5276,7 +5276,7 @@ test "agent capability: affected selects impacted tests" {
     defer stderr_buffer.deinit();
 
     // First run establishes baseline (no prior function hashes in this process).
-    const first = [_][]const u8{ "sa", "test", "tests/agent_fixtures/affected_graph.sa", "--affected" };
+    const first = [_][]const u8{"sars", "test", "tests/agent_fixtures/affected_graph.sa", "--affected" };
     const code1 = try saasm.cli.executeWithWriters(std.testing.allocator, first[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
     try std.testing.expectEqual(@as(u8, 0), code1);
     try std.testing.expect(std.mem.containsAtLeast(u8, stdout_buffer.items, 1, "affected:"));
@@ -5320,7 +5320,7 @@ test "sab with corrupted param_ids traps CorruptedSignature without panic or tex
     // NOTE: use executeWithWriters (not execute): execute writes to the real
     // process stdout, which corrupts the `zig build` --listen test protocol
     // and hangs the run.
-    const emit_argv = [_][]const u8{ "sa", "check", "params.sa", "--emit-sab", "params.sab" };
+    const emit_argv = [_][]const u8{"sars", "check", "params.sa", "--emit-sab", "params.sab" };
     var emit_stdout = std.array_list.Managed(u8).init(std.testing.allocator);
     defer emit_stdout.deinit();
     var emit_stderr = std.array_list.Managed(u8).init(std.testing.allocator);
@@ -5398,7 +5398,7 @@ test "sab with corrupted param_ids traps CorruptedSignature without panic or tex
         defer stdout_buffer.deinit();
         var stderr_buffer = std.array_list.Managed(u8).init(std.testing.allocator);
         defer stderr_buffer.deinit();
-        const argv = [_][]const u8{ "sa", "check", bad_name };
+        const argv = [_][]const u8{"sars", "check", bad_name };
         const code = try saasm.cli.executeWithWriters(std.testing.allocator, argv[0..], sio.managedWriter(&stdout_buffer), sio.managedWriter(&stderr_buffer));
         try std.testing.expectEqual(@as(u8, 1), code);
         try std.testing.expect(std.mem.indexOf(u8, stderr_buffer.items, "CorruptedSignature") != null);

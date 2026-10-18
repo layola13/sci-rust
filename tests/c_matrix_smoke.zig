@@ -82,7 +82,7 @@ fn assertCMatrixStdout(path: []const u8, expected_stdout: []const u8) !void {
     const exe_name = try std.fmt.allocPrint(std.testing.allocator, "{s}_{s}_c", .{ tag, stem });
     defer std.testing.allocator.free(exe_name);
 
-    const build_c_argv = [_][]const u8{ "sa", "build-c", source_path, "-o", c_name, "--project-root", repo_root };
+    const build_c_argv = [_][]const u8{"sars", "build-c", source_path, "-o", c_name, "--project-root", repo_root };
     const build_c_code = saasm.cli.execute(std.testing.allocator, build_c_argv[0..]) catch |err| {
         std.debug.print("build-c errored: {s}: {s}\n", .{ path, @errorName(err) });
         return err;
@@ -150,7 +150,7 @@ test "c backend emits sane C for hello world" {
     try std.process.setCurrentDir(std.testing.io, tmp.dir);
     defer original_cwd.setAsCwd() catch {};
 
-    const build_c_argv = [_][]const u8{ "sa", "build-c", source_path, "-o", "hello.c", "--project-root", repo_root };
+    const build_c_argv = [_][]const u8{"sars", "build-c", source_path, "-o", "hello.c", "--project-root", repo_root };
     const code = saasm.cli.execute(std.testing.allocator, build_c_argv[0..]) catch |err| return err;
     try std.testing.expectEqual(@as(u8, 0), code);
 

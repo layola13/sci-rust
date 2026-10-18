@@ -303,7 +303,7 @@ pub fn build(b: *std.Build) void {
     addLlvmcSupportToModule(b, cli_module, enable_llvm, llvm_include_dir, llvm_lib_dir, llvm_lib_name);
     cli_module.addOptions("build_options", build_options);
     const exe = b.addExecutable(.{
-        .name = "sa",
+        .name = "sars",
         .root_module = cli_module,
     });
     linkLLVMToCompile(exe, enable_llvm, llvm_include_dir, llvm_lib_dir, llvm_lib_name);
@@ -606,7 +606,7 @@ pub fn build(b: *std.Build) void {
     // default test runner rejects unknown `--sa-bin=` argv, so pass the
     // just-built `sa` via SA_BIN (which the runner already honors) instead.
     // This matches the 0.14 behavior for the default `zig-out` prefix.
-    run_unit_framework.setEnvironmentVariable("SA_BIN", pathFromRoot(b, if (is_windows) "zig-out/bin/sa.exe" else "zig-out/bin/sa"));
+    run_unit_framework.setEnvironmentVariable("SA_BIN", pathFromRoot(b, if (is_windows) "zig-out/bin/sars.exe" else "zig-out/bin/sars"));
     // Multithreaded unit-test execution: SA_UNIT_FILE_JOBS>1 makes the runner
     // queue suites and verify them via external `sa` processes with a worker
     // thread pool instead of slow serial in-process runs. Defaults to the

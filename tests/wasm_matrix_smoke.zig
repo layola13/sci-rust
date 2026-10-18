@@ -309,7 +309,7 @@ fn assertWasmMatrixStdout(stats: *WasmMatrixStats, path: []const u8, expected_st
 
     if (shouldRunNativeReference(path)) {
         timing.native_checked = true;
-        const build_exe_argv = [_][]const u8{ "sa", "build-exe", source_path, "-o", exe_path, "--project-root", repo_root };
+        const build_exe_argv = [_][]const u8{"sars", "build-exe", source_path, "-o", exe_path, "--project-root", repo_root };
         {
             const phase_start = startTimedPhase(path, "build-exe");
             var phase_ended = false;
@@ -356,7 +356,7 @@ fn assertWasmMatrixStdout(stats: *WasmMatrixStats, path: []const u8, expected_st
         std.debug.print("[wasm-matrix] SKIP  demo={s} phase=native-run reason=wasm-fast-default\n", .{path});
     }
 
-    const build_wasm_argv = [_][]const u8{ "sa", "build-wasm", source_path, "-o", wasm_path, "--target", "wasm32", "--project-root", repo_root };
+    const build_wasm_argv = [_][]const u8{"sars", "build-wasm", source_path, "-o", wasm_path, "--target", "wasm32", "--project-root", repo_root };
     {
         const phase_start = startTimedPhase(path, "build-wasm");
         var phase_ended = false;

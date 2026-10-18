@@ -1280,7 +1280,7 @@ fn writeBuildOptionsHelp(writer: anytype, artifact: []const u8, include_incremen
 fn printPkgHelp(writer: anytype, args: []const []const u8) !void {
     const sub = if (args.len != 0 and !isHelpFlag(args[0])) args[0] else "";
     if (std.mem.eql(u8, sub, "install")) {
-        try writer.writeAll("usage: sa pkg install [options] [identity]\n\n");
+        try writer.writeAll("usage: sars pkg install [options] [identity]\n\n");
         try writer.writeAll("Fetch project dependencies from sa.mod, or fetch one package identity.\n\n");
         try writer.writeAll("Options:\n");
         try writer.writeAll("  --offline                      Use local package cache only\n");
@@ -1291,7 +1291,7 @@ fn printPkgHelp(writer: anytype, args: []const []const u8) !void {
         return;
     }
     if (std.mem.eql(u8, sub, "fetch")) {
-        try writer.writeAll("usage: sa pkg fetch [options] <identity>\n\n");
+        try writer.writeAll("usage: sars pkg fetch [options] <identity>\n\n");
         try writer.writeAll("Fetch and cache one package identity.\n\n");
         try writer.writeAll("Options:\n");
         try writer.writeAll("  --offline                      Use local package cache only\n");
@@ -1301,7 +1301,7 @@ fn printPkgHelp(writer: anytype, args: []const []const u8) !void {
         return;
     }
     if (std.mem.eql(u8, sub, "audit")) {
-        try writer.writeAll("usage: sa pkg audit [options] <identity>\n\n");
+        try writer.writeAll("usage: sars pkg audit [options] <identity>\n\n");
         try writer.writeAll("Audit a package source tree and report required capabilities.\n\n");
         try writer.writeAll("Options:\n");
         try writer.writeAll("  --format text|json             Select report format\n");
@@ -1314,7 +1314,7 @@ fn printPkgHelp(writer: anytype, args: []const []const u8) !void {
         return;
     }
 
-    try writer.writeAll("usage: sa pkg <install|fetch|audit> [options]\n\n");
+    try writer.writeAll("usage: sars pkg <install|fetch|audit> [options]\n\n");
     try writer.writeAll("Package fetch, audit, install, and lock commands.\n\n");
     try writer.writeAll("Subcommands:\n");
     try writer.writeAll("  install                        Fetch project dependencies or one identity\n");
@@ -1326,7 +1326,7 @@ fn printPkgHelp(writer: anytype, args: []const []const u8) !void {
 fn printCacheHelp(writer: anytype, args: []const []const u8) !void {
     const sub = if (args.len != 0 and !isHelpFlag(args[0])) args[0] else "";
     if (std.mem.eql(u8, sub, "clean")) {
-        try writer.writeAll("usage: sa cache clean [options]\n\n");
+        try writer.writeAll("usage: sars cache clean [options]\n\n");
         try writer.writeAll("Remove invalid, incomplete, or expired project cache entries from .sa_cache.\n\n");
         try writer.writeAll("Options:\n");
         try writer.writeAll("  --dry-run                      Report removals without deleting files\n");
@@ -1335,7 +1335,7 @@ fn printCacheHelp(writer: anytype, args: []const []const u8) !void {
         return;
     }
 
-    try writer.writeAll("usage: sa cache <clean> [options]\n\n");
+    try writer.writeAll("usage: sars cache <clean> [options]\n\n");
     try writer.writeAll("Inspect and clean project-local SA build/test caches.\n\n");
     try writer.writeAll("Subcommands:\n");
     try writer.writeAll("  clean                          Remove invalid or expired .sa_cache entries\n");
@@ -1345,7 +1345,7 @@ fn printCacheHelp(writer: anytype, args: []const []const u8) !void {
 fn printPluginHelp(writer: anytype, args: []const []const u8) !void {
     const sub = if (args.len != 0 and !isHelpFlag(args[0])) args[0] else "";
     if (std.mem.eql(u8, sub, "install")) {
-        try writer.writeAll("usage: sa plugin install [--dev] [--review] <path|sap.json>\n\n");
+        try writer.writeAll("usage: sars plugin install [--dev] [--review] <path|sap.json>\n\n");
         try writer.writeAll("Build, verify, and install a native SA plugin project.\n\n");
         try writer.writeAll("Options:\n");
         try writer.writeAll("  --dev                          Allow development-mode install checks\n");
@@ -1354,14 +1354,14 @@ fn printPluginHelp(writer: anytype, args: []const []const u8) !void {
         return;
     }
     if (std.mem.eql(u8, sub, "list")) {
-        try writer.writeAll("usage: sa plugin list\n\n");
+        try writer.writeAll("usage: sars plugin list\n\n");
         try writer.writeAll("List installed native SA plugins.\n\n");
         try writer.writeAll("Options:\n");
         try writer.writeAll("  -h, --help                     Show this help message\n");
         return;
     }
 
-    try writer.writeAll("usage: sa plugin <install|list> [options]\n\n");
+    try writer.writeAll("usage: sars plugin <install|list> [options]\n\n");
     try writer.writeAll("Install and list native SA plugins.\n\n");
     try writer.writeAll("Subcommands:\n");
     try writer.writeAll("  install                        Install a plugin project or sap.json\n");
@@ -1372,13 +1372,13 @@ fn printPluginHelp(writer: anytype, args: []const []const u8) !void {
 fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !void {
     switch (cmd) {
         .init => {
-            try writer.writeAll("usage: sa init [path]\n\n");
+            try writer.writeAll("usage: sars init [path]\n\n");
             try writer.writeAll("Create a new SA binary project.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .install => {
-            try writer.writeAll("usage: sa install [options] [identity]\n\n");
+            try writer.writeAll("usage: sars install [options] [identity]\n\n");
             try writer.writeAll("Install project dependencies or one package identity. This is a compatibility alias for package install behavior.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --offline                      Use local package cache only\n");
@@ -1391,35 +1391,35 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
         .pkg => try printPkgHelp(writer, args),
         .cache => try printCacheHelp(writer, args),
         .build => {
-            try writer.writeAll("usage: sa build <file> [options]\n\n");
+            try writer.writeAll("usage: sars build <file> [options]\n\n");
             try writer.writeAll("Compile a .sa source file or .sab binary to a native executable.\n\n");
             try writer.writeAll("Options:\n");
             try writeBuildOptionsHelp(writer, "the executable", false);
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .build_workspace => {
-            try writer.writeAll("usage: sa build-workspace [options]\n\n");
+            try writer.writeAll("usage: sars build-workspace [options]\n\n");
             try writer.writeAll("Build the selected workspace member from the current workspace root or member directory.\n\n");
             try writer.writeAll("Options:\n");
             try writeBuildOptionsHelp(writer, "the executable", false);
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .build_exe => {
-            try writer.writeAll("usage: sa build-exe <file> [options]\n\n");
+            try writer.writeAll("usage: sars build-exe <file> [options]\n\n");
             try writer.writeAll("Build a standalone native executable. This is an alias for `sa build`.\n\n");
             try writer.writeAll("Options:\n");
             try writeBuildOptionsHelp(writer, "the executable", false);
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .build_obj => {
-            try writer.writeAll("usage: sa build-obj <file> [options]\n\n");
+            try writer.writeAll("usage: sars build-obj <file> [options]\n\n");
             try writer.writeAll("Build a native object file from a .sa source file or .sab binary.\n\n");
             try writer.writeAll("Options:\n");
             try writeBuildOptionsHelp(writer, "the object file", true);
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .build_wasm => {
-            try writer.writeAll("usage: sa build-wasm <file> [options]\n\n");
+            try writer.writeAll("usage: sars build-wasm <file> [options]\n\n");
             try writer.writeAll("Build a WebAssembly module from a .sa source file or .sab binary.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --target wasm32|wasm64         Select the WebAssembly target\n");
@@ -1427,7 +1427,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .build_js => {
-            try writer.writeAll("usage: sa build-js <file> [options]\n\n");
+            try writer.writeAll("usage: sars build-js <file> [options]\n\n");
             try writer.writeAll("Build a JavaScript module from a .sa source file or .sab binary (JS backend, coexists with LLVM).\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --format esm|cjs              Select the JS module format (default: esm)\n");
@@ -1435,33 +1435,33 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .build_c => {
-            try writer.writeAll("usage: sa build-c <file> [options]\n\n");
+            try writer.writeAll("usage: sars build-c <file> [options]\n\n");
             try writer.writeAll("Build a portable C file from a .sa source file or .sab binary (C backend, MVP).\n\n");
             try writer.writeAll("Options:\n");
             try writeBuildOptionsHelp(writer, "the c file", false);
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .run => {
-            try writer.writeAll("usage: sa run <file> [compile-options] [args...]\n\n");
+            try writer.writeAll("usage: sars run <file> [compile-options] [args...]\n\n");
             try writer.writeAll("Compile and execute a .sa source file or .sab binary.\n\n");
             try writer.writeAll("Options:\n");
             try writeCompileOptionsHelp(writer);
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .fetch => {
-            try writer.writeAll("usage: sa fetch <identity>\n\n");
+            try writer.writeAll("usage: sars fetch <identity>\n\n");
             try writer.writeAll("Fetch and cache a remote package. This is a compatibility alias; prefer `sa pkg fetch`.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .audit => {
-            try writer.writeAll("usage: sa audit <identity>\n\n");
+            try writer.writeAll("usage: sars audit <identity>\n\n");
             try writer.writeAll("Compatibility alias for package audit. Prefer `sa pkg audit <identity>`.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .graph => {
-            try writer.writeAll("usage: sa graph [path] [options]\n\n");
+            try writer.writeAll("usage: sars graph [path] [options]\n\n");
             try writer.writeAll("Output a dependency and call graph for a source file or project.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --json                         Emit graph JSON\n");
@@ -1469,7 +1469,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .layout => {
-            try writer.writeAll("usage: sa layout --name <TypeName> --fields <name:ty,...> [options]\n\n");
+            try writer.writeAll("usage: sars layout --name <TypeName> --fields <name:ty,...> [options]\n\n");
             try writer.writeAll("Compute and print struct layout information.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --name <TypeName>              Struct/type name to display\n");
@@ -1479,7 +1479,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .size => {
-            try writer.writeAll("usage: sa size [path] [options]\n\n");
+            try writer.writeAll("usage: sars size [path] [options]\n\n");
             try writer.writeAll("Print function size statistics for a source file or project.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --json                         Emit size data as JSON\n");
@@ -1487,7 +1487,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .test_cmd => {
-            try writer.writeAll("usage: sa test <file> [options]\n\n");
+            try writer.writeAll("usage: sars test <file> [options]\n\n");
             try writer.writeAll("Run @test blocks in a .sa source file.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --list                         List selected tests after frontend checks only\n");
@@ -1506,7 +1506,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .check => {
-            try writer.writeAll("usage: sa check <file> [options]\n\n");
+            try writer.writeAll("usage: sars check <file> [options]\n\n");
             try writer.writeAll("Flatten and verify a .sa/.sab file without codegen or linking.\n");
             try writer.writeAll("Uses the process/daemon-scoped verdict cache so unchanged streams skip re-verify.\n\n");
             try writer.writeAll("Options:\n");
@@ -1516,20 +1516,20 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .bc2sa => {
-            try writer.writeAll("usage: sa bc2sa <file.bc>\n\n");
+            try writer.writeAll("usage: sars bc2sa <file.bc>\n\n");
             try writer.writeAll("Translate LLVM bitcode to SA assembly.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .explain => {
-            try writer.writeAll("usage: sa explain <code>\n\n");
+            try writer.writeAll("usage: sars explain <code>\n\n");
             try writer.writeAll("Explain a diagnostic error code.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --json                         Emit explanation as JSON\n");
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .fix => {
-            try writer.writeAll("usage: sa fix [--plan] <code>\n\n");
+            try writer.writeAll("usage: sars fix [--plan] <code>\n\n");
             try writer.writeAll("Suggest fixes for diagnostics.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --plan                         Print a deterministic fix plan\n");
@@ -1537,7 +1537,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .skills => {
-            try writer.writeAll("usage: sa skills [--json]\n\n");
+            try writer.writeAll("usage: sars skills [--json]\n\n");
             try writer.writeAll("List compiler and plugin skills/capabilities. Text mode also writes agent skills into the current directory.\n");
             try writer.writeAll("The generated SA skill scans the current sa_std root and records every .sa/.sal/.sai macro and extern/export declaration.\n\n");
             try writer.writeAll("Options:\n");
@@ -1545,7 +1545,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  -h, --help                     Show this help message\n");
         },
         .daemon => {
-            try writer.writeAll("usage: sa daemon [--socket path] [--max-workers N] [--per-agent-limit N]\n\n");
+            try writer.writeAll("usage: sars daemon [--socket path] [--max-workers N] [--per-agent-limit N]\n\n");
             try writer.writeAll("Run a persistent compile/verify/test server over a Unix socket.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --socket <path>                Unix socket path (default /tmp/sa-daemon.sock)\n");
@@ -1553,7 +1553,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  --per-agent-limit <N>          Max in-flight requests per agent_id (default 4)\n");
         },
         .help => {
-            try writer.writeAll("usage: sa help [command]\n\n");
+            try writer.writeAll("usage: sars help [command]\n\n");
             try writer.writeAll("Show global help or help for one command.\n\n");
             try writer.writeAll("Examples:\n");
             try writer.writeAll("  sa help test\n");
@@ -1561,7 +1561,7 @@ fn printCommandHelp(writer: anytype, cmd: Command, args: []const []const u8) !vo
             try writer.writeAll("  sa test --help\n");
         },
         .version => {
-            try writer.writeAll("usage: sa version\n\n");
+            try writer.writeAll("usage: sars version\n\n");
             try writer.writeAll("Print the SA toolchain version.\n\n");
             try writer.writeAll("Options:\n");
             try writer.writeAll("  --version                      Print version and exit\n");
@@ -1709,7 +1709,7 @@ fn printTrapReport(writer: anytype, report: trap.TrapReport, mode: DiagnosticsMo
 }
 
 fn printUsage(writer: anytype) !void {
-    try writer.writeAll("usage: sa <command> [options]\n\n");
+    try writer.writeAll("usage: sars <command> [options]\n\n");
     try writer.writeAll("Commands:\n");
     try writer.writeAll("  init         [path]            Create a new SA binary project\n");
     try writer.writeAll("  pkg          <subcommand>      Package fetch, audit, install, and lock commands\n");
@@ -1762,7 +1762,7 @@ fn printUsage(writer: anytype) !void {
 
 fn printVersion(writer: anytype) !void {
     const ver = build_options.version;
-    try writer.print("sa {s}\n", .{ver});
+    try writer.print("sars {s}\n", .{ver});
 }
 
 const TmpWorkDir = struct {
@@ -3568,20 +3568,21 @@ fn parseDaemonArgv(allocator: std.mem.Allocator, request: []const u8) ![]const [
             i += 1; // closing quote
             try list.append(try item.toOwnedSlice());
         }
-        // Normalize argv[0] to "sa". Clients may send the real binary path
-        // (e.g. zig-out/bin/sa) or omit argv[0] entirely and start at the command.
+        // Normalize argv[0] to "sars" (legacy "sa" accepted). Clients may send
+        // the real binary path (e.g. zig-out/bin/sars) or omit argv[0]
+        // entirely and start at the command.
         if (list.items.len == 0) {
-            try list.insert(0, try allocator.dupe(u8, "sa"));
-        } else if (std.mem.eql(u8, list.items[0], "sa") or std.mem.endsWith(u8, list.items[0], "/sa")) {
-            if (!std.mem.eql(u8, list.items[0], "sa")) {
+            try list.insert(0, try allocator.dupe(u8, "sars"));
+        } else if (std.mem.eql(u8, list.items[0], "sars") or std.mem.endsWith(u8, list.items[0], "/sars") or std.mem.eql(u8, list.items[0], "sa") or std.mem.endsWith(u8, list.items[0], "/sa")) {
+            if (!std.mem.eql(u8, list.items[0], "sars")) {
                 allocator.free(list.items[0]);
-                list.items[0] = try allocator.dupe(u8, "sa");
+                list.items[0] = try allocator.dupe(u8, "sars");
             }
         } else if (commandFromName(list.items[0]) != null or std.mem.eql(u8, list.items[0], "help") or std.mem.eql(u8, list.items[0], "version")) {
-            try list.insert(0, try allocator.dupe(u8, "sa"));
+            try list.insert(0, try allocator.dupe(u8, "sars"));
         } else {
-            // Unknown first token: still force sa so dispatch can error cleanly.
-            try list.insert(0, try allocator.dupe(u8, "sa"));
+            // Unknown first token: still force sars so dispatch can error cleanly.
+            try list.insert(0, try allocator.dupe(u8, "sars"));
         }
         return try list.toOwnedSlice();
     }
@@ -3593,7 +3594,7 @@ fn parseDaemonArgv(allocator: std.mem.Allocator, request: []const u8) ![]const [
         for (list.items) |it| allocator.free(it);
         list.deinit();
     }
-    try list.append(try allocator.dupe(u8, "sa"));
+    try list.append(try allocator.dupe(u8, "sars"));
     try list.append(try allocator.dupe(u8, op));
     if (daemon_cancel.parseJsonStrField(request, "\"file\"")) |file| {
         try list.append(try allocator.dupe(u8, file));
@@ -3682,7 +3683,7 @@ fn daemonCommandUnix(allocator: std.mem.Allocator, args: []const []const u8, std
         try stderr.print("daemon: failed to restrict socket permissions for {s}\n", .{socket_path});
         return 1;
     }
-    try stdout.print("sa daemon listening on {s} (max_workers={d})\n", .{ socket_path, max_workers });
+    try stdout.print("sars daemon listening on {s} (max_workers={d})\n", .{ socket_path, max_workers });
 
     var in_flight = std.atomic.Value(usize).init(0);
     daemon_shutdown_flag.store(false, .monotonic);
@@ -7008,12 +7009,12 @@ fn executePkgCommandFallback(allocator: std.mem.Allocator, args: []const []const
 
 fn executePluginCommand(allocator: std.mem.Allocator, args: []const []const u8, stdout: anytype, stderr: anytype) !u8 {
     if (args.len == 0) {
-        try stderr.writeAll("usage: sa plugin install [--dev] [--review] <path|sap.json> | list\n");
+        try stderr.writeAll("usage: sars plugin install [--dev] [--review] <path|sap.json> | list\n");
         return 1;
     }
     if (std.mem.eql(u8, args[0], "install")) {
         if (args.len < 2) {
-            try stderr.writeAll("usage: sa plugin install [--dev] [--review] <path|sap.json>\n");
+            try stderr.writeAll("usage: sars plugin install [--dev] [--review] <path|sap.json>\n");
             return 1;
         }
         var dev = false;
@@ -7040,7 +7041,7 @@ fn executePluginCommand(allocator: std.mem.Allocator, args: []const []const u8, 
         if (args.len > 1) return error.UnexpectedArgument;
         return try plugins.listInstalled(allocator, stdout);
     }
-    try stderr.writeAll("usage: sa plugin install [--dev] [--review] <path|sap.json> | list\n");
+    try stderr.writeAll("usage: sars plugin install [--dev] [--review] <path|sap.json> | list\n");
     return 1;
 }
 
@@ -9162,7 +9163,7 @@ test "build-workspace command is recognized in help" {
 
     law.clearRetainingCapacity();
     try printCommandHelp(&law.writer, .build_workspace, &.{});
-    try std.testing.expect(std.mem.indexOf(u8, law.written(), "usage: sa build-workspace [options]") != null);
+    try std.testing.expect(std.mem.indexOf(u8, law.written(), "usage: sars build-workspace [options]") != null);
 }
 
 test "source tree hash cache reuses mtime size digest without reloading unchanged files" {
