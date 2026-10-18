@@ -220,13 +220,16 @@ fn rewrite_place(
 }
 
 /// Version one function: rename multi-def dests, rewrite uses, mark join
-/// conflicts. Single-def functions return unchanged (fast path).
+/// conflicts. Single-def functions skip renaming but still resolve the
+/// `Return` place (MIR returns through local `_0`; an unresolved `ret`
+/// forces the backend to `return 0` and discard the real value — arith
+/// `add` returned 0 instead of 42 because of exactly this).
 pub fn version_function(f: &Function) -> Function {
     let defs = collect_defs(&f.blocks);
     let multi: BTreeSet<String> =
         defs.iter().filter(|(_, v)| v.len() > 1).map(|(k, _)| k.clone()).collect();
     if multi.is_empty() {
-        return Function {
+        let mut out = Function {
             name: f.name.clone(),
             locals: f.locals.clone(),
             params: f.params.clone(),
@@ -234,6 +237,18 @@ pub fn version_function(f: &Function) -> Function {
             sig_ok: f.sig_ok,
             blocks: f.blocks.clone(),
         };
+        // Resolve the return place even on the fast path: every
+        // non-void function returns `_0` (single-def, no conflict).
+        if f.ret.as_deref() != Some("void") {
+            for b in out.blocks.iter_mut() {
+                if let Term::Return { ret } = &mut b.terminator {
+                    if ret.is_none() {
+                        *ret = Some("_0".to_string());
+                    }
+                }
+            }
+        }
+        return out;
     }
     let order = rpo_order(&f.blocks);
     // Predecessors for the reaching-definitions fixpoint.
@@ -453,6 +468,32 @@ mod version_tests {
                          blk("bb1", vec![], Term::Return { ret: None })]);
         let out = version_function(&f);
         assert_eq!(out.blocks[0].statements.len(), 1);
+    }
+
+    #[test]
+    fn single_def_return_resolves_ret_place() {
+        // arith `add` regression: a single-def function returning through
+        // local `_0` must resolve `Return.ret` on the fast path — an
+        // unresolved `ret` forces the backend to `return 0` and discards
+        // the real value (callers read 0, branches misfire).
+        let mut f = mkfn(vec![
+            blk("bb0", vec![use_stmt("_0", "_3")], Term::Return { ret: None }),
+        ]);
+        f.ret = Some("i32".to_string());
+        let out = version_function(&f);
+        match &out.blocks[0].terminator {
+            Term::Return { ret: Some(r) } => assert_eq!(r, "_0"),
+            Term::Return { ret: None } => panic!("ret place unresolved (None)"),
+            _ => panic!("ret place unresolved (wrong terminator)"),
+        }
+        // Void functions keep the bare `Return` (no place to resolve).
+        let mut v = mkfn(vec![blk("bb0", vec![], Term::Return { ret: None })]);
+        v.ret = Some("void".to_string());
+        let vout = version_function(&v);
+        match &vout.blocks[0].terminator {
+            Term::Return { ret: None } => {}
+            _ => panic!("void return must stay bare"),
+        }
     }
 
     #[test]

@@ -292,12 +292,18 @@ pub fn exit_frees(
         // on some path), never moved anywhere, never freed anywhere
         // (conditional frees would double-free on their path), params
         // included (unused params leak).
+        // `_0` is the return place: it is consumed by `return _0` (or
+        // dropped by the caller frame), so it must never be exit-freed
+        // here — freeing it early makes the callee return garbage/zero
+        // (arith `add` returned 0 instead of 42) and `return 0` then
+        // discards the real value.
         // Dominator blocks of this exit (incl. itself).
         let doms: &std::collections::HashSet<usize> = &dom_sets[bi];
         let mut cand: BTreeSet<String> = def_count
             .iter()
             .filter(|(_, &n)| n == 1)
             .map(|(r, _)| r.clone())
+            .filter(|r| r != "_0")
             .filter(|r| {
                 def_blocks.get(r).is_some_and(|bis| bis.iter().all(|b| doms.contains(b)))
             })
@@ -480,5 +486,18 @@ mod drop_tests {
         // No candidates left (return consumes _r) -> no entry at all.
         let frees = out.get(&3).cloned().unwrap_or_default();
         assert!(!frees.contains(&"_x".to_string()), "{:?}", frees);
+    }
+
+    #[test]
+    fn return_place_never_freed() {
+        // arith `add` regression: `_0` is the return place consumed by
+        // `return _0`. Exit-freeing it makes the callee return garbage
+        // (callers then read 0 and branches misfire), so it is excluded
+        // from candidates even when defined once and never moved.
+        let body = vec![lines(&["_3 = add _1, _2", "_0 = _3", "return _0"])];
+        let doms = vec![std::collections::HashSet::from([0])];
+        let out = exit_frees(&body, &doms, 2);
+        let frees = out.get(&0).cloned().unwrap_or_default();
+        assert!(!frees.contains(&"_0".to_string()), "{:?}", frees);
     }
 }
