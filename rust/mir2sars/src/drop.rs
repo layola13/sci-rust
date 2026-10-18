@@ -303,7 +303,7 @@ pub fn exit_frees(
             .iter()
             .filter(|(_, &n)| n == 1)
             .map(|(r, _)| r.clone())
-            .filter(|r| r != "_0")
+            .filter(|r| r != "_0" && !r.starts_with("_0_v"))
             .filter(|r| {
                 def_blocks.get(r).is_some_and(|bis| bis.iter().all(|b| doms.contains(b)))
             })
@@ -499,5 +499,17 @@ mod drop_tests {
         let out = exit_frees(&body, &doms, 2);
         let frees = out.get(&0).cloned().unwrap_or_default();
         assert!(!frees.contains(&"_0".to_string()), "{:?}", frees);
+    }
+
+    #[test]
+    fn versioned_return_place_never_freed() {
+        // Multi-def variant: `_0_v1` is the versioned return place consumed
+        // by `return _0_v1`. The `_0` exclusion must cover versioned names
+        // too, or the same garbage-return regression returns.
+        let body = vec![lines(&["_3 = add _1, _2", "_0_v1 = _3", "return _0_v1"])];
+        let doms = vec![std::collections::HashSet::from([0])];
+        let out = exit_frees(&body, &doms, 2);
+        let frees = out.get(&0).cloned().unwrap_or_default();
+        assert!(!frees.contains(&"_0_v1".to_string()), "{:?}", frees);
     }
 }

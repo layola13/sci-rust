@@ -1,5 +1,7 @@
-//! arith: zero-extern arithmetic demo for the end-to-end run check.
-//! MIR has no calls, so `sars run` executes with no broker needed.
+//! arith: same-crate call + overflow-checked arithmetic demo for the
+//! end-to-end check. `main` calls local `add` (no `@extern` for same-crate
+//! callees); the bad-arith `panic!` folds to native `panic(code)`, so
+//! `sars run` executes with no broker needed (zero `@extern`).
 #[allow(dead_code)]
 fn add(a: i32, b: i32) -> i32 {
     a + b
