@@ -4431,7 +4431,7 @@ fn injectImportedFile(
     cache_dependency: ?*ExpandedImportCacheDependency,
 ) anyerror!void {
     const entry_path = imported.entry_path;
-    if (!std.mem.endsWith(u8, entry_path, ".sars") and !std.mem.endsWith(u8, entry_path, ".sars")) return;
+    if (!std.mem.endsWith(u8, entry_path, ".sa") and !std.mem.endsWith(u8, entry_path, ".sars")) return;
 
     const effective_package_identity = if (imported.package_identity) |identity| blk: {
         break :blk try rememberPackageIdentity(allocator, seen_package_identities, identity);

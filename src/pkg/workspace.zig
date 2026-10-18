@@ -146,13 +146,13 @@ fn manifestPathForRoot(allocator: std.mem.Allocator, root_path: []const u8) ![]u
 }
 
 fn sourcePathForRoot(allocator: std.mem.Allocator, root_path: []const u8) ![]u8 {
-    const src_path = try pathJoinAlloc(allocator, &.{ root_path, "src", "main.sars" });
+    const src_path = try pathJoinAlloc(allocator, &.{ root_path, "src", "main.sa" });
     if (pathExists(src_path)) return src_path;
     allocator.free(src_path);
     const src_sars = try pathJoinAlloc(allocator, &.{ root_path, "src", "main.sars" });
     if (pathExists(src_sars)) return src_sars;
     allocator.free(src_sars);
-    const fallback = try pathJoinAlloc(allocator, &.{ root_path, "main.sars" });
+    const fallback = try pathJoinAlloc(allocator, &.{ root_path, "main.sa" });
     if (pathExists(fallback)) return fallback;
     allocator.free(fallback);
     const fallback_sars = try pathJoinAlloc(allocator, &.{ root_path, "main.sars" });

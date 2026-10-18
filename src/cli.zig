@@ -2694,7 +2694,7 @@ fn normalizeSkillPathAlloc(allocator: std.mem.Allocator, path: []const u8) ![]u8
 fn isSaStdSurfaceFile(path: []const u8) bool {
     if (std.mem.eql(u8, std.fs.path.basename(path), "sa.mod")) return true;
     const ext = std.fs.path.extension(path);
-    return std.mem.eql(u8, ext, ".sars") or
+    return std.mem.eql(u8, ext, ".sa") or
         std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sal") or
         std.mem.eql(u8, ext, ".sai");
@@ -2966,12 +2966,12 @@ fn appendPermissionSummary(
 
 fn pluginInterfaceFileCandidate(path: []const u8) bool {
     const base = std.fs.path.basename(path);
-    if (std.mem.eql(u8, base, "expanded.sars")) return false;
+    if (std.mem.eql(u8, base, "expanded.sa")) return false;
     if (std.mem.eql(u8, base, "expanded.sars")) return false;
     if (std.mem.startsWith(u8, base, "tmp_")) return false;
     if (std.mem.startsWith(u8, base, "_tmp")) return false;
     const ext = std.fs.path.extension(path);
-    return std.mem.eql(u8, ext, ".sars") or
+    return std.mem.eql(u8, ext, ".sa") or
         std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sal") or
         std.mem.eql(u8, ext, ".sai");
@@ -4188,7 +4188,7 @@ fn globalCacheRoot(allocator: std.mem.Allocator, identity: []const u8, ref: []co
     defer allocator.free(home);
     const leaf = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ identity, ref });
     defer allocator.free(leaf);
-    return try std.fs.path.join(allocator, &.{ home, ".sars", "pkg", leaf });
+    return try std.fs.path.join(allocator, &.{ home, ".sa", "pkg", leaf });
 }
 
 fn resolvePackageAuditRoot(
