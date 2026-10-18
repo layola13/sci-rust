@@ -223,13 +223,13 @@ pub fn binop_mnemonic(op: &str) -> Option<&'static str> {
     }
 }
 
-/// `*WithOverflow` -> the `sci/sa_std` checked helper that returns the exact
-/// value and traps on overflow. None for every other binop.
+/// `*WithOverflow` -> the `sa_std/num.sal` checked macro that computes the
+/// exact value and traps on overflow. None for every other binop.
 pub fn checked_arith_helper(op: &str) -> Option<&'static str> {
     match op {
-        "AddWithOverflow" => Some("sa_num_add_checked"),
-        "SubWithOverflow" => Some("sa_num_sub_checked"),
-        "MulWithOverflow" => Some("sa_num_mul_checked"),
+        "AddWithOverflow" => Some("NUM_ADD_CHECKED"),
+        "SubWithOverflow" => Some("NUM_SUB_CHECKED"),
+        "MulWithOverflow" => Some("NUM_MUL_CHECKED"),
         _ => None,
     }
 }

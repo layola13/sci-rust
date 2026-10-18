@@ -330,15 +330,15 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
             }
             Term::Assert { cond, target, msg, expected } => {
                 // Overflow asserts are folded: the accompanying
-                // `*WithOverflow` already lowered to `sa_std/num.sai`'s
-                // checked helper, which traps on overflow. Comparing the flag
+                // `*WithOverflow` already expanded to `sa_std/num.sal`'s
+                // checked macro, which traps on overflow. Comparing the flag
                 // here would test the VALUE register (the pair is collapsed),
                 // i.e. nonsense. Counted loudly so the folding stays visible.
                 let msg_text = msg.as_deref().unwrap_or("");
                 if is_overflow_assert(msg_text) {
                     unsup.push(format!("{}: OverflowAssertFolded", b.id));
                     out.push(format!(
-                        "    // overflow assert folded: {} traps inside sa_std/num.sai ({} )",
+                        "    // overflow assert folded: {} traps inside sa_std/num.sal ({} )",
                         sa_label(target),
                         flat_comment(msg_text)
                     ));
@@ -506,18 +506,32 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
     // Signatures are per first-seen call site (monomorphic MIR gives one sig
     // per DefId; name truncation collisions keep the first, documented).
     // Signatures are unknown at MIR level; map them to sci/sa_std per STD_MAP.md.
+    // Locally-defined functions are NOT externs (mir2sars fix: same-crate
+    // callees like `add` must not get a shadowing `@extern` decl).
+    let mut defined = std::collections::BTreeSet::new();
+    for f in &mir.functions {
+        defined.insert(crate::render_util::sa_ident(&f.name));
+    }
     let mut set = std::collections::BTreeMap::new();
     for f in &mir.functions {
         for b in &f.blocks {
             for st in &b.statements {
                 if let Stmt::Assign { rvalue: Rvalue::Call { func, sig, .. }, .. } = st {
-                    set.entry(sa_ident(func)).or_insert_with(|| {
+                    let name = sa_ident(func);
+                    if defined.contains(&name) {
+                        continue;
+                    }
+                    set.entry(name).or_insert_with(|| {
                         sig.as_ref().map(|s| (s.params.clone(), s.ret.clone()))
                     });
                 }
             }
             if let Term::Call { func, sig, .. } = &b.terminator {
-                set.entry(sa_ident(func)).or_insert_with(|| {
+                let name = sa_ident(func);
+                if defined.contains(&name) {
+                    continue;
+                }
+                set.entry(name).or_insert_with(|| {
                     sig.as_ref().map(|s| (s.params.clone(), s.ret.clone()))
                 });
             }
@@ -574,7 +588,7 @@ pub fn cmd_lower(args: &[String]) -> ExitCode {
     let mut unsup = vec![];
     // Bodies joined by "\n"; each body already ends with one trailing newline.
     // sla convention: `@extern` decls for all called-but-undefined symbols.
-    let mut sa_compat = String::from("@import \"sa_std/io/print.sai\"\n@import \"sa_std/num.sai\"\n\n");
+    let mut sa_compat = String::from("@import \"sa_std/io/print.sai\"\n@import \"sa_std/num.sal\"\n\n");
     let mut exts = collect_externs(&mir);
     let bodies: Vec<String> = mir.functions.iter().map(|f| lower_function(f, &mut unsup)).collect();
     if bodies.iter().any(|b| b.contains("sa_mem_set")) {

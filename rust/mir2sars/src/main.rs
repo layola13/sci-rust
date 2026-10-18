@@ -92,7 +92,7 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
                             match rvalue {
                                 Rvalue::Unsupported { .. } => true,
                                 // ThreadLocal lowers to sa_thread_local_slot (sci registry).
-                                // `*WithOverflow` lowers to the sa_std checked helper.
+                                // `*WithOverflow` expands to the sa_std/num.sal checked macro.
                                 Rvalue::BinOp { op, .. } => {
                                     binop_mnemonic(op).is_none() && checked_arith_helper(op).is_none()
                                 }
@@ -186,7 +186,7 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
                     }
                 }
                 Term::Assert { cond, msg, .. } if is_overflow_assert(msg.as_deref().unwrap_or("")) => {
-                    // Folded in lower(): the checked helper traps instead.
+                    // Folded in lower(): the checked macro traps instead.
                     tot_unsup += 1;
                     unsup.push(format!("{}: T/OverflowAssertFolded", b.id));
                 }
@@ -857,15 +857,15 @@ mod tests {
 
     #[test]
     fn checked_arith_shape() {
-        // `*WithOverflow` cannot hold the (value, flag) pair, so it lowers to
-        // the sa_std checked helper: exact value, overflow traps inside the
-        // library (T26). No invented arithmetic, no inline guard duplication.
+        // `*WithOverflow` cannot hold the (value, flag) pair, so it expands to
+        // the sa_std/num.sal checked macro: exact value, overflow traps inside
+        // the macro (T26). No invented arithmetic, no duplicate guard logic.
         let mut idx = 0usize;
         let mut unsup = vec![];
         for (op, want) in [
-            ("AddWithOverflow", "sa_num_add_checked"),
-            ("SubWithOverflow", "sa_num_sub_checked"),
-            ("MulWithOverflow", "sa_num_mul_checked"),
+            ("AddWithOverflow", "NUM_ADD_CHECKED"),
+            ("SubWithOverflow", "NUM_SUB_CHECKED"),
+            ("MulWithOverflow", "NUM_MUL_CHECKED"),
         ] {
             let line = render_rvalue(
                 &Rvalue::BinOp {
@@ -877,7 +877,7 @@ mod tests {
                 &std::collections::HashMap::new(), &std::collections::BTreeMap::new(),
             );
             assert!(unsup.is_empty(), "{}: {:?}", op, unsup);
-            assert_eq!(line, format!("_3 = call @{}(_1, _2)", want));
+            assert_eq!(line, format!("EXPAND {} _3, _1, _2", want));
         }
     }
 
@@ -885,7 +885,7 @@ mod tests {
     fn overflow_assert_folded() {
         // rustc's `Assert(Overflow(..))` tests the flag, which shares the
         // value's register: comparing it is nonsense, so it is folded into the
-        // checked helper's trap — counted loudly, control preserved.
+        // checked macro's trap — counted loudly, control preserved.
         let f = blank_fn("f_ovf", vec![Block {
             id: "bb0".to_string(),
             statements: vec![],

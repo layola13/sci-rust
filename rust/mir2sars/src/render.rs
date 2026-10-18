@@ -117,8 +117,8 @@ pub fn render_rvalue(
             // `*WithOverflow` yields a (value, flag) PAIR, which this backend
             // cannot hold in one register. rustc always follows it with an
             // `Assert(Overflow(..))` on the flag, so the value alone is what
-            // the program observes: lower to the sa_std checked helper, which
-            // returns the exact value and traps on overflow (the assert is
+            // the program observes: expand the sa_std/num.sal checked macro,
+            // which computes the exact value and traps on overflow (the assert is
             // folded there, see lower.rs). Panic-on-overflow is Rust's
             // `overflow-checks` behaviour, not an invention.
             if let Some(helper) = checked_arith_helper(op) {
@@ -126,7 +126,7 @@ pub fn render_rvalue(
                 let (pr, rt) = bind_move_operand(right, bid, mv_idx);
                 let mut lines = pl;
                 lines.extend(pr);
-                lines.push(format!("{} = call @{}({}, {})", dest, helper, lt, rt));
+                lines.push(format!("EXPAND {} {}, {}, {}", helper, dest, lt, rt));
                 return lines.join("\n");
             }
             let (pl, lt) = bind_move_operand(left, bid, mv_idx);
