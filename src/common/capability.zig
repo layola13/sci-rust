@@ -81,10 +81,15 @@ pub const TRUTH_TABLE = [_]Transition{
     .{ .prev_mask = 0x40, .op = .ffi_assume_borrow, .legal = true, .new_mask = 0x33, .trap = null },
     .{ .prev_mask = 0x100, .op = .alloc, .legal = true, .new_mask = 0x100, .trap = null },
     .{ .prev_mask = 0x200, .op = .move_, .legal = true, .new_mask = 0x200, .trap = null },
+    // sci-rust Rust edition: Active|Immutable (0x101) lifecycle.
+    .{ .prev_mask = 0x101, .op = .release_own, .legal = true, .new_mask = 0x08, .trap = null },
+    .{ .prev_mask = 0x101, .op = .borrow_read, .legal = true, .new_mask = 0x102, .trap = null },
+    .{ .prev_mask = 0x102, .op = .borrow_read_again, .legal = true, .new_mask = 0x102, .trap = null },
+    .{ .prev_mask = 0x102, .op = .borrow_mut, .legal = false, .new_mask = 0x00, .trap = .read_write_conflict },
 };
 
 test "truth table contains canonical transitions" {
-    try std.testing.expectEqual(@as(usize, 17), TRUTH_TABLE.len);
+    try std.testing.expectEqual(@as(usize, 21), TRUTH_TABLE.len);
     try std.testing.expect(TRUTH_TABLE[0].legal);
     try std.testing.expectEqual(@as(u16, 0x01), TRUTH_TABLE[0].new_mask);
     try std.testing.expectEqual(@as(?TrapKind, .read_write_conflict), TRUTH_TABLE[4].trap);
