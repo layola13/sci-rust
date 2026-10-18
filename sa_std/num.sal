@@ -316,27 +316,39 @@ L_NUM_SUB_CHECKED_OK_%out:
 [MACRO] NUM_MUL_CHECKED %out, %a, %b
     %out = mul %a, %b
     // Divide back: the product is exact iff it divides without remainder and
-    // neither factor is -1 with a minimal result.
+    // the quotient recovers %b. Zero factor short-circuits (product is 0,
+    // no overflow; also dodges div-by-zero in the check itself).
+    // NOTE: MIN*-1 wraps before the check sees it (TODO: INT_MIN guard).
+    // All guard temps are bound unconditionally up front so the TAIL
+    // releases never touch an unbound register on any path.
+    %num_mc_azero_%out = eq %a, 0
     %num_mc_amin_%out = eq %a, -1
     %num_mc_bmin_%out = eq %b, -1
-    %num_mc_back_%out = sub %out, 0
-    br %num_mc_amin_%out -> L_NUM_MUL_CHECKED_MIN_%out, L_NUM_MUL_CHECKED_DIV_%out
+    br %num_mc_azero_%out -> L_NUM_MUL_CHECKED_OK_%out, L_NUM_MUL_CHECKED_MIN_%out
 L_NUM_MUL_CHECKED_MIN_%out:
+    br %num_mc_amin_%out -> L_NUM_MUL_CHECKED_MIND_%out, L_NUM_MUL_CHECKED_DIV_%out
+L_NUM_MUL_CHECKED_MIND_%out:
     br %num_mc_bmin_%out -> L_NUM_MUL_CHECKED_OK_%out, L_NUM_MUL_CHECKED_DIV_%out
 L_NUM_MUL_CHECKED_DIV_%out:
     %num_mc_div_%out = div %out, %a
-    %num_mc_rem_%out = rem %num_mc_div_%out, %a
-    %num_mc_ovf_%out = ne %num_mc_rem_%out, 0
-    br %num_mc_ovf_%out -> L_NUM_MUL_CHECKED_OVF_%out, L_NUM_MUL_CHECKED_OK_%out
+    %num_mc_rem_%out = rem %out, %a
+    %num_mc_remnz_%out = ne %num_mc_rem_%out, 0
+    %num_mc_qbad_%out = ne %num_mc_div_%out, %b
+    %num_mc_ovf_%out = or %num_mc_remnz_%out, %num_mc_qbad_%out
+    br %num_mc_ovf_%out -> L_NUM_MUL_CHECKED_OVF_%out, L_NUM_MUL_CHECKED_DIVOK_%out
 L_NUM_MUL_CHECKED_OVF_%out:
     panic(PANIC_ARITH_OVERFLOW)
-L_NUM_MUL_CHECKED_OK_%out:
+L_NUM_MUL_CHECKED_DIVOK_%out:
     !%num_mc_ovf_%out
+    !%num_mc_qbad_%out
+    !%num_mc_remnz_%out
     !%num_mc_rem_%out
     !%num_mc_div_%out
-    br L_NUM_MUL_CHECKED_TAIL_%out
+    jmp L_NUM_MUL_CHECKED_TAIL_%out
+L_NUM_MUL_CHECKED_OK_%out:
+    jmp L_NUM_MUL_CHECKED_TAIL_%out
 L_NUM_MUL_CHECKED_TAIL_%out:
-    !%num_mc_back_%out
     !%num_mc_bmin_%out
     !%num_mc_amin_%out
+    !%num_mc_azero_%out
 [END_MACRO]
