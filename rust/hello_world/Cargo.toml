@@ -1,0 +1,5 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+edition = "2021"
+description = "Minimal Rust hello world for the mir->sars pipeline (cargo run + rustc MIR + mir2sars + sars)."
