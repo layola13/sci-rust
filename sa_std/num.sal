@@ -247,7 +247,8 @@
 #def NONZERO_ISIZE_BITS = 64
 #def NONZERO_ISIZE_BYTES = 8
 
-// Checked signed arithmetic (mirrors sa_std/num.sai). Overflow traps with
+// Checked signed arithmetic (expanded by mir2sars `*WithOverflow`, no extern
+// needed). Overflow traps with
 // panic(PANIC_ARITH_OVERFLOW) instead of wrapping, matching rustc's
 // `*WithOverflow` + overflow `Assert` pair. Guards are the standard sign
 // tests: an addition overflows when both operands share a sign that the
@@ -257,15 +258,15 @@
 
 [MACRO] NUM_ADD_CHECKED %out, %a, %b
     %out = add %a, %b
-    %num_ac_pos_a_%out = gt %a, 0
-    %num_ac_pos_b_%out = gt %b, 0
+    %num_ac_pos_a_%out = sgt %a, 0
+    %num_ac_pos_b_%out = sgt %b, 0
     %num_ac_both_pos_%out = and %num_ac_pos_a_%out, %num_ac_pos_b_%out
-    %num_ac_res_neg_%out = lt %out, 0
+    %num_ac_res_neg_%out = slt %out, 0
     %num_ac_ovf_pos_%out = and %num_ac_both_pos_%out, %num_ac_res_neg_%out
-    %num_ac_neg_a_%out = lt %a, 0
-    %num_ac_neg_b_%out = lt %b, 0
+    %num_ac_neg_a_%out = slt %a, 0
+    %num_ac_neg_b_%out = slt %b, 0
     %num_ac_both_neg_%out = and %num_ac_neg_a_%out, %num_ac_neg_b_%out
-    %num_ac_res_nonneg_%out = ge %out, 0
+    %num_ac_res_nonneg_%out = sge %out, 0
     %num_ac_ovf_neg_%out = and %num_ac_both_neg_%out, %num_ac_res_nonneg_%out
     %num_ac_ovf_%out = or %num_ac_ovf_pos_%out, %num_ac_ovf_neg_%out
     br %num_ac_ovf_%out -> L_NUM_ADD_CHECKED_OVF_%out, L_NUM_ADD_CHECKED_OK_%out
@@ -286,15 +287,15 @@ L_NUM_ADD_CHECKED_OK_%out:
 
 [MACRO] NUM_SUB_CHECKED %out, %a, %b
     %out = sub %a, %b
-    %num_sc_pos_a_%out = gt %a, 0
-    %num_sc_neg_b_%out = lt %b, 0
+    %num_sc_pos_a_%out = sgt %a, 0
+    %num_sc_neg_b_%out = slt %b, 0
     %num_sc_mixed_%out = and %num_sc_pos_a_%out, %num_sc_neg_b_%out
-    %num_sc_res_neg_%out = lt %out, 0
+    %num_sc_res_neg_%out = slt %out, 0
     %num_sc_ovf_pos_%out = and %num_sc_mixed_%out, %num_sc_res_neg_%out
-    %num_sc_neg_a_%out = lt %a, 0
-    %num_sc_pos_b_%out = gt %b, 0
+    %num_sc_neg_a_%out = slt %a, 0
+    %num_sc_pos_b_%out = sgt %b, 0
     %num_sc_mixed2_%out = and %num_sc_neg_a_%out, %num_sc_pos_b_%out
-    %num_sc_res_nonneg_%out = ge %out, 0
+    %num_sc_res_nonneg_%out = sge %out, 0
     %num_sc_ovf_neg_%out = and %num_sc_mixed2_%out, %num_sc_res_nonneg_%out
     %num_sc_ovf_%out = or %num_sc_ovf_pos_%out, %num_sc_ovf_neg_%out
     br %num_sc_ovf_%out -> L_NUM_SUB_CHECKED_OVF_%out, L_NUM_SUB_CHECKED_OK_%out
