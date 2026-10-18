@@ -1,0 +1,29 @@
+@main() -> i32:
+L_ENTRY:
+    // Rust edition: strict &mut. Writing through a shared `&` borrow is a
+    // ReadWriteConflict; the exclusive form below is the blessed path.
+    // Also exercises the `borrow mut` long-form alias.
+    mut x = alloc 8
+    store x+0, 1 as i64
+
+    r1 = borrow mut x
+    store r1+0, 2 as i64
+    !r1
+
+    r2 = &mut x
+    store r2+0, 3 as i64
+    !r2
+
+    v = load x+0 as i64
+    ok = eq v, 3
+    !v
+    !x
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

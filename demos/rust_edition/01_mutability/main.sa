@@ -1,0 +1,35 @@
+@main() -> i32:
+L_ENTRY:
+    // Rust edition: `mut` is required for any register that gets stored.
+    // Build with: sa check --edition rust <this file>
+    mut x = alloc 8
+    store x+0, 10 as i64
+
+    r1 = &x
+    before = load r1+0 as i64
+    !r1
+
+    r2 = &mut x
+    store r2+0, 20 as i64
+    !r2
+
+    after = load x+0 as i64
+    ok_before = eq before, 10
+    ok_after = eq after, 20
+    ok = and ok_before, ok_after
+
+    !before
+    !after
+    !ok_before
+    !ok_after
+    !x
+
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

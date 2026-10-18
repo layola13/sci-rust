@@ -1,0 +1,9 @@
+@main() -> i32:
+L_ENTRY:
+    // Rust edition negative test: plain `alloc` is immutable, so this store
+    // must trap with ConstMutation under `--edition rust`.
+    // EXPECT-TRAP: ConstMutation
+    x = alloc 8
+    store x+0, 10 as i64
+    !x
+    return 0
