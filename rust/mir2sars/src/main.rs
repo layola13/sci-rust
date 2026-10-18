@@ -700,14 +700,6 @@ mod tests {
         f
     }
 
-    fn def(dest: &str, v: &str) -> Stmt {
-        Stmt::Assign {
-            dest: dest.to_string(),
-            dest_place: Some(dest.to_string()),
-            rvalue: Rvalue::Use { op: c(v) },
-        }
-    }
-
     /// Plain register copy (not a const literal: `c()` values go loud).
     fn def_from(dest: &str, src: &str) -> Stmt {
         Stmt::Assign {

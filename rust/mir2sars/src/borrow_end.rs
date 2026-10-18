@@ -347,7 +347,6 @@ pub fn plan_drops(blocks: &[Block], doms: &[HashSet<usize>]) -> DropPlan {
 #[cfg(test)]
 mod borrow_end_tests {
     use super::*;
-    use crate::mir::Function;
 
     fn blk(id: &str, stmts: Vec<Stmt>, term: Term) -> Block {
         Block { id: id.to_string(), statements: stmts, terminator: term }
@@ -434,7 +433,7 @@ mod borrow_end_tests {
     fn cleanup_without_borrow_also_deduped() {
         // No borrowers -> phase 1 skips the site, but the release is still a
         // duplicate of the main path, so phase 2 must omit it.
-        let mut blocks = vec![
+        let blocks = vec![
             blk("bb0", vec![], Term::Drop { place: "_1".to_string(), target: "bb1".to_string() }),
             blk("bb1", vec![], Term::Return { ret: None }),
             blk("bb9", vec![], Term::Drop { place: "_1".to_string(), target: "bb1".to_string() }),

@@ -246,7 +246,7 @@ pub fn dead_locals(blocks: &[crate::mir::Block], n_params: usize) -> BTreeSet<St
     use crate::mir::{Operand, Rvalue, Stmt, Term};
     let mut defined: BTreeSet<String> = BTreeSet::new();
     let mut read: BTreeSet<String> = BTreeSet::new();
-    let mut note = |op: &Operand, defined: &mut BTreeSet<String>, read: &mut BTreeSet<String>| {
+    let note = |op: &Operand, defined: &mut BTreeSet<String>, read: &mut BTreeSet<String>| {
         let place = match op {
             Operand::Move { place } | Operand::Copy { place } | Operand::Conflict { place } => {
                 place.as_str()
@@ -379,7 +379,7 @@ mod spill_tests {
 
     #[test]
     fn no_copies_no_spill() {
-        use crate::mir::{Block, Rvalue, Term};
+        use crate::mir::{Block, Term};
         let blocks = vec![Block {
             id: "bb0".to_string(),
             statements: vec![],
@@ -425,7 +425,7 @@ mod spill_tests {
 
     #[test]
     fn cast_dest_spills_when_copy_used() {
-        use crate::mir::{Block, Rvalue, Term};
+        use crate::mir::{Block, Term};
         // f_box shape: _7 = cast(copy _6), _12 = cast(copy _6) — pointer-copy
         // chain: the second plain assign would trap UseAfterMove.
         let blocks = vec![Block {
