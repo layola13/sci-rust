@@ -3095,10 +3095,7 @@ fn verifyBody(
     rust_copy_elision: bool,
 ) !VerifyBodyResult {
     std.debug.assert(classified_lines.len == instructions.len);
-    // P0.1: switches are threaded through; P0.3 activates default_immutable
-    // semantics in alloc/load handlers.
-    _ = default_immutable;
-    _ = rust_strict_mut;
+    // P2 activates rust_copy_elision in finalizeLeaks.
     _ = rust_copy_elision;
     var sig_index = sig_index_start;
     var state: []u16 = &.{};
@@ -3372,7 +3369,12 @@ fn verifyBody(
 
         switch (item.kind) {
             .alloc => {
-                if (assignValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, maskOf(.active), &interior)) |tr| return tr;
+                // sci-rust: explicit `mut x = alloc` (operands[2]=="mut") opts
+                // out even under --default-immutable; otherwise the edition
+                // default applies.
+                const explicit_mut = item.operands[2] == .text and std.mem.eql(u8, item.operands[2].text, "mut");
+                const alloc_mask: u16 = if (explicit_mut) maskOf(.active) else if (default_immutable) maskOf(.active) | maskOf(.immutable) else maskOf(.active);
+                if (assignValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, alloc_mask, &interior)) |tr| return tr;
                 flags[@intCast(item.operands[0].reg)] = 0;
                 recordAllocSize(&interior, item.operands[0].reg, parseAllocSizeOperand(item.operands[1]));
                 gas_alloc_bytes += switch (item.operands[1]) {
@@ -3383,7 +3385,9 @@ fn verifyBody(
                 };
             },
             .stack_alloc => {
-                if (assignValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, maskOf(.active), &interior)) |tr| return tr;
+                const explicit_mut = item.operands[2] == .text and std.mem.eql(u8, item.operands[2].text, "mut");
+                const alloc_mask: u16 = if (explicit_mut) maskOf(.active) else if (default_immutable) maskOf(.active) | maskOf(.immutable) else maskOf(.active);
+                if (assignValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, alloc_mask, &interior)) |tr| return tr;
                 flags[@intCast(item.operands[0].reg)] = regFlagStackAlloc;
                 recordAllocSize(&interior, item.operands[0].reg, parseAllocSizeOperand(item.operands[1]));
                 gas_alloc_bytes += switch (item.operands[1]) {
@@ -3404,7 +3408,10 @@ fn verifyBody(
                 const load_is_borrowed_ptr =
                     loaded_ty == .ptr and
                     ((source_mask & (maskOf(.borrow_view) | maskOf(.ffi_borrow))) != 0);
-                const new_mask = maskOf(.active) | if (load_is_borrowed_ptr) maskOf(.interior_ptr) else 0;
+                // sci-rust: under --default-immutable, values loaded from an
+                // immutable source inherit Active|Immutable.
+                const load_inherits_immutable = default_immutable and isImmutableConst(state, flags, item.operands[1].reg);
+                const new_mask = maskOf(.active) | if (load_is_borrowed_ptr) maskOf(.interior_ptr) else 0 | if (load_inherits_immutable) maskOf(.immutable) else 0;
                 if (assignValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, new_mask, &interior)) |tr| return tr;
                 flags[@intCast(item.operands[0].reg)] = if (item.kind == .load) (if (loaded_ty == .ptr) regFlagRawPointer else regFlagEphemeralScalar) else 0;
                 if (item.kind == .take and ((source_mask & (maskOf(.borrow_view) | maskOf(.ffi_borrow) | maskOf(.interior_ptr))) != 0 or hasInteriorTree(state, interior_first_child, item.operands[1].reg))) {
@@ -3426,6 +3433,11 @@ fn verifyBody(
                     const origin_id = origins[dst_idx] orelse unreachable;
                     const origin_idx: usize = @intCast(origin_id);
                     if (origin_idx < state.len and state[origin_idx] == maskOf(.locked_read)) {
+                        // sci-rust: under --rust-strict-mut, writing through a
+                        // shared borrow is rejected; use `&mut` explicitly.
+                        if (rust_strict_mut) {
+                            return trapReport(.read_write_conflict, item, current_function_text, current_is_ffi_wrapper, classified.parts[0], maskOf(.active), state[origin_idx], "rust edition: writing through a shared (&) borrow requires an explicit &mut borrow", "borrow with `r = &mut x` or `r = borrow mut x`");
+                        }
                         state[origin_idx] = maskOf(.locked_mut);
                     }
                 }

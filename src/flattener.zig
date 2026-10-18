@@ -1758,6 +1758,10 @@ fn emitParsedLine(
                     const dst = try symbols.intern(classified.parts[0]);
                     inst.operands[0] = .{ .reg = dst };
                     inst.operands[1] = try resolveSizeOperandText(allocator, dict, owned_text, symbols, classified.parts[1]);
+                    // sci-rust: explicit `mut x = alloc` marker survives via operands[2].
+                    if (classified.part_count > 2 and std.mem.eql(u8, classified.parts[2], "mut")) {
+                        inst.operands[2] = .{ .text = try ownFoldedText(allocator, dict, owned_text, "mut") };
+                    }
                 },
                 .atomic_load => {
                     const parsed = atomic.parseLoad(raw_line) catch |err| switch (err) {
@@ -1839,6 +1843,9 @@ fn emitParsedLine(
                     const dst = try symbols.intern(classified.parts[0]);
                     inst.operands[0] = .{ .reg = dst };
                     inst.operands[1] = try resolveSizeOperandText(allocator, dict, owned_text, symbols, classified.parts[1]);
+                    if (classified.part_count > 2 and std.mem.eql(u8, classified.parts[2], "mut")) {
+                        inst.operands[2] = .{ .text = try ownFoldedText(allocator, dict, owned_text, "mut") };
+                    }
                 },
                 .load, .take => {
                     const dst = try symbols.intern(classified.parts[0]);

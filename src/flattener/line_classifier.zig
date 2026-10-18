@@ -400,6 +400,21 @@ fn classifyAssignment(line: *ClassifiedLine, lhs_text: []const u8, rhs_text: []c
     const typed_rhs = splitPrimitiveTypedValue(rhs);
     const simple_rhs = if (typed_rhs) |typed| typed.body else rhs;
 
+    // sci-rust: explicit `mut` destination prefix (`mut x = alloc 8`).
+    // Strip it here; alloc/stack_alloc handlers record the marker in parts[2].
+    var lhs_eff: []const u8 = lhs;
+    var lhs_is_mut: bool = false;
+    if (std.mem.startsWith(u8, lhs, "mut")) {
+        const after_mut = lhs["mut".len..];
+        if (after_mut.len != 0 and std.ascii.isWhitespace(after_mut[0])) {
+            const name = std.mem.trim(u8, after_mut, " \t");
+            if (name.len != 0) {
+                lhs_eff = name;
+                lhs_is_mut = true;
+            }
+        }
+    }
+
     if (std.mem.startsWith(u8, simple_rhs, "*")) {
         const source = std.mem.trim(u8, simple_rhs[1..], " \t");
         if (source.len == 0) return false;
@@ -520,14 +535,56 @@ fn classifyAssignment(line: *ClassifiedLine, lhs_text: []const u8, rhs_text: []c
     }
 
     if (std.mem.startsWith(u8, simple_rhs, "&")) {
-        const source = std.mem.trim(u8, simple_rhs["&".len..], " \t");
+        const after_amp = std.mem.trimStart(u8, simple_rhs["&".len..], " \t");
+        // sci-rust: explicit &mut sugar (Rust edition). `r = &mut x`
+        // classifies as borrow/mut; plain `r = &x` stays borrow/read.
+        if (std.mem.startsWith(u8, after_amp, "mut")) {
+            const after_mut = after_amp["mut".len..];
+            if (after_mut.len == 0 or std.ascii.isWhitespace(after_mut[0])) {
+                const source = std.mem.trim(u8, after_mut, " \t");
+                if (source.len == 0) return false;
+                line.* = makeLine(.instruction, line.raw, line.trimmed);
+                line.inst_form = .borrow;
+                addPart(line, 0, lhs_eff);
+                addPart(line, 1, "mut");
+                addPart(line, 2, source);
+                return true;
+            }
+        }
+        const source = std.mem.trim(u8, after_amp, " \t");
         if (source.len == 0) return false;
         line.* = makeLine(.instruction, line.raw, line.trimmed);
         line.inst_form = .borrow;
-        addPart(line, 0, lhs);
+        addPart(line, 0, lhs_eff);
         addPart(line, 1, "read");
         addPart(line, 2, source);
         return true;
+    }
+
+    // sci-rust: borrow long-form `r = borrow x` / `r = borrow mut x`.
+    if (std.mem.startsWith(u8, simple_rhs, "borrow")) {
+        const after = simple_rhs["borrow".len..];
+        if (after.len == 0 or std.ascii.isWhitespace(after[0])) {
+            const rest = std.mem.trim(u8, after, " \t");
+            if (rest.len == 0) return false;
+            var mode: []const u8 = "read";
+            var source: []const u8 = rest;
+            if (std.mem.startsWith(u8, rest, "mut")) {
+                const after_mut = rest["mut".len..];
+                if (after_mut.len == 0 or std.ascii.isWhitespace(after_mut[0])) {
+                    const src = std.mem.trim(u8, after_mut, " \t");
+                    if (src.len == 0) return false;
+                    mode = "mut";
+                    source = src;
+                }
+            }
+            line.* = makeLine(.instruction, line.raw, line.trimmed);
+            line.inst_form = .borrow;
+            addPart(line, 0, lhs_eff);
+            addPart(line, 1, mode);
+            addPart(line, 2, source);
+            return true;
+        }
     }
 
     if (std.mem.startsWith(u8, simple_rhs, "alloc ")) {
@@ -535,8 +592,10 @@ fn classifyAssignment(line: *ClassifiedLine, lhs_text: []const u8, rhs_text: []c
         if (size.len == 0) return false;
         line.* = makeLine(.instruction, line.raw, line.trimmed);
         line.inst_form = .alloc;
-        addPart(line, 0, lhs);
+        addPart(line, 0, lhs_eff);
         addPart(line, 1, size);
+        // sci-rust: parts[2]=="mut" marks explicit `mut x = alloc`.
+        if (lhs_is_mut) addPart(line, 2, "mut");
         return true;
     }
 
@@ -545,8 +604,9 @@ fn classifyAssignment(line: *ClassifiedLine, lhs_text: []const u8, rhs_text: []c
         if (size.len == 0) return false;
         line.* = makeLine(.instruction, line.raw, line.trimmed);
         line.inst_form = .stack_alloc;
-        addPart(line, 0, lhs);
+        addPart(line, 0, lhs_eff);
         addPart(line, 1, size);
+        if (lhs_is_mut) addPart(line, 2, "mut");
         return true;
     }
 
