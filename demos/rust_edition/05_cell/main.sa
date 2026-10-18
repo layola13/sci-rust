@@ -1,0 +1,27 @@
+@main() -> i32:
+L_ENTRY:
+    // sci-rust P2.2 Cell model: InteriorPtr derived from a borrow carries
+    // interior mutability. Stores through the derived pointer are allowed
+    // even when the source is conceptually shared.
+    mut base = alloc 8
+    store base+0, 5 as i64
+
+    r = &base
+    v = load r+0 as ptr
+    store v+0, 9 as i64
+    !v
+    !r
+
+    out = load base+0 as i64
+    ok = eq out, 5
+    !out
+    !base
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1

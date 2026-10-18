@@ -566,7 +566,14 @@ fn isImmutable(mask: u16) bool {
 
 fn isImmutableConst(state: []const u16, flags: []const u8, id: u32) bool {
     const idx: usize = @intCast(id);
-    return isImmutable(state[idx]) or (flags[idx] & regFlagImmutable) != 0;
+    if (isImmutable(state[idx]) or (flags[idx] & regFlagImmutable) != 0) {
+        // sci-rust P2.2 Cell model: an InteriorPtr derived from a borrow
+        // carries interior mutability, so stores through it bypass the
+        // Immutable write guard (mirrors Rust Cell/UnsafeCell).
+        if (hasInteriorPtr(state[idx])) return false;
+        return true;
+    }
+    return false;
 }
 
 fn constTrap(
