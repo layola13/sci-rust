@@ -657,6 +657,11 @@ fn parseVtableSlots(allocator: std.mem.Allocator, literal: const_decl.VTableLite
             }
         }
         const resolved = sig_match orelse return error.UnknownRegister;
+        // sci-rust P1.1a object-safety: vtable slot methods must take the
+        // receiver by borrow (`&self: ptr`). By-value `^self` would consume
+        // the object into the vtable call and is rejected here.
+        if (resolved.params.len == 0) return error.VTableSignatureMismatch;
+        if (resolved.params[0].cap != .borrow or resolved.params[0].ty != .ptr) return error.VTableSignatureMismatch;
         try slots.append(.{
             .slot_name = slot.name,
             .function_name = slot.func_name,
@@ -2605,6 +2610,7 @@ fn metadataTrapKind(err: anyerror) trap.Trap {
         error.OutOfMemory => .arena_oom,
         error.TestFuncSignatureMismatch => .test_func_signature_mismatch,
         error.InvalidAtomicOrdering => .invalid_atomic_ordering,
+        error.VTableSignatureMismatch => .vtable_signature_mismatch,
         error.InvalidFunctionSig, error.InvalidAtomicSyntax => .forbidden_syntax,
         else => .import_resolution_failed,
     };
@@ -2616,6 +2622,7 @@ fn metadataTrapMessage(err: anyerror) []const u8 {
         error.OutOfMemory => "out of memory while rebuilding metadata",
         error.TestFuncSignatureMismatch => "@test function must have signature () -> void",
         error.InvalidAtomicOrdering => "invalid atomic ordering while rebuilding metadata",
+        error.VTableSignatureMismatch => "vtable slot method must take receiver by borrow (&self: ptr) for object safety",
         error.InvalidFunctionSig => "invalid function signature while rebuilding metadata",
         error.InvalidAtomicSyntax => "invalid atomic syntax while rebuilding metadata",
         else => "unclassified metadata rebuild error",
@@ -2627,6 +2634,7 @@ fn metadataTrapHint(err: anyerror) ?[]const u8 {
         error.UnsupportedType => "check primitive type names in signatures and atomic suffixes",
         error.TestFuncSignatureMismatch => "test functions cannot have parameters and must return void",
         error.InvalidAtomicOrdering => "check success/failure ordering pairs and atomic ordering suffixes",
+        error.VTableSignatureMismatch => "declare the method as (@name(&self: ptr) -> ...) so dyn dispatch borrows the receiver",
         error.InvalidFunctionSig => "check declaration spelling, parentheses, parameters, return arrow, and trailing colon",
         error.InvalidAtomicSyntax => "check atomic instruction spelling, destination registers, address, value, and ordering fields",
         error.OutOfMemory => null,

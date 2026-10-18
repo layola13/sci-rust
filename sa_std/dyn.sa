@@ -1,0 +1,34 @@
+// sci-rust P1.1a: dyn trait-object macros (Rust edition).
+//
+// A `dyn` fat pointer is 16 bytes: [data_ptr:8][vtable_ptr:8].
+// These macros lower trait-object construction and dispatch to the existing
+// vtable + call_indirect machinery with zero compiler changes.
+//
+// Object-safety contract (enforced by the verifier since P1.1a):
+// every vtable slot method must take its receiver by borrow (`&self: ptr`).
+
+#def Dyn_SIZE = 16
+#def Dyn_DATA = +0
+#def Dyn_VTABLE = +8
+
+[MACRO] DYN_NEW %out_dyn, %data_ptr, %vtable_const
+    %out_dyn = alloc Dyn_SIZE
+    store %out_dyn+Dyn_DATA, %data_ptr as ptr
+    store %out_dyn+Dyn_VTABLE, %vtable_const as ptr
+[END_MACRO]
+
+[MACRO] DYN_DATA %out_data, %dyn
+    %out_data = load %dyn+Dyn_DATA as ptr
+[END_MACRO]
+
+[MACRO] DYN_VTABLE %out_vtable, %dyn
+    %out_vtable = load %dyn+Dyn_VTABLE as ptr
+[END_MACRO]
+
+[MACRO] DYN_FREE %dyn
+    __dyn_data_%dyn = load %dyn+Dyn_DATA as ptr
+    __dyn_vtable_%dyn = load %dyn+Dyn_VTABLE as ptr
+    !__dyn_data_%dyn
+    !__dyn_vtable_%dyn
+    !%dyn
+[END_MACRO]

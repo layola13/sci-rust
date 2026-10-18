@@ -1,0 +1,49 @@
+@import "sa_std/dyn.sa"
+
+@const BUTTON_VT = vtable { draw = @button_draw }
+
+#def VTable_draw = +0
+#def Button_SIZE = 4
+#def Button_id = +0
+
+@button_draw(&self: ptr) -> i32:
+L_ENTRY:
+    id = load self+Button_id as i32
+    !self
+    return id
+
+@render(&item: ptr) -> i32:
+L_ENTRY:
+    EXPAND DYN_DATA data_ptr, item
+    EXPAND DYN_VTABLE vtable_ptr, item
+    draw_fn = load vtable_ptr+VTable_draw as ptr
+    result = call_indirect draw_fn(&data_ptr)
+    !draw_fn
+    !vtable_ptr
+    !data_ptr
+    !item
+    return result
+
+@main() -> i32:
+L_ENTRY:
+    mut button = alloc Button_SIZE
+    store button+Button_id, 77 as i32
+
+    mut fat = alloc Dyn_SIZE
+    store fat+Dyn_DATA, button as ptr
+    store fat+Dyn_VTABLE, &BUTTON_VT as ptr
+
+    result = call @render(&fat)
+    ok = eq result, 77
+    !result
+    !button
+    !fat
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !ok
+    return 0
+
+L_ERR:
+    !ok
+    return 1
