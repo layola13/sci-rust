@@ -32,6 +32,58 @@ assume_borrow  = IDENT "=" "assume_borrow" IDENT [ "," "mut" ] ;
 
 ---
 
+## 14. 附录 F：Rust Edition 扩展（sci-rust / sars）
+
+二进制改名：`sa` -> `sars`（`--version` 输出 `sars x.y.z`，`usage:` 前缀同步；
+daemon argv[0] 归一化接受新旧名）。
+
+CLI 开关（`--edition rust` 等价于三开关全开）：
+
+```
+--default-immutable
+--rust-strict-mut
+--rust-copy-elision
+--edition rust | 2024-rust | rust-edition
+```
+
+语法糖（全部降级为既有 IR，零后端改动）：
+
+```ebnf
+mut_alloc      = "mut" IDENT "=" "alloc" LITERAL ;
+mut_stack      = "mut" IDENT "=" "stack_alloc" LITERAL ;
+borrow_mut     = IDENT "=" "&mut" IDENT ;
+borrow_long    = IDENT "=" "borrow" [ "mut" ] IDENT ;
+```
+
+语义：
+
+* 默认不可变：`x = alloc N` 在 `--default-immutable` 下初始 mask 为
+  `Active|Immutable (0x101)`；`mut x = alloc N` 显式可变（`0x01`）。
+  `load` 从 Immutable 源读取时目标继承 Immutable。
+* 严格独占借用：`r = &mut x` / `r = borrow mut x` 为显式独占借用；
+  `--rust-strict-mut` 下经共享 `&` 借用写回报 `ReadWriteConflict`，
+  必须改写为 `&mut`。
+* Copy 省略：`--rust-copy-elision`（`--edition rust` 隐含）下 ephemeral
+  标量在 `move`/`assign` 中不被消费，可多次使用。
+* Cell 内部可变：`InteriorPtr` 派生指针豁免 Immutable 写保护
+  （`isImmutableConst` 对 `hasInteriorPtr` 返回 false）。
+* vtable 对象安全：slot 方法首参必须为 `&self: ptr`（borrow），否则
+  `VTableSignatureMismatch (1024)`。`sa_std/dyn.sa` 提供 `DYN_NEW` /
+  `DYN_DATA` / `DYN_VTABLE` / `DYN_FREE` / `TRAIT_DISPATCH` 宏，
+  fat pointer 布局固定 16B `[data:8][vtable:8]`。
+
+真值表新增（`src/common/capability.zig`）：
+
+| 当前 mask | 操作 | 合法? | 新 mask | Trap |
+|---|---|---|---|---|
+| `0x101` (Active\|Immutable) | `release_own` | ✅ | `0x08` (Consumed) | — |
+| `0x101` | `borrow_read` | ✅ | `0x102` | — |
+| `0x102` | `borrow_read_again` | ✅ | `0x102` | — |
+| `0x102` | `borrow_mut` | ❌ | — | `ReadWriteConflict` |
+```
+
+---
+
 ## 12. 附录 D：Capability Mask 真值表（扩展版）
 
 旧版真值表全部保留，新增气闸舱行（见前版）与 Fallible 行：
