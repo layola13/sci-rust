@@ -85,6 +85,7 @@ fn pathHasPrecompiledArtifact(name: []const u8) bool {
 fn isSourceFile(path: []const u8) bool {
     const ext = std.fs.path.extension(path);
     return std.mem.eql(u8, ext, ".sa") or
+        std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sai") or
         std.mem.eql(u8, ext, ".sal");
 }

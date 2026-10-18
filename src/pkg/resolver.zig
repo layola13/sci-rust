@@ -151,7 +151,7 @@ pub const ResolveOptions = struct {
     project_root: ?[]const u8 = null,
     home_dir: ?[]const u8 = null,
     offline: bool = false,
-    entry_candidates: []const []const u8 = &.{ "index.sa", "main.sa" },
+    entry_candidates: []const []const u8 = &.{ "index.sa", "index.sars", "main.sa", "main.sars" },
     std_root: ?[]const u8 = null,
     plugin_import_roots: []const []const u8 = &.{},
     stable_import_roots: []const []const u8 = &.{},
@@ -222,6 +222,7 @@ fn isPackageIdentity(import_path: []const u8) bool {
     if (std.fs.path.isAbsolute(trimmed)) return false;
     if (std.mem.startsWith(u8, trimmed, "./") or std.mem.startsWith(u8, trimmed, "../")) return false;
     return !std.mem.endsWith(u8, trimmed, ".sa") and
+        !std.mem.endsWith(u8, trimmed, ".sars") and
         !std.mem.endsWith(u8, trimmed, ".sai") and
         !std.mem.endsWith(u8, trimmed, ".sal");
 }
@@ -232,6 +233,7 @@ fn isPluginInterfaceImportPath(import_path: []const u8) bool {
     if (std.fs.path.isAbsolute(trimmed)) return false;
     if (std.mem.startsWith(u8, trimmed, "./") or std.mem.startsWith(u8, trimmed, "../")) return false;
     if (!std.mem.endsWith(u8, trimmed, ".sa") and
+        !std.mem.endsWith(u8, trimmed, ".sars") and
         !std.mem.endsWith(u8, trimmed, ".sai") and
         !std.mem.endsWith(u8, trimmed, ".sal")) return false;
 

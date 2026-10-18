@@ -2695,6 +2695,7 @@ fn isSaStdSurfaceFile(path: []const u8) bool {
     if (std.mem.eql(u8, std.fs.path.basename(path), "sa.mod")) return true;
     const ext = std.fs.path.extension(path);
     return std.mem.eql(u8, ext, ".sa") or
+        std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sal") or
         std.mem.eql(u8, ext, ".sai");
 }
@@ -2966,10 +2967,12 @@ fn appendPermissionSummary(
 fn pluginInterfaceFileCandidate(path: []const u8) bool {
     const base = std.fs.path.basename(path);
     if (std.mem.eql(u8, base, "expanded.sa")) return false;
+    if (std.mem.eql(u8, base, "expanded.sars")) return false;
     if (std.mem.startsWith(u8, base, "tmp_")) return false;
     if (std.mem.startsWith(u8, base, "_tmp")) return false;
     const ext = std.fs.path.extension(path);
     return std.mem.eql(u8, ext, ".sa") or
+        std.mem.eql(u8, ext, ".sars") or
         std.mem.eql(u8, ext, ".sal") or
         std.mem.eql(u8, ext, ".sai");
 }
@@ -6812,7 +6815,7 @@ fn executeInit(allocator: std.mem.Allocator, args: []const []const u8, stdout: a
 
     const manifest_path = try std.fs.path.join(allocator, &.{ project_path, "sa.mod" });
     defer allocator.free(manifest_path);
-    const main_path = try std.fs.path.join(allocator, &.{ project_path, "src", "main.sa" });
+    const main_path = try std.fs.path.join(allocator, &.{ project_path, "src", "main.sars" });
     defer allocator.free(main_path);
     const gitignore_path = try std.fs.path.join(allocator, &.{ project_path, ".gitignore" });
     defer allocator.free(gitignore_path);
