@@ -3103,8 +3103,6 @@ fn verifyBody(
     rust_copy_elision: bool,
 ) !VerifyBodyResult {
     std.debug.assert(classified_lines.len == instructions.len);
-    // P2 activates rust_copy_elision in finalizeLeaks.
-    _ = rust_copy_elision;
     var sig_index = sig_index_start;
     var state: []u16 = &.{};
     var flags: []u8 = &.{};
@@ -3582,7 +3580,12 @@ fn verifyBody(
             },
             .move_ => {
                 if (readCheck(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags)) |tr| return tr;
-                if (consumeSourceValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, origins, locks, interior_parent, interior_first_child, interior_next_sibling, false, &interior)) |tr| return tr;
+                // sci-rust P2.1 Copy elision: under --rust-copy-elision,
+                // ephemeral scalars (Copy values) are not consumed by move.
+                const copy_scalar = rust_copy_elision and (flags[@intCast(item.operands[0].reg)] & regFlagEphemeralScalar) != 0;
+                if (!copy_scalar) {
+                    if (consumeSourceValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[0], item.operands[0].reg, state, flags, origins, locks, interior_parent, interior_first_child, interior_next_sibling, false, &interior)) |tr| return tr;
+                }
             },
             .assign => {
                 const dst_id = item.operands[0].reg;
@@ -3605,7 +3608,11 @@ fn verifyBody(
                     flags[@intCast(dst_id)] = regFlagEphemeralScalar;
                 }
                 if (item.operands[1] == .reg and item.operands[1].reg != dst_id) {
-                    if (consumeSourceValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[1], item.operands[1].reg, state, flags, origins, locks, interior_parent, interior_first_child, interior_next_sibling, true, &interior)) |tr| return tr;
+                    // sci-rust P2.1: Copy scalars survive rebinding.
+                    const copy_keep = rust_copy_elision and source_is_ephemeral;
+                    if (!copy_keep) {
+                        if (consumeSourceValue(item, current_function_text, current_is_ffi_wrapper, classified.parts[1], item.operands[1].reg, state, flags, origins, locks, interior_parent, interior_first_child, interior_next_sibling, true, &interior)) |tr| return tr;
+                    }
                 }
             },
             .release => {
