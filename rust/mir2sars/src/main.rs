@@ -167,8 +167,13 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
             // Calls without signatures mirror lower()'s CallNoSig rule.
             // Terminator dests join the bound set exactly like lower().
             match &b.terminator {
-                Term::Call { args, sig, dest, .. } => {
-                    if args.iter().any(const_needs_loud) {
+                Term::Call { func, func_raw, args, sig, dest, target } => {
+                    // Diverging panic calls fold to native `panic(code)` in
+                    // lower(): counted loudly here for parity (not a gap).
+                    if target.is_none() && is_diverging_panic_call(func, func_raw.as_deref()) {
+                        tot_unsup += 1;
+                        unsup.push(format!("{}: T/DivergingPanicFolded", b.id));
+                    } else if args.iter().any(const_needs_loud) {
                         tot_unsup += 1;
                         let kind = args.iter().find_map(loud_const_kind).unwrap_or("ConstValue");
                         unsup.push(format!("{}: T/Call{}", b.id, kind));
@@ -938,6 +943,50 @@ mod tests {
         assert!(unsup.is_empty());
         assert!(!sa.contains("\n    unreachable\n"), "no bare unreachable:\n{}", sa);
         assert!(sa.contains("panic(1600)"), "panic:\n{}", sa);
+    }
+
+    #[test]
+    fn diverging_panic_call_folds_to_panic() {
+        // arith regression: a diverging `std::rt::panic_fmt` call (no
+        // target) lowers to a native `panic(code)` — no `@extern`, no
+        // broker needed. Counted loudly (DivergingPanicFolded), and the
+        // extern collector skips it too.
+        let f = blank_fn("f_panic", vec![
+            blank_block("bb0", Term::Call {
+                func: "std_rt_panic_fmt".to_string(),
+                func_raw: Some("std::rt::panic_fmt".to_string()),
+                args: vec![Operand::Copy { place: "_6".to_string() }],
+                dest: Some("_5".to_string()),
+                target: None,
+                sig: Some(CallSig { params: vec!["ptr".to_string()], ret: "ptr".to_string() }),
+            }),
+        ]);
+        let mut unsup = vec![];
+        let sa = lower_function(&f, &mut unsup);
+        assert_eq!(unsup, vec!["bb0: DivergingPanicFolded"], "{:?}", unsup);
+        assert!(sa.contains("panic(1700)"), "native panic:\n{}", sa);
+        assert!(!sa.contains("call @std_rt_panic_fmt"), "no extern call:\n{}", sa);
+        let mir = MirFile { source: None, functions: vec![f] };
+        let exts = collect_externs(&mir);
+        assert!(!exts.contains_key("std_rt_panic_fmt"), "{:?}", exts);
+        // Non-diverging calls (with a target) still go the extern route.
+        let g = blank_fn("g_call", vec![
+            Block {
+                id: "bb0".to_string(),
+                statements: vec![],
+                terminator: Term::Call {
+                    func: "some_fn".to_string(),
+                    func_raw: None,
+                    args: vec![Operand::Copy { place: "_1".to_string() }],
+                    dest: Some("_0".to_string()),
+                    target: Some("bb1".to_string()),
+                    sig: Some(CallSig { params: vec!["ptr".to_string()], ret: "i32".to_string() }),
+                },
+            },
+            blank_block("bb1", Term::Return { ret: None }),
+        ]);
+        let mir_g = MirFile { source: None, functions: vec![g] };
+        assert!(collect_externs(&mir_g).contains_key("some_fn"));
     }
 
     #[test]

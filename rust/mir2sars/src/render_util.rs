@@ -155,6 +155,37 @@ pub fn unreachable_panic_code(bid: &str) -> u32 {
     1600 + (n % 100)
 }
 
+/// Panic code for a diverging Rust panic call (`panic_fmt`, `panic`,
+/// `begin_panic`, `unreachable_unchecked` with no return target, 1700-range,
+/// distinct from asserts/unreachable). The call itself aborts, so lowering
+/// it to a native `panic(code)` keeps `sars run` broker-free instead of
+/// emitting an unresolvable `@extern` decl.
+pub fn diverging_panic_code(bid: &str) -> u32 {
+    let n: u32 = bid
+        .trim_start_matches(|c: char| !c.is_ascii_digit())
+        .parse()
+        .unwrap_or(0);
+    1700 + (n % 100)
+}
+
+/// True for Rust's diverging panic entry points: they never return, so a
+/// `Call` terminator with `target: None` to one of these lowers directly to
+/// `panic(code)` (no `@extern`, no broker needed). Matches on both the
+/// sanitized MIR name and the raw `func_raw` path (`std::rt::panic_fmt`,
+/// `core::panicking::panic`, `std::panicking::begin_panic`, ...).
+pub fn is_diverging_panic_call(func: &str, func_raw: Option<&str>) -> bool {
+    let f = func.to_ascii_lowercase();
+    let r = func_raw.unwrap_or("").to_ascii_lowercase();
+    let hit = |s: &str| {
+        s.contains("panic_fmt")
+            || s.contains("begin_panic")
+            || (s.contains("panic") && !s.contains("unwind"))
+            || s.contains("unreachable_unchecked")
+            || s.contains("abort")
+    };
+    hit(&f) || hit(&r)
+}
+
 /// Decimal text for a scalar const value (`Val(Scalar(0x..), TY)` or `N_TY`
 /// or bare bool), or None for non-scalars (slices, unevaluated, ZST…) and
 /// floats (no verified float-literal shape yet — stays loud, never guessed).

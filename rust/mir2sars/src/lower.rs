@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use crate::asm::{asm_inout_passthrough, asm_mov_copy, is_plain_local};
 use crate::mir::*;
 use crate::render::*;
-use crate::render_util::{assert_panic_code, assign_loud_const, build_constmap, call_sig_loud, const_needs_loud, flat_comment, is_overflow_assert, loud_const_kind, loud_operand_reason, render_call_arg, render_operand, sa_ident, sa_label, unreachable_panic_code};
+use crate::render_util::{assert_panic_code, assign_loud_const, build_constmap, call_sig_loud, const_needs_loud, diverging_panic_code, flat_comment, is_diverging_panic_call, is_overflow_assert, loud_const_kind, loud_operand_reason, render_call_arg, render_operand, sa_ident, sa_label, unreachable_panic_code};
 use crate::spill::{build_spill, spill_slot};
 
 /// Placeholder bind for loud paths: an unbound dest gets `= 0` so
@@ -189,6 +189,26 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
             Term::Call { func, func_raw, args, dest, target, sig } => {
                 if let Some(raw) = func_raw {
                     out.push(format!("    // MIR: {}", flat_comment(raw)));
+                }
+                // Diverging Rust panic entry points (`panic_fmt`, `begin_panic`,
+                // ...) never return: lower directly to a native `panic(code)`
+                // so `sars run` stays broker-free (no `@extern` for a call
+                // that can never come back). Counted loudly for honesty.
+                if target.is_none() && is_diverging_panic_call(func, func_raw.as_deref()) {
+                    unsup.push(format!("{}: DivergingPanicFolded", b.id));
+                    out.push(format!(
+                        "    // diverging panic call folded: {} aborts natively ({} )",
+                        sa_ident(func),
+                        flat_comment(func_raw.as_deref().unwrap_or("")),
+                    ));
+                    if let Some(d) = dest {
+                        if !bound.contains(d) {
+                            out.push(format!("    {} = 0", d));
+                            bound.insert(d.clone());
+                        }
+                    }
+                    out.push(format!("    panic({})", diverging_panic_code(&b.id)));
+                    continue;
                 }
                 // Rebound call dests keep the first value (bare call preserves
                 // side effects; control preserved below).
@@ -526,9 +546,16 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
                     });
                 }
             }
-            if let Term::Call { func, sig, .. } = &b.terminator {
+            if let Term::Call { func, func_raw, sig, target, .. } = &b.terminator {
                 let name = sa_ident(func);
                 if defined.contains(&name) {
+                    continue;
+                }
+                // Diverging panic calls lower to native `panic(code)` (see
+                // the Term::Call arm above): no `@extern` needed, and
+                // emitting one would force `sars run` through a broker for
+                // a call that never returns.
+                if target.is_none() && is_diverging_panic_call(func, func_raw.as_deref()) {
                     continue;
                 }
                 set.entry(name).or_insert_with(|| {
@@ -608,8 +635,16 @@ pub fn cmd_lower(args: &[String]) -> ExitCode {
         );
     }
     if !exts.is_empty() {
+        let joined = bodies.join("\n");
         sa_compat += "// MIR callees (map to sci/sa_std per STD_MAP.md):\n";
         for (e, sig) in &exts {
+            // Dead extern guard: the call site may have gone loud (const
+            // args, rebind, no-sig) and emitted no `call @e` at all — an
+            // unreferenced `@extern` still forces `sars run` to resolve it
+            // through a broker. Only declare what the bodies reference.
+            if !joined.contains(&format!("call @{e}(")) && !joined.contains(&format!("call @{e} ")) {
+                continue;
+            }
             sa_compat += &extern_decl(e, sig);
             sa_compat += "\n";
         }
