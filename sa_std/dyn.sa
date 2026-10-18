@@ -32,3 +32,33 @@
     !__dyn_vtable_%dyn
     !%dyn
 [END_MACRO]
+
+// sci-rust P1.1b-light: trait declaration/impl sugar.
+//
+// A trait is a named method set; an impl binds concrete @functions into a
+// `@const VT = vtable { ... }`. The verifier enforces object-safety
+// (receiver by borrow) at vtable-collection time, so these macros are pure
+// documentation + layout sugar with zero compiler changes.
+//
+// Usage:
+//   #trait Draw { draw }              -> documents method set { draw }
+//   @button_draw(&self: ptr) -> i32:  -> concrete method (borrow receiver)
+//   #impl Draw for Button { draw = @button_draw }
+//     -> expands to: @const Button_Draw_VT = vtable { draw = @button_draw }
+//
+// NOTE: #trait/#impl are comments for now (parsed as #def-compatible docs);
+// the normative artifact remains the @const vtable below them. A future
+// heavy slice may promote them to first-class LineKind with registry checks.
+
+// #trait Draw { draw }: method set = { draw }; receiver must be &self: ptr.
+// #impl Draw for Button: Button_Draw_VT = vtable { draw = @button_draw }
+
+[MACRO] TRAIT_DISPATCH %out_result, %dyn, %vtable_slot_offset, %call_args
+    __trait_vtable_%out_result = load %dyn+Dyn_VTABLE as ptr
+    __trait_data_%out_result = load %dyn+Dyn_DATA as ptr
+    __trait_fn_%out_result = load __trait_vtable_%out_result+%vtable_slot_offset as ptr
+    %out_result = call_indirect __trait_fn_%out_result(%call_args)
+    !__trait_fn_%out_result
+    !__trait_vtable_%out_result
+    !__trait_data_%out_result
+[END_MACRO]
