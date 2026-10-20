@@ -148,6 +148,11 @@ exit 0，无 broker）。
   借用已随取走结束，不再额外 `!`（否则双重释放）。
 - 仍未覆盖：**提升常量**（promoted const）的引用仍是 loud（值为 0 占位，
   调用方会读到空指针）。
-- 仍未覆盖：`for` 循环（std 迭代器协议 `IntoIterator`/`Iterator::next`）
-  ——std 函数无法在 SA 中按值提供聚合返回，需要在 driver 侧脱糖。
+- `for i in a..b`（`Range<T>`）：std 的迭代器协议在 mir2sars 内联——
+  `IntoIterator::into_iter` 退化为恒等，`Iterator::next` 展开为「读游标/
+  上界 → 比较 → 构造 `Option<(T,)>` → 游标加一」的 SA 代码（布局取自
+  MIR：range 字段偏移、判别式偏移与类型、payload 偏移）。`&mut self`
+  借用临时量被跳过（它的拷贝会消耗循环携带的迭代器）。
+- 仍未覆盖：`for` 遍历 **非 range** 迭代器（`Vec`/切片/`iter()`）——需要
+  std 的容器迭代器实现。
 

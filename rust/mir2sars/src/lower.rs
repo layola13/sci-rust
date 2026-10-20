@@ -536,6 +536,130 @@ fn materialize_projected_operands(f: &Function) -> Function {
     out
 }
 
+/// Layout facts for a `for` loop over `Range<T>`: the iterator shim reads
+/// the range's cursor/end fields and builds the `Option<(T,)>` result.
+#[derive(Clone)]
+struct IterNextCtx {
+    cur_off: u64,
+    end_off: u64,
+    tag_off: u64,
+    tag_ty: String,
+    payload_off: u64,
+    payload_ty: String,
+    signed: bool,
+}
+
+/// True for std's `IntoIterator::into_iter` on a range.
+fn is_into_iter_call(func: &str) -> bool {
+    func.contains("as_std_iter_IntoIterator_into_iter")
+}
+
+/// True for std's `Iterator::next` on a range.
+fn is_next_call(func: &str) -> bool {
+    func.contains("as_std_iter_Iterator_next")
+}
+
+/// Collect the layout facts a range iterator shim needs: the range's field
+/// offsets (from the aggregate that feeds `into_iter`), the `Option` tag
+/// (from the discriminant read) and its payload (the projected read).
+/// Also returns the registers to skip (the `&mut self` borrow temp: copying
+/// it would consume the iterator, which the loop carries across iterations)
+/// and the iterator register to use instead.
+fn find_iter_ctx(f: &Function) -> Option<(IterNextCtx, std::collections::HashSet<String>, String)> {
+    // The range aggregate: the argument of the `into_iter` call.
+    let mut range_offsets: Option<Vec<u64>> = None;
+    let mut elem_ty = "i32".to_string();
+    for b in &f.blocks {
+        for st in &b.statements {
+            if let Stmt::Assign { rvalue: Rvalue::Aggregate { layout, elem_tys, .. }, .. } = st {
+                if let Some(l) = layout {
+                    if l.offsets.len() >= 2 {
+                        range_offsets = Some(l.offsets.clone());
+                        if let Some(ts) = elem_tys {
+                            if let Some(t) = ts.first() {
+                                elem_ty = t.clone();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let offsets = range_offsets?;
+    // The `Option` tag: the discriminant read.
+    let mut tag = None;
+    let mut payload = None;
+    for b in &f.blocks {
+        for st in &b.statements {
+            match st {
+                Stmt::Assign { rvalue: Rvalue::Discriminant { offset, ty, .. }, .. } => {
+                    if let Some(t) = ty {
+                        tag = Some((*offset, t.clone()));
+                    }
+                }
+                Stmt::Assign { rvalue: Rvalue::Use { op }, .. } => {
+                    if let Some(pj) = op.proj() {
+                        // The payload read is the projected one that names the
+                        // `Some` variant (`((_6 as Some).0: i32)`).
+                        if let Some(via) = &pj.via {
+                            if via.contains("Some") {
+                                payload = Some((pj.offset, pj.ty.clone()));
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let (tag_off, tag_ty) = tag?;
+    let (payload_off, payload_ty) = payload?;
+    // The `next` call's argument: a `&mut self` borrow temp over the
+    // iterator local. The borrow temp is skipped (its copy would consume the
+    // loop-carried iterator) and the iterator register is used directly.
+    let mut skip = std::collections::HashSet::new();
+    let mut iter_reg = String::new();
+    for b in &f.blocks {
+        if let Term::Call { func, args, .. } = &b.terminator {
+            if !is_next_call(func) {
+                continue;
+            }
+            let arg_place = match args.first() {
+                Some(Operand::Move { place, .. }) | Some(Operand::Copy { place, .. }) => {
+                    place.clone()
+                }
+                _ => continue,
+            };
+            for bb in &f.blocks {
+                for st in &bb.statements {
+                    if let Stmt::Assign { dest, rvalue: Rvalue::Ref { place, agg, .. }, .. } = st {
+                        if *dest == arg_place && *agg {
+                            skip.insert(dest.clone());
+                            iter_reg = place.clone();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if iter_reg.is_empty() {
+        return None;
+    }
+    Some((
+        IterNextCtx {
+            cur_off: offsets[0],
+            end_off: offsets[1],
+            tag_off,
+            tag_ty,
+            payload_off,
+            payload_ty,
+            signed: elem_ty.starts_with('i'),
+        },
+        skip,
+        iter_reg,
+    ))
+}
+
 /// A join-ambiguous local (`Operand::Conflict`) lowered through a stack slot:
 /// versions are stored on the incoming frontier, the use site loads the slot.
 struct JoinSlot {
@@ -965,6 +1089,11 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     // Derived `PartialEq` on primitives: inlined as a value compare (std's
     // `PartialEq::eq` is not runnable here).
     let (inline_eq, inline_skip) = plan_inline_eq(f);
+    // `for i in a..b`: the range iterator protocol is inlined.
+    let (iter_ctx, iter_skip, iter_reg) = match find_iter_ctx(f) {
+        Some((c, s, r)) => (Some(c), s, r),
+        None => (None, std::collections::HashSet::new(), String::new()),
+    };
     let mut block_stores: std::collections::HashMap<usize, Vec<(String, String, String)>> =
         std::collections::HashMap::new();
     for p in &join_slots {
@@ -1033,6 +1162,11 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                     // Borrows that only feed an inlined primitive comparison
                     // are dead: the comparison loads the fields directly.
                     if inline_skip.contains(dest) {
+                        continue;
+                    }
+                    // The iterator's `&mut self` borrow temp is skipped too:
+                    // copying it would consume the loop-carried iterator.
+                    if iter_skip.contains(dest) {
                         continue;
                     }
                     // Return of a by-value aggregate that is (a copy of) a
@@ -1253,6 +1387,93 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
             Term::Call { func, func_raw, args, dest, target, sig } => {
+                // `for i in a..b`: std's iterator protocol is inlined here
+                // (the SA runtime has no std `Iterator::next`).
+                if is_into_iter_call(func) {
+                    // `into_iter(range)` is the identity for a range.
+                    let src = args
+                        .first()
+                        .map(|a| match a {
+                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                place.clone()
+                            }
+                            _ => "0".to_string(),
+                        })
+                        .unwrap_or_else(|| "0".to_string());
+                    let d = dest.as_deref().unwrap_or("_0");
+                    out.push(format!("    {} = {}", d, src));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
+                }
+                if is_next_call(func) {
+                    let iter = if iter_reg.is_empty() {
+                        args.first()
+                            .map(|a| match a {
+                                Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                    place.clone()
+                                }
+                                _ => "0".to_string(),
+                            })
+                            .unwrap_or_else(|| "0".to_string())
+                    } else {
+                        iter_reg.clone()
+                    };
+                    let d = dest.as_deref().unwrap_or("_0");
+                    if let Some(ctx) = iter_ctx.clone() {
+                        let lbl_some = format!("L_iter_some_{}", b.id);
+                        let lbl_none = format!("L_iter_none_{}", b.id);
+                        let lbl_end = format!("L_iter_end_{}", b.id);
+                        let cur = format!("_iter_cur_{}", b.id);
+                        let end = format!("_iter_endv_{}", b.id);
+                        let cmp = format!("_iter_cmp_{}", b.id);
+                        let ret = format!("_iter_ret_{}", b.id);
+                        let inc = format!("_iter_inc_{}", b.id);
+                        out.push(format!("    {} = load {}+{} as {}", cur, iter, ctx.cur_off, ctx.payload_ty));
+                        out.push(format!("    {} = load {}+{} as {}", end, iter, ctx.end_off, ctx.payload_ty));
+                        out.push(format!(
+                            "    {} = {} {}, {}",
+                            cmp,
+                            if ctx.signed { "slt" } else { "ult" },
+                            cur,
+                            end
+                        ));
+                        out.push(format!("    mut {} = alloc 8", ret));
+                        out.push(format!("    br {} -> {}, {}", cmp, lbl_some, lbl_none));
+                        out.push(format!("{}:", lbl_some));
+                        out.push(format!("    store {}+{}, 1 as {}", ret, ctx.tag_off, ctx.tag_ty));
+                        out.push(format!(
+                            "    store {}+{}, {} as {}",
+                            ret, ctx.payload_off, cur, ctx.payload_ty
+                        ));
+                        out.push(format!("    {} = add {}, 1", inc, cur));
+                        out.push(format!(
+                            "    store {}+{}, {} as {}",
+                            iter, ctx.cur_off, inc, ctx.payload_ty
+                        ));
+                        out.push(format!("    jmp {}", lbl_end));
+                        out.push(format!("{}:", lbl_none));
+                        out.push(format!("    store {}+{}, 0 as {}", ret, ctx.tag_off, ctx.tag_ty));
+                        out.push(format!("    jmp {}", lbl_end));
+                        out.push(format!("{}:", lbl_end));
+                        out.push(format!("    {} = {}", d, ret));
+                        bound.insert(d.to_string());
+                        match target {
+                            Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                            None => {
+                                out.push("    // diverging call".to_string());
+                                out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                            }
+                        }
+                        continue;
+                    }
+                }
                 // Inlined primitive comparison (derived `PartialEq`).
                 if let Some(ie) = inline_eq.get(&bi) {
                     let (lb, lo, lt) = &ie.left;
