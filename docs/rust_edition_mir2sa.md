@@ -174,11 +174,11 @@ exit 0，无 broker）。
   `str_fat`（`&str`/`&[u8]` 是胖指针，`&[u8; N]` 是瘦指针），mir2sars 把
   字节缓冲 + 长度字构造成胖指针；`str::as_bytes` 是恒等（同一胖指针）。
   字节缓冲在函数出口释放（胖指针本身被调用方消费）。
-- `Option`/`Result` 方法（`is_some`/`is_none`/`is_ok`/`is_err`/`unwrap_or`）：
-  driver 解析接收者的判别式布局（tag 偏移/类型、带载荷的变体索引、载荷
-  偏移/类型）并输出 `opt_shim`，mir2sars 内联为「读判别式 + 比较」
-  （`unwrap_or` 用分支实现，ISA 没有 `select`）。这些 std 符号不再需要
-  broker。
+- `Option`/`Result` 方法（`is_some`/`is_none`/`is_ok`/`is_err`/`unwrap_or`/
+  `unwrap`）：driver 解析接收者的判别式布局（tag 偏移/类型、**带载荷的变体
+  索引**、载荷偏移/类型）并输出 `opt_shim`，mir2sars 内联为「读判别式 +
+  与带载荷变体索引比较」（`unwrap_or`/`unwrap` 用分支实现，ISA 没有
+  `select`；`unwrap` 失败时 panic 只带代码，消息需要格式化栈）。
 - `slice::len` / `str::len`：胖指针的长度字（driver 给出偏移，mir2sars 内联
   为一次 load）——循环里按切片长度迭代的常见写法因此可运行。
 - cargo 演示工程（`rust/cargo_demo`）现在覆盖：跨 crate 的**枚举 + match**、

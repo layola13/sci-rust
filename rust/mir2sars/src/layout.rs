@@ -545,6 +545,30 @@ pub fn plan_option_shim(
             lines.push(format!("{} = eq {}, {}", dest, tag, sh.present));
             Some(lines)
         }
+        "unwrap" => {
+            // `unwrap(self)`: the payload, or a panic (the message needs the
+            // formatting stack, so the panic carries a code).
+            let tag = format!("_opt_tag_{}", bid);
+            let cmp = format!("_opt_cmp_{}", bid);
+            let lbl_some = format!("L_opt_some_{}", bid);
+            let lbl_none = format!("L_opt_none_{}", bid);
+            let lbl_end = format!("L_opt_end_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("{} = load {}+{} as {}", tag, recv, sh.tag_off, sh.tag_ty));
+            lines.push(format!("{} = eq {}, {}", cmp, tag, sh.present));
+            lines.push(format!("br {} -> {}, {}", cmp, lbl_some, lbl_none));
+            lines.push(format!("{}:", lbl_some));
+            lines.push(format!(
+                "{} = load {}+{} as {}",
+                dest, recv, sh.payload_off, sh.payload_ty
+            ));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_none));
+            lines.push("    panic(1500)".to_string());
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_end));
+            Some(lines)
+        }
         "is_none" => {
             lines.push(format!("{} = ne {}, {}", dest, tag, sh.present));
             Some(lines)

@@ -353,6 +353,8 @@ fn option_shim_info<'tcx>(
         "is_none"
     } else if fname.ends_with("_unwrap_or") {
         "unwrap_or"
+    } else if fname.ends_with("_unwrap") {
+        "unwrap"
     } else {
         return None;
     };
