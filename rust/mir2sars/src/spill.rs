@@ -112,7 +112,12 @@ fn rvalue_type(rv: &Rvalue, types: &BTreeMap<String, String>) -> Option<String> 
                 }
                 const_operand_ty(value)
             }
-            Operand::Copy { place, .. } | Operand::Move { place, .. } => types.get(place).cloned(),
+            // A projected read (`load base+off as ty`) has the field type, not
+            // the base local's type (which is usually `ptr` for an aggregate).
+            Operand::Copy { place, proj } | Operand::Move { place, proj } => match proj {
+                Some(pj) => Some(pj.ty.clone()),
+                None => types.get(place).cloned(),
+            },
             _ => None,
         },
         Rvalue::Ref { .. } | Rvalue::RawPtr { .. } | Rvalue::Repeat { .. } => {
@@ -739,6 +744,8 @@ mod spill_tests {
                 via: None,
                 zst: false,
                 agg: false,
+                offset: 0,
+                projected: false,
             },
         }
     }
@@ -976,6 +983,8 @@ mod spill_tests {
                         via: None,
                         zst: true,
                         agg: false,
+                        offset: 0,
+                        projected: false,
                     },
                 },
                 cast_copy("_7", "_6", "usize"),

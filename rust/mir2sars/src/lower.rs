@@ -79,6 +79,265 @@ pub fn param_agg_sizes(f: &Function) -> std::collections::BTreeMap<String, u64> 
     m
 }
 
+/// A join-ambiguous local (`Operand::Conflict`) lowered through a stack slot:
+/// versions are stored on the incoming frontier, the use site loads the slot.
+struct JoinSlot {
+    slot: String,
+    ty: String,
+    /// (frontier block, version register to store) pairs.
+    frontier: Vec<(usize, String)>,
+    /// Use site (block index) replaced by a slot load.
+    use_block: usize,
+    local: String,
+}
+
+fn is_scalar_ty(t: &str) -> bool {
+    matches!(
+        t,
+        "i8" | "i16" | "i32" | "i64" | "isize" | "u8" | "u16" | "u32" | "u64" | "usize"
+            | "f32" | "f64" | "char"
+    )
+}
+
+fn op_if_conflict(op: &Operand) -> Option<&str> {
+    match op {
+        Operand::Conflict { place } => Some(place),
+        _ => None,
+    }
+}
+
+fn conflict_ops(st: &Stmt) -> Vec<&Operand> {
+    match st {
+        Stmt::Assign { rvalue, .. } => match rvalue {
+            Rvalue::Use { op } => vec![op],
+            Rvalue::Call { args, .. } => args.iter().collect(),
+            Rvalue::BinOp { left, right, .. } => vec![left.as_ref(), right.as_ref()],
+            Rvalue::UnOp { operand, .. } => vec![operand.as_ref()],
+            Rvalue::Cast { op, .. } => vec![op.as_ref()],
+            Rvalue::Aggregate { elems, .. } => elems.iter().collect(),
+            Rvalue::Repeat { op, .. } => vec![op.as_ref()],
+            _ => vec![],
+        },
+        _ => vec![],
+    }
+}
+
+fn conflict_ops_term(t: &Term) -> Vec<&Operand> {
+    match t {
+        Term::SwitchInt { discr, .. } => vec![discr.as_ref()],
+        Term::Call { args, .. } => args.iter().collect(),
+        Term::Assert { cond, .. } => vec![cond.as_ref()],
+        Term::InlineAsm { ins, .. } => ins.iter().collect(),
+        _ => vec![],
+    }
+}
+
+fn conflict_ops_mut(st: &mut Stmt) -> Vec<&mut Operand> {
+    match st {
+        Stmt::Assign { rvalue, .. } => match rvalue {
+            Rvalue::Use { op } => vec![op],
+            Rvalue::Call { args, .. } => args.iter_mut().collect(),
+            Rvalue::BinOp { left, right, .. } => vec![left.as_mut(), right.as_mut()],
+            Rvalue::UnOp { operand, .. } => vec![operand.as_mut()],
+            Rvalue::Cast { op, .. } => vec![op.as_mut()],
+            Rvalue::Aggregate { elems, .. } => elems.iter_mut().collect(),
+            Rvalue::Repeat { op, .. } => vec![op.as_mut()],
+            _ => vec![],
+        },
+        _ => vec![],
+    }
+}
+
+fn conflict_ops_term_mut(t: &mut Term) -> Vec<&mut Operand> {
+    match t {
+        Term::SwitchInt { discr, .. } => vec![discr.as_mut()],
+        Term::Call { args, .. } => args.iter_mut().collect(),
+        Term::Assert { cond, .. } => vec![cond.as_mut()],
+        Term::InlineAsm { ins, .. } => ins.iter_mut().collect(),
+        _ => vec![],
+    }
+}
+
+/// Nearest versioned definition of `local` in block `p` (or the block itself).
+fn version_def(blocks: &[Block], p: usize, local: &str) -> Option<String> {
+    let vp = format!("{}_v", local);
+    let b = &blocks[p];
+    for st in b.statements.iter().rev() {
+        if let Stmt::Assign { dest, dest_proj: None, .. } = st {
+            if dest == local || dest.starts_with(&vp) {
+                return Some(dest.clone());
+            }
+        }
+    }
+    if let Term::Call { dest: Some(d), .. } = &b.terminator {
+        if d == local || d.starts_with(&vp) {
+            return Some(d.clone());
+        }
+    }
+    None
+}
+
+/// Collect the version-defining frontier that reaches `u` for `local`.
+fn join_frontier(
+    preds: &[Vec<usize>],
+    blocks: &[Block],
+    u: usize,
+    local: &str,
+) -> Option<Vec<(usize, String)>> {
+    use std::collections::HashSet;
+    let mut out = Vec::new();
+    let mut seen: HashSet<usize> = HashSet::new();
+    let mut stack: Vec<usize> = preds.get(u).cloned().unwrap_or_default();
+    if stack.is_empty() {
+        return None;
+    }
+    while let Some(p) = stack.pop() {
+        if !seen.insert(p) {
+            continue;
+        }
+        if let Some(ver) = version_def(blocks, p, local) {
+            out.push((p, ver));
+            continue;
+        }
+        let ps = preds.get(p)?;
+        if ps.is_empty() {
+            // Reached the entry without a definition on this path.
+            return None;
+        }
+        stack.extend(ps.iter().copied());
+    }
+    if out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
+}
+
+/// Plan stack-slot routing for join-ambiguous scalar locals.
+fn plan_join_slots(f: &Function) -> Vec<JoinSlot> {
+    use std::collections::{HashMap, HashSet};
+    let idx: HashMap<&str, usize> = f
+        .blocks
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b.id.as_str(), i))
+        .collect();
+    let mut preds: Vec<Vec<usize>> = vec![Vec::new(); f.blocks.len()];
+    for (pi, b) in f.blocks.iter().enumerate() {
+        let mut add = |t: &str| {
+            if let Some(&ti) = idx.get(t) {
+                preds[ti].push(pi);
+            }
+        };
+        match &b.terminator {
+            Term::Goto { target } => add(target),
+            Term::SwitchInt { targets, otherwise, .. } => {
+                for (_, t) in targets {
+                    add(t);
+                }
+                add(otherwise);
+            }
+            Term::Call { target: Some(t), .. } => add(t),
+            Term::Assert { target, .. } => add(target),
+            Term::Drop { target, .. } => add(target),
+            Term::InlineAsm { target: Some(t), .. } => add(t),
+            _ => {}
+        }
+    }
+    let types = crate::spill::place_types(f);
+    let mut sites: Vec<(usize, String)> = Vec::new();
+    for (bi, b) in f.blocks.iter().enumerate() {
+        for st in &b.statements {
+            for op in conflict_ops(st) {
+                if let Some(p) = op_if_conflict(op) {
+                    sites.push((bi, p.to_string()));
+                }
+            }
+        }
+        for op in conflict_ops_term(&b.terminator) {
+            if let Some(p) = op_if_conflict(op) {
+                sites.push((bi, p.to_string()));
+            }
+        }
+    }
+    let mut seen: HashSet<(usize, String)> = HashSet::new();
+    let mut out = Vec::new();
+    for (u, local) in sites {
+        if !seen.insert((u, local.clone())) {
+            continue;
+        }
+        let frontier = match join_frontier(&preds, &f.blocks, u, &local) {
+            Some(x) if !x.is_empty() => x,
+            _ => continue,
+        };
+        let mut ty: Option<String> = None;
+        let mut ok = true;
+        for (_, ver) in &frontier {
+            match types.get(ver) {
+                Some(t) if is_scalar_ty(t) => match &ty {
+                    Some(prev) if prev != t => {
+                        ok = false;
+                        break;
+                    }
+                    None => ty = Some(t.clone()),
+                    _ => {}
+                },
+                _ => {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        if !ok {
+            continue;
+        }
+        out.push(JoinSlot {
+            slot: format!("{}_phi{}_spill", local, u),
+            ty: ty.unwrap(),
+            frontier,
+            use_block: u,
+            local,
+        });
+    }
+    out
+}
+
+/// Replace planned `Operand::Conflict` uses with slot loads.
+fn apply_join_slots(f: &mut Function, plans: &[JoinSlot]) {
+    use std::collections::{HashMap, HashSet};
+    let planned: HashSet<(usize, String)> =
+        plans.iter().map(|p| (p.use_block, p.local.clone())).collect();
+    let by_site: HashMap<(usize, String), &JoinSlot> = plans
+        .iter()
+        .map(|p| ((p.use_block, p.local.clone()), p))
+        .collect();
+    for bi in 0..f.blocks.len() {
+        let mut rewrite = |op: &mut Operand| {
+            if let Operand::Conflict { place } = op {
+                if planned.contains(&(bi, place.clone())) {
+                    let plan = by_site.get(&(bi, place.clone())).unwrap();
+                    *op = Operand::Copy {
+                        place: plan.slot.clone(),
+                        proj: Some(PlaceProj {
+                            offset: 0,
+                            ty: plan.ty.clone(),
+                            via: None,
+                        }),
+                    };
+                }
+            }
+        };
+        for st in f.blocks[bi].statements.iter_mut() {
+            for op in conflict_ops_mut(st) {
+                rewrite(op);
+            }
+        }
+        for op in conflict_ops_term_mut(&mut f.blocks[bi].terminator) {
+            rewrite(op);
+        }
+    }
+}
+
 /// Return-phi plan: see `lower_function`. Returns the join block indices
 /// lowered via the shared slot, plus `pred -> _0-version` stores to emit
 /// before the unconditional jump into a join.
@@ -163,7 +422,17 @@ fn plan_return_phi(
     (joins, pred_ret)
 }
 
-pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // Typed header: MIR arg locals `_1..` bind here (bare `@f()` would leave
+pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
+    // Join-ambiguous scalar locals (`Operand::Conflict` from version.rs) are
+    // routed through a per-use stack slot: versions stored on the frontier,
+    // a slot load at the use. Rewrite first so rendering stays unaware.
+    let join_slots = plan_join_slots(f);
+    let mut owned = f.clone();
+    if !join_slots.is_empty() {
+        apply_join_slots(&mut owned, &join_slots);
+    }
+    let f = &owned;
+    // Typed header: MIR arg locals `_1..` bind here (bare `@f()` would leave
     // them unbound: UnknownRegister). Ret defaults to i32 (old fixtures).
     let mut head = format!("@{}(", sa_ident(&f.name));
     for (i, t) in f.params.iter().enumerate() {
@@ -186,6 +455,17 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
     let (ret_joins, pred_ret) = plan_return_phi(f);
     if !ret_joins.is_empty() {
         out.push("    mut _ret_phi_spill = stack_alloc 8".to_string());
+    }
+    let mut block_stores: std::collections::HashMap<usize, Vec<(String, String, String)>> =
+        std::collections::HashMap::new();
+    for p in &join_slots {
+        out.push(format!("    mut {} = stack_alloc 8", p.slot));
+        for (fb, ver) in &p.frontier {
+            block_stores
+                .entry(*fb)
+                .or_default()
+                .push((p.slot.clone(), ver.clone(), p.ty.clone()));
+        }
     }
     // RPO emission order (see order.rs): SA checks def-before-use textually.
     // Bound seeds come from dominators (see order::dom_seeds): a rebind of
@@ -401,6 +681,13 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                     unsup.push(format!("{}: UnsupportedStmt", b.id));
                     out.push(format!("    // UNSUPPORTED stmt: {}", text));
                 }
+            }
+        }
+        // Join-slot frontier: the versioned value is defined here (or in an
+        // ancestor); publish it for the later use-site load.
+        if let Some(list) = block_stores.get(&bi) {
+            for (slot, ver, ty) in list {
+                out.push(format!("    store {}+0, {} as {}", slot, ver, ty));
             }
         }
         match &b.terminator {

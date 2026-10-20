@@ -102,6 +102,10 @@ pub enum Rvalue {
         /// array storage holds an address): `&place` is the address already in
         /// `place`, so lowering emits `dest = place` instead of `dest = &place`.
         #[serde(default, skip_serializing_if = "is_false")] agg: bool,
+        /// Byte offset when borrowing a projected place (`&(*p).f`): the
+        /// address is `ptr_add place, offset` (not `&place`).
+        #[serde(default)] offset: u64,
+        #[serde(default, skip_serializing_if = "is_false")] projected: bool,
     },
     Call {
         func: String,

@@ -567,7 +567,7 @@ mod version_tests {
             dest: "_5".to_string(),
             dest_place: Some("_5".to_string()),
             dest_proj: None,
-            rvalue: Rvalue::Ref { place: "_1".to_string(), mut_: false, via: None, zst: false, agg: false },
+            rvalue: Rvalue::Ref { place: "_1".to_string(), mut_: false, via: None, zst: false, agg: false, offset: 0, projected: false },
         };
         let f = mkfn(vec![
             blk("bb0", vec![use_stmt("_1", "_9")], asm_term),
@@ -591,7 +591,7 @@ mod version_tests {
             dest: "_5".to_string(),
             dest_place: Some("_5".to_string()),
             dest_proj: None,
-            rvalue: Rvalue::Ref { place: "_2".to_string(), mut_: false, via: None, zst: false, agg: false },
+            rvalue: Rvalue::Ref { place: "_2".to_string(), mut_: false, via: None, zst: false, agg: false, offset: 0, projected: false },
         };
         let f = mkfn(vec![
             blk("bb0", vec![use_stmt("_2", "_9")], Term::SwitchInt {

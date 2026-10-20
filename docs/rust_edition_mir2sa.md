@@ -90,4 +90,18 @@ exit 0，无 broker）。
 - spill 槽去重：同一 local 可能被多个 def 重复声明 `mut *_spill =
   stack_alloc 8`（会触发 `RegisterRedefinition`）；`lower_function` 末尾
   只保留首个声明（后续 def 仍 `store` 到该槽）。
+- 通用 join 槽（phi 替代）：`version.rs` 标出的 `Operand::Conflict`（join
+  处同一 local 有多个到达版本）若类型为标量，`plan_join_slots` 找到每个
+  到达版本的前沿块，改走栈槽：前沿 `store <local>_phi<N>_spill+0, <ver>`，
+  use 点 `load <local>_phi<N>_spill+0 as ty`。因此
+  `match` 各臂给同一局部量赋值、join 后再使用（如 `let mut r; match e {...}
+  r`）不再 loud。
+- 投影借用地址：`&(*p).f` / `&local.f` 原先退化成 `&p`（取寄存器地址，
+  语义错）。driver 现在为 `Rvalue::Ref` 输出 `offset`/`projected`，
+  mir2sars 降为 `ptr_add base, off`（ISA 已有 `ptr_add`）。
+- `place_types` 现在按 `proj.ty` 定型（字段读是字段类型，不是基址的
+  `ptr`），join 槽与 spill 的类型判定更准。
+- 仍未覆盖：派生 `PartialEq`（枚举）里 `&(*p).f` 借用寄存器在 join 处
+  状态不一致（`PhiStateConflict`）：需要按 MIR `StorageDead` 释放借用
+  临时量。
 

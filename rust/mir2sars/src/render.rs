@@ -99,7 +99,7 @@ pub fn render_rvalue(
                 _ => format!("{} = {}", dest, render_operand(op)),
             }
         }
-        Rvalue::Ref { place, mut_, via, zst, agg } => {
+        Rvalue::Ref { place, mut_, via, zst, agg, offset, projected } => {
             // Zero-sized borrows carry no data: null marker (exact).
             // Trailing `//` is ForbiddenSyntax: provenance goes full-line
             // (the Assign arm indents each line of multi-line returns).
@@ -116,7 +116,10 @@ pub fn render_rvalue(
             // Memory-resident aggregate local: `place` already names the
             // storage address, so `&place` is `place` (a `&place` would take
             // the address of the register holding the pointer).
-            if *agg {
+            if *projected {
+                // `&(*p).f` (or `&local.f`): interior address via ptr_add.
+                lines.push(format!("{} = ptr_add {}, {}", dest, place, offset));
+            } else if *agg {
                 lines.push(format!("{} = {}", dest, place));
             } else {
                 lines.push(format!("{} = &{}", dest, place));

@@ -119,6 +119,11 @@ pub fn rvalue_json<'tcx>(
             if matches!(pty.kind(), TyKind::Adt(..) | TyKind::Tuple(..) | TyKind::Array(..)) {
                 into.push_str(", \"agg\": true");
             }
+            // Borrow of a projected place (`&(*p).f`, `&local.f`): the address
+            // is the base plus the field offset, not the base register.
+            if let Some((off, _ty, _via)) = crate::place::place_proj(tcx, body, p) {
+                write!(into, ", \"offset\": {}, \"projected\": true", off).unwrap();
+            }
             into.push('}');
         }
         Rvalue::RawPtr(kind, p) => {
