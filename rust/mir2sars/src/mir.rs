@@ -66,6 +66,15 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// Enum variant construction: discriminant value plus the tag slot's byte
+/// offset and integer width (rustc `TagEncoding::Direct` only).
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EnumTag {
+    pub variant: u32,
+    pub offset: u64,
+    pub ty: String,
+}
+
 /// Callee signature for typed `@extern` decls (bare `()` decls mismatch
 /// any call with args: CapabilityMismatch). Absent when unresolvable.
 #[derive(Serialize, Deserialize, Clone)]
@@ -113,6 +122,8 @@ pub enum Rvalue {
         elems: Vec<Operand>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         layout: Option<AdtLayout>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tag: Option<EnumTag>,
     },
     Discriminant {
         place: String,
@@ -120,6 +131,10 @@ pub enum Rvalue {
         offset: u64,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         ty: Option<String>,
+        /// Niche-encoded tag (`Option<&T>`, ...): the discriminant has no
+        /// stored slot; lowering it needs niche-specific logic (loud).
+        #[serde(default, skip_serializing_if = "is_false")]
+        niche: bool,
     },
     RawPtr { place: String, #[serde(rename = "mut", default, skip_serializing_if = "is_false")] mut_: bool },
     Repeat { op: Box<Operand>, len: String },

@@ -1,6 +1,6 @@
 //! mir2sa::layout.
 use crate::const_util::{array_elem_size, const_array_elem, const_elem_ty, sa_scalar_ty, scalar_hex_value};
-use crate::mir::{AdtLayout, Operand, STR_INLINE_MAX};
+use crate::mir::{AdtLayout, EnumTag, Operand, STR_INLINE_MAX};
 
 /// `(((*_46).1: ...).0: [i32; 3])` lowers to sla-style `alloc` + `store`
 /// (cf. `sci/sa_std/alloc/vec.sa`: `buf = alloc bytes`,
@@ -60,8 +60,9 @@ pub fn lower_adt_init(
     dest_place: &str,
     elems: &[Operand],
     layout: Option<&AdtLayout>,
+    tag: Option<&EnumTag>,
 ) -> Option<Vec<String>> {
-    if elems.len() < 2 {
+    if elems.len() < 2 && tag.is_none() {
         return None;
     }
     let mut plans: Vec<FieldPlan> = Vec::with_capacity(elems.len());
@@ -106,8 +107,9 @@ pub fn lower_adt_init(
         v1_total = align_agg_offset(v1_total, p.align_size());
         v1_total += p.size();
     }
-    if v1_total == 0 {
+    if v1_total == 0 && tag.is_none() {
         // All fields zero-sized: no storage, bind a null marker (exact).
+        // (An enum unit variant still needs storage for its tag.)
         return Some(vec![
             format!("// aggregate Adt init @ {} (all fields zero-sized)", dest_place.trim()),
             format!("{} = 0", dest),
@@ -158,6 +160,20 @@ pub fn lower_adt_init(
                 lines.push(format!("store {}+{}, {} as u64", base, offsets[i] + 8, bytes.len()));
             }
         }
+    }
+    if let Some(t) = tag {
+        let tag_end = t.offset + match t.ty.as_str() {
+            "u8" | "i8" => 1,
+            "u16" | "i16" => 2,
+            "u64" | "i64" => 8,
+            _ => 4,
+        };
+        if (tag_end as usize) > total {
+            // Defensive: storage was sized from the enum layout; never write
+            // past it. (Mismatch would be a driver bug, not silent corruption.)
+            return None;
+        }
+        lines.push(format!("store {}+{}, {} as {}", base, t.offset, t.variant, t.ty));
     }
     lines.push(format!("{} = {}", dest, base));
     Some(lines)

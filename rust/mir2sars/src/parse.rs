@@ -196,7 +196,7 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
     if (rhs.starts_with('[') && rhs.ends_with(']')) || (rhs.starts_with('(') && rhs.ends_with(')')) {
         let inner = rhs[1..rhs.len() - 1].trim().trim_end_matches(',').trim();
         if !inner.is_empty() {
-            return Rvalue::Aggregate { elems: split_top(inner).into_iter().map(|e| parse_operand(&e)).collect(), layout: None };
+            return Rvalue::Aggregate { elems: split_top(inner).into_iter().map(|e| parse_operand(&e)).collect(), layout: None, tag: None };
         }
     }
     Rvalue::Unsupported { text: rhs.chars().take(120).collect() }

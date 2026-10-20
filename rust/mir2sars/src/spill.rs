@@ -787,6 +787,7 @@ mod spill_tests {
                     rvalue: Rvalue::Aggregate {
                         elems: vec![Operand::Move { place: "_78".to_string(), proj: None }],
                         layout: None,
+                        tag: None,
                     },
                 },
             ],

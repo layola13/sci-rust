@@ -262,13 +262,20 @@ pub fn render_rvalue(
                 }
             }
         }
-        Rvalue::Discriminant { place, offset, ty } => {
+        Rvalue::Discriminant { place, offset, ty, niche } => {
             // Tag may sit at a non-zero offset (rustc layout); the driver
             // resolves both the offset and the tag's integer width. Fall back
             // to the legacy `+0 as i64` when the driver could not.
-            match ty {
-                Some(t) => format!("{} = load {}+{} as {}", dest, place, offset, t),
-                None => format!("{} = load {}+0 as i64", dest, place),
+            if *niche {
+                // Niche tags (`Option<&T>`) are not a stored discriminant;
+                // computing them needs niche-specific lowering. Stay honest.
+                unsup.push(format!("{}:{} NicheDiscriminant", bid, dest));
+                format!("// UNSUPPORTED niche discriminant ({})\n{} = 0", place.trim(), dest)
+            } else {
+                match ty {
+                    Some(t) => format!("{} = load {}+{} as {}", dest, place, offset, t),
+                    None => format!("{} = load {}+0 as i64", dest, place),
+                }
             }
         }
         Rvalue::RawPtr { place, .. } => {
@@ -309,10 +316,10 @@ pub fn render_rvalue(
             // Lowered to the shared registry (sci/sa_std/thread_local.sai).
             format!("// thread-local registry slot\n{} = call @sa_thread_local_slot({})", dest, tls_key(def))
         }
-        Rvalue::Aggregate { elems, layout } => {
-            if elems.is_empty() {
+        Rvalue::Aggregate { elems, layout, tag } => {
+            if elems.is_empty() && tag.is_none() {
                 format!("// zero-elem aggregate (unit/niche; tag via SetDisc when present)\n{} = 0", dest)
-            } else if elems.len() == 1 {
+            } else if elems.len() == 1 && tag.is_none() {
                 // Spilled shared buffers reload like plain Uses.
                 if let Some(t) = spill_reg(&elems[0], spill) {
                     return format!(
@@ -326,7 +333,7 @@ pub fn render_rvalue(
                 if let Some(mut lines) = lower_array_init(bid, place, elems) {
                     crate::spill::spill_slot_lines(&mut lines, bid, spill);
                     lines.join("\n")
-                } else if let Some(mut lines) = lower_adt_init(bid, dest, place, elems, layout.as_ref()) {
+                } else if let Some(mut lines) = lower_adt_init(bid, dest, place, elems, layout.as_ref(), tag.as_ref()) {
                     crate::spill::spill_slot_lines(&mut lines, bid, spill);
                     lines.join("\n")
                 } else {

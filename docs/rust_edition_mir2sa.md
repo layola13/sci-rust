@@ -71,13 +71,23 @@ exit 0，无 broker）。
   `fn f(p: Pair) -> Pair { p }`、`fn f(p) -> Pair { let q = p; q }`、
   `fn make() -> Pair { Pair{..} }` 均可 check+run（caller 只释放自己的
   local 与结果各一次）。
-- 枚举（部分）：`rsc_driver` 的 `discr_info` 按 rustc layout 输出判别式
-  `offset`/`ty`（`u8/u16/u32/u64`，仅 `TagEncoding::Direct`），`SetDisc`
-  同样带 `offset`/`ty`；`place_proj` 消费 `Downcast` 变体，按
-  `variants[vi].field_offsets` 给出**绝对** payload 偏移。因此 tag 读/写
-  与变体字段读（`match` 分派后 `load base+off`）已按真实布局生成。
-- 仍未覆盖：枚举**构造**（单字段 `Aggregate(Adt variant)` 目前降为标量
-  `_d = elem`，未 alloc/store payload+tag）与 `match` 各臂汇合处的
-  `return _0`（`ReturnConflict`，需要 phi/return-sinking）。这两项未完成，
-  端到端 enum 运行仍 loud/失败。
+- 枚举（direct tag）：`rsc_driver` 的 `discr_info` 按 rustc layout 输出
+  判别式 `offset`/`ty`（`u8/u16/u32/u64`，仅 `TagEncoding::Direct`），
+  `SetDisc` 同样带 `offset`/`ty`；`place_proj` 消费 `Downcast` 变体，按
+  `variants[vi].field_offsets` 给出**绝对** payload 偏移。构造侧
+  `enum_agg_layout` 输出 enum 大小与各字段绝对偏移，`Aggregate` JSON 附带
+  `tag {variant, offset, ty}`；mir2sars 降为 `mut _agg = alloc size` +
+  逐字段 `store` + tag `store`（含 0 字段的 unit 变体）。因此 3 变体
+  `E::{A(i32),B(i32,i32),C}` 的构造、tag 分派、变体字段读取均可
+  check+run（已验证 `pick`/`sum` 与 unit `C`）。
+- `match` 汇合返回：各臂给 `_0` 不同版本、汇合块 `return _0` 时，
+  `version.rs` 的 `ReturnConflict` 由 `plan_return_phi` 下沉——所有前驱都
+  以无条件 `jmp` 到达、且各自定一个 `_0` 版本时，前驱 `store _ret_phi_spill`
+  并在汇合块 `load` 后 `return`（无 phi，单栈槽）。非此形状仍 loud。
+- 枚举 **niche tag**（`Option<&T>`/`Box<T>` 等）尚无 niche 专用判别式
+  计算：`discr_info` 返回 None，driver 标 `niche: true`，mir2sars 输出
+  `UNSUPPORTED niche discriminant` 占位（不再静默按 `+0 as i64` 读）。
+- spill 槽去重：同一 local 可能被多个 def 重复声明 `mut *_spill =
+  stack_alloc 8`（会触发 `RegisterRedefinition`）；`lower_function` 末尾
+  只保留首个声明（后续 def 仍 `store` 到该槽）。
 

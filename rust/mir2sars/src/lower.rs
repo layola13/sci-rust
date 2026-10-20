@@ -79,6 +79,90 @@ pub fn param_agg_sizes(f: &Function) -> std::collections::BTreeMap<String, u64> 
     m
 }
 
+/// Return-phi plan: see `lower_function`. Returns the join block indices
+/// lowered via the shared slot, plus `pred -> _0-version` stores to emit
+/// before the unconditional jump into a join.
+fn plan_return_phi(
+    f: &Function,
+) -> (std::collections::HashSet<usize>, std::collections::HashMap<usize, String>) {
+    use std::collections::{HashMap, HashSet};
+    let idx: HashMap<&str, usize> = f
+        .blocks
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b.id.as_str(), i))
+        .collect();
+    let mut preds: HashMap<usize, Vec<(usize, bool)>> = HashMap::new();
+    for (pi, b) in f.blocks.iter().enumerate() {
+        let mut add = |t: &str, uncond: bool| {
+            if let Some(&ti) = idx.get(t) {
+                preds.entry(ti).or_default().push((pi, uncond));
+            }
+        };
+        match &b.terminator {
+            Term::Goto { target } => add(target, true),
+            Term::SwitchInt { targets, otherwise, .. } => {
+                for (_, t) in targets {
+                    add(t, false);
+                }
+                add(otherwise, false);
+            }
+            Term::Call { target: Some(t), .. } => add(t, false),
+            Term::Assert { target, .. } => add(target, false),
+            Term::Drop { target, .. } => add(target, false),
+            Term::InlineAsm { target: Some(t), .. } => add(t, false),
+            _ => {}
+        }
+    }
+    let mut joins = HashSet::new();
+    let mut pred_ret = HashMap::new();
+    for (bi, b) in f.blocks.iter().enumerate() {
+        if !matches!(&b.terminator, Term::Return { ret: Some(r) } if r == "__VERSION_CONFLICT__") {
+            continue;
+        }
+        let ps = match preds.get(&bi) {
+            Some(p) if !p.is_empty() => p,
+            _ => continue,
+        };
+        if ps.iter().any(|(_, uncond)| !*uncond) {
+            continue;
+        }
+        let mut map = HashMap::new();
+        let mut ok = true;
+        for (pi, _) in ps {
+            let pb = &f.blocks[*pi];
+            let reg = pb
+                .statements
+                .iter()
+                .rev()
+                .find_map(|st| match st {
+                    Stmt::Assign { dest, dest_proj: None, .. } if dest.starts_with("_0") => {
+                        Some(dest.clone())
+                    }
+                    _ => None,
+                })
+                .or_else(|| match &pb.terminator {
+                    Term::Call { dest: Some(d), .. } if d.starts_with("_0") => Some(d.clone()),
+                    _ => None,
+                });
+            match reg {
+                Some(r) => {
+                    map.insert(*pi, r);
+                }
+                None => {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        if ok {
+            joins.insert(bi);
+            pred_ret.extend(map);
+        }
+    }
+    (joins, pred_ret)
+}
+
 pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // Typed header: MIR arg locals `_1..` bind here (bare `@f()` would leave
     // them unbound: UnknownRegister). Ret defaults to i32 (old fixtures).
     let mut head = format!("@{}(", sa_ident(&f.name));
@@ -95,6 +179,13 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
     if !f.sig_ok {
         unsup.push("FnSig".to_string());
         out.push("    // UNSUPPORTED fn-sig: unrepresentable param/return type (ptr fallback)".to_string());
+    }
+    // `match`-arm joins that return `_0` have two reaching versions and no
+    // phi in SA. When every predecessor reaches the join unconditionally and
+    // defines a `_0` version, route it through one stack slot (return-phi).
+    let (ret_joins, pred_ret) = plan_return_phi(f);
+    if !ret_joins.is_empty() {
+        out.push("    mut _ret_phi_spill = stack_alloc 8".to_string());
     }
     // RPO emission order (see order.rs): SA checks def-before-use textually.
     // Bound seeds come from dominators (see order::dom_seeds): a rebind of
@@ -313,13 +404,29 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
             }
         }
         match &b.terminator {
-            Term::Goto { target } => out.push(format!("    jmp {}", sa_label(target))),
+            Term::Goto { target } => {
+                if let Some(reg) = pred_ret.get(&bi) {
+                    out.push(format!(
+                        "    store _ret_phi_spill+0, {} as {}",
+                        reg,
+                        f.ret.as_deref().unwrap_or("i32")
+                    ));
+                }
+                out.push(format!("    jmp {}", sa_label(target)))
+            }
             Term::Return { ret } => {
                 // Return-value fidelity: `return <reg>` is legal and consumes
                 // the reg (probe r4; `return 0` leaks it, probe r5). Fall back
                 // to the `0` marker when unresolved, void, conflicting, or not
                 // definitely bound here — the marker is always parse-clean.
                 let is_void = f.ret.as_deref() == Some("void");
+                if !is_void && ret_joins.contains(&bi) && !bound.contains("_0") {
+                    let retty = f.ret.as_deref().unwrap_or("i32");
+                    out.push(format!("    _0 = load _ret_phi_spill+0 as {}", retty));
+                    out.push("    return _0".to_string());
+                    bound.insert("_0".to_string());
+                    continue;
+                }
                 let live = ret.as_deref().filter(|_| !is_void).filter(|r| {
                     *r != "__VERSION_CONFLICT__" && bound.contains(*r)
                 });
@@ -705,6 +812,28 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                 out.insert(pos + k, format!("    !{}", r));
             }
         }
+    }
+    // A spill slot is declared at its first def, but a second def of the same
+    // local (e.g. both arms assigning a spilled temp) re-emits the slot's
+    // `stack_alloc`. Re-declaring a stack slot traps (RegisterRedefinition),
+    // so keep only the first declaration; later defs already `store` into it.
+    {
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut dedup = Vec::with_capacity(out.len());
+        for line in out.drain(..) {
+            let t = line.trim();
+            if let Some(slot) = t
+                .strip_prefix("mut ")
+                .and_then(|r| r.strip_suffix(" = stack_alloc 8"))
+            {
+                if seen.insert(slot.to_string()) {
+                    dedup.push(line);
+                }
+                continue;
+            }
+            dedup.push(line);
+        }
+        out = dedup;
     }
     let mut s = out.join("\n");
     s.push('\n');

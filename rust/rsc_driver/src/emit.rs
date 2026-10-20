@@ -85,6 +85,7 @@ pub fn rvalue_json<'tcx>(
     rv: &Rvalue<'tcx>,
     tcx: TyCtxt<'tcx>,
     body: &Body<'tcx>,
+    place: &rustc_middle::mir::Place<'tcx>,
     layout: Option<&(u64, Vec<u64>)>,
     into: &mut String,
 ) {
@@ -168,7 +169,7 @@ pub fn rvalue_json<'tcx>(
             esc(&operand_ty_short(tcx, body, op), into);
             into.push_str("\"}");
         }
-        Rvalue::Aggregate(_kind, ops) => {
+        Rvalue::Aggregate(kind, ops) => {
             into.push_str("{\"kind\": \"Aggregate\", \"elems\": [");
             for (i, o) in ops.iter().enumerate() {
                 if i > 0 {
@@ -187,6 +188,17 @@ pub fn rvalue_json<'tcx>(
                 }
                 into.push_str("]}");
             }
+            // Enum construction: discriminant + tag slot (Direct encoding).
+            if let rustc_middle::mir::AggregateKind::Adt(_, vi, _, _, _) = &**kind {
+                if let Some((toff, tty)) = discr_info(tcx, body, place) {
+                    write!(
+                        into,
+                        ", \"tag\": {{\"variant\": {}, \"offset\": {}, \"ty\": \"{}\"}}",
+                        vi.as_u32(), toff, tty
+                    )
+                    .unwrap();
+                }
+            }
             into.push('}');
         }
         Rvalue::Discriminant(p) => {
@@ -196,6 +208,12 @@ pub fn rvalue_json<'tcx>(
                     into,
                     "{{\"kind\": \"Discriminant\", \"place\": \"{}\", \"offset\": {}, \"ty\": \"{}\"}}",
                     s, off, t
+                )
+                .unwrap(),
+                None if niche_enum(tcx, body, p) => write!(
+                    into,
+                    "{{\"kind\": \"Discriminant\", \"place\": \"{}\", \"niche\": true}}",
+                    s
                 )
                 .unwrap(),
                 None => write!(into, "{{\"kind\": \"Discriminant\", \"place\": \"{}\"}}", s).unwrap(),
@@ -323,6 +341,63 @@ fn name_from_def(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> (String,
         s
     };
     (clean, trunc(full, 100))
+}
+
+/// Absolute payload offsets for an enum variant construction: the enum's
+/// storage size plus each field's absolute offset from `variants[vi]`.
+fn enum_agg_layout<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    dest: &rustc_middle::mir::Place<'tcx>,
+    kind: &rustc_middle::mir::AggregateKind<'tcx>,
+    n: usize,
+) -> Option<(u64, Vec<u64>)> {
+    use rustc_abi::{TagEncoding, Variants};
+    use rustc_middle::mir::AggregateKind;
+    use rustc_middle::ty::TypingEnv;
+    let vi = match kind {
+        AggregateKind::Adt(_, vi, ..) => *vi,
+        _ => return None,
+    };
+    let env = TypingEnv::fully_monomorphized();
+    let ty = dest.ty(&body.local_decls, tcx).ty;
+    let layout = tcx
+        .layout_of(rustc_middle::ty::PseudoCanonicalInput { typing_env: env, value: ty })
+        .ok()?;
+    match &layout.variants {
+        Variants::Multiple { tag_encoding: TagEncoding::Direct, variants, .. } => {
+            let v = variants.raw.get(vi.as_usize())?;
+            let mut offsets = Vec::with_capacity(n);
+            for i in 0..n {
+                offsets.push(v.field_offsets.raw.get(i)?.bytes());
+            }
+            Some((layout.size.bytes(), offsets))
+        }
+        // Niche-encoded tags (Option<&T>, ...) map non-trivially; stay loud.
+        _ => None,
+    }
+}
+
+/// True when the place's type is a multi-variant enum whose tag is encoded
+/// in another field's niche (no stored discriminant slot).
+fn niche_enum<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    p: &rustc_middle::mir::Place<'tcx>,
+) -> bool {
+    use rustc_abi::{TagEncoding, Variants};
+    use rustc_middle::ty::TypingEnv;
+    let env = TypingEnv::fully_monomorphized();
+    match tcx.layout_of(rustc_middle::ty::PseudoCanonicalInput {
+        typing_env: env,
+        value: p.ty(&body.local_decls, tcx).ty,
+    }) {
+        Ok(layout) => matches!(
+            layout.variants,
+            Variants::Multiple { tag_encoding: TagEncoding::Niche { .. }, .. }
+        ),
+        Err(_) => false,
+    }
 }
 
 /// Byte offset + SA integer type of an enum's discriminant (tag), when it is
@@ -459,9 +534,15 @@ pub fn body_json<'tcx>(
                         Rvalue::Aggregate(kind, ops) if ops.len() > 1 => {
                             aggregate_layout(tcx, param_env, body, kind, place, ops.len())
                         }
+                        // Enum variant payloads: absolute offsets come from the
+                        // *enum* layout (variant field_offsets), even for a
+                        // single-field variant.
+                        Rvalue::Aggregate(kind, ops) if ops.len() <= 1 => {
+                            enum_agg_layout(tcx, body, place, kind, ops.len())
+                        }
                         _ => None,
                     };
-                    rvalue_json(rv, tcx, body, layout.as_ref(), into);
+                    rvalue_json(rv, tcx, body, place, layout.as_ref(), into);
                     into.push('}');
                 }
                 StatementKind::StorageLive(l) => {
