@@ -425,6 +425,55 @@ fn slice_iter_info<'tcx>(
     None
 }
 
+/// Slice accessors returning `Option<&T>` (`first`/`last`/`get`): inline
+/// them as a niche pointer (null = None) so no std symbol is needed.
+fn slice_opt_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    fname: &str,
+    args: &[rustc_middle::mir::Operand<'tcx>],
+) -> Option<String> {
+    use rustc_middle::ty::TypingEnv;
+    let has = |m: &str| fname.split('_').any(|c| c == m);
+    let kind = if has("first") {
+        "first"
+    } else if has("last") {
+        "last"
+    } else if has("get") {
+        "get"
+    } else {
+        return None;
+    };
+    let recv_ty = match args.first()? {
+        Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+        _ => return None,
+    };
+    let mut ty = recv_ty;
+    while let TyKind::Ref(_, inner, _) = ty.kind() {
+        ty = *inner;
+    }
+    let TyKind::Slice(elem) = ty.kind() else {
+        return None;
+    };
+    let env = TypingEnv::fully_monomorphized();
+    let layout_of = |t: Ty<'tcx>| {
+        tcx.layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: t,
+        })
+        .ok()
+    };
+    let elem_size = layout_of(*elem)?.size.bytes();
+    let layout = layout_of(recv_ty)?;
+    Some(format!(
+        "{{\"kind\": \"{}\", \"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
+        kind,
+        elem_size,
+        layout.fields.offset(0).bytes(),
+        layout.fields.offset(1).bytes()
+    ))
+}
+
 /// An `Option` method the backend can inline: the discriminant's offset and
 /// type plus the payload's offset and type.
 fn option_shim_info<'tcx>(
@@ -1516,6 +1565,10 @@ pub fn body_json<'tcx>(
                 // `&[T]` / `&Vec<T>` iteration: element size plus word offsets.
                 if let Some(shim) = slice_iter_info(tcx, body, &fname, &arg_nodes) {
                     write!(into, ", \"slice_iter\": {}", shim).unwrap();
+                }
+                // `slice::first`/`last`/`get`: inline the niche `Option<&T>`.
+                if let Some(shim) = slice_opt_info(tcx, body, &fname, &arg_nodes) {
+                    write!(into, ", \"slice_opt\": {}", shim).unwrap();
                 }
                 // `i32::abs`, `core::cmp::min`/`max`: inlined arithmetic.
                 if let Some(shim) = primitive_op_shim(tcx, body, &fname, &arg_nodes) {

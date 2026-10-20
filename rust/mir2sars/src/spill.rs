@@ -938,6 +938,7 @@ mod spill_tests {
             opt_shim: None,
             slice_len: None,
             slice_iter: None,
+            slice_opt: None,
             negate_eq: None,
             prim_shim: None,
             vec_shim: None,

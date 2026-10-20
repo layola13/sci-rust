@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 1687 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2266 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -246,5 +246,9 @@ exit 0，无 broker）。
   `Iter`；`Vec::iter()` 先经 `Deref::deref` 内联出 `&[T]` 胖指针
   （`_deref_data_`/`_deref_len_`，字段名解析偏移），再走 `slice::iter`。
   已用 `iter_ref_sum` / `iter_ref_sum_vec` 端到端验证。
+- `slice::first`/`last`/`get`：返回 `Option<&T>`（niche 指针，0 = None），
+  `first` 判 `len != 0` 取 data，`last` 取 `data + (len-1)*elem_size`，
+  `get` 先做 `idx < len` 再取地址。已用 `slice_opt_sum`（含越界 `get(99)`）
+  端到端验证。
 - 仍未覆盖：`.step_by()`/`.take()` 等适配器。
 

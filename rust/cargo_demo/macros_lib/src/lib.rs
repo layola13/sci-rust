@@ -162,6 +162,24 @@ pub fn iter_ref_sum_vec(v: &Vec<i32>) -> i32 {
     total
 }
 
+/// Slice accessors returning `Option<&T>` (`first`/`last`/`get`).
+pub fn slice_opt_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    if let Some(x) = xs.first() {
+        total += *x;
+    }
+    if let Some(x) = xs.last() {
+        total += *x;
+    }
+    if let Some(x) = xs.get(1) {
+        total += *x;
+    }
+    if let Some(x) = xs.get(99) {
+        total += *x;
+    }
+    total
+}
+
 /// A `for` loop over a range, and a string literal read by byte.
 pub fn range_sum(n: i32) -> i32 {
     let mut total = 0;

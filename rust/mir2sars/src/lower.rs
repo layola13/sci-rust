@@ -1537,7 +1537,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    // MIR Resume (cleanup path)".to_string());
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
-            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, slice_iter, negate_eq, prim_shim, vec_shim } => {
+            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, slice_iter, slice_opt, negate_eq, prim_shim, vec_shim } => {
                 // `PartialEq::ne`: call the local `eq` and negate.
                 if let Some(eq_name) = negate_eq {
                     let d = dest.as_deref().unwrap_or("_0");
@@ -1731,6 +1731,75 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         }
                         continue;
                     }
+                }
+                // `slice::first` / `last` / `get`: inline the niche
+                // `Option<&T>` (null pointer = `None`).
+                if let Some(so) = slice_opt {
+                    let arg = |i: usize| -> Option<String> {
+                        match args.get(i)? {
+                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                Some(place.clone())
+                            }
+                            Operand::Const { value, .. } => {
+                                crate::render_util::const_scalar_text(value)
+                            }
+                            _ => None,
+                        }
+                    };
+                    let src = arg(0).unwrap_or_else(|| "0".to_string());
+                    let d = dest.as_deref().unwrap_or("_0");
+                    let data = format!("_slice_data_{}", b.id);
+                    let len = format!("_slice_len_{}", b.id);
+                    let ret = format!("_slice_opt_{}", b.id);
+                    let lbl_some = format!("L_slice_opt_some_{}", b.id);
+                    let lbl_none = format!("L_slice_opt_none_{}", b.id);
+                    let lbl_end = format!("L_slice_opt_end_{}", b.id);
+                    out.push(format!("    {} = load {}+{} as ptr", data, src, so.ptr_off));
+                    out.push(format!("    {} = load {}+{} as u64", len, src, so.len_off));
+                    if so.kind == "get" {
+                        let idx = arg(1).unwrap_or_else(|| "0".to_string());
+                        let inb = format!("_slice_inb_{}", b.id);
+                        let off = format!("_slice_off_{}", b.id);
+                        let addr = format!("_slice_addr_{}", b.id);
+                        out.push(format!("    {} = ult {}, {}", inb, idx, len));
+                        out.push(format!("    mut {} = alloc 8", ret));
+                        out.push(format!("    br {} -> {}, {}", inb, lbl_some, lbl_none));
+                        out.push(format!("{}:", lbl_some));
+                        out.push(format!("    {} = mul {}, {}", off, idx, so.elem_size));
+                        out.push(format!("    {} = ptr_add {}, {}", addr, data, off));
+                        out.push(format!("    store {}+0, {} as ptr", ret, addr));
+                        out.push(format!("    jmp {}", lbl_end));
+                    } else {
+                        let has = format!("_slice_has_{}", b.id);
+                        out.push(format!("    {} = ne {}, 0", has, len));
+                        out.push(format!("    mut {} = alloc 8", ret));
+                        out.push(format!("    br {} -> {}, {}", has, lbl_some, lbl_none));
+                        out.push(format!("{}:", lbl_some));
+                        if so.kind == "last" {
+                            let off = format!("_slice_off_{}", b.id);
+                            let addr = format!("_slice_addr_{}", b.id);
+                            out.push(format!("    {} = mul {}, {}", off, len, so.elem_size));
+                            out.push(format!("    {} = sub {}, {}", off, off, so.elem_size));
+                            out.push(format!("    {} = ptr_add {}, {}", addr, data, off));
+                            out.push(format!("    store {}+0, {} as ptr", ret, addr));
+                        } else {
+                            out.push(format!("    store {}+0, {} as ptr", ret, data));
+                        }
+                        out.push(format!("    jmp {}", lbl_end));
+                    }
+                    out.push(format!("{}:", lbl_none));
+                    out.push(format!("    store {}+0, 0 as ptr", ret));
+                    out.push(format!("{}:", lbl_end));
+                    out.push(format!("    {} = {}", d, ret));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
                 }
                 if is_into_iter_call(func) {
                     // `into_iter(range)` and `into_iter(Iter)` are the
@@ -2384,13 +2453,13 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
                     });
                 }
             }
-            if let Term::Call { func, func_raw, sig, target, opt_shim, slice_len, slice_iter, .. } = &b.terminator {
+            if let Term::Call { func, func_raw, sig, target, opt_shim, slice_len, slice_iter, slice_opt, .. } = &b.terminator {
                 let name = sa_ident(func);
                 if defined.contains(&name) {
                     continue;
                 }
                 // An inlined `Option`/`slice` method is not an extern.
-                if opt_shim.is_some() || slice_len.is_some() || slice_iter.is_some() {
+                if opt_shim.is_some() || slice_len.is_some() || slice_iter.is_some() || slice_opt.is_some() {
                     continue;
                 }
                 // Diverging panic calls lower to native `panic(code)` (see
