@@ -338,6 +338,87 @@ fn slice_len_info<'tcx>(
     Some(format!("{{\"len_off\": {}}}", len_off))
 }
 
+/// `&[T]` / `&Vec<T>` slice iteration: the element size and the data/length
+/// word offsets. Lets the backend inline `IntoIterator::into_iter` (build a
+/// `slice::Iter`) and `Iterator::next` (advance the data pointer).
+fn slice_iter_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    fname: &str,
+    args: &[rustc_middle::mir::Operand<'tcx>],
+) -> Option<String> {
+    use rustc_middle::ty::TypingEnv;
+    let recv_ty = match args.first()? {
+        Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+        _ => return None,
+    };
+    let mut ty = recv_ty;
+    while let TyKind::Ref(_, inner, _) = ty.kind() {
+        ty = *inner;
+    }
+    let env = TypingEnv::fully_monomorphized();
+    let size_of = |t: Ty<'tcx>| {
+        tcx.layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: t,
+        })
+        .ok()
+        .map(|l| l.size.bytes())
+    };
+    // `<std::slice::Iter<'_, T> as Iterator>::next`
+    if let TyKind::Adt(def, targs) = ty.kind() {
+        if tcx.def_path_str(def.did()).contains("slice::Iter") {
+            let elem = targs.iter().find_map(|a| a.as_type())?;
+            let elem_size = size_of(elem)?;
+            // std's `Iter` is `{ ptr, end }`: fixed word offsets.
+            return Some(format!(
+                "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 8}}",
+                elem_size
+            ));
+        }
+    }
+    if !fname.contains("IntoIterator_into_iter") {
+        return None;
+    }
+    // `into_iter` on `&[T]`.
+    if let TyKind::Slice(elem) = ty.kind() {
+        let elem_size = size_of(*elem)?;
+        let layout = tcx
+            .layout_of(PseudoCanonicalInput {
+                typing_env: env,
+                value: recv_ty,
+            })
+            .ok()?;
+        return Some(format!(
+            "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
+            elem_size,
+            layout.fields.offset(0).bytes(),
+            layout.fields.offset(1).bytes()
+        ));
+    }
+    // `into_iter` on `&Vec<T>`: the words are found by field name (Vec nests
+    // them behind `RawVec`).
+    if let TyKind::Adt(def, targs) = ty.kind() {
+        if tcx.def_path_str(def.did()).contains("vec::Vec") {
+            let elem = targs.iter().find_map(|a| a.as_type())?;
+            let elem_size = size_of(elem)?;
+            let layout = tcx
+                .layout_of(PseudoCanonicalInput {
+                    typing_env: env,
+                    value: ty,
+                })
+                .ok()?;
+            let ptr_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "ptr")?;
+            let len_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "len")?;
+            return Some(format!(
+                "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
+                elem_size, ptr_off, len_off
+            ));
+        }
+    }
+    None
+}
+
 /// An `Option` method the backend can inline: the discriminant's offset and
 /// type plus the payload's offset and type.
 fn option_shim_info<'tcx>(
@@ -1425,6 +1506,10 @@ pub fn body_json<'tcx>(
                 // `slice::len` / `str::len`: the fat pointer's length word.
                 if let Some(shim) = slice_len_info(tcx, body, &fname, &arg_nodes) {
                     write!(into, ", \"slice_len\": {}", shim).unwrap();
+                }
+                // `&[T]` / `&Vec<T>` iteration: element size plus word offsets.
+                if let Some(shim) = slice_iter_info(tcx, body, &fname, &arg_nodes) {
+                    write!(into, ", \"slice_iter\": {}", shim).unwrap();
                 }
                 // `i32::abs`, `core::cmp::min`/`max`: inlined arithmetic.
                 if let Some(shim) = primitive_op_shim(tcx, body, &fname, &arg_nodes) {

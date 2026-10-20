@@ -683,6 +683,45 @@ fn find_iter_ctx(f: &Function) -> Option<(IterNextCtx, std::collections::HashSet
     ))
 }
 
+/// The slice iterator (`std::slice::Iter`) context: `next` advances the data
+/// pointer by `elem_size` until it reaches the end pointer. The layout is
+/// fixed (`{ ptr, end }`); only the borrow-temp skip and iterator register
+/// need to be discovered from the `&mut self` reborrow.
+fn find_slice_iter_ctx(f: &Function) -> Option<(u64, std::collections::HashSet<String>, String)> {
+    let mut elem_size = None;
+    let mut skip = std::collections::HashSet::new();
+    let mut iter_reg = String::new();
+    for b in &f.blocks {
+        if let Term::Call { func, args, slice_iter, .. } = &b.terminator {
+            if !is_next_call(func) {
+                continue;
+            }
+            let si = slice_iter.as_ref()?;
+            elem_size = Some(si.elem_size);
+            let arg_place = match args.first() {
+                Some(Operand::Move { place, .. }) | Some(Operand::Copy { place, .. }) => {
+                    place.clone()
+                }
+                _ => continue,
+            };
+            for bb in &f.blocks {
+                for st in &bb.statements {
+                    if let Stmt::Assign { dest, rvalue: Rvalue::Ref { place, agg, .. }, .. } = st {
+                        if *dest == arg_place && *agg {
+                            skip.insert(dest.clone());
+                            iter_reg = place.clone();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if iter_reg.is_empty() {
+        return None;
+    }
+    Some((elem_size?, skip, iter_reg))
+}
+
 /// A join-ambiguous local (`Operand::Conflict`) lowered through a stack slot:
 /// versions are stored on the incoming frontier, the use site loads the slot.
 struct JoinSlot {
@@ -1148,10 +1187,17 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     // `PartialEq::eq` is not runnable here).
     let (inline_eq, inline_skip) = plan_inline_eq(f);
     // `for i in a..b`: the range iterator protocol is inlined.
-    let (iter_ctx, iter_skip, iter_reg) = match find_iter_ctx(f) {
+    let (iter_ctx, mut iter_skip, iter_reg) = match find_iter_ctx(f) {
         Some((c, s, r)) => (Some(c), s, r),
         None => (None, std::collections::HashSet::new(), String::new()),
     };
+    // `for x in &slice` / `for x in &vec`: the slice iterator protocol.
+    let (slice_iter_elem, slice_skip, slice_reg) = match find_slice_iter_ctx(f) {
+        Some((e, s, r)) => (Some(e), s, r),
+        None => (None, std::collections::HashSet::new(), String::new()),
+    };
+    iter_skip.extend(slice_skip);
+    let iter_reg = if slice_reg.is_empty() { iter_reg } else { slice_reg };
     let mut block_stores: std::collections::HashMap<usize, Vec<(String, String, String)>> =
         std::collections::HashMap::new();
     // Discriminant slots hold the TAG (computed per path), not the local's
@@ -1491,7 +1537,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    // MIR Resume (cleanup path)".to_string());
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
-            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, negate_eq, prim_shim, vec_shim } => {
+            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, slice_iter, negate_eq, prim_shim, vec_shim } => {
                 // `PartialEq::ne`: call the local `eq` and negate.
                 if let Some(eq_name) = negate_eq {
                     let d = dest.as_deref().unwrap_or("_0");
@@ -1647,7 +1693,6 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                     continue;
                 }
                 if is_into_iter_call(func) {
-                    // `into_iter(range)` is the identity for a range.
                     let src = args
                         .first()
                         .map(|a| match a {
@@ -1658,6 +1703,34 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         })
                         .unwrap_or_else(|| "0".to_string());
                     let d = dest.as_deref().unwrap_or("_0");
+                    if let Some(si) = slice_iter {
+                        // `into_iter` on `&[T]` / `&Vec<T>`: build a
+                        // `slice::Iter { ptr, end }` from the data word and
+                        // the length word.
+                        let it = format!("_slice_iter_{}", b.id);
+                        let data = format!("_slice_data_{}", b.id);
+                        let len = format!("_slice_len_{}", b.id);
+                        let off = format!("_slice_off_{}", b.id);
+                        let end = format!("_slice_end_{}", b.id);
+                        out.push(format!("    mut {} = alloc 16", it));
+                        out.push(format!("    {} = load {}+{} as ptr", data, src, si.ptr_off));
+                        out.push(format!("    {} = load {}+{} as u64", len, src, si.len_off));
+                        out.push(format!("    {} = mul {}, {}", off, len, si.elem_size));
+                        out.push(format!("    {} = ptr_add {}, {}", end, data, off));
+                        out.push(format!("    store {}+0, {} as ptr", it, data));
+                        out.push(format!("    store {}+8, {} as ptr", it, end));
+                        out.push(format!("    {} = {}", d, it));
+                        bound.insert(d.to_string());
+                        match target {
+                            Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                            None => {
+                                out.push("    // diverging call".to_string());
+                                out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                            }
+                        }
+                        continue;
+                    }
+                    // `into_iter(range)` is the identity for a range.
                     out.push(format!("    {} = {}", d, src));
                     bound.insert(d.to_string());
                     match target {
@@ -1683,6 +1756,44 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         iter_reg.clone()
                     };
                     let d = dest.as_deref().unwrap_or("_0");
+                    if let Some(si) = slice_iter {
+                        // `slice::Iter::next`: the iterator is `{ ptr, end }`;
+                        // yield the current element pointer (null at the end)
+                        // and advance by one element.
+                        let elem_size = slice_iter_elem.unwrap_or(si.elem_size);
+                        let lbl_some = format!("L_slice_some_{}", b.id);
+                        let lbl_none = format!("L_slice_none_{}", b.id);
+                        let lbl_end = format!("L_slice_end_{}", b.id);
+                        let cur = format!("_slice_cur_{}", b.id);
+                        let endp = format!("_slice_endp_{}", b.id);
+                        let cmp = format!("_slice_cmp_{}", b.id);
+                        let ret = format!("_slice_ret_{}", b.id);
+                        let nxt = format!("_slice_nxt_{}", b.id);
+                        out.push(format!("    {} = load {}+0 as ptr", cur, iter));
+                        out.push(format!("    {} = load {}+8 as ptr", endp, iter));
+                        out.push(format!("    {} = ult {}, {}", cmp, cur, endp));
+                        out.push(format!("    mut {} = alloc 8", ret));
+                        out.push(format!("    br {} -> {}, {}", cmp, lbl_some, lbl_none));
+                        out.push(format!("{}:", lbl_some));
+                        out.push(format!("    store {}+0, {} as ptr", ret, cur));
+                        out.push(format!("    {} = ptr_add {}, {}", nxt, cur, elem_size));
+                        out.push(format!("    store {}+0, {} as ptr", iter, nxt));
+                        out.push(format!("    jmp {}", lbl_end));
+                        out.push(format!("{}:", lbl_none));
+                        out.push(format!("    store {}+0, 0 as ptr", ret));
+                        out.push(format!("    jmp {}", lbl_end));
+                        out.push(format!("{}:", lbl_end));
+                        out.push(format!("    {} = {}", d, ret));
+                        bound.insert(d.to_string());
+                        match target {
+                            Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                            None => {
+                                out.push("    // diverging call".to_string());
+                                out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                            }
+                        }
+                        continue;
+                    }
                     if let Some(ctx) = iter_ctx.clone() {
                         let lbl_some = format!("L_iter_some_{}", b.id);
                         let lbl_none = format!("L_iter_none_{}", b.id);
@@ -2259,13 +2370,13 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
                     });
                 }
             }
-            if let Term::Call { func, func_raw, sig, target, opt_shim, slice_len, .. } = &b.terminator {
+            if let Term::Call { func, func_raw, sig, target, opt_shim, slice_len, slice_iter, .. } = &b.terminator {
                 let name = sa_ident(func);
                 if defined.contains(&name) {
                     continue;
                 }
                 // An inlined `Option`/`slice` method is not an extern.
-                if opt_shim.is_some() || slice_len.is_some() {
+                if opt_shim.is_some() || slice_len.is_some() || slice_iter.is_some() {
                     continue;
                 }
                 // Diverging panic calls lower to native `panic(code)` (see

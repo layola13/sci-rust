@@ -93,6 +93,16 @@ pub struct SliceLen {
     pub len_off: u64,
 }
 
+/// `&[T]` / `&Vec<T>` -> `std::slice::Iter<'_, T>`: the element size plus the
+/// data/length word offsets of the source aggregate. Used to inline
+/// `IntoIterator::into_iter` and `Iterator::next`.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SliceIter {
+    pub elem_size: u64,
+    pub ptr_off: u64,
+    pub len_off: u64,
+}
+
 /// An `Option` method inlined by the backend: the discriminant's offset and
 /// type plus the payload's offset and type.
 #[derive(Serialize, Deserialize, Clone)]
@@ -368,6 +378,9 @@ pub enum Term {
         /// `slice::len` / `str::len`: the fat pointer's length word.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         slice_len: Option<SliceLen>,
+        /// `&[T]` / `&Vec<T>` slice iteration: element size and word offsets.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        slice_iter: Option<SliceIter>,
         /// A `PartialEq::ne` call: the local `eq` to call instead, negated.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         negate_eq: Option<String>,

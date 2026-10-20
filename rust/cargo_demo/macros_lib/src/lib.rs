@@ -126,6 +126,24 @@ pub fn first_or(v: &Vec<i32>, default: i32) -> i32 {
     }
 }
 
+/// `for` over a slice reference: `slice::Iter` walks the data..data+len pair.
+pub fn iter_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    for x in xs {
+        total += *x;
+    }
+    total
+}
+
+/// `for` over `&Vec` (deref coercion to a slice): the idiomatic Rust form.
+pub fn iter_sum_vec(v: &Vec<i32>) -> i32 {
+    let mut total = 0;
+    for x in v {
+        total += *x;
+    }
+    total
+}
+
 /// A `for` loop over a range, and a string literal read by byte.
 pub fn range_sum(n: i32) -> i32 {
     let mut total = 0;

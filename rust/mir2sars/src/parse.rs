@@ -304,6 +304,7 @@ pub fn parse_block(lines: &[String]) -> (Vec<Stmt>, Term, usize) {
                             negate_eq: None,
                             prim_shim: None,
                             vec_shim: None,
+                            slice_iter: None,
                         });
                     }
                     None => {
