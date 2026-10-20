@@ -174,6 +174,11 @@ exit 0，无 broker）。
   `str_fat`（`&str`/`&[u8]` 是胖指针，`&[u8; N]` 是瘦指针），mir2sars 把
   字节缓冲 + 长度字构造成胖指针；`str::as_bytes` 是恒等（同一胖指针）。
   字节缓冲在函数出口释放（胖指针本身被调用方消费）。
+- `Option`/`Result` 方法（`is_some`/`is_none`/`is_ok`/`is_err`/`unwrap_or`）：
+  driver 解析接收者的判别式布局（tag 偏移/类型、带载荷的变体索引、载荷
+  偏移/类型）并输出 `opt_shim`，mir2sars 内联为「读判别式 + 比较」
+  （`unwrap_or` 用分支实现，ISA 没有 `select`）。这些 std 符号不再需要
+  broker。
 - 仍未覆盖：**泛型函数/泛型枚举**里的 `T: PartialEq`（泛型 MIR 的类型未知，
   字段偏移依赖具体类型）。
 - 仍未覆盖：**泛型枚举**的字段比较：泛型函数的 MIR 里局部类型仍是 `T`，

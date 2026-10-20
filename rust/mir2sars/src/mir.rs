@@ -66,6 +66,20 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// An `Option` method inlined by the backend: the discriminant's offset and
+/// type plus the payload's offset and type.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct OptShim {
+    pub kind: String,
+    pub tag_off: u64,
+    pub tag_ty: String,
+    pub payload_off: u64,
+    pub payload_ty: String,
+    /// The variant index that carries the payload (`Some` / `Ok`).
+    #[serde(default)]
+    pub present: u32,
+}
+
 /// An unsizing coercion to a fat pointer: the pointer's size, the offset of
 /// its length word and the source length.
 #[derive(Serialize, Deserialize, Clone)]
@@ -131,6 +145,10 @@ pub enum Rvalue {
         func: String,
         #[serde(default)] args: Vec<Operand>,
         #[serde(default, skip_serializing_if = "Option::is_none")] sig: Option<CallSig>,
+        /// An `Option` method the backend inlines (the receiver's
+        /// discriminant layout).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        opt_shim: Option<OptShim>,
     },
     BinOp {
         op: String,
@@ -301,6 +319,10 @@ pub enum Term {
         target: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         sig: Option<CallSig>,
+        /// An `Option` method the backend inlines (the receiver's
+        /// discriminant layout).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        opt_shim: Option<OptShim>,
     },
     Drop { place: String, target: String },
     SwitchInt { discr: Box<Operand>, #[serde(default)] targets: Vec<(String, String)>, otherwise: String },

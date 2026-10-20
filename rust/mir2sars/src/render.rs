@@ -254,7 +254,14 @@ pub fn render_rvalue(
             }
             lines.join("\n")
         }
-        Rvalue::Call { func, args, sig } => {
+        Rvalue::Call { func, args, sig, opt_shim } => {
+            // `Option::is_some` / `is_none` / `unwrap_or`: inline the
+            // discriminant test (std's symbol cannot run here).
+            if let Some(sh) = opt_shim {
+                if let Some(lines) = crate::layout::plan_option_shim(dest, bid, args, sh) {
+                    return lines.join("\n");
+                }
+            }
             // `Range::rev()` builds a `Rev<Range<T>>`, a newtype over the
             // range: the adapter shares the range's storage, so it is the
             // identity here (the iteration direction is handled by the

@@ -299,6 +299,66 @@ pub fn plan_const_bytes(
     Some(lines)
 }
 
+/// An `Option` method inlined: the discriminant test (and the payload for
+/// `unwrap_or`).
+pub fn plan_option_shim(
+    dest: &str,
+    bid: &str,
+    args: &[Operand],
+    sh: &crate::mir::OptShim,
+) -> Option<Vec<String>> {
+    let recv = match args.first() {
+        Some(Operand::Move { place, .. }) | Some(Operand::Copy { place, .. }) => place.clone(),
+        _ => return None,
+    };
+    let tag = format!("_opt_tag_{}", bid);
+    let mut lines = vec![format!(
+        "{} = load {}+{} as {}",
+        tag, recv, sh.tag_off, sh.tag_ty
+    )];
+    match sh.kind.as_str() {
+        "is_some" => {
+            // The payload variant (`Some` / `Ok`) carries the value; the
+            // discriminant holds its index.
+            lines.push(format!("{} = eq {}, {}", dest, tag, sh.present));
+            Some(lines)
+        }
+        "is_none" => {
+            lines.push(format!("{} = ne {}, {}", dest, tag, sh.present));
+            Some(lines)
+        }
+        "unwrap_or" => {
+            let dflt = match args.get(1) {
+                Some(Operand::Move { place, .. }) | Some(Operand::Copy { place, .. }) => place.clone(),
+                Some(Operand::Const { value, .. }) => {
+                    crate::render_util::const_scalar_text(value)?
+                }
+                _ => return None,
+            };
+            let payload = format!("_opt_val_{}", bid);
+            let sel = format!("_opt_sel_{}", bid);
+            let lbl_some = format!("L_opt_some_{}", bid);
+            let lbl_none = format!("L_opt_none_{}", bid);
+            let lbl_end = format!("L_opt_end_{}", bid);
+            lines.push(format!("{} = eq {}, {}", sel, tag, sh.present));
+            lines.push(format!("br {} -> {}, {}", sel, lbl_some, lbl_none));
+            lines.push(format!("{}:", lbl_some));
+            lines.push(format!(
+                "{} = load {}+{} as {}",
+                payload, recv, sh.payload_off, sh.payload_ty
+            ));
+            lines.push(format!("{} = {}", dest, payload));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_none));
+            lines.push(format!("{} = {}", dest, dflt));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_end));
+            Some(lines)
+        }
+        _ => None,
+    }
+}
+
 /// FNV-1a 64 of a ThreadLocal def path: the u64 key passed to
 /// `sa_thread_local_slot` (see `sci/sa_std/thread_local.sai`). Keeps .sa
 /// string-free; collisions across a crate's few TLS statics are impractical.

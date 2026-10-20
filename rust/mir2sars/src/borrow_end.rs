@@ -373,6 +373,7 @@ mod borrow_end_tests {
                 args: vec![Operand::Move { place: "_2".to_string(), proj: None }],
                 dest: Some("_3".to_string()), target: Some("bb1".to_string()),
                 sig: None,
+            opt_shim: None,
             }),
             blk("bb1", vec![], Term::Drop { place: "_1".to_string(), target: "bb2".to_string() }),
             blk("bb2", vec![], Term::Return { ret: None }),
@@ -401,6 +402,7 @@ mod borrow_end_tests {
             func: "g".to_string(), func_raw: None,
             args: vec![Operand::Copy { place: "_2".to_string(), proj: None }],
             dest: None, target: None, sig: None,
+        opt_shim: None,
         });
         let plan = plan_drops(&blocks, &doms(&blocks));
         assert!(!plan.ends.contains_key(&1));

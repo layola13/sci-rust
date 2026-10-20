@@ -167,7 +167,7 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
             // Calls without signatures mirror lower()'s CallNoSig rule.
             // Terminator dests join the bound set exactly like lower().
             match &b.terminator {
-                Term::Call { func, func_raw, args, sig, dest, target } => {
+                Term::Call { func, func_raw, args, sig, dest, target, opt_shim } => {
                     // Diverging panic calls fold to native `panic(code)` in
                     // lower(): counted loudly here for parity (not a gap).
                     if target.is_none() && is_diverging_panic_call(func, func_raw.as_deref()) {
@@ -816,6 +816,7 @@ mod tests {
                     dest: Some("_3".to_string()),
                     target: Some("bb1".to_string()),
                     sig: None,
+                    opt_shim: None,
                 },
             },
             blank_block("bb1", Term::Return { ret: None }),
@@ -960,6 +961,7 @@ mod tests {
                 dest: Some("_5".to_string()),
                 target: None,
                 sig: Some(CallSig { params: vec!["ptr".to_string()], ret: "ptr".to_string() }),
+            opt_shim: None,
             }),
         ]);
         let mut unsup = vec![];
@@ -982,6 +984,7 @@ mod tests {
                     dest: Some("_0".to_string()),
                     target: Some("bb1".to_string()),
                     sig: Some(CallSig { params: vec!["ptr".to_string()], ret: "i32".to_string() }),
+                opt_shim: None,
                 },
             },
             blank_block("bb1", Term::Return { ret: None }),
@@ -1001,6 +1004,7 @@ mod tests {
                 dest: Some("_0".to_string()),
                 target: Some("bb1".to_string()),
                 sig: Some(CallSig { params: vec!["ptr".to_string()], ret: "i32".to_string() }),
+            opt_shim: None,
             }),
             blank_block("bb1", Term::Return { ret: None }),
         ]);

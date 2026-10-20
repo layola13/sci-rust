@@ -106,6 +106,88 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
     }
 }
 
+/// An `Option` method the backend can inline: the discriminant's offset and
+/// type plus the payload's offset and type.
+fn option_shim_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    fname: &str,
+    args: &[rustc_middle::mir::Operand<'tcx>],
+) -> Option<String> {
+    use rustc_middle::ty::TypingEnv;
+    let kind = if fname.ends_with("_is_some") || fname.ends_with("_is_ok") {
+        "is_some"
+    } else if fname.ends_with("_is_none") || fname.ends_with("_is_err") {
+        "is_none"
+    } else if fname.ends_with("_unwrap_or") {
+        "unwrap_or"
+    } else {
+        return None;
+    };
+    let recv = args.first()?;
+    let recv_ty = match recv {
+        Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+        _ => return None,
+    };
+    // The receiver is `&Option<T>` (`&self` methods) or `Option<T>` (a
+    // by-value `self`); both denote the same aggregate layout.
+    let opt_ty = match recv_ty.kind() {
+        TyKind::Ref(_, t, _) => *t,
+        _ => recv_ty,
+    };
+    let env = TypingEnv::fully_monomorphized();
+    let layout = tcx
+        .layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: opt_ty,
+        })
+        .ok()?;
+    let (tag_off, tag_size, payload_off, payload_ty, present_idx) = match &layout.variants {
+        rustc_abi::Variants::Multiple {
+            tag,
+            variants,
+            tag_field,
+            ..
+        } => {
+            let off = layout.fields.offset(tag_field.as_usize()).bytes();
+            let size = tag.size(&tcx).bytes();
+            // The payload lives in the variant that has fields.
+            let mut found: Option<(u64, String)> = None;
+            let mut present = 0u32;
+            for (i, v) in variants.iter().enumerate() {
+                if v.field_offsets.len() > 0 {
+                    present = i as u32;
+                    let foff = v.field_offsets.raw.get(0)?.bytes();
+                    let fty = match opt_ty.kind() {
+                        TyKind::Adt(def, args) => {
+                            let vdef = def.variant(rustc_abi::VariantIdx::from_usize(i));
+                            let fld = vdef.fields.raw.first()?;
+                            let fty = tcx.normalize_erasing_regions(env, fld.ty(tcx, args));
+                            crate::tyinfo::ty_sa_sig_opt(fty)?
+                        }
+                        _ => "u64".to_string(),
+                    };
+                    found = Some((foff, fty));
+                    break;
+                }
+            }
+            let (foff, fty) = found?;
+            (off, size, foff, fty, present)
+        }
+        _ => return None,
+    };
+    let tag_ty = match tag_size {
+        1 => "u8",
+        2 => "u16",
+        8 => "u64",
+        _ => "u32",
+    };
+    Some(format!(
+        "{{\"kind\": \"{}\", \"tag_off\": {}, \"tag_ty\": \"{}\", \"payload_off\": {}, \"payload_ty\": \"{}\", \"present\": {}}}",
+        kind, tag_off, tag_ty, payload_off, payload_ty, present_idx
+    ))
+}
+
 /// An unsizing coercion `&[T; N]` -> `&[T]`: the fat pointer's size, the
 /// offset of its length word and the source length.
 fn unsize_info<'tcx>(
@@ -1095,6 +1177,14 @@ pub fn body_json<'tcx>(
                         write!(into, "], \"ret\": \"{}\"}}", ret).unwrap();
                     }
                     None => into.push_str(", \"sig\": null"),
+                }
+                // `Option::is_some` / `is_none` / `unwrap_or` are std
+                // symbols we cannot run: the backend inlines them from the
+                // receiver's discriminant layout.
+                let arg_nodes: Vec<rustc_middle::mir::Operand<'_>> =
+                    args.iter().map(|a| a.node.clone()).collect();
+                if let Some(shim) = option_shim_info(tcx, body, &fname, &arg_nodes) {
+                    write!(into, ", \"opt_shim\": {}", shim).unwrap();
                 }
                 let (ds, _) = place_name(destination);
                 write!(into, ", \"dest\": \"{}\"", ds).unwrap();

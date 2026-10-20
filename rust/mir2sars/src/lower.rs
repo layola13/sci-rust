@@ -1374,7 +1374,26 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    // MIR Resume (cleanup path)".to_string());
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
-            Term::Call { func, func_raw, args, dest, target, sig } => {
+            Term::Call { func, func_raw, args, dest, target, sig, opt_shim } => {
+                // `Option::is_some` / `is_none` / `unwrap_or`: inline the
+                // discriminant test (std's symbol cannot run here).
+                if let Some(sh) = opt_shim {
+                    let d = dest.as_deref().unwrap_or("_0");
+                    if let Some(lines) = crate::layout::plan_option_shim(d, &b.id, args, sh) {
+                        for l in lines {
+                            out.push(l);
+                        }
+                        bound.insert(d.to_string());
+                        match target {
+                            Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                            None => {
+                                out.push("    // diverging call".to_string());
+                                out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                            }
+                        }
+                        continue;
+                    }
+                }
                 // `for i in a..b`: std's iterator protocol is inlined here
                 // (the SA runtime has no std `Iterator::next`).
                 if func.contains("core_str_impl_str_as_bytes") {
@@ -2016,9 +2035,13 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
     for f in &mir.functions {
         for b in &f.blocks {
             for st in &b.statements {
-                if let Stmt::Assign { rvalue: Rvalue::Call { func, sig, .. }, .. } = st {
+                if let Stmt::Assign { rvalue: Rvalue::Call { func, sig, opt_shim, .. }, .. } = st {
                     let name = sa_ident(func);
                     if defined.contains(&name) {
+                        continue;
+                    }
+                    // An inlined `Option` method is not an extern.
+                    if opt_shim.is_some() {
                         continue;
                     }
                     set.entry(name).or_insert_with(|| {
@@ -2026,9 +2049,13 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
                     });
                 }
             }
-            if let Term::Call { func, func_raw, sig, target, .. } = &b.terminator {
+            if let Term::Call { func, func_raw, sig, target, opt_shim, .. } = &b.terminator {
                 let name = sa_ident(func);
                 if defined.contains(&name) {
+                    continue;
+                }
+                // An inlined `Option` method is not an extern.
+                if opt_shim.is_some() {
                     continue;
                 }
                 // Diverging panic calls lower to native `panic(code)` (see

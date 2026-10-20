@@ -903,6 +903,7 @@ mod spill_tests {
                 dest: Some("_7".to_string()),
                 target: Some("bb1".to_string()),
                 sig: None,
+            opt_shim: None,
             },
         }];
         assert!(!build_spill(&blocks).contains_key("_5"));
