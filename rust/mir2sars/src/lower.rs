@@ -297,12 +297,14 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                 Stmt::StorageLive { local } => out.push(format!("    // StorageLive {}", local)),
                 Stmt::StorageDead { local } => out.push(format!("    // StorageDead {}", local)),
                 Stmt::Nop { text } => out.push(format!("    // nop: {}", text)),
-                Stmt::SetDisc { place, variant, .. } => {
-                    // p_layout v1: enum tag lives at offset 0 (sla enum_tag_offset=0,
-                    // payload at 8). Driver reports the base local already; the
-                    // full place (`(*_9)`) is kept as a comment for provenance.
+                Stmt::SetDisc { place, variant, offset, ty, .. } => {
+                    // Enum tag: offset/width from rustc layout (driver). Falls
+                    // back to the v1 assumption (`+0 as i64`) when unknown.
                     out.push("    // set-discriminant (enum tag)".to_string());
-                    out.push(format!("    store {}+0, {} as i64", place, variant));
+                    match ty {
+                        Some(t) => out.push(format!("    store {}+{}, {} as {}", place, offset, variant, t)),
+                        None => out.push(format!("    store {}+0, {} as i64", place, variant)),
+                    }
                 }
                 Stmt::UnsupportedStmt { text } => {
                     unsup.push(format!("{}: UnsupportedStmt", b.id));

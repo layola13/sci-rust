@@ -191,7 +191,15 @@ pub fn rvalue_json<'tcx>(
         }
         Rvalue::Discriminant(p) => {
             let (s, _) = place_name(p);
-            write!(into, "{{\"kind\": \"Discriminant\", \"place\": \"{}\"}}", s).unwrap();
+            match discr_info(tcx, body, p) {
+                Some((off, t)) => write!(
+                    into,
+                    "{{\"kind\": \"Discriminant\", \"place\": \"{}\", \"offset\": {}, \"ty\": \"{}\"}}",
+                    s, off, t
+                )
+                .unwrap(),
+                None => write!(into, "{{\"kind\": \"Discriminant\", \"place\": \"{}\"}}", s).unwrap(),
+            }
         }
         other => {
             into.push_str("{\"kind\": \"Unsupported\", \"text\": \"");
@@ -317,6 +325,39 @@ fn name_from_def(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> (String,
     (clean, trunc(full, 100))
 }
 
+/// Byte offset + SA integer type of an enum's discriminant (tag), when it is
+/// stored directly (no niche). `None` for non-enums, single-variant enums and
+/// niche-encoded tags (whose memory value maps to the variant non-trivially).
+fn discr_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    p: &rustc_middle::mir::Place<'tcx>,
+) -> Option<(u64, String)> {
+    use rustc_abi::{TagEncoding, Variants};
+    use rustc_middle::ty::TypingEnv;
+    let env = TypingEnv::fully_monomorphized();
+    let layout = tcx
+        .layout_of(rustc_middle::ty::PseudoCanonicalInput {
+            typing_env: env,
+            value: p.ty(&body.local_decls, tcx).ty,
+        })
+        .ok()?;
+    match layout.variants {
+        Variants::Multiple { tag, tag_encoding: TagEncoding::Direct, tag_field, .. } => {
+            let off = layout.fields.offset(tag_field.as_usize()).bytes();
+            let t = match tag.size(&tcx).bytes() {
+                1 => "u8",
+                2 => "u16",
+                4 => "u32",
+                8 => "u64",
+                _ => return None,
+            };
+            Some((off, t.to_string()))
+        }
+        _ => None,
+    }
+}
+
 /// Byte size of a by-value aggregate type (Adt/tuple/array), else 0. Used for
 /// `param_aggs` so a callee can copy a param-derived aggregate on return.
 fn ty_agg_size<'tcx>(tcx: TyCtxt<'tcx>, ty: ty::Ty<'tcx>) -> u64 {
@@ -440,7 +481,11 @@ pub fn body_json<'tcx>(
                     let (s, full) = place_name(place);
                     write!(into, "{{\"kind\": \"SetDisc\", \"place\": \"{}\", \"place_full\": \"", s).unwrap();
                     esc(&full, into);
-                    write!(into, "\", \"variant\": {}}}", variant_index.as_u32()).unwrap();
+                    into.push('"');
+                    if let Some((off, t)) = discr_info(tcx, body, place) {
+                        write!(into, ", \"offset\": {}, \"ty\": \"{}\"", off, t).unwrap();
+                    }
+                    write!(into, ", \"variant\": {}}}", variant_index.as_u32()).unwrap();
                 }
                 other => {
                     into.push_str("{\"kind\": \"UnsupportedStmt\", \"text\": \"");

@@ -262,9 +262,14 @@ pub fn render_rvalue(
                 }
             }
         }
-        Rvalue::Discriminant { place } => {
-            // Tag lives at offset 0 (mirrors SetDisc `store +0`).
-            format!("{} = load {}+0 as i64", dest, place)
+        Rvalue::Discriminant { place, offset, ty } => {
+            // Tag may sit at a non-zero offset (rustc layout); the driver
+            // resolves both the offset and the tag's integer width. Fall back
+            // to the legacy `+0 as i64` when the driver could not.
+            match ty {
+                Some(t) => format!("{} = load {}+{} as {}", dest, place, offset, t),
+                None => format!("{} = load {}+0 as i64", dest, place),
+            }
         }
         Rvalue::RawPtr { place, .. } => {
             // Thin-pointer reborrow is a plain copy (exact); fat cases stay

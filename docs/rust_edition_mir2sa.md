@@ -71,5 +71,13 @@ exit 0，无 broker）。
   `fn f(p: Pair) -> Pair { p }`、`fn f(p) -> Pair { let q = p; q }`、
   `fn make() -> Pair { Pair{..} }` 均可 check+run（caller 只释放自己的
   local 与结果各一次）。
-- 仍未覆盖：枚举 `Downcast` 投影仍折叠到 root local。
+- 枚举（部分）：`rsc_driver` 的 `discr_info` 按 rustc layout 输出判别式
+  `offset`/`ty`（`u8/u16/u32/u64`，仅 `TagEncoding::Direct`），`SetDisc`
+  同样带 `offset`/`ty`；`place_proj` 消费 `Downcast` 变体，按
+  `variants[vi].field_offsets` 给出**绝对** payload 偏移。因此 tag 读/写
+  与变体字段读（`match` 分派后 `load base+off`）已按真实布局生成。
+- 仍未覆盖：枚举**构造**（单字段 `Aggregate(Adt variant)` 目前降为标量
+  `_d = elem`，未 alloc/store payload+tag）与 `match` 各臂汇合处的
+  `return _0`（`ReturnConflict`，需要 phi/return-sinking）。这两项未完成，
+  端到端 enum 运行仍 loud/失败。
 

@@ -340,7 +340,7 @@ pub fn version_function(f: &Function) -> Function {
                         }
                         Rvalue::ThreadLocal { .. } => {}
                         Rvalue::Ref { place, .. }
-                        | Rvalue::Discriminant { place }
+                        | Rvalue::Discriminant { place, .. }
                         | Rvalue::RawPtr { place, .. } => {
                             // Places have no sentinel shape: on conflict the
                             // whole rvalue goes loud (counted downstream).

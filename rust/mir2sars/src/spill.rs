@@ -230,7 +230,7 @@ pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>
                     Rvalue::Ref { place, .. } => {
                         note_use(&mut uses, place, false, pos);
                     }
-                    Rvalue::Discriminant { place } => {
+                    Rvalue::Discriminant { place, .. } => {
                         note_use(&mut uses, place, false, pos);
                     }
                     Rvalue::Repeat { op, .. } => {
@@ -601,7 +601,7 @@ pub fn dead_locals(blocks: &[crate::mir::Block], n_params: usize) -> BTreeSet<St
                             }
                         }
                         Rvalue::Ref { place, .. }
-                        | Rvalue::Discriminant { place }
+                        | Rvalue::Discriminant { place, .. }
                         | Rvalue::RawPtr { place, .. } => {
                             if defined.contains(place.as_str()) {
                                 read.insert(place.clone());

@@ -52,6 +52,9 @@ pub fn place_proj<'tcx>(
     let mut off: u64 = 0;
     let mut has_field = false;
     let mut leaf: Ty<'tcx> = cur;
+    // Active enum variant introduced by `Downcast` (consumed by the following
+    // `Field` to pick that variant's payload offset).
+    let mut variant: Option<rustc_abi::VariantIdx> = None;
     for elem in p.projection.iter() {
         match elem {
             ProjectionElem::Deref => {
@@ -61,18 +64,29 @@ pub fn place_proj<'tcx>(
                     _ => return None,
                 };
                 leaf = cur;
+                variant = None;
+            }
+            ProjectionElem::Downcast(_, vi) => {
+                variant = Some(vi);
             }
             ProjectionElem::Field(idx, fty) => {
                 has_field = true;
                 let layout = tcx
                     .layout_of(PseudoCanonicalInput { typing_env: env, value: cur })
                     .ok()?;
-                off = off.checked_add(layout.fields.offset(idx.as_usize()).bytes())?;
+                let field_off = match (variant.take(), &layout.variants) {
+                    (Some(vi), rustc_abi::Variants::Multiple { variants, .. }) => {
+                        let vl = variants.raw.get(vi.as_usize())?;
+                        vl.field_offsets.raw.get(idx.as_usize())?.bytes()
+                    }
+                    _ => layout.fields.offset(idx.as_usize()).bytes(),
+                };
+                off = off.checked_add(field_off)?;
                 cur = fty;
                 leaf = fty;
             }
-            // Downcast/Index/ConstantIndex/Subslice/OpaqueCast carry no
-            // constant byte offset here; leave them to the collapse path.
+            // Index/ConstantIndex/Subslice/OpaqueCast carry no constant byte
+            // offset here; leave them to the collapse path.
             _ => return None,
         }
     }

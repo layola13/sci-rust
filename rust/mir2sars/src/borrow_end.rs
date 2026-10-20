@@ -195,7 +195,7 @@ pub fn plan_drops(blocks: &[Block], doms: &[HashSet<usize>]) -> DropPlan {
                             edges.push((dest.clone(), place.clone(), bi));
                         }
                     }
-                    Rvalue::Discriminant { place } | Rvalue::RawPtr { place, .. } => {
+                    Rvalue::Discriminant { place, .. } | Rvalue::RawPtr { place, .. } => {
                         used(place, bi);
                     }
                     Rvalue::ThreadLocal { .. } | Rvalue::Unsupported { .. } => {}

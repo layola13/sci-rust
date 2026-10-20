@@ -55,7 +55,7 @@ pub enum Stmt {
     StorageLive { local: String },
     StorageDead { local: String },
     Nop { text: String },
-    SetDisc { place: String, variant: u32, #[serde(default, skip_serializing_if = "Option::is_none")] place_full: Option<String> },
+    SetDisc { place: String, variant: u32, #[serde(default, skip_serializing_if = "Option::is_none")] place_full: Option<String>, #[serde(default)] offset: u64, #[serde(default, skip_serializing_if = "Option::is_none")] ty: Option<String> },
     UnsupportedStmt { text: String },
 }
 
@@ -114,7 +114,13 @@ pub enum Rvalue {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         layout: Option<AdtLayout>,
     },
-    Discriminant { place: String },
+    Discriminant {
+        place: String,
+        #[serde(default)]
+        offset: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ty: Option<String>,
+    },
     RawPtr { place: String, #[serde(rename = "mut", default, skip_serializing_if = "is_false")] mut_: bool },
     Repeat { op: Box<Operand>, len: String },
     ThreadLocal { def: String },
