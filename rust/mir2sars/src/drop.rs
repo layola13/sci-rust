@@ -234,6 +234,8 @@ fn is_shim_address_reg(reg: &str) -> bool {
         "_slice_endp_",
         "_slice_nxt_",
         "_deref_data_",
+        "_vec_data_",
+        "_vec_addr_",
     ]
     .iter()
     .any(|p| reg.starts_with(p))

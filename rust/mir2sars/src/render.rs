@@ -236,20 +236,11 @@ pub fn render_rvalue(
                 lines.push(format!("store {}+0, {} as {}", buf, place, sty));
                 lines.push(format!("{} = {}", dest, buf));
             } else if *agg {
-                // Memory-resident aggregate: `place` already names the
-                // storage address. Reload it from the owner's spill slot
-                // when there is one: a plain copy would transfer the
-                // allocation's ownership, so a second borrow of the same
-                // owner would use a moved value.
-                match spill.get(place) {
-                    Some(t) => lines.push(format!(
-                        "{} = load {}+0 as {}",
-                        dest,
-                        crate::spill::spill_slot(place),
-                        t
-                    )),
-                    None => lines.push(format!("{} = {}", dest, place)),
-                }
+                // Memory-resident aggregate: view the owner at offset 0.
+                // `ptr_add` marks the result interior, so a later release
+                // does not free the referee (a plain pointer copy would look
+                // like an owned allocation to the exit-free pass).
+                lines.push(format!("{} = ptr_add {}, 0", dest, place));
             } else {
                 lines.push(format!("{} = &{}", dest, place));
             }

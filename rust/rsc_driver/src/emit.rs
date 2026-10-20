@@ -140,11 +140,22 @@ fn vec_layout_info<'tcx>(
     dest_ty: Option<Ty<'tcx>>,
 ) -> Option<String> {
     use rustc_middle::ty::TypingEnv;
+    // Only std's own `Vec`/`String` methods are container shims; a user
+    // function whose name happens to contain `pop`/`push` must stay a call.
+    if !(fname.starts_with("std_vec_")
+        || fname.starts_with("alloc_vec_")
+        || fname.starts_with("std_string_")
+        || fname.starts_with("alloc_string_"))
+    {
+        return None;
+    }
     let has = |m: &str| fname.split('_').any(|c| c == m);
     let kind = if has("new") {
         "new"
     } else if has("push") {
         "push"
+    } else if has("pop") {
+        "pop"
     } else if has("len") {
         "len"
     } else if has("empty") {

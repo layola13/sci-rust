@@ -225,6 +225,36 @@ pub fn iter_zip_sum(xs: &[i32], ys: &[i32]) -> i32 {
     total
 }
 
+/// Pop every element (`Vec::pop`).
+pub fn vec_pop_sum(v: &mut Vec<i32>) -> i32 {
+    let mut total = 0;
+    while let Some(x) = v.pop() {
+        total += x;
+    }
+    total
+}
+
+/// Pop every byte (`Option<u8>`'s tag/payload are narrower than i32's).
+pub fn vec_u8_pop_sum(v: &mut Vec<u8>) -> i32 {
+    let mut total = 0;
+    while let Some(x) = v.pop() {
+        total += x as i32;
+    }
+    total
+}
+
+/// First/last element through `Vec`'s slice deref.
+pub fn vec_ends_sum(v: &Vec<i32>) -> i32 {
+    let mut total = 0;
+    if let Some(x) = v.first() {
+        total += *x;
+    }
+    if let Some(x) = v.last() {
+        total += *x;
+    }
+    total
+}
+
 /// A `for` loop over a range, and a string literal read by byte.
 pub fn range_sum(n: i32) -> i32 {
     let mut total = 0;

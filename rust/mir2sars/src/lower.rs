@@ -208,7 +208,14 @@ fn plan_borrow_releases(
                 // Projected borrows lower to `ptr_add` (an interior
                 // pointer): releasing one consumes its base, which would
                 // poison the phi state, so they are left alone.
-                if *mut_ || (!*projected && !*agg && !*zst && ty.as_deref() == Some("ptr")) {
+                // Aggregate and projected borrows render as interior views
+                // (`ptr_add`), not real borrow views: they hold no lock, so
+                // they need no explicit release.
+                if !*agg
+                    && !*projected
+                    && !*zst
+                    && (*mut_ || ty.as_deref() == Some("ptr"))
+                {
                     // A mid-function release must be reached by every path
                     // that reaches a join, or the borrow's state differs
                     // there (`PhiStateConflict`). The release is therefore

@@ -472,6 +472,54 @@ pub fn plan_vec_shim(
             let _ = ety;
             Some(lines)
         }
+        "pop" => {
+            // `pop(&mut v) -> Option<T>`: shrink first, then read the last
+            // element. A no-niche `Option<scalar>` is `{ tag@0: u8,
+            // payload@elem_size }` and `2 * elem_size` bytes.
+            let v = arg_reg(0)?;
+            let ety = if sh.elem_ty.is_empty() {
+                "u64".to_string()
+            } else {
+                sh.elem_ty.clone()
+            };
+            let len = format!("_vec_len_{}", bid);
+            let len2 = format!("_vec_len2_{}", bid);
+            let data = format!("_vec_data_{}", bid);
+            let off = format!("_vec_off_{}", bid);
+            let addr = format!("_vec_addr_{}", bid);
+            let val = format!("_vec_val_{}", bid);
+            let ret = format!("_vec_pop_{}", bid);
+            let has = format!("_vec_has_{}", bid);
+            let lbl_some = format!("L_vec_pop_some_{}", bid);
+            let lbl_none = format!("L_vec_pop_none_{}", bid);
+            let lbl_end = format!("L_vec_pop_end_{}", bid);
+            let tag_ty = match esz {
+                1 => "u8",
+                2 => "u16",
+                4 => "u32",
+                _ => "u64",
+            };
+            let mut lines = Vec::new();
+            lines.push(format!("{} = load {}+{} as u64", len, v, sh.len_off));
+            lines.push(format!("{} = ne {}, 0", has, len));
+            lines.push(format!("mut {} = alloc {}", ret, 2 * esz));
+            lines.push(format!("br {} -> {}, {}", has, lbl_some, lbl_none));
+            lines.push(format!("{}:", lbl_some));
+            lines.push(format!("{} = sub {}, 1", len2, len));
+            lines.push(format!("store {}+{}, {} as u64", v, sh.len_off, len2));
+            lines.push(format!("{} = load {}+{} as ptr", data, v, sh.ptr_off));
+            lines.push(format!("{} = mul {}, {}", off, len2, esz));
+            lines.push(format!("{} = ptr_add {}, {}", addr, data, off));
+            lines.push(format!("{} = load {}+0 as {}", val, addr, ety));
+            lines.push(format!("store {}+0, 1 as {}", ret, tag_ty));
+            lines.push(format!("store {}+{}, {} as {}", ret, esz, val, ety));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_none));
+            lines.push(format!("store {}+0, 0 as {}", ret, tag_ty));
+            lines.push(format!("{}:", lbl_end));
+            lines.push(format!("{} = {}", dest, ret));
+            Some(lines)
+        }
         "push" => {
             // `push(&mut v, x)`: grow when full, then append.
             let v = arg_reg(0)?;

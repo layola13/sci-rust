@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 3208 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 3714 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -134,8 +134,10 @@ exit 0，无 broker）。
 - 关联函数（impl 方法、派生 `Shape::eq`）用完整路径命名
   （`Shape_as_std_cmp_PartialEq_eq`）：不同 impl 的同名方法不再互相混淆，
   跨 crate 调用仍用短名（与 `--dep` 导入一致）。
-- 聚合借用（`&local`）从属主的 spill 槽重载，不再把聚合存储的所有权
-  转给借用方：同一聚合被借用两次不再 UseAfterMove。
+- 聚合借用（`&local`）降为 `ptr_add owner, 0`（interior view），不再把
+  聚合存储的所有权转给借用方：同一聚合被借用两次不再 UseAfterMove，
+  借用结束也不会释放属主。interior/投影借用不产生锁，因此不做显式
+  借用释放（函数出口释放时也会跳过）。
 - 共享引用（`&x`）：SA 的 `&x` 语义是「重借用 x 里的指针」，标量不能直接
   取地址。因此 `&scalar` 降为「把值复制进缓冲区 + 传缓冲区地址」
   （`alloc` + `store`，借用结束时释放）；指针值的借用仍是 reborrow。
@@ -248,8 +250,15 @@ exit 0，无 broker）。
   已用 `iter_ref_sum` / `iter_ref_sum_vec` 端到端验证。
 - `slice::first`/`last`/`get`：返回 `Option<&T>`（niche 指针，0 = None），
   `first` 判 `len != 0` 取 data，`last` 取 `data + (len-1)*elem_size`，
-  `get` 先做 `idx < len` 再取地址。已用 `slice_opt_sum`（含越界 `get(99)`）
-  端到端验证。
+  `get` 先做 `idx < len` 再取地址。`Vec::first()`/`last()` 经
+  `Deref::deref` 同样内联。已用 `slice_opt_sum`（含越界 `get(99)`）与
+  `vec_ends_sum` 端到端验证。
+- `Vec::pop()`：长度非零时先 `len -= 1`，再从 `data + len*elem_size` 读
+  末元素，写入 `Option<T>`（无 niche 的标量：`tag@0` 宽度同 `elem_size`、
+  payload@`elem_size`，槽大小 `2*elem_size`；`Option<i32>` 即 tag u32、
+  payload@4）；长度为
+  零时只写 `None` 判别式。已用 `vec_pop_sum`、`vec_u8_pop_sum`
+  （`Option<u8>` 的窄 tag/payload）及弹空后的 `is_empty()` 验证。
 - `slice::Iter::rev()`：`rev` 把 `Iter { ptr, end }` 换成
   `{ ptr: end, end: ptr }`；`Rev::next` 从末尾前移（`sub cur, elem_size`，
   `ugt cur, base`），复用 niche `Option<&T>`。已用 `iter_rev_sum`
@@ -273,6 +282,7 @@ exit 0，无 broker）。
   从而支持 `Option<(usize, &T)>` / `Option<(&A, &B)>` 这类 niche
   嵌在 payload 元组内的情况。
 - 退出释放不再释放 niche 判别式读出的 `<reg>_n` 载荷指针（它指向调用方
-  存储，不拥有该分配）。
+  存储，不拥有该分配），也不释放容器 shim 读出的 `_vec_data_`（缓冲基址）
+  与 `_vec_addr_`（元素内部地址）。
 - 仍未覆盖：`.map()`/`.filter()` 等闭包适配器。
 

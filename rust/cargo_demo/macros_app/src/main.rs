@@ -2,7 +2,7 @@
 //! boundary. `sars run` must resolve the callees via `@import "macros_lib.sars"`
 //! (not `@extern`), and `panic!` folds to native `panic(code)` — so the
 //! program runs with no broker.
-use macros_lib::{double, plus_two, first_byte, first_or, iter_ref_sum, iter_ref_sum_vec, iter_rev_sum, iter_enum_sum, iter_step_sum, iter_take_sum, iter_zip_sum, slice_opt_sum, iter_sum, iter_sum_vec, option_is_some, option_or, range_sum, shape_area, slice_sum, sum, sum_vec, total, weight, Kind, Shape};
+use macros_lib::{double, plus_two, first_byte, first_or, iter_ref_sum, iter_ref_sum_vec, iter_rev_sum, iter_enum_sum, iter_step_sum, iter_take_sum, iter_zip_sum, slice_opt_sum, vec_ends_sum, vec_pop_sum, vec_u8_pop_sum, iter_sum, iter_sum_vec, option_is_some, option_or, range_sum, shape_area, slice_sum, sum, sum_vec, total, weight, Kind, Shape};
 
 fn main() {
     let x = double(20);
@@ -46,6 +46,24 @@ fn main() {
     }
     if iter_ref_sum_vec(&vs) != 10 {
         panic!("bad iter ref sum vec");
+    }
+    if vec_ends_sum(&vs) != 10 {
+        panic!("bad vec ends sum");
+    }
+    if vec_pop_sum(&mut vs) != 10 {
+        panic!("bad vec pop sum");
+    }
+    if !vs.is_empty() {
+        panic!("bad vec pop empty");
+    }
+    let mut bytes: Vec<u8> = Vec::new();
+    bytes.push(1);
+    bytes.push(2);
+    if vec_u8_pop_sum(&mut bytes) != 3 {
+        panic!("bad vec u8 pop sum");
+    }
+    if !bytes.is_empty() {
+        panic!("bad vec u8 pop empty");
     }
     if slice_opt_sum(&xs) != 7 {
         panic!("bad slice opt sum");
