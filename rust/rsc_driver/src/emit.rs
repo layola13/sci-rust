@@ -127,6 +127,116 @@ fn partial_eq_ne_name<'tcx>(
     Some(sanitize(&tcx.def_path_str(eq)))
 }
 
+/// `Vec<T>` layout for the backend's `Vec` shims: the data pointer, the
+/// capacity and the length words, plus the element size.
+fn vec_layout_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    args: &[rustc_middle::mir::Operand<'tcx>],
+    fname: &str,
+    dest_ty: Option<Ty<'tcx>>,
+) -> Option<String> {
+    use rustc_middle::ty::TypingEnv;
+    let has = |m: &str| fname.split('_').any(|c| c == m);
+    let kind = if has("new") {
+        "new"
+    } else if has("push") {
+        "push"
+    } else if has("len") {
+        "len"
+    } else if has("empty") {
+        "is_empty"
+    } else {
+        return None;
+    };
+    // The `Vec<T>` type: the receiver (a method) or the destination (`new`).
+    let raw_ty = match dest_ty {
+        Some(t) if args.is_empty() => t,
+        _ => {
+            let recv = args.first()?;
+            match recv {
+                Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+                _ => return None,
+            }
+        }
+    };
+    let vec_ty = match raw_ty.kind() {
+        TyKind::Ref(_, inner, _) => *inner,
+        _ => raw_ty,
+    };
+    let (vec_def, vec_args) = match vec_ty.kind() {
+        TyKind::Adt(d, a) => (d, *a),
+        _ => return None,
+    };
+    let elem_ty = vec_args.iter().find_map(|a| a.as_type()).filter(|t| {
+        matches!(t.kind(), TyKind::Int(_) | TyKind::Uint(_) | TyKind::Bool | TyKind::Char | TyKind::Float(_))
+    })?;
+    let elem_sa = crate::tyinfo::ty_sa_sig_opt(elem_ty)?;
+    let env = TypingEnv::fully_monomorphized();
+    let elem_size = tcx
+        .layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: elem_ty,
+        })
+        .ok()?
+        .size
+        .bytes();
+    // `Vec` = RawVec { ptr, cap } + len.
+    let layout = tcx
+        .layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: vec_ty,
+        })
+        .ok()?;
+    // The words are found by field name: `Vec` nests them
+    // (`RawVec { inner: RawVecInner { ptr, cap }, .. }` plus `len`).
+    let offs = [
+        field_offset(tcx, env, vec_ty, &layout.layout, 0, "ptr")?,
+        field_offset(tcx, env, vec_ty, &layout.layout, 0, "cap")?,
+        field_offset(tcx, env, vec_ty, &layout.layout, 0, "len")?,
+    ];
+    Some(format!(
+        "{{\"kind\": \"{}\", \"ptr_off\": {}, \"cap_off\": {}, \"len_off\": {}, \"elem_size\": {}, \"elem_ty\": \"{}\"}}",
+        kind, offs[0], offs[1], offs[2], elem_size, elem_sa
+    ))
+}
+
+/// Byte offset of a named field (recursing into nested structs): `Vec`
+/// keeps its words several levels down.
+fn field_offset<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    env: rustc_middle::ty::TypingEnv<'tcx>,
+    ty: Ty<'tcx>,
+    layout: &rustc_abi::Layout<'tcx>,
+    base: u64,
+    name: &str,
+) -> Option<u64> {
+    let (def, args) = match ty.kind() {
+        TyKind::Adt(d, a) => (d, *a),
+        _ => return None,
+    };
+    if !matches!(layout.fields, rustc_abi::FieldsShape::Arbitrary { .. }) {
+        return None;
+    }
+    let fields = &def.variant(rustc_abi::VariantIdx::ZERO).fields;
+    for (i, f) in fields.iter().enumerate() {
+        let off = base + layout.fields.offset(i).bytes();
+        if f.name.to_string() == name {
+            return Some(off);
+        }
+        let fty = tcx.normalize_erasing_regions(env, f.ty(tcx, args));
+        if let Ok(fl) = tcx.layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: fty,
+        }) {
+            if let Some(o) = field_offset(tcx, env, fty, &fl.layout, off, name) {
+                return Some(o);
+            }
+        }
+    }
+    None
+}
+
 /// A primitive method the backend can inline: `i32::abs`, `core::cmp::min`
 /// and `core::cmp::max` (std symbols that cannot run here).
 fn primitive_op_shim<'tcx>(
@@ -1292,6 +1402,11 @@ pub fn body_json<'tcx>(
                 // `i32::abs`, `core::cmp::min`/`max`: inlined arithmetic.
                 if let Some(shim) = primitive_op_shim(tcx, body, &fname, &arg_nodes) {
                     write!(into, ", \"prim_shim\": {}", shim).unwrap();
+                }
+                // `Vec::new`/`push`/`len`/`is_empty`: inlined container ops.
+                let dest_ty = Some(destination.ty(&body.local_decls, tcx).ty);
+                if let Some(shim) = vec_layout_info(tcx, body, &arg_nodes, &fname, dest_ty) {
+                    write!(into, ", \"vec_shim\": {}", shim).unwrap();
                 }
                 // NOTE: `PartialEq::ne` is left as a std symbol: the
                 // derived `eq` itself compares payloads with `!=`, so

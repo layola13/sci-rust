@@ -377,6 +377,7 @@ mod borrow_end_tests {
             slice_len: None,
             negate_eq: None,
             prim_shim: None,
+            vec_shim: None,
             }),
             blk("bb1", vec![], Term::Drop { place: "_1".to_string(), target: "bb2".to_string() }),
             blk("bb2", vec![], Term::Return { ret: None }),
@@ -409,6 +410,7 @@ mod borrow_end_tests {
         slice_len: None,
         negate_eq: None,
         prim_shim: None,
+        vec_shim: None,
         });
         let plan = plan_drops(&blocks, &doms(&blocks));
         assert!(!plan.ends.contains_key(&1));

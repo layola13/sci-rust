@@ -201,6 +201,10 @@ exit 0，无 broker）。
 - **原始数值方法**（`i32::abs`、`core::cmp::min`/`max`）内联为 SA 代码：
   操作数放进帧槽再比较（避免只在一条路径上消耗寄存器），有符号性由
   driver 按操作数类型给出（`slt`/`ult`）。
+- **`Vec<T>` 基础操作**（`new`/`push`/`len`/`is_empty`）内联为 SA 代码：
+  driver 按**字段名**递归解析 `Vec` 的嵌套布局（`RawVec { inner: RawVecInner
+  { ptr, cap } }` + `len`），后端据此读写三个字；`push` 满了就重新分配并用
+  `sa_mem_copy` 搬运旧元素（新 `Vec` 预分配一个小缓冲，指针始终有效）。
 - 仍未覆盖：`println!`/`format!` 的**格式化栈**（`Argument::new_display`、
   `Arguments::new`、`io::_print` 都是 std 符号）——`panic!` 路径已折叠为
   原生 `panic(code)` ✓，但主动打印仍需 std 符号。

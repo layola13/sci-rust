@@ -907,6 +907,7 @@ mod spill_tests {
             slice_len: None,
             negate_eq: None,
             prim_shim: None,
+            vec_shim: None,
             },
         }];
         assert!(!build_spill(&blocks).contains_key("_5"));

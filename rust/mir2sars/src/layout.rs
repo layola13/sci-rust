@@ -394,6 +394,117 @@ pub fn plan_prim_shim(
     }
 }
 
+/// A `Vec` operation inlined: `new`, `push`, `len`, `is_empty`.
+///
+/// The vector's words are read from the receiver; `push` grows the buffer
+/// when it is full (a fresh allocation, the old one is left to the frame).
+pub fn plan_vec_shim(
+    dest: &str,
+    bid: &str,
+    args: &[Operand],
+    sh: &crate::mir::VecShim,
+) -> Option<Vec<String>> {
+    let arg_reg = |i: usize| -> Option<String> {
+        match args.get(i)? {
+            Operand::Move { place, .. } | Operand::Copy { place, .. } => Some(place.clone()),
+            Operand::Const { value, .. } => crate::render_util::const_scalar_text(value),
+            _ => None,
+        }
+    };
+    let esz = sh.elem_size.max(1);
+    match sh.kind.as_str() {
+        "new" => {
+            // `Vec::new()` -> an empty vector with a small initial buffer
+            // (the data pointer stays valid, so a later grow can copy from it).
+            let buf = format!("_vec_new_{}", bid);
+            let data = format!("_vec_data_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("mut {} = alloc 24", buf));
+            lines.push(format!("mut {} = alloc {}", data, 4 * esz));
+            lines.push(format!("store {}+{}, {} as ptr", buf, sh.ptr_off, data));
+            lines.push(format!("store {}+{}, 4 as u64", buf, sh.cap_off));
+            lines.push(format!("store {}+{}, 0 as u64", buf, sh.len_off));
+            lines.push(format!("{} = {}", dest, buf));
+            Some(lines)
+        }
+        "len" => {
+            let v = arg_reg(0)?;
+            lines_push_load(dest, &v, sh.len_off, "u64")
+        }
+        "is_empty" => {
+            let v = arg_reg(0)?;
+            let tmp = format!("_vec_len_{}", bid);
+            let mut lines = vec![format!("{} = load {}+{} as u64", tmp, v, sh.len_off)];
+            lines.push(format!("{} = eq {}, 0", dest, tmp));
+            Some(lines)
+        }
+        "push" => {
+            // `push(&mut v, x)`: grow when full, then append.
+            let v = arg_reg(0)?;
+            let x = arg_reg(1)?;
+            let len = format!("_vec_len_{}", bid);
+            let cap = format!("_vec_cap_{}", bid);
+            let data = format!("_vec_data_{}", bid);
+            let lbl_grow = format!("L_vec_grow_{}", bid);
+            let lbl_app = format!("L_vec_app_{}", bid);
+            let lbl_end = format!("L_vec_end_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("{} = load {}+{} as u64", len, v, sh.len_off));
+            lines.push(format!("{} = load {}+{} as u64", cap, v, sh.cap_off));
+            lines.push(format!("{} = load {}+{} as ptr", data, v, sh.ptr_off));
+            lines.push(format!(
+                "{} = eq {}, {}",
+                format!("_vec_full_{}", bid),
+                len,
+                cap
+            ));
+            lines.push(format!(
+                "br {} -> {}, {}",
+                format!("_vec_full_{}", bid),
+                lbl_grow,
+                lbl_app
+            ));
+            lines.push(format!("{}:", lbl_grow));
+            // new capacity (in elements): double, at least one
+            let newcap = format!("_vec_ncap_{}", bid);
+            lines.push(format!("{} = mul {}, 2", newcap, cap));
+            lines.push(format!("{} = add {}, 1", newcap, newcap));
+            let newbytes = format!("_vec_nbytes_{}", bid);
+            lines.push(format!("{} = mul {}, {}", newbytes, newcap, esz));
+            let newbuf = format!("_vec_buf_{}", bid);
+            lines.push(format!("mut {} = alloc {}", newbuf, newbytes));
+            // copy the live elements into the fresh buffer
+            let copybytes = format!("_vec_cbytes_{}", bid);
+            lines.push(format!("{} = mul {}, {}", copybytes, len, esz));
+            lines.push(format!(
+                "call @sa_mem_copy(&{}, &{}, {})",
+                newbuf, data, copybytes
+            ));
+            lines.push(format!("store {}+{}, {} as ptr", v, sh.ptr_off, newbuf));
+            lines.push(format!("store {}+{}, {} as u64", v, sh.cap_off, newcap));
+            lines.push(format!("{} = {}", data, newbuf));
+            lines.push(format!("jmp {}", lbl_app));
+            lines.push(format!("{}:", lbl_app));
+            let slot = format!("_vec_slot_{}", bid);
+            lines.push(format!("{} = mul {}, {}", slot, len, esz));
+            let addr = format!("_vec_addr_{}", bid);
+            lines.push(format!("{} = ptr_add {}, {}", addr, data, slot));
+            let ety = if sh.elem_ty.is_empty() { "u64".to_string() } else { sh.elem_ty.clone() };
+            lines.push(format!("store {}+0, {} as {}", addr, x, ety));
+            lines.push(format!("{} = add {}, 1", format!("_vec_len2_{}", bid), len));
+            lines.push(format!("store {}+{}, {} as u64", v, sh.len_off, format!("_vec_len2_{}", bid)));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_end));
+            Some(lines)
+        }
+        _ => None,
+    }
+}
+
+fn lines_push_load(dest: &str, v: &str, off: u64, ty: &str) -> Option<Vec<String>> {
+    Some(vec![format!("{} = load {}+{} as {}", dest, v, off, ty)])
+}
+
 pub fn plan_option_shim(
     dest: &str,
     bid: &str,

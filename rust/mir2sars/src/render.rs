@@ -57,7 +57,7 @@ pub fn spill_reg(op: &Operand, spill: &crate::spill::SpillMap) -> Option<String>
 /// Slot setup lines for a spilled dest: its later Copy-uses reload from the
 /// slot instead of moving the register (a moved register traps
 /// UseAfterMove). Empty when the dest is not spilled.
-fn dest_slot_lines(dest: &str, spill: &crate::spill::SpillMap) -> Vec<String> {
+pub fn dest_slot_lines(dest: &str, spill: &crate::spill::SpillMap) -> Vec<String> {
     match spill.get(dest) {
         Some(t) => {
             let s = crate::spill::spill_slot(dest);

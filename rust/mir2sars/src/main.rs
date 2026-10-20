@@ -167,7 +167,7 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
             // Calls without signatures mirror lower()'s CallNoSig rule.
             // Terminator dests join the bound set exactly like lower().
             match &b.terminator {
-                Term::Call { func, func_raw, args, sig, dest, target, opt_shim, slice_len, negate_eq, prim_shim } => {
+                Term::Call { func, func_raw, args, sig, dest, target, opt_shim, slice_len, negate_eq, prim_shim, vec_shim } => {
                     // Diverging panic calls fold to native `panic(code)` in
                     // lower(): counted loudly here for parity (not a gap).
                     if target.is_none() && is_diverging_panic_call(func, func_raw.as_deref()) {
@@ -820,6 +820,7 @@ mod tests {
                 slice_len: None,
                 negate_eq: None,
                 prim_shim: None,
+                vec_shim: None,
                 },
             },
             blank_block("bb1", Term::Return { ret: None }),
@@ -968,6 +969,7 @@ mod tests {
             slice_len: None,
             negate_eq: None,
             prim_shim: None,
+            vec_shim: None,
             }),
         ]);
         let mut unsup = vec![];
@@ -994,6 +996,7 @@ mod tests {
                     slice_len: None,
                     negate_eq: None,
                 prim_shim: None,
+                vec_shim: None,
                 },
             },
             blank_block("bb1", Term::Return { ret: None }),
@@ -1017,6 +1020,7 @@ mod tests {
                 slice_len: None,
                 negate_eq: None,
             prim_shim: None,
+            vec_shim: None,
             }),
             blank_block("bb1", Term::Return { ret: None }),
         ]);

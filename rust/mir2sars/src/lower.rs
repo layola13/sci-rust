@@ -1463,7 +1463,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    // MIR Resume (cleanup path)".to_string());
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
-            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, negate_eq, prim_shim } => {
+            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, negate_eq, prim_shim, vec_shim } => {
                 // `PartialEq::ne`: call the local `eq` and negate.
                 if let Some(eq_name) = negate_eq {
                     let d = dest.as_deref().unwrap_or("_0");
@@ -1483,6 +1483,28 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         }
                     }
                     continue;
+                }
+                // `Vec::new`/`push`/`len`/`is_empty`: inlined container ops.
+                if let Some(vs) = vec_shim {
+                    let d = dest.as_deref().unwrap_or("_0");
+                    if let Some(mut lines) = crate::layout::plan_vec_shim(d, &b.id, args, vs) {
+                        // A spilled dest keeps its slot setup (the uses reload
+                        // from it).
+                        lines.extend(crate::render::dest_slot_lines(d, &spill));
+                        crate::spill::spill_slot_lines(&mut lines, &b.id, &spill);
+                        for l in lines {
+                            out.push(l);
+                        }
+                        bound.insert(d.to_string());
+                        match target {
+                            Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                            None => {
+                                out.push("    // diverging call".to_string());
+                                out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                            }
+                        }
+                        continue;
+                    }
                 }
                 // `i32::abs`, `core::cmp::min`/`max`: inlined arithmetic.
                 if let Some(ps) = prim_shim {

@@ -66,6 +66,20 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// A `Vec` operation inlined by the backend: the data/capacity/length word
+/// offsets and the element size.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct VecShim {
+    pub kind: String,
+    pub ptr_off: u64,
+    pub cap_off: u64,
+    pub len_off: u64,
+    pub elem_size: u64,
+    /// SA type of the element (the store width).
+    #[serde(default)]
+    pub elem_ty: String,
+}
+
 /// A primitive method inlined by the backend: the kind and the operand types.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PrimShim {
@@ -357,6 +371,9 @@ pub enum Term {
         /// A primitive method inlined by the backend (`abs`, `min`, `max`).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         prim_shim: Option<PrimShim>,
+        /// A `Vec` operation inlined by the backend.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        vec_shim: Option<VecShim>,
     },
     Drop { place: String, target: String },
     SwitchInt { discr: Box<Operand>, #[serde(default)] targets: Vec<(String, String)>, otherwise: String },
