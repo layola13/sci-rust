@@ -1,0 +1,3 @@
+[workspace]
+members = ["macros_lib", "macros_app"]
+resolver = "2"

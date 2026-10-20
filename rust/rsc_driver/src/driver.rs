@@ -8,9 +8,12 @@
 //!
 //! Build (needs nightly + rustc-dev, both present):
 //!   ./build.sh
-//! Run:
+//! Run (direct, mir.json only):
 //!   ./target/rsc_driver --edition 2021 /tmp/rsc_demo/src/main.rs \
 //!       --rsc-out /tmp/driver.mir.json --crate-type bin
+//! Run (cargo workspace capture, real artifacts too):
+//!   RUSTC_WORKSPACE_WRAPPER=./target/rsc_driver RSC_OUT_DIR=/tmp/mir \
+//!       cargo build            # writes /tmp/mir/<crate>.mir.json per crate
 
 #![feature(rustc_private)]
 
@@ -31,6 +34,10 @@ use crate::emit::body_json;
 
 struct RscCallbacks {
     out: String,
+    /// True when running as a cargo `RUSTC_WORKSPACE_WRAPPER`: after dumping
+    /// the MIR we must let rustc finish codegen so cargo still gets its
+    /// rlib/bin. Direct invocations stop after the dump (mir.json only).
+    continue_compilation: bool,
 }
 
 mod emit;
@@ -42,6 +49,9 @@ impl Callbacks for RscCallbacks {
     fn after_analysis<'tcx>(&mut self, _compiler: &Compiler, tcx: TyCtxt<'tcx>) -> Compilation {
         if tcx.dcx().err_count() > 0 {
             eprintln!("rsc_driver: analysis had errors; refusing to emit mir.json");
+            if self.continue_compilation {
+                return Compilation::Continue;
+            }
             std::process::exit(1);
         }
         let mut out = String::from("{\"source\": \"rsc_driver (rustc_private, real MIR)\", \"functions\": [");
@@ -73,26 +83,59 @@ impl Callbacks for RscCallbacks {
             std::process::exit(1);
         }
         eprintln!("rsc_driver: wrote {} APPROX={}", self.out, approx);
-        Compilation::Stop
+        if self.continue_compilation {
+            Compilation::Continue
+        } else {
+            Compilation::Stop
+        }
     }
+}
+
+/// Value of `--flag <value>` in a rustc argument vector, if present.
+fn arg_value(args: &[String], flag: &str) -> Option<String> {
+    args.iter()
+        .position(|a| a == flag)
+        .and_then(|i| args.get(i + 1))
+        .cloned()
 }
 
 fn main() {
     let raw: Vec<String> = std::env::args().collect();
-    let mut out = String::from("out.mir.json");
-    let mut rustc_args: Vec<String> = vec![raw.get(0).cloned().unwrap_or_else(|| "rsc_driver".to_string())];
+    // Wrapper mode (cargo `RUSTC_WORKSPACE_WRAPPER`): cargo invokes
+    // `<wrapper> <real rustc> <rustc args...>`. RSC_OUT_DIR selects the
+    // per-crate mir.json directory, so argv[1] is the real rustc and must
+    // become the driver's argv0 (compiler_entrypoint takes a rustc argv).
+    let wrapper_mode = std::env::var_os("RSC_OUT_DIR").is_some();
+    let mut rustc_args: Vec<String> = Vec::new();
     let mut i = 1;
+    if wrapper_mode && raw.len() > 1 {
+        rustc_args.push(raw[1].clone());
+        i = 2;
+    } else {
+        rustc_args.push(raw.get(0).cloned().unwrap_or_else(|| "rsc_driver".to_string()));
+    }
+    let mut out: Option<String> = None;
     while i < raw.len() {
         if raw[i] == "--rsc-out" {
             i += 1;
             if let Some(v) = raw.get(i) {
-                out = v.clone();
+                out = Some(v.clone());
             }
         } else {
             rustc_args.push(raw[i].clone());
         }
         i += 1;
     }
-    let mut cb = RscCallbacks { out };
+    let out = match out {
+        Some(o) => o,
+        None if wrapper_mode => {
+            let dir = std::env::var("RSC_OUT_DIR").unwrap_or_else(|_| ".".to_string());
+            let crate_name =
+                arg_value(&rustc_args, "--crate-name").unwrap_or_else(|| "crate".to_string());
+            format!("{}/{}.mir.json", dir.trim_end_matches('/'), crate_name)
+        }
+        None => "out.mir.json".to_string(),
+    };
+    let mut cb = RscCallbacks { out, continue_compilation: wrapper_mode };
     compiler_entrypoint(&rustc_args, &mut cb);
 }

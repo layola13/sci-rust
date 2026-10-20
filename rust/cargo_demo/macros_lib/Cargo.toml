@@ -1,0 +1,9 @@
+[package]
+name = "macros_lib"
+version = "0.1.0"
+edition = "2021"
+description = "Cargo workspace fixture: macro_rules! + derive macro surface for the MIR->sars pipeline."
+
+[lib]
+name = "macros_lib"
+path = "src/lib.rs"

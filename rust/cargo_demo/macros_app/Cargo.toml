@@ -1,0 +1,12 @@
+[package]
+name = "macros_app"
+version = "0.1.0"
+edition = "2021"
+description = "Cargo workspace fixture: bin crate calling into macros_lib across the crate boundary."
+
+[dependencies]
+macros_lib = { path = "../macros_lib" }
+
+[[bin]]
+name = "macros_app"
+path = "src/main.rs"

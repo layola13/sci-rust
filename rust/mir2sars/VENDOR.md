@@ -5,6 +5,7 @@
 - 本仓新增 fixture：`tests/fixtures/arith.mir.json`（`rust/hello_world/src/arith.rs` 经 rsc_driver 实产，`add`+`main` 双函数，APPROX=0）。
 - 本仓改动（仅适配层，不改lower落法）：
   - crate/bin改名 `mir2sa` → `mir2sars`，usage文本默认 `--out <out.sars>`。
+  - 新增 `--dep <dep.mir.json>=<import.sars>`：跨 crate callee 落为 `@import` 而非 `@extern`（cargo workspace 链接，见 docs/rust_edition_mir2sa.md）。
   - 其余lower语义与上游逐行一致；上游演进时以本文件为基准做三方diff后同步。
 - 同步命令：
   `diff -r /content/sa_all/sarust/rsc/mir2sa/src rust/mir2sars/src`

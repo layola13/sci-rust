@@ -3,6 +3,7 @@ use crate::place::{place_name, place_via};
 use crate::tyinfo::{aggregate_layout, fn_operand_sig, operand_ty_short, str_const_bytes, ty_sa_sig_opt};
 use crate::util::{bb_name, esc, local_name, sanitize, trunc};
 use rustc_ast::ast::InlineAsmTemplatePiece;
+use rustc_hir::def::DefKind;
 use rustc_middle::mir::{Body, BorrowKind, Const, ConstOperand, InlineAsmOperand, Local, Operand, Rvalue, StatementKind, TerminatorKind};
 use rustc_middle::ty::{ConstKind, TyCtxt, TyKind};
 use rustc_middle::ty;
@@ -168,35 +169,69 @@ pub fn fn_operand_name(tcx: TyCtxt<'_>, op: &Operand<'_>) -> (String, String) {
     // Prefer `a_b_c` path names; fall back to Debug text.
     if let Operand::Constant(c) = op {
         let c: &ConstOperand<'_> = c;
-        if let Const::Ty(_, ct) = c.const_ {
-            if let ConstKind::Value(ty::Value { ty, .. }) = ct.kind() {
-            if let TyKind::FnDef(def_id, _) = ty.kind() {
-                let full = tcx.def_path_str(*def_id);
-                let short = full.rsplit("::").next().unwrap_or(&full).to_string();
-                let clean: String = {
-                    let mut s = String::new();
-                    let mut sep = true;
-                    for ch in short.chars() {
-                        if ch.is_ascii_alphanumeric() || ch == '_' {
-                            s.push(ch);
-                            sep = false;
-                        } else if !sep {
-                            s.push('_');
-                            sep = true;
-                        }
-                    }
-                    while s.ends_with('_') {
-                        s.pop();
-                    }
-                    s
-                };
-                return (clean, trunc(full, 100));
+        // Cross-crate items (every workspace dependency reached through an
+        // imported crate) reach MIR as unevaluated consts. Resolve them to
+        // the short def name so a caller and the callee's own mir.json agree
+        // (`double`, not the sanitized `macros_lib_double`) and
+        // `mir2sars --dep` can link them. std/core/alloc keep the
+        // Debug-derived name: it is the key the STD_MAP/broker side expects.
+        let dep_def: Option<rustc_span::def_id::DefId> = match c.const_ {
+            Const::Unevaluated(uv, _) => Some(uv.def),
+            Const::Ty(_, ct) => match ct.kind() {
+                ConstKind::Value(ty::Value { ty, .. }) => match ty.kind() {
+                    TyKind::FnDef(def_id, _) => Some(*def_id),
+                    _ => None,
+                },
+                ConstKind::Alias(_, alias) => Some(match alias.kind {
+                    ty::AliasConstKind::Free { def_id } => def_id,
+                    ty::AliasConstKind::Projection { def_id } => def_id,
+                    ty::AliasConstKind::InherentImpl { def_id } => def_id,
+                    ty::AliasConstKind::InherentSelf { def_id } => def_id,
+                    ty::AliasConstKind::Anon { def_id } => def_id,
+                }),
+                _ => None,
+            },
+            Const::Val(_, ty) => match ty.kind() {
+                TyKind::FnDef(def_id, _) => Some(*def_id),
+                _ => None,
+            },
+        };
+        if let Some(def_id) = dep_def {
+            if matches!(tcx.def_kind(def_id), DefKind::Fn | DefKind::AssocFn) {
+                let krate = tcx.crate_name(def_id.krate);
+                let k = krate.as_str();
+                if k != "std" && k != "core" && k != "alloc" && k != "proc_macro" {
+                    return name_from_def(tcx, def_id);
                 }
             }
         }
     }
     let dbg = trunc(format!("{:?}", op), 100);
     (sanitize(&dbg), dbg)
+}
+
+/// `(short, full)` for a named item: last path segment, sanitized for SA.
+fn name_from_def(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> (String, String) {
+    let full = tcx.def_path_str(def_id);
+    let short = full.rsplit("::").next().unwrap_or(&full).to_string();
+    let clean: String = {
+        let mut s = String::new();
+        let mut sep = true;
+        for ch in short.chars() {
+            if ch.is_ascii_alphanumeric() || ch == '_' {
+                s.push(ch);
+                sep = false;
+            } else if !sep {
+                s.push('_');
+                sep = true;
+            }
+        }
+        while s.ends_with('_') {
+            s.pop();
+        }
+        s
+    };
+    (clean, trunc(full, 100))
 }
 
 pub fn body_json<'tcx>(

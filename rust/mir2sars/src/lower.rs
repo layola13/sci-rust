@@ -600,10 +600,22 @@ pub fn extern_decl(name: &str, sig: &Option<(Vec<String>, String)>) -> String {
 
 pub fn cmd_lower(args: &[String]) -> ExitCode {
     let (mut input, mut out, mut strict) = (None, None, false);
+    // Cross-crate deps: `<dep mir.json>=<import path written into .sars>`.
+    // Callees provided by a dep become `@import` instead of `@extern`, so a
+    // cargo workspace links its crates instead of hitting the broker.
+    let mut deps: Vec<(String, String)> = Vec::new();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--out" => { i += 1; out = args.get(i).cloned(); }
+            "--dep" => {
+                i += 1;
+                if let Some(spec) = args.get(i) {
+                    if let Some((mir, imp)) = spec.split_once('=') {
+                        deps.push((mir.to_string(), imp.to_string()));
+                    }
+                }
+            }
             "--strict" => strict = true,
             s if !s.starts_with("--") && input.is_none() => input = Some(s.to_string()),
             _ => {}
@@ -612,7 +624,7 @@ pub fn cmd_lower(args: &[String]) -> ExitCode {
     }
     let (input, out) = match (input, out) {
         (Some(a), Some(b)) => (a, b),
-        _ => { eprintln!("usage: mir2sars lower <mir.json> --out <out.sars> [--strict]"); return ExitCode::from(2); }
+        _ => { eprintln!("usage: mir2sars lower <mir.json> --out <out.sars> [--strict] [--dep <dep.mir.json>=<import.sars>]"); return ExitCode::from(2); }
     };
     let text = match std::fs::read_to_string(&input) {
         Ok(t) => t,
@@ -630,9 +642,8 @@ pub fn cmd_lower(args: &[String]) -> ExitCode {
     let mut unsup = vec![];
     // Bodies joined by "\n"; each body already ends with one trailing newline.
     // sla convention: `@extern` decls for all called-but-undefined symbols.
-    let mut sa_compat = String::from("@import \"sa_std/io/print.sai\"\n@import \"sa_std/num.sal\"\n\n");
+    let mut bodies: Vec<String> = mir.functions.iter().map(|f| lower_function(f, &mut unsup)).collect();
     let mut exts = collect_externs(&mir);
-    let bodies: Vec<String> = mir.functions.iter().map(|f| lower_function(f, &mut unsup)).collect();
     if bodies.iter().any(|b| b.contains("sa_mem_set")) {
         // Repeat lowering emits `call @sa_mem_set` directly (not via Rvalue::Call).
         // Signature mirrors `sci/sa_std/core/mem.sa` (`&dst: ptr, val: u8, count: u64 -> void`).
@@ -649,8 +660,53 @@ pub fn cmd_lower(args: &[String]) -> ExitCode {
             Some((vec!["u64".to_string()], "ptr".to_string())),
         );
     }
+    let joined = bodies.join("\n");
+    // Cross-crate: a callee exported by a `--dep` crate is imported, not
+    // declared `@extern` (an `@extern` would force broker resolution at run).
+    let mut dep_imports: Vec<String> = Vec::new();
+    if !deps.is_empty() {
+        let mut provided = std::collections::BTreeMap::<String, String>::new();
+        for (dep_mir, import_path) in &deps {
+            // Cross-crate callees from another crate reach MIR as
+            // `<crate>_<fn>` (sanitized `crate::fn`); the dep's own mir.json
+            // names them `<fn>`. Accept both, deriving `<crate>` from the
+            // `<crate>.mir.json` filename produced by rsc_driver.
+            let crate_name = std::path::Path::new(dep_mir)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.trim_end_matches(".mir.json").to_string())
+                .filter(|n| !n.is_empty());
+            if let Ok(text) = std::fs::read_to_string(dep_mir) {
+                if let Ok(dep) = serde_json::from_str::<MirFile>(&text) {
+                    for f in &dep.functions {
+                        let name = sa_ident(&f.name);
+                        provided.insert(name.clone(), import_path.clone());
+                        if let Some(c) = &crate_name {
+                            provided.insert(format!("{}_{}", c, name), import_path.clone());
+                        }
+                    }
+                }
+            }
+        }
+        let names: Vec<String> = exts.keys().cloned().collect();
+        for name in names {
+            if !joined.contains(&format!("call @{name}(")) && !joined.contains(&format!("call @{name} ")) {
+                continue;
+            }
+            if let Some(imp) = provided.get(&name) {
+                exts.remove(&name);
+                if !dep_imports.contains(imp) {
+                    dep_imports.push(imp.clone());
+                }
+            }
+        }
+    }
+    let mut sa_compat = String::from("@import \"sa_std/io/print.sai\"\n@import \"sa_std/num.sal\"\n");
+    for imp in &dep_imports {
+        sa_compat += &format!("@import \"{}\"\n", imp);
+    }
+    sa_compat += "\n";
     if !exts.is_empty() {
-        let joined = bodies.join("\n");
         sa_compat += "// MIR callees (map to sci/sa_std per STD_MAP.md):\n";
         for (e, sig) in &exts {
             // Dead extern guard: the call site may have gone loud (const
