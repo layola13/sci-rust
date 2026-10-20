@@ -33,7 +33,7 @@ pub fn sum(a: i32, b: i32) -> i32 {
     a + b
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pair {
     pub a: i32,
     pub b: i32,
@@ -41,7 +41,7 @@ pub struct Pair {
 
 /// An enum with a payload: exercised end-to-end (construction, `match`, and
 /// the discriminant) across the crate boundary.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Shape {
     Circle(i32),
     Rect(i32, i32),

@@ -252,16 +252,15 @@ fn plan_borrow_releases(
         if consuming.get(dest).copied().unwrap_or(false) {
             continue;
         }
-        // A mid-function release runs on the path that reaches the last use
-        // only; another path reaching a join would see the borrow still
-        // live (`Composite`) while this path sees it released (`Consumed`).
-        // Releasing at the function exit keeps every path consistent.
+        // A borrow release only clears the lock on the borrowed register (the
+        // borrow view itself stays alive), so it is state-safe on every path:
+        // the register is Active afterwards, and a join sees Active vs
+        // Uninitialized (allowed). Releasing after the last use therefore
+        // unblocks joins that merge a borrowing path with a plain one.
         let ends_function = sites
             .iter()
             .all(|(bi, _)| matches!(f.blocks[*bi].terminator, Term::Return { .. }));
-        if !ends_function {
-            continue;
-        }
+        let _ = ends_function;
         let site = match sites.iter().max().cloned() {
             Some(s) => s,
             // Never read: release right where it was created.
