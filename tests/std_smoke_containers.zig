@@ -21,7 +21,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
     try std.testing.expect(!std.mem.containsAtLeast(u8, vec_src, 1, "示例"));
     try std.testing.expect(!std.mem.containsAtLeast(u8, vec_src, 1, "[DEBUG]"));
     try std.testing.expect(!std.mem.containsAtLeast(u8, vec_src, 1, "sa_print_bytes"));
-    try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "@import \"../num.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "@import \"../num.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "EXPAND NUM_U64_CHECKED_MUL bytes_ok, bytes, cap, elem_size"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, cap, cap"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_src, 1, "EXPAND NUM_U64_CHECKED_MUL shrink_new_bytes_ok, new_bytes, target_cap, elem_size"));
@@ -47,7 +47,7 @@ test "sa_std alloc helpers are concrete and verifiable" {
 
     const vec_macro_src = try common.readFileAlloc(std.testing.allocator, "sa_std/vec.sars");
     defer std.testing.allocator.free(vec_macro_src);
-    try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "@import \"alloc/vec.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "@import \"alloc/vec.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "[MACRO] VEC_NEW"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "[MACRO] VEC_LEN"));
     try std.testing.expect(std.mem.containsAtLeast(u8, vec_macro_src, 1, "[MACRO] VEC_AS_PTR"));
@@ -388,16 +388,16 @@ test "sa_std hashset helpers are concrete and verifiable" {
 
     const collections_hashset = try common.readFileAlloc(std.testing.allocator, "sa_std/collections/hashset.sars");
     defer std.testing.allocator.free(collections_hashset);
-    try std.testing.expect(std.mem.containsAtLeast(u8, collections_hashset, 1, "@import \"../hashset.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, collections_hashset, 1, "@import \"../hashset.sars\""));
 
     const hashset_src = try common.readFileAlloc(std.testing.allocator, "sa_std/hashset.sars");
     defer std.testing.allocator.free(hashset_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"hashset.sal\""));
-    try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"hashmap.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"hashmap.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"core/slice.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"alloc/vec.sal\""));
-    try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"vec.sa\""));
-    try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"num.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"vec.sars\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@import \"num.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "EXPAND NUM_U64_CHECKED_MUL __set_drain_bytes_ok_%out_vec"));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@export sa_set_new"));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashset_src, 1, "@export sa_set_with_capacity"));
@@ -488,12 +488,12 @@ test "sa_std btree_set helpers are concrete and verifiable" {
 
     const collections_btree_set = try common.readFileAlloc(std.testing.allocator, "sa_std/collections/btree_set.sars");
     defer std.testing.allocator.free(collections_btree_set);
-    try std.testing.expectEqualStrings("@import \"../btree_set.sa\"\n", collections_btree_set);
+    try std.testing.expectEqualStrings("@import \"../btree_set.sars\"\n", collections_btree_set);
 
     const btree_set_src = try common.readFileAlloc(std.testing.allocator, "sa_std/btree_set.sars");
     defer std.testing.allocator.free(btree_set_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@import \"btree_set.sal\""));
-    try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@import \"btree_map.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@import \"btree_map.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@export sa_btree_set_new"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@export sa_btree_set_free"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_set_src, 1, "@export sa_btree_set_len"));
@@ -538,7 +538,7 @@ test "sa_std btree_set helpers are concrete and verifiable" {
 
     const btree_map_src = try common.readFileAlloc(std.testing.allocator, "sa_std/btree_map.sars");
     defer std.testing.allocator.free(btree_map_src);
-    try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "@import \"num.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "@import \"num.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, old_cap, old_cap"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "EXPAND NUM_U64_CHECKED_MUL new_bytes_ok, new_bytes, next_cap, BTreeMapEntry_SIZE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, btree_map_src, 1, "EXPAND NUM_U64_CHECKED_MUL clear_bytes_ok, bytes, cap, BTreeMapEntry_SIZE"));
@@ -547,7 +547,7 @@ test "sa_std btree_set helpers are concrete and verifiable" {
     defer std.testing.allocator.free(hashmap_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"core/slice.sal\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"alloc/vec.sal\""));
-    try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"vec.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, hashmap_src, 1, "@import \"vec.sars\""));
 
     var btree_set_error_ctx = saasm.flattener.ErrorContext{};
     var btree_set_flat = saasm.flattener.flattenFileWithContext(std.testing.allocator, "sa_std/btree_set.sars", btree_set_src, &btree_set_error_ctx) catch |err| {
@@ -683,7 +683,7 @@ test "sa_std deque and binary heap capacity arithmetic is checked" {
     const deque_src = try common.readFileAlloc(std.testing.allocator, "sa_std/vec_deque.sars");
     defer std.testing.allocator.free(deque_src);
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "@import \"alloc/vec.sal\""));
-    try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "@import \"num.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "@import \"num.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "EXPAND NUM_U64_CHECKED_MUL with_cap_bytes_ok, bytes, capacity, VecDeque_SLOT_SIZE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, cap, cap"));
     try std.testing.expect(std.mem.containsAtLeast(u8, deque_src, 1, "EXPAND NUM_U64_CHECKED_ADD reserve_needed_ok, needed, len, additional"));
@@ -707,7 +707,7 @@ test "sa_std deque and binary heap capacity arithmetic is checked" {
 
     const heap_src = try common.readFileAlloc(std.testing.allocator, "sa_std/binary_heap.sars");
     defer std.testing.allocator.free(heap_src);
-    try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "@import \"num.sa\""));
+    try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "@import \"num.sars\""));
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "EXPAND NUM_U64_CHECKED_ADD next_cap_ok, next_cap, cap, cap"));
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "EXPAND NUM_U64_CHECKED_MUL bytes_ok, bytes, target_cap, BinaryHeap_SLOT_SIZE"));
     try std.testing.expect(std.mem.containsAtLeast(u8, heap_src, 1, "EXPAND NUM_U64_CHECKED_ADD reserve_needed_ok, needed, len, additional"));

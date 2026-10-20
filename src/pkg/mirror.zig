@@ -212,7 +212,7 @@ test "mirror rejects forbidden global config files" {
     defer tmp.cleanup();
 
     try tmp.dir.createDirPath(std.testing.io, "home/.sars");
-    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "home/.sa/mirror.toml", .data = "github.com = mirror\n" });
+    try tmp.dir.writeFile(std.testing.io, .{ .sub_path = "home/.sars/mirror.toml", .data = "github.com = mirror\n" });
     const home = try tmp.dir.realPathFileAlloc(std.testing.io, "home", std.testing.allocator);
     defer std.testing.allocator.free(home);
 
