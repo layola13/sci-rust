@@ -146,8 +146,16 @@ exit 0，无 broker）。
   构造（`Aggregate`）输出为 `ConstAgg`，mir2sars 像内联聚合一样物化。
 - 借用释放不再重复释放：借用的最后一次使用若是**消耗性**的（take/move），
   借用已随取走结束，不再额外 `!`（否则双重释放）。
+- `&T as PartialEq` 的调用解析：std 的 `impl PartialEq for &T` 只是转发到
+  `T::eq`，driver 现在把这种调用解析到**本 crate 的派生实现**（否则是一个
+  跑不了的 std 符号）。
+- 借用释放只在「借用到函数返回为止」时插入：中途释放只发生在部分路径上，
+  join 处会看到「已释放 vs 仍存活」的状态冲突；其余情况由函数出口统一释放。
 - 仍未覆盖：**提升常量**（promoted const）的引用仍是 loud（值为 0 占位，
   调用方会读到空指针）。
+- 仍未覆盖：**泛型枚举**的字段比较：泛型函数的 MIR 里局部类型仍是 `T`，
+  字段偏移依赖具体类型（无法静态解析），派生 `PartialEq` 的字段比较因此
+  仍是 loud。
 - `for i in a..b`（`Range<T>`）：std 的迭代器协议在 mir2sars 内联——
   `IntoIterator::into_iter` 退化为恒等，`Iterator::next` 展开为「读游标/
   上界 → 比较 → 构造 `Option<(T,)>` → 游标加一」的 SA 代码（布局取自

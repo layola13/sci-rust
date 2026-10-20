@@ -423,6 +423,60 @@ fn local_instance_name<'tcx>(
             return Some(name_from_def(tcx, id));
         }
     }
+    // `<&T as PartialEq>::eq` (std's blanket impl) delegates to `T::eq`:
+    // resolve the local type's own impl so the call reaches the derived
+    // function instead of an unrunnable std symbol.
+    if let Some(local) = local_partial_eq_impl(tcx, def_id, args) {
+        return Some(name_from_def(tcx, local));
+    }
+    None
+}
+
+/// The local `PartialEq::eq` implementation for the pointee of a
+/// `&T as PartialEq` call (the derived `impl PartialEq for T`).
+fn local_partial_eq_impl<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    def_id: rustc_span::def_id::DefId,
+    args: ty::GenericArgsRef<'tcx>,
+) -> Option<rustc_span::def_id::DefId> {
+    if !tcx.def_path_str(def_id).contains("PartialEq") {
+        return None;
+    }
+    let self_ty = args.first()?.as_type()?;
+    let pointee = match self_ty.kind() {
+        TyKind::Ref(_, t, _) => *t,
+        _ => return None,
+    };
+    let adt = match pointee.kind() {
+        TyKind::Adt(d, _) => *d,
+        _ => return None,
+    };
+    let adt = adt.did();
+    for owner in tcx.hir_body_owners() {
+        let did = owner.to_def_id();
+        if !matches!(tcx.def_kind(did), DefKind::AssocFn) {
+            continue;
+        }
+        if tcx.item_name(did) != rustc_span::symbol::sym::eq {
+            continue;
+        }
+        let parent = tcx.parent(did);
+        if !matches!(tcx.def_kind(parent), DefKind::Impl { .. }) {
+            continue;
+        }
+        // The impl's own type: the derived `impl PartialEq for E` has `E`
+        // as its self type (the method name already pins it to `eq`).
+        let impl_self = tcx
+            .normalize_erasing_regions(
+                ty::TypingEnv::fully_monomorphized(),
+                tcx.type_of(parent).instantiate_identity(),
+            );
+        if let TyKind::Adt(d, _) = impl_self.kind() {
+            if d.did() == adt {
+                return Some(did);
+            }
+        }
+    }
     None
 }
 

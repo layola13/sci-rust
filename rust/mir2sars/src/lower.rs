@@ -201,14 +201,20 @@ fn plan_borrow_releases(
     let mut borrowed_by: HashMap<String, Vec<String>> = HashMap::new();
     for (bi, b) in f.blocks.iter().enumerate() {
         for (si, st) in b.statements.iter().enumerate() {
-            if let Stmt::Assign { dest, rvalue: Rvalue::Ref { place, agg, zst, mut_, projected, .. }, .. } = st {
-                // Shared borrows of a plain place are lowered as `&place`
-                // (a borrow view): releasing it clears the lock on the
-                // source without consuming the register. Projected borrows
-                // lower to `ptr_add` (an interior pointer): releasing one
-                // consumes its base, which would poison the phi state, so
-                // they are left alone.
-                if *mut_ || (!*projected && !*agg && !*zst) {
+            if let Stmt::Assign { dest, rvalue: Rvalue::Ref { place, agg, zst, mut_, projected, ty, .. }, .. } = st {
+                // A shared borrow of a plain place lowers to a value copy
+                // (a buffer, no lock) unless the place is pointer-valued
+                // (then it is a real reborrow that locks the source).
+                // Projected borrows lower to `ptr_add` (an interior
+                // pointer): releasing one consumes its base, which would
+                // poison the phi state, so they are left alone.
+                if *mut_ || (!*projected && !*agg && !*zst && ty.as_deref() == Some("ptr")) {
+                    // A mid-function release must be reached by every path
+                    // that reaches a join, or the borrow's state differs
+                    // there (`PhiStateConflict`). The release is therefore
+                    // only planned when the borrow ends the function (its
+                    // last use is the return); otherwise the exit free
+                    // releases it.
                     borrow_src.insert(dest.clone(), place.clone());
                     borrow_def.insert(dest.clone(), (bi, si));
                     borrowed_by.entry(place.clone()).or_default().push(dest.clone());
@@ -244,6 +250,16 @@ fn plan_borrow_releases(
         // A borrow whose last use consumes it (a take/move) is already
         // finished: releasing it again would double-release the register.
         if consuming.get(dest).copied().unwrap_or(false) {
+            continue;
+        }
+        // A mid-function release runs on the path that reaches the last use
+        // only; another path reaching a join would see the borrow still
+        // live (`Composite`) while this path sees it released (`Consumed`).
+        // Releasing at the function exit keeps every path consistent.
+        let ends_function = sites
+            .iter()
+            .all(|(bi, _)| matches!(f.blocks[*bi].terminator, Term::Return { .. }));
+        if !ends_function {
             continue;
         }
         let site = match sites.iter().max().cloned() {
@@ -1008,35 +1024,6 @@ fn plan_return_phi(
     (joins, pred_ret)
 }
 
-trait DebugStmt {
-    fn dest_str(&self) -> &str;
-    fn debug_str(&self) -> String;
-}
-
-impl DebugStmt for Stmt {
-    fn dest_str(&self) -> &str {
-        match self {
-            Stmt::Assign { dest, .. } => dest,
-            _ => "",
-        }
-    }
-    fn debug_str(&self) -> String {
-        match self {
-            Stmt::Assign { dest, rvalue, .. } => {
-                let kind = match rvalue {
-                    Rvalue::Use { op } => match op.proj() {
-                        Some(pj) => format!("Use(proj off={} ty={})", pj.offset, pj.ty),
-                        None => "Use".to_string(),
-                    },
-                    _ => "other".to_string(),
-                };
-                format!("{} = {}", dest, kind)
-            }
-            _ => String::new(),
-        }
-    }
-}
-
 pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     // Join-ambiguous scalar locals (`Operand::Conflict` from version.rs) are
     // routed through a per-use stack slot: versions stored on the frontier,
@@ -1048,15 +1035,6 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     }
     // Projected reads in value positions become loads into temps.
     let owned = materialize_projected_operands(&owned);
-    if std::env::var("SA_DEBUG_MAT").is_ok() {
-        for b in owned.blocks.iter() {
-            for st in b.statements.iter() {
-                if st.dest_str().starts_with("_t") {
-                    eprintln!("[mat] {} {}", b.id, st.debug_str());
-                }
-            }
-        }
-    }
     let f = &owned;
     // Typed header: MIR arg locals `_1..` bind here (bare `@f()` would leave
     // them unbound: UnknownRegister). Ret defaults to i32 (old fixtures).

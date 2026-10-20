@@ -76,8 +76,11 @@ pub fn place_proj<'tcx>(
             }
             ProjectionElem::Field(idx, fty) => {
                 has_field = true;
+                // A generic ADT's type may carry unresolved args; normalize
+                // before asking for its layout.
+                let cur_norm = cur;
                 let layout = tcx
-                    .layout_of(PseudoCanonicalInput { typing_env: env, value: cur })
+                    .layout_of(PseudoCanonicalInput { typing_env: env, value: cur_norm })
                     .ok()?;
                 let field_off = match (variant.take(), &layout.variants) {
                     (Some(vi), rustc_abi::Variants::Multiple { variants, .. }) => {
