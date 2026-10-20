@@ -121,8 +121,13 @@ pub fn rvalue_json<'tcx>(
             }
             // Borrow of a projected place (`&(*p).f`, `&local.f`): the address
             // is the base plus the field offset, not the base register.
-            if let Some((off, _ty, _via)) = crate::place::place_proj(tcx, body, p) {
-                write!(into, ", \"offset\": {}, \"projected\": true", off).unwrap();
+            if let Some((off, ty, _via)) = crate::place::place_proj(tcx, body, p) {
+                write!(
+                    into,
+                    ", \"offset\": {}, \"projected\": true, \"ty\": \"{}\"",
+                    off, ty
+                )
+                .unwrap();
             }
             into.push('}');
         }

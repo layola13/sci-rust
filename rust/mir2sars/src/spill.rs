@@ -746,6 +746,7 @@ mod spill_tests {
                 agg: false,
                 offset: 0,
                 projected: false,
+                ty: None,
             },
         }
     }
@@ -985,6 +986,7 @@ mod spill_tests {
                         agg: false,
                         offset: 0,
                         projected: false,
+                        ty: None,
                     },
                 },
                 cast_copy("_7", "_6", "usize"),

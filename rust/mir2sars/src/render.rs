@@ -99,7 +99,7 @@ pub fn render_rvalue(
                 _ => format!("{} = {}", dest, render_operand(op)),
             }
         }
-        Rvalue::Ref { place, mut_, via, zst, agg, offset, projected } => {
+        Rvalue::Ref { place, mut_, via, zst, agg, offset, projected, .. } => {
             // Zero-sized borrows carry no data: null marker (exact).
             // Trailing `//` is ForbiddenSyntax: provenance goes full-line
             // (the Assign arm indents each line of multi-line returns).

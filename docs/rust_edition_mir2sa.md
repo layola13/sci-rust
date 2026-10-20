@@ -101,7 +101,18 @@ exit 0，无 broker）。
   mir2sars 降为 `ptr_add base, off`（ISA 已有 `ptr_add`）。
 - `place_types` 现在按 `proj.ty` 定型（字段读是字段类型，不是基址的
   `ptr`），join 槽与 spill 的类型判定更准。
-- 仍未覆盖：派生 `PartialEq`（枚举）里 `&(*p).f` 借用寄存器在 join 处
-  状态不一致（`PhiStateConflict`）：需要按 MIR `StorageDead` 释放借用
-  临时量。
+- 借用生命周期：SA 无词法作用域，`&x` 会把源寄存器锁住；join 处若一条
+  路径持锁、另一条没有，就报 `PhiStateConflict`。因此普通借用（`&x`，
+  borrow view）在**最后一次使用后**显式 `!` 释放（只清锁、不消耗寄存器）；
+  投影借用（`ptr_add` 产生的 interior pointer）不释放（释放会消耗基址
+  寄存器，污染 phi 状态）。
+- 派生 `PartialEq`（枚举/结构体）：`<T as std::cmp::PartialEq>::eq` 是
+  std 函数，SA 运行时无法提供。当两个实参都是「字段投影借用」时，
+  `plan_inline_eq` 直接内联为字段值比较（`load` 两个字段 + `eq`），
+  并跳过只为该调用服务的借用语句（不产生借用/interior pointer）。
+  因此 `#[derive(PartialEq)] enum` 可 check+run。
+- `call` 终结符的边是**无条件**的（除分歧调用外都会跳到 target），
+  return-phi 计划据此把 `call → join` 也当作无条件边。
+- 仍未覆盖：niche tag 枚举（`Option<&T>` 等）——判别式无存储槽，需要
+  niche 专用计算（当前显式 loud）。
 

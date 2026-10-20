@@ -146,11 +146,11 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
     let rhs = rhs.trim();
     if let Some(rest) = rhs.strip_prefix("&mut ") {
         let p = rest.trim();
-        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: true, via: None, zst: false, agg: false, offset: 0, projected: false };
+        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: true, via: None, zst: false, agg: false, offset: 0, projected: false, ty: None };
     }
     if let Some(rest) = rhs.strip_prefix('&') {
         let p = rest.trim();
-        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: false, via: None, zst: false, agg: false, offset: 0, projected: false };
+        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: false, via: None, zst: false, agg: false, offset: 0, projected: false, ty: None };
     }
     // Cast before plain Use so `copy X as T (Kind)` is not swallowed.
     if let Some(as_pos) = rhs.find(" as ") {

@@ -357,7 +357,7 @@ mod borrow_end_tests {
             dest: dest.to_string(),
             dest_place: None,
             dest_proj: None,
-            rvalue: Rvalue::Ref { place: place.to_string(), mut_: false, via: None, zst: false, agg: false, offset: 0, projected: false },
+            rvalue: Rvalue::Ref { place: place.to_string(), mut_: false, via: None, zst: false, agg: false, offset: 0, projected: false, ty: None },
         }
     }
 
@@ -463,7 +463,7 @@ mod borrow_end_tests {
             blk("bb0", vec![Stmt::Assign {
                 dest: "_2".to_string(), dest_place: None,
                 dest_proj: None,
-                rvalue: Rvalue::Ref { place: "_1".to_string(), mut_: false, via: None, zst: true, agg: false, offset: 0, projected: false },
+                rvalue: Rvalue::Ref { place: "_1".to_string(), mut_: false, via: None, zst: true, agg: false, offset: 0, projected: false, ty: None },
             }], Term::Goto { target: "bb1".to_string() }),
             blk("bb1", vec![], Term::Drop { place: "_1".to_string(), target: "bb2".to_string() }),
             blk("bb2", vec![], Term::Return { ret: None }),

@@ -79,6 +79,306 @@ pub fn param_agg_sizes(f: &Function) -> std::collections::BTreeMap<String, u64> 
     m
 }
 
+/// Registers a statement reads (value uses; the dest is not a use).
+fn stmt_uses(st: &Stmt) -> Vec<String> {
+    let mut out = Vec::new();
+    match st {
+        Stmt::Assign { dest_place, dest_proj, rvalue, .. } => {
+            out.extend(rvalue_uses(rvalue));
+            // A field store reads the base register; a plain assignment does
+            // not read its own destination.
+            if dest_proj.is_some() {
+                if let Some(dp) = dest_place {
+                    out.push(dp.clone());
+                }
+            }
+        }
+        Stmt::SetDisc { place, .. } => out.push(place.clone()),
+        _ => {}
+    }
+    out
+}
+
+/// Collect the operand-level reads of an rvalue.
+fn rvalue_uses(rv: &Rvalue) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut push_op = |op: &Operand| {
+        if let Operand::Move { place, .. } | Operand::Copy { place, .. } = op {
+            out.push(place.clone());
+        }
+    };
+    match rv {
+        Rvalue::Use { op } => push_op(op),
+        Rvalue::Call { args, .. } => args.iter().for_each(&mut push_op),
+        Rvalue::BinOp { left, right, .. } => {
+            push_op(left);
+            push_op(right);
+        }
+        Rvalue::UnOp { operand, .. } => push_op(operand),
+        Rvalue::Cast { op, .. } => push_op(op),
+        Rvalue::Aggregate { elems, .. } => elems.iter().for_each(&mut push_op),
+        Rvalue::Repeat { op, .. } => push_op(op),
+        Rvalue::Ref { place, .. } | Rvalue::RawPtr { place, .. } => out.push(place.clone()),
+        Rvalue::Discriminant { place, .. } => out.push(place.clone()),
+        _ => {}
+    }
+    out
+}
+
+/// Registers a terminator reads (value uses; the call dest is a def).
+fn term_uses(t: &Term) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut push_op = |op: &Operand| {
+        if let Operand::Move { place, .. } | Operand::Copy { place, .. } = op {
+            out.push(place.clone());
+        }
+    };
+    match t {
+        Term::SwitchInt { discr, .. } => push_op(discr),
+        Term::Call { args, .. } => args.iter().for_each(&mut push_op),
+        Term::Assert { cond, .. } => push_op(cond),
+        Term::Drop { place, .. } => out.push(place.clone()),
+        Term::InlineAsm { ins, .. } => ins.iter().for_each(&mut push_op),
+        _ => {}
+    }
+    out
+}
+
+/// Borrow temporaries (`Rvalue::Ref` of a non-aggregate place) hold a live
+/// borrow. Rust ends a borrow at its last use; SA has no scopes, so the
+/// borrow is released explicitly. Without the release the borrowed register
+/// stays locked and a join that merges a borrowing path with a non-borrowing
+/// one sees mismatched states (`PhiStateConflict`).
+///
+/// Returns `(block, statement) -> registers to release after that statement`.
+fn plan_borrow_releases(
+    f: &Function,
+) -> std::collections::HashMap<(usize, usize), Vec<String>> {
+    use std::collections::HashMap;
+    // dest -> borrowed source, plus the statement that defines it.
+    let mut borrow_src: HashMap<String, String> = HashMap::new();
+    let mut borrow_def: HashMap<String, (usize, usize)> = HashMap::new();
+    let mut borrowed_by: HashMap<String, Vec<String>> = HashMap::new();
+    for (bi, b) in f.blocks.iter().enumerate() {
+        for (si, st) in b.statements.iter().enumerate() {
+            if let Stmt::Assign { dest, rvalue: Rvalue::Ref { place, agg, zst, mut_, projected, .. }, .. } = st {
+                // Shared borrows of a plain place are lowered as `&place`
+                // (a borrow view): releasing it clears the lock on the
+                // source without consuming the register. Projected borrows
+                // lower to `ptr_add` (an interior pointer): releasing one
+                // consumes its base, which would poison the phi state, so
+                // they are left alone.
+                if *mut_ || (!*projected && !*agg && !*zst) {
+                    borrow_src.insert(dest.clone(), place.clone());
+                    borrow_def.insert(dest.clone(), (bi, si));
+                    borrowed_by.entry(place.clone()).or_default().push(dest.clone());
+                }
+            }
+        }
+    }
+    // Value uses per register. Statement sites use the statement index;
+    // terminator uses use `usize::MAX` (nothing may follow a terminator, so
+    // the release goes right after the terminator's call line).
+    let mut uses: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
+    for (bi, b) in f.blocks.iter().enumerate() {
+        for (si, st) in b.statements.iter().enumerate() {
+            for u in stmt_uses(st) {
+                uses.entry(u).or_default().push((bi, si));
+            }
+        }
+        for u in term_uses(&b.terminator) {
+            uses.entry(u).or_default().push((bi, usize::MAX));
+        }
+    }
+    let mut out: HashMap<(usize, usize), Vec<String>> = HashMap::new();
+    for (dest, src) in &borrow_src {
+        // A borrow of a borrow is released together with its borrower.
+        if borrowed_by.contains_key(dest) {
+            continue;
+        }
+        let sites = uses.get(dest).cloned().unwrap_or_default();
+        let site = match sites.iter().max().cloned() {
+            Some(s) => s,
+            // Never read: release right where it was created.
+            None => match borrow_def.get(dest) {
+                Some(d) => *d,
+                None => continue,
+            },
+        };
+        // Chain: the borrow and the borrow(s) it holds, released outermost
+        // first (releasing an inner borrow while it is still borrowed traps).
+        let mut chain = vec![dest.clone()];
+        let mut cur = src.clone();
+        let mut guard = 0;
+        while let Some(s) = borrow_src.get(&cur) {
+            chain.push(cur.clone());
+            cur = s.clone();
+            guard += 1;
+            if guard > 8 {
+                break;
+            }
+        }
+        // Inner members must be dead at the release point.
+        let mut keep: Vec<String> = Vec::new();
+        for (i, m) in chain.iter().enumerate() {
+            if i == 0 {
+                keep.push(m.clone());
+                continue;
+            }
+            let later = uses
+                .get(m)
+                .map(|v| v.iter().any(|s| *s > site))
+                .unwrap_or(false);
+            if !later {
+                keep.push(m.clone());
+            }
+        }
+        out.entry(site).or_default().extend(keep);
+    }
+    out
+}
+
+/// A derived `PartialEq` comparison inlined into a value compare.
+///
+/// Rust's derived `PartialEq` for primitives calls
+/// `<T as std::cmp::PartialEq>::eq`, a std function the SA runtime cannot
+/// provide. When both arguments are borrows of a projected field, the
+/// comparison is exactly a compare of the two field values, so it is
+/// inlined: load both fields and compare.
+struct InlineEq {
+    left: (String, u64, String),
+    right: (String, u64, String),
+    ne: bool,
+}
+
+/// Resolve a borrow of a projected field to `(base, offset, type)`: the
+/// value the borrow designates.
+fn resolve_borrow_field(
+    defs: &std::collections::HashMap<String, Rvalue>,
+    place: &str,
+) -> Option<(String, u64, String)> {
+    let Rvalue::Ref {
+        place: q,
+        projected: false,
+        agg: false,
+        zst: false,
+        ..
+    } = defs.get(place)?
+    else {
+        return None;
+    };
+    let Rvalue::Ref {
+        place: r,
+        offset,
+        projected: true,
+        ty: Some(t),
+        ..
+    } = defs.get(q)?
+    else {
+        return None;
+    };
+    Some((r.clone(), *offset, t.clone()))
+}
+
+/// Plan the inlined primitive comparisons of one function: block index ->
+/// comparison, plus the registers whose borrow statements become dead (they
+/// are skipped so no borrow/interior pointer is materialized).
+fn plan_inline_eq(
+    f: &Function,
+) -> (
+    std::collections::HashMap<usize, InlineEq>,
+    std::collections::HashSet<String>,
+) {
+    use std::collections::{HashMap, HashSet};
+    let mut defs: HashMap<String, Rvalue> = HashMap::new();
+    for b in &f.blocks {
+        for st in &b.statements {
+            if let Stmt::Assign { dest, rvalue, .. } = st {
+                if matches!(rvalue, Rvalue::Ref { .. }) {
+                    defs.insert(dest.clone(), rvalue.clone());
+                }
+            }
+        }
+    }
+    // Use counts (statements + terminators): a borrow may only be skipped
+    // when the inlined call is its single user.
+    let mut uses: HashMap<String, usize> = HashMap::new();
+    for b in &f.blocks {
+        for st in &b.statements {
+            for u in stmt_uses(st) {
+                *uses.entry(u).or_insert(0) += 1;
+            }
+        }
+        for u in term_uses(&b.terminator) {
+            *uses.entry(u).or_insert(0) += 1;
+        }
+    }
+    let mut calls: HashMap<usize, InlineEq> = HashMap::new();
+    let mut skip: HashSet<String> = HashSet::new();
+    for (bi, b) in f.blocks.iter().enumerate() {
+        let Term::Call { func, func_raw, args, .. } = &b.terminator else {
+            continue;
+        };
+        let raw = func_raw.clone().unwrap_or_default();
+        if !raw.contains("std::cmp::PartialEq") && !func.contains("as_std_cmp_PartialEq") {
+            continue;
+        }
+        let ne = raw.contains("PartialEq::ne") || func.ends_with("_ne");
+        if args.len() != 2 {
+            continue;
+        }
+        let mut resolved = [None, None];
+        for (i, arg) in args.iter().enumerate() {
+            let place = match arg {
+                Operand::Move { place, .. } | Operand::Copy { place, .. } => place,
+                _ => {
+                    resolved = [None, None];
+                    break;
+                }
+            };
+            let r = resolve_borrow_field(&defs, place);
+            if r.is_none() {
+                resolved = [None, None];
+                break;
+            }
+            resolved[i] = r;
+        }
+        let (Some(l), Some(r)) = (resolved[0].clone(), resolved[1].clone()) else {
+            continue;
+        };
+        if l.2 != r.2 {
+            continue;
+        }
+        // The borrows feeding the comparison become dead.
+        let mut dead = true;
+        for arg in args.iter() {
+            if let Operand::Move { place, .. } | Operand::Copy { place, .. } = arg {
+                if uses.get(place).copied().unwrap_or(0) != 1 {
+                    dead = false;
+                }
+                if let Some(Rvalue::Ref { place: q, .. }) = defs.get(place) {
+                    if uses.get(q).copied().unwrap_or(0) != 1 {
+                        dead = false;
+                    }
+                }
+            }
+        }
+        if !dead {
+            continue;
+        }
+        for arg in args.iter() {
+            if let Operand::Move { place, .. } | Operand::Copy { place, .. } = arg {
+                skip.insert(place.clone());
+                if let Some(Rvalue::Ref { place: q, .. }) = defs.get(place) {
+                    skip.insert(q.clone());
+                }
+            }
+        }
+        calls.insert(bi, InlineEq { left: l, right: r, ne });
+    }
+    (calls, skip)
+}
+
 /// A join-ambiguous local (`Operand::Conflict`) lowered through a stack slot:
 /// versions are stored on the incoming frontier, the use site loads the slot.
 struct JoinSlot {
@@ -360,6 +660,9 @@ fn plan_return_phi(
         };
         match &b.terminator {
             Term::Goto { target } => add(target, true),
+            // A call with a target always continues to it (unless it
+            // diverges), so the edge is unconditional.
+            Term::Call { target: Some(t), .. } => add(t, true),
             Term::SwitchInt { targets, otherwise, .. } => {
                 for (_, t) in targets {
                     add(t, false);
@@ -456,6 +759,15 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     if !ret_joins.is_empty() {
         out.push("    mut _ret_phi_spill = stack_alloc 8".to_string());
     }
+    // Borrow temporaries are released after their last use (see
+    // `plan_borrow_releases`): SA has no lexical scopes, and a still-locked
+    // borrow makes a later join see mismatched states.
+    let borrow_releases = plan_borrow_releases(f);
+    // Value types of every local (used by the join-slot type check).
+    let _borrow_types = crate::spill::place_types(f);
+    // Derived `PartialEq` on primitives: inlined as a value compare (std's
+    // `PartialEq::eq` is not runnable here).
+    let (inline_eq, inline_skip) = plan_inline_eq(f);
     let mut block_stores: std::collections::HashMap<usize, Vec<(String, String, String)>> =
         std::collections::HashMap::new();
     for p in &join_slots {
@@ -518,9 +830,14 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
         // (skip the line). Exclusive-branch joins stay legal (never seeded).
         let mut bound = seeds[bi].clone();
         let mut mv_idx = 0usize;
-        for st in &b.statements {
+        for (si, st) in b.statements.iter().enumerate() {
             match st {
                 Stmt::Assign { dest, dest_place, dest_proj, rvalue } => {
+                    // Borrows that only feed an inlined primitive comparison
+                    // are dead: the comparison loads the fields directly.
+                    if inline_skip.contains(dest) {
+                        continue;
+                    }
                     // Return of a by-value aggregate that is (a copy of) a
                     // param: copy it out so the caller owns a distinct
                     // allocation (otherwise the result aliases the caller's
@@ -682,6 +999,12 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                     out.push(format!("    // UNSUPPORTED stmt: {}", text));
                 }
             }
+            // Borrow release: end the borrow right after its last use.
+            if let Some(list) = borrow_releases.get(&(bi, si)) {
+                for r in list {
+                    out.push(format!("    !{}", r));
+                }
+            }
         }
         // Join-slot frontier: the versioned value is defined here (or in an
         // ancestor); publish it for the later use-site load.
@@ -733,6 +1056,32 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
             Term::Call { func, func_raw, args, dest, target, sig } => {
+                // Inlined primitive comparison (derived `PartialEq`).
+                if let Some(ie) = inline_eq.get(&bi) {
+                    let (lb, lo, lt) = &ie.left;
+                    let (rb, ro, rt) = &ie.right;
+                    let v1 = format!("_ie{}_l", bi);
+                    let v2 = format!("_ie{}_r", bi);
+                    out.push(format!("    {} = load {}+{} as {}", v1, lb, lo, lt));
+                    out.push(format!("    {} = load {}+{} as {}", v2, rb, ro, rt));
+                    let d = dest.as_deref().unwrap_or("_0");
+                    out.push(format!(
+                        "    {} = {} {}, {}",
+                        d,
+                        if ie.ne { "ne" } else { "eq" },
+                        v1,
+                        v2
+                    ));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
+                }
                 if let Some(raw) = func_raw {
                     out.push(format!("    // MIR: {}", flat_comment(raw)));
                 }
@@ -816,12 +1165,19 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         }
                     }
                 }
+                // Borrow release after a terminator call: the borrow's last
+                // use is this call, so the borrow ends here. A `!` may not
+                // follow the jump, so it goes right after the call line.
+                if let Some(list) = borrow_releases.get(&(bi, usize::MAX)) {
+                    for r in list {
+                        out.push(format!("    !{}", r));
+                    }
+                }
                 match target {
                     Some(t) => out.push(format!("    jmp {}", sa_label(t))),
                     None => {
                         // Diverging call: panic diverges without ending the
-                        // SA function textually (bare `unreachable` would).
-                        out.push("    // diverging call".to_string());
+                        // SA function textually (bare `unreachable` would).                        out.push("    // diverging call".to_string());
                         out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
                     }
                 }

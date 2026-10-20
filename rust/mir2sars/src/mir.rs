@@ -106,6 +106,9 @@ pub enum Rvalue {
         /// address is `ptr_add place, offset` (not `&place`).
         #[serde(default)] offset: u64,
         #[serde(default, skip_serializing_if = "is_false")] projected: bool,
+        /// Value type of the borrowed place (projected borrows only).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ty: Option<String>,
     },
     Call {
         func: String,
