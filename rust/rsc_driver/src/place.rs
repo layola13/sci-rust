@@ -85,6 +85,9 @@ pub struct PlaceProjInfo {
     pub ty: String,
     pub via: String,
     pub deref_base: bool,
+    /// The word the base register is loaded from (a `Vec`'s data pointer);
+    /// `None` means the base holds the pointer itself.
+    pub base_off: Option<u64>,
 }
 
 pub fn place_proj<'tcx>(
@@ -106,6 +109,9 @@ pub fn place_proj<'tcx>(
     // A slice's elements live behind the fat pointer's data word: the base
     // register must be loaded before the offset is applied.
     let mut deref_base = false;
+    // The word the base register must be loaded from (a `Vec`'s data pointer
+    // word); `None` means the base holds the pointer directly.
+    let mut base_load_off: Option<u64> = None;
     let mut leaf: Ty<'tcx> = cur;
     // Active enum variant introduced by `Downcast` (consumed by the following
     // `Field` to pick that variant's payload offset).
@@ -116,6 +122,35 @@ pub fn place_proj<'tcx>(
                 cur = match cur.kind() {
                     TyKind::Ref(_, t, _) => *t,
                     TyKind::RawPtr(t, _) => *t,
+                    // `Vec<T>` derefs to its slice: the data pointer lives in
+                    // the vector's own word, so the base must be loaded from
+                    // that offset before the element offset applies.
+                    TyKind::Adt(def, targs) => {
+                        let elem = targs.iter().find_map(|a| a.as_type())?;
+                        let env = TypingEnv::fully_monomorphized();
+                        let layout = tcx
+                            .layout_of(PseudoCanonicalInput {
+                                typing_env: env,
+                                value: cur,
+                            })
+                            .ok()?;
+                        let ptr_off = crate::emit::field_offset_pub(
+                            tcx,
+                            env,
+                            cur,
+                            &layout.layout,
+                            0,
+                            "ptr",
+                        )?;
+                        base_load_off = Some(ptr_off);
+                        // The element type of the slice.
+                        let slice_ty = Ty::new_slice(tcx, elem);
+                        leaf = slice_ty;
+                        has_deref = true;
+                        deref_base = true;
+                        variant = None;
+                        continue;
+                    }
                     _ => return None,
                 };
                 leaf = cur;
@@ -177,5 +212,6 @@ pub fn place_proj<'tcx>(
         ty,
         via: trunc(format!("{:?}", p), 80),
         deref_base,
+        base_off: base_load_off,
     })
 }

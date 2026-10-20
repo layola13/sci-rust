@@ -265,6 +265,9 @@ pub struct PlaceProj {
     /// offset (a slice's elements live behind its data word).
     #[serde(default, skip_serializing_if = "is_false")]
     pub deref_base: bool,
+    /// The word the base register is loaded from (a `Vec`'s data pointer).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_off: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

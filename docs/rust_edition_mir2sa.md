@@ -205,6 +205,9 @@ exit 0，无 broker）。
   driver 按**字段名**递归解析 `Vec` 的嵌套布局（`RawVec { inner: RawVecInner
   { ptr, cap } }` + `len`），后端据此读写三个字；`push` 满了就重新分配并用
   `sa_mem_copy` 搬运旧元素（新 `Vec` 预分配一个小缓冲，指针始终有效）。
+- **`Vec` 下标** `v[i]`：rustc 把 `Vec` 的下标编译成 `Index::index` 调用，
+  后端内联为「读数据指针 + 下标 * 元素大小 + 取地址」（返回**元素引用**，
+  与 Rust 的 `Index` 语义一致；越界检查由 MIR 的 `BoundsCheck` 断言负责）。
 - 仍未覆盖：`println!`/`format!` 的**格式化栈**（`Argument::new_display`、
   `Arguments::new`、`io::_print` 都是 std 符号）——`panic!` 路径已折叠为
   原生 `panic(code)` ✓，但主动打印仍需 std 符号。

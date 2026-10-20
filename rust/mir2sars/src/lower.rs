@@ -976,6 +976,7 @@ fn apply_join_slots(f: &mut Function, plans: &[JoinSlot]) {
                                 via: p.via.clone(),
                                 index: p.index.clone(),
                                 deref_base: true,
+                                base_off: p.base_off,
                             },
                             None => PlaceProj {
                                 offset: 0,
@@ -983,6 +984,7 @@ fn apply_join_slots(f: &mut Function, plans: &[JoinSlot]) {
                                 via: None,
                                 index: None,
                                 deref_base: false,
+                                base_off: None,
                             },
                         }),
                     };

@@ -438,6 +438,24 @@ pub fn plan_vec_shim(
             lines.push(format!("{} = eq {}, 0", dest, tmp));
             Some(lines)
         }
+        "index" => {
+            // `v[i]`: the element at `data + i * elem_size`. The MIR's
+            // bounds check runs before this call, so the index is in range.
+            let v = arg_reg(0)?;
+            let idx = arg_reg(1)?;
+            let ety = if sh.elem_ty.is_empty() { "u64".to_string() } else { sh.elem_ty.clone() };
+            let data = format!("_vec_data_{}", bid);
+            let slot = format!("_vec_slot_{}", bid);
+            let addr = format!("_vec_addr_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("{} = load {}+{} as ptr", data, v, sh.ptr_off));
+            lines.push(format!("{} = mul {}, {}", slot, idx, esz));
+            lines.push(format!("{} = ptr_add {}, {}", addr, data, slot));
+            // `Index::index` returns a *reference* to the element.
+            lines.push(format!("{} = {}", dest, addr));
+            let _ = ety;
+            Some(lines)
+        }
         "push" => {
             // `push(&mut v, x)`: grow when full, then append.
             let v = arg_reg(0)?;

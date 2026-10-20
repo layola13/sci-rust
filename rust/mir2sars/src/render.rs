@@ -99,7 +99,15 @@ pub fn render_rvalue(
                     // word first, then apply the (dynamic) index.
                     let (base, prelude) = if pj.deref_base {
                         let bp = format!("{}_b", dest);
-                        (bp.clone(), format!("{} = load {}+0 as ptr\n", bp, place))
+                        (
+                            bp.clone(),
+                            format!(
+                                "{} = load {}+{} as ptr\n",
+                                bp,
+                                place,
+                                pj.base_off.unwrap_or(0)
+                            ),
+                        )
                     } else {
                         (place.clone(), String::new())
                     };

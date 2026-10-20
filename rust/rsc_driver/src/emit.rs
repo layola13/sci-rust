@@ -39,6 +39,9 @@ fn write_proj_operand<'a>(
             if pi.deref_base {
                 into.push_str(", \"deref_base\": true");
             }
+            if let Some(bo) = pi.base_off {
+                write!(into, ", \"base_off\": {}", bo).unwrap();
+            }
             if let Some((idx, size)) = crate::place::place_dynamic_index(tcx, body, p) {
                 write!(into, ", \"index\": [\"{}\", {}]", idx, size).unwrap();
             }
@@ -146,6 +149,8 @@ fn vec_layout_info<'tcx>(
         "len"
     } else if has("empty") {
         "is_empty"
+    } else if has("index") {
+        "index"
     } else {
         return None;
     };
@@ -191,9 +196,9 @@ fn vec_layout_info<'tcx>(
     // The words are found by field name: `Vec` nests them
     // (`RawVec { inner: RawVecInner { ptr, cap }, .. }` plus `len`).
     let offs = [
-        field_offset(tcx, env, vec_ty, &layout.layout, 0, "ptr")?,
-        field_offset(tcx, env, vec_ty, &layout.layout, 0, "cap")?,
-        field_offset(tcx, env, vec_ty, &layout.layout, 0, "len")?,
+        field_offset_pub(tcx, env, vec_ty, &layout.layout, 0, "ptr")?,
+        field_offset_pub(tcx, env, vec_ty, &layout.layout, 0, "cap")?,
+        field_offset_pub(tcx, env, vec_ty, &layout.layout, 0, "len")?,
     ];
     Some(format!(
         "{{\"kind\": \"{}\", \"ptr_off\": {}, \"cap_off\": {}, \"len_off\": {}, \"elem_size\": {}, \"elem_ty\": \"{}\"}}",
@@ -203,7 +208,7 @@ fn vec_layout_info<'tcx>(
 
 /// Byte offset of a named field (recursing into nested structs): `Vec`
 /// keeps its words several levels down.
-fn field_offset<'tcx>(
+pub fn field_offset_pub<'tcx>(
     tcx: TyCtxt<'tcx>,
     env: rustc_middle::ty::TypingEnv<'tcx>,
     ty: Ty<'tcx>,
@@ -229,7 +234,7 @@ fn field_offset<'tcx>(
             typing_env: env,
             value: fty,
         }) {
-            if let Some(o) = field_offset(tcx, env, fty, &fl.layout, off, name) {
+            if let Some(o) = field_offset_pub(tcx, env, fty, &fl.layout, off, name) {
                 return Some(o);
             }
         }
