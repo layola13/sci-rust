@@ -1,6 +1,6 @@
 //! mir2sa::layout.
 use crate::const_util::{array_elem_size, const_array_elem, const_elem_ty, sa_scalar_ty, scalar_hex_value};
-use crate::mir::{AdtLayout, EnumTag, Operand, STR_INLINE_MAX};
+use crate::mir::{AdtLayout, EnumTag, NicheStore, Operand, STR_INLINE_MAX};
 
 /// `(((*_46).1: ...).0: [i32; 3])` lowers to sla-style `alloc` + `store`
 /// (cf. `sci/sa_std/alloc/vec.sa`: `buf = alloc bytes`,
@@ -61,8 +61,9 @@ pub fn lower_adt_init(
     elems: &[Operand],
     layout: Option<&AdtLayout>,
     tag: Option<&EnumTag>,
+    niche_store: Option<&NicheStore>,
 ) -> Option<Vec<String>> {
-    if elems.len() < 2 && tag.is_none() {
+    if elems.len() < 2 && tag.is_none() && niche_store.is_none() && layout.is_none() {
         return None;
     }
     let mut plans: Vec<FieldPlan> = Vec::with_capacity(elems.len());
@@ -107,7 +108,7 @@ pub fn lower_adt_init(
         v1_total = align_agg_offset(v1_total, p.align_size());
         v1_total += p.size();
     }
-    if v1_total == 0 && tag.is_none() {
+    if v1_total == 0 && tag.is_none() && niche_store.is_none() {
         // All fields zero-sized: no storage, bind a null marker (exact).
         // (An enum unit variant still needs storage for its tag.)
         return Some(vec![
@@ -160,6 +161,13 @@ pub fn lower_adt_init(
                 lines.push(format!("store {}+{}, {} as u64", base, offsets[i] + 8, bytes.len()));
             }
         }
+    }
+    if let Some(n) = niche_store {
+        // Niche variant: the niche value lives in the niche slot.
+        lines.push(format!(
+            "store {}+{}, {} as {}",
+            base, n.offset, n.value, n.ty
+        ));
     }
     if let Some(t) = tag {
         let tag_end = t.offset + match t.ty.as_str() {

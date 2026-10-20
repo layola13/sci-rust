@@ -796,6 +796,7 @@ mod spill_tests {
                         elems: vec![Operand::Move { place: "_78".to_string(), proj: None }],
                         layout: None,
                         tag: None,
+                        niche_store: None,
                     },
                 },
             ],

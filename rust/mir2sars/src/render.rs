@@ -265,15 +265,23 @@ pub fn render_rvalue(
                 }
             }
         }
-        Rvalue::Discriminant { place, offset, ty, niche } => {
+        Rvalue::Discriminant { place, offset, ty, niche, niche_offset, none_variant, some_variant } => {
             // Tag may sit at a non-zero offset (rustc layout); the driver
             // resolves both the offset and the tag's integer width. Fall back
             // to the legacy `+0 as i64` when the driver could not.
             if *niche {
-                // Niche tags (`Option<&T>`) are not a stored discriminant;
-                // computing them needs niche-specific lowering. Stay honest.
-                unsup.push(format!("{}:{} NicheDiscriminant", bid, dest));
-                format!("// UNSUPPORTED niche discriminant ({})\n{} = 0", place.trim(), dest)
+                // Niche tag (`Option<&T>`): the variant follows from the niche
+                // field's value (null pointer => the niche variant).
+                if *none_variant == 0 && *some_variant == 1 {
+                    format!(
+                        "// niche discriminant: 0 = null (None), 1 = payload (Some)\n{}_n = load {}+{} as ptr\n{} = ne {}_n, 0",
+                        dest, place, niche_offset, dest, dest
+                    )
+                } else {
+                    // Other niche shapes stay honest.
+                    unsup.push(format!("{}:{} NicheDiscriminant", bid, dest));
+                    format!("// UNSUPPORTED niche discriminant ({})\n{} = 0", place.trim(), dest)
+                }
             } else {
                 match ty {
                     Some(t) => format!("{} = load {}+{} as {}", dest, place, offset, t),
@@ -319,10 +327,10 @@ pub fn render_rvalue(
             // Lowered to the shared registry (sci/sa_std/thread_local.sai).
             format!("// thread-local registry slot\n{} = call @sa_thread_local_slot({})", dest, tls_key(def))
         }
-        Rvalue::Aggregate { elems, layout, tag } => {
-            if elems.is_empty() && tag.is_none() {
+        Rvalue::Aggregate { elems, layout, tag, niche_store } => {
+            if elems.is_empty() && tag.is_none() && niche_store.is_none() {
                 format!("// zero-elem aggregate (unit/niche; tag via SetDisc when present)\n{} = 0", dest)
-            } else if elems.len() == 1 && tag.is_none() {
+            } else if elems.len() == 1 && tag.is_none() && niche_store.is_none() && layout.is_none() {
                 // Spilled shared buffers reload like plain Uses.
                 if let Some(t) = spill_reg(&elems[0], spill) {
                     return format!(
@@ -336,7 +344,7 @@ pub fn render_rvalue(
                 if let Some(mut lines) = lower_array_init(bid, place, elems) {
                     crate::spill::spill_slot_lines(&mut lines, bid, spill);
                     lines.join("\n")
-                } else if let Some(mut lines) = lower_adt_init(bid, dest, place, elems, layout.as_ref(), tag.as_ref()) {
+                } else if let Some(mut lines) = lower_adt_init(bid, dest, place, elems, layout.as_ref(), tag.as_ref(), niche_store.as_ref()) {
                     crate::spill::spill_slot_lines(&mut lines, bid, spill);
                     lines.join("\n")
                 } else {

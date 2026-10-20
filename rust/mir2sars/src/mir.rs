@@ -66,6 +66,14 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// Niche-encoded enum construction: the niche value and its slot.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct NicheStore {
+    pub offset: u64,
+    pub value: u64,
+    pub ty: String,
+}
+
 /// Enum variant construction: discriminant value plus the tag slot's byte
 /// offset and integer width (rustc `TagEncoding::Direct` only).
 #[derive(Serialize, Deserialize, Clone)]
@@ -131,6 +139,10 @@ pub enum Rvalue {
         layout: Option<AdtLayout>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         tag: Option<EnumTag>,
+        /// Niche-encoded enum construction: the niche value written into the
+        /// niche slot (the niche variant has no payload).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        niche_store: Option<NicheStore>,
     },
     Discriminant {
         place: String,
@@ -139,9 +151,17 @@ pub enum Rvalue {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         ty: Option<String>,
         /// Niche-encoded tag (`Option<&T>`, ...): the discriminant has no
-        /// stored slot; lowering it needs niche-specific logic (loud).
+        /// stored slot; it is the niche field's value.
         #[serde(default, skip_serializing_if = "is_false")]
         niche: bool,
+        /// Byte offset of the niche field (niche discriminants only).
+        #[serde(default)]
+        niche_offset: u64,
+        /// Variant index of the niche (e.g. `None`) and of the untagged one.
+        #[serde(default)]
+        none_variant: u32,
+        #[serde(default)]
+        some_variant: u32,
     },
     RawPtr { place: String, #[serde(rename = "mut", default, skip_serializing_if = "is_false")] mut_: bool },
     Repeat { op: Box<Operand>, len: String },

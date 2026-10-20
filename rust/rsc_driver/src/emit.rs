@@ -87,6 +87,7 @@ pub fn rvalue_json<'tcx>(
     body: &Body<'tcx>,
     place: &rustc_middle::mir::Place<'tcx>,
     layout: Option<&(u64, Vec<u64>)>,
+    niche_store: Option<(u64, u64, String)>,
     into: &mut String,
 ) {
     match rv {
@@ -209,6 +210,15 @@ pub fn rvalue_json<'tcx>(
                     .unwrap();
                 }
             }
+            // Niche construction: the niche variant stores the niche value.
+            if let Some((noff, nval, nty)) = niche_store {
+                write!(
+                    into,
+                    ", \"niche_store\": {{\"offset\": {}, \"value\": {}, \"ty\": \"{}\"}}",
+                    noff, nval, nty
+                )
+                .unwrap();
+            }
             into.push('}');
         }
         Rvalue::Discriminant(p) => {
@@ -220,12 +230,20 @@ pub fn rvalue_json<'tcx>(
                     s, off, t
                 )
                 .unwrap(),
-                None if niche_enum(tcx, body, p) => write!(
-                    into,
-                    "{{\"kind\": \"Discriminant\", \"place\": \"{}\", \"niche\": true}}",
-                    s
-                )
-                .unwrap(),
+                None if niche_enum(tcx, body, p) => match niche_info(tcx, body, p) {
+                    Some((off, nv, uv)) => write!(
+                        into,
+                        "{{\"kind\": \"Discriminant\", \"place\": \"{}\", \"niche\": true, \"niche_offset\": {}, \"none_variant\": {}, \"some_variant\": {}}}",
+                        s, off, nv, uv
+                    )
+                    .unwrap(),
+                    None => write!(
+                        into,
+                        "{{\"kind\": \"Discriminant\", \"place\": \"{}\", \"niche\": true}}",
+                        s
+                    )
+                    .unwrap(),
+                },
                 None => write!(into, "{{\"kind\": \"Discriminant\", \"place\": \"{}\"}}", s).unwrap(),
             }
         }
@@ -375,7 +393,33 @@ fn enum_agg_layout<'tcx>(
         .layout_of(rustc_middle::ty::PseudoCanonicalInput { typing_env: env, value: ty })
         .ok()?;
     match &layout.variants {
-        Variants::Multiple { tag_encoding: TagEncoding::Direct, variants, .. } => {
+        // Struct-like ADT: plain field offsets.
+        Variants::Single { .. } => {
+            if !matches!(
+                layout.fields,
+                rustc_abi::FieldsShape::Arbitrary { .. } | rustc_abi::FieldsShape::Array { .. }
+            ) {
+                return None;
+            }
+            let mut offsets = Vec::with_capacity(n);
+            for i in 0..n {
+                offsets.push(layout.fields.offset(i).bytes());
+            }
+            Some((layout.size.bytes(), offsets))
+        }
+        Variants::Multiple { tag_encoding, variants, .. } => {
+            // Niche encoding: the payload of the untagged variant lives in
+            // the niche field (same slot as the niche value).
+            let vi = match tag_encoding {
+                TagEncoding::Direct => vi,
+                TagEncoding::Niche { untagged_variant, .. } => {
+                    if vi != *untagged_variant {
+                        // The niche variant carries no payload.
+                        return Some((layout.size.bytes(), Vec::new()));
+                    }
+                    vi
+                }
+            };
             let v = variants.raw.get(vi.as_usize())?;
             let mut offsets = Vec::with_capacity(n);
             for i in 0..n {
@@ -383,9 +427,57 @@ fn enum_agg_layout<'tcx>(
             }
             Some((layout.size.bytes(), offsets))
         }
-        // Niche-encoded tags (Option<&T>, ...) map non-trivially; stay loud.
         _ => None,
     }
+}
+
+/// Niche store for a niche-encoded enum construction: the niche variant
+/// (`None`) has no payload, so the niche value (0 for a pointer niche) is
+/// written into the niche slot.
+fn niche_store_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    dest: &rustc_middle::mir::Place<'tcx>,
+    kind: &rustc_middle::mir::AggregateKind<'tcx>,
+) -> Option<(u64, u64, String)> {
+    use rustc_abi::{TagEncoding, Variants};
+    use rustc_middle::mir::AggregateKind;
+    use rustc_middle::ty::TypingEnv;
+    let vi = match kind {
+        AggregateKind::Adt(_, vi, ..) => *vi,
+        _ => return None,
+    };
+    let env = TypingEnv::fully_monomorphized();
+    let ty = dest.ty(&body.local_decls, tcx).ty;
+    let layout = tcx
+        .layout_of(rustc_middle::ty::PseudoCanonicalInput { typing_env: env, value: ty })
+        .ok()?;
+    let (untagged, niche_variants, niche_start, tag_field) = match &layout.variants {
+        Variants::Multiple {
+            tag_encoding:
+                TagEncoding::Niche {
+                    untagged_variant,
+                    niche_variants,
+                    niche_start,
+                },
+            tag_field,
+            ..
+        } => (
+            *untagged_variant,
+            niche_variants.clone(),
+            *niche_start,
+            *tag_field,
+        ),
+        _ => return None,
+    };
+    if vi == untagged || niche_variants.start != vi {
+        return None;
+    }
+    if niche_start != 0 {
+        return None;
+    }
+    let off = layout.fields.offset(tag_field.as_usize()).bytes();
+    Some((off, 0, "ptr".to_string()))
 }
 
 /// True when the place's type is a multi-variant enum whose tag is encoded
@@ -441,6 +533,67 @@ fn discr_info<'tcx>(
         }
         _ => None,
     }
+}
+
+/// Niche-encoded discriminant (e.g. `Option<&T>`): the variant is decided by
+/// the niche field's value, not by a stored tag. Returns
+/// `(niche field offset, none variant, some variant)` for the simple shape
+/// (one niche variant, one untagged variant, pointer niche whose value is 0).
+fn niche_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    p: &rustc_middle::mir::Place<'tcx>,
+) -> Option<(u64, u32, u32)> {
+    use rustc_abi::{TagEncoding, Variants};
+    use rustc_middle::ty::TypingEnv;
+    let env = TypingEnv::fully_monomorphized();
+    let layout = tcx
+        .layout_of(rustc_middle::ty::PseudoCanonicalInput {
+            typing_env: env,
+            value: p.ty(&body.local_decls, tcx).ty,
+        })
+        .ok()?;
+    let (untagged, niche_variants, niche_start, tag_field) = match &layout.variants {
+        Variants::Multiple {
+            tag_encoding:
+                TagEncoding::Niche {
+                    untagged_variant,
+                    niche_variants,
+                    niche_start,
+                },
+            tag_field,
+            ..
+        } => (
+            *untagged_variant,
+            niche_variants.clone(),
+            *niche_start,
+            *tag_field,
+        ),
+        _ => return None,
+    };
+    // Only the simple shape: exactly one niche variant (the `None` one).
+    if niche_variants.last != niche_variants.start {
+        return None;
+    }
+    if niche_start != 0 {
+        return None;
+    }
+    let nv = niche_variants.start.as_u32();
+    let uv_idx = untagged;
+    let uv = untagged.as_u32();
+    // The niche field must be a pointer (null is the niche value).
+    let ty = p.ty(&body.local_decls, tcx).ty;
+    let (def, args) = match ty.kind() {
+        TyKind::Adt(def, args) => (*def, args),
+        _ => return None,
+    };
+    let fld = def.variants()[uv_idx].fields.raw.first()?;
+    let fty = tcx.normalize_erasing_regions(env, fld.ty(tcx, args));
+    if !matches!(fty.kind(), TyKind::Ref(..) | TyKind::RawPtr(..)) {
+        return None;
+    }
+    let off = layout.fields.offset(tag_field.as_usize()).bytes();
+    Some((off, nv, uv))
 }
 
 /// Byte size of a by-value aggregate type (Adt/tuple/array), else 0. Used for
@@ -541,18 +694,27 @@ pub fn body_json<'tcx>(
                     into.push_str(", \"rvalue\": ");
                     // p_layout v2 goes only on multi-operand aggregates.
                     let layout = match rv {
+                        // ADT aggregates (structs, tuples-as-ADT, enums): the
+                        // absolute field offsets come from the type's layout,
+                        // so a one-field aggregate is materialized too (its
+                        // local holds the aggregate's address).
+                        Rvalue::Aggregate(kind, ops)
+                            if matches!(&**kind, rustc_middle::mir::AggregateKind::Adt(..)) =>
+                        {
+                            enum_agg_layout(tcx, body, place, kind, ops.len())
+                        }
                         Rvalue::Aggregate(kind, ops) if ops.len() > 1 => {
                             aggregate_layout(tcx, param_env, body, kind, place, ops.len())
                         }
-                        // Enum variant payloads: absolute offsets come from the
-                        // *enum* layout (variant field_offsets), even for a
-                        // single-field variant.
-                        Rvalue::Aggregate(kind, ops) if ops.len() <= 1 => {
-                            enum_agg_layout(tcx, body, place, kind, ops.len())
+                        _ => None,
+                    };
+                    let niche_store = match rv {
+                        Rvalue::Aggregate(kind, ops) => {
+                            niche_store_info(tcx, body, place, kind).filter(|_| ops.is_empty())
                         }
                         _ => None,
                     };
-                    rvalue_json(rv, tcx, body, place, layout.as_ref(), into);
+                    rvalue_json(rv, tcx, body, place, layout.as_ref(), niche_store, into);
                     into.push('}');
                 }
                 StatementKind::StorageLive(l) => {

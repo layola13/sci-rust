@@ -1225,9 +1225,13 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 }
                 let d = match discr.as_ref() {
                     Operand::Move { place, .. } => {
-                        let tmp = format!("_sw_{}", b.id);
-                        out.push(format!("    {} = {}", tmp, place));
-                        tmp
+                        // The discriminant is read by every arm's compare, so
+                        // it must stay live across the fan-out. A copy would
+                        // be released only on the fall-through path (the arm
+                        // sections are emitted inside this block), leaving the
+                        // register's state different at the join; reading the
+                        // place directly keeps one definition on all paths.
+                        place.clone()
                     }
                     _ => render_operand(discr),
                 };

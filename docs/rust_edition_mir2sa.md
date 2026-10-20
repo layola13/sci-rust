@@ -113,6 +113,14 @@ exit 0，无 broker）。
   因此 `#[derive(PartialEq)] enum` 可 check+run。
 - `call` 终结符的边是**无条件**的（除分歧调用外都会跳到 target），
   return-phi 计划据此把 `call → join` 也当作无条件边。
-- 仍未覆盖：niche tag 枚举（`Option<&T>` 等）——判别式无存储槽，需要
-  niche 专用计算（当前显式 loud）。
+- niche tag 枚举（`Option<&T>` 等）：判别式没有存储槽，由 niche 字段的值
+  决定（空指针 = niche 变体）。driver 输出 `niche_offset`/`none_variant`/
+  `some_variant`，mir2sars 降为「读 niche 槽 + 与 0 比较」；构造侧
+  `niche_store` 把 niche 值写入槽内，单字段 niche 枚举也按聚合物化
+  （`alloc` + `store`），因此 `Option<&T>` 可 check+run。
+- switch 判别式不再复制到临时寄存器：各臂直接读判别式 place，避免临时量
+  只在「落空路径」被释放导致 join 处寄存器状态不一致（`PhiStateConflict`）。
+- 单字段 ADT 聚合（`struct W(i32)`、niche 枚举）现在也按聚合物化
+  （`alloc` + `store`），局部量持有聚合地址（与 `agg: true` 借用一致），
+  按值传参/返回因此正确。
 
