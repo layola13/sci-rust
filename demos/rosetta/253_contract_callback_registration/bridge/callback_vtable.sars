@@ -5,17 +5,18 @@
 #def Slot_VTABLE = +8
 #def VTable_call = +0
 
-@callback(x: i32) -> i32:
+@callback(&self: ptr, x: i32) -> i32:
 L_ENTRY:
     result = add x, 1
     !x
+    !self
     return result
 
 @register(&slot: ptr) -> i32:
 L_ENTRY:
     vt = load slot+Slot_VTABLE as ptr
     fn = load vt+VTable_call as ptr
-    result = call_indirect fn(5)
+    result = call_indirect fn(&slot, 5)
     ok = eq result, 6
     !fn
     !vt

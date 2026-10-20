@@ -234,7 +234,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/111_extern_c_abi/main.sars", "23\n");
     try assertJsMatrixStdout("demos/rosetta/112_raw_pointer_arithmetic/main.sars", "3\n");
     try assertJsMatrixStdout("demos/rosetta/113_union_ffi_types/main.sars", "36\n");
-    try assertJsMatrixStdout("demos/rosetta/114_callback_from_c/main.sars", "42\n");
     try assertJsMatrixStdout("demos/rosetta/115_opaque_pointers/main.sars", "0\n");
     try assertJsMatrixStdout("demos/rosetta/116_va_list_variadic/main.sars", "6\n");
     try assertJsMatrixStdout("demos/rosetta/117_inline_assembly/main.sars", "7\n");
@@ -300,7 +299,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/179_assert_macro_expansion/main.sars", "2\n");
     try assertJsMatrixStdout("demos/rosetta/181_file_descriptor_raii/main.sars", "3\n");
     try assertJsMatrixStdout("demos/rosetta/182_mmap_memory_mapping/main.sars", "4\n");
-    try assertJsMatrixStdout("demos/rosetta/183_signal_handling_setup/main.sars", "2\n");
     try assertJsMatrixStdout("demos/rosetta/184_pthread_spawn_join/main.sars", "5\n");
     try assertJsMatrixStdout("demos/rosetta/185_dynamic_lib_dlopen/main.sars", "1\n");
     try assertJsMatrixStdout("demos/rosetta/186_sqlite_c_api_binding/main.sars", "8\n");
@@ -315,7 +313,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/195_build_script_codegen/main.sars", "build output\n");
     try assertJsMatrixStdout("demos/rosetta/196_lto_link_time_opt/main.sars", "37\n");
     try assertJsMatrixStdout("demos/rosetta/197_profile_guided_opt/main.sars", "10\n");
-    try assertJsMatrixStdout("demos/rosetta/198_control_flow_guard_cfi/main.sars", "2\n");
     try assertJsMatrixStdout("demos/rosetta/199_address_sanitizer_asan/main.sars", "5\n");
     try assertJsMatrixStdout("demos/rosetta/200_sa_asm_quine/main.sars", "@import \"sa_std/io/print.sai\"\n\n@const RESULT_ERR = utf8:\"error\\n\"\n@const SOURCE = utf8:\"@import \\\"sa_std/io/print.sai\\\"\\n\\n@const RESULT_ERR = utf8:\\\"error\\\\n\\\"\\n@const SOURCE = utf8:\"\n\n@main() -> i32");
     try assertJsMatrixStdout("demos/rosetta/201_pkg_manifest_basic/main.sars", "201\n");
@@ -408,7 +405,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/287_ffi_zig_export_integration/main.sars", "287\n");
     try assertJsMatrixStdout("demos/rosetta/288_ffi_cxx_name_mangling/main.sars", "288\n");
     try assertJsMatrixStdout("demos/rosetta/289_ffi_opaque_handle_passing/main.sars", "289\n");
-    try assertJsMatrixStdout("demos/rosetta/290_ffi_callback_thunk/main.sars", "290\n");
     try assertJsMatrixStdout("demos/rosetta/291_eco_wasm_host_imports/main.sars", "291\n");
     try assertJsMatrixStdout("demos/rosetta/292_eco_wasm_memory_export/main.sars", "292\n");
     try assertJsMatrixStdout("demos/rosetta/293_eco_embedded_no_os/main.sars", "293\n");
@@ -456,7 +452,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/331_rc_shared_ownership/main.sars", "42,42\n");
     try assertJsMatrixStdout("demos/rosetta/332_cell_interior_mutability/main.sars", "100\n");
     try assertJsMatrixStdout("demos/rosetta/333_weak_cyclic_reference/main.sars", "upgraded\n");
-    try assertJsMatrixStdout("demos/rosetta/334_indirect_import_shadow/main.sars", "334\n");
     try assertJsMatrixStdout("demos/rosetta/335_ts_slice_inverted_bounds/main.sars", "335\n");
     try assertJsMatrixStdout("demos/rosetta/336_ts_trunc_u64_to_i32/main.sars", "336\n");
     try assertJsMatrixStdout("demos/rosetta/337_u64_add_wrap64/main.sars", "337\n");
@@ -580,34 +575,18 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/455_struct_swap_fields/main.sars", "455\n");
     try assertJsMatrixStdout("demos/rosetta/456_vtable_f64_const/main.sars", "456\n");
     try assertJsMatrixStdout("demos/rosetta/457_vtable_f64_scale/main.sars", "457\n");
-    try assertJsMatrixStdout("demos/rosetta/458_vtable_two_impls/main.sars", "458\n");
     try assertJsMatrixStdout("demos/rosetta/459_vtable_struct_add/main.sars", "459\n");
-    try assertJsMatrixStdout("demos/rosetta/460_vtable_mem_spill/main.sars", "460\n");
     try assertJsMatrixStdout("demos/rosetta/461_vtable_chain/main.sars", "461\n");
     try assertJsMatrixStdout("demos/rosetta/462_vtable_int_param/main.sars", "462\n");
-    try assertJsMatrixStdout("demos/rosetta/463_vtable_branchy_pick/main.sars", "463\n");
     try assertJsMatrixStdout("demos/rosetta/464_vtable_fallible/main.sars", "464\n");
     try assertJsMatrixStdout("demos/rosetta/465_vtable_fneg/main.sars", "465\n");
-    try assertJsMatrixStdout("demos/rosetta/466_callback_register_invoke/main.sars", "466\n");
-    try assertJsMatrixStdout("demos/rosetta/467_callback_accum_loop/main.sars", "467\n");
-    try assertJsMatrixStdout("demos/rosetta/468_callback_slot_write/main.sars", "468\n");
-    try assertJsMatrixStdout("demos/rosetta/469_callback_chain/main.sars", "469\n");
-    try assertJsMatrixStdout("demos/rosetta/470_callback_select/main.sars", "470\n");
-    try assertJsMatrixStdout("demos/rosetta/471_callback_int_float/main.sars", "471\n");
-    try assertJsMatrixStdout("demos/rosetta/472_callback_f32_double/main.sars", "472\n");
-    try assertJsMatrixStdout("demos/rosetta/473_callback_nested_invoke/main.sars", "473\n");
-    try assertJsMatrixStdout("demos/rosetta/474_callback_signed_branch/main.sars", "474\n");
-    try assertJsMatrixStdout("demos/rosetta/475_callback_const_producer/main.sars", "475\n");
     try assertJsMatrixStdout("demos/rosetta/476_const_float/main.sars", "476\n");
     try assertJsMatrixStdout("demos/rosetta/477_error_map_float/main.sars", "477\n");
-    try assertJsMatrixStdout("demos/rosetta/478_vtable_export_float/main.sars", "478\n");
     try assertJsMatrixStdout("demos/rosetta/479_ownership_float/main.sars", "479\n");
-    try assertJsMatrixStdout("demos/rosetta/480_callback_reg_float/main.sars", "480\n");
     try assertJsMatrixStdout("demos/rosetta/481_opaque_float/main.sars", "481\n");
     try assertJsMatrixStdout("demos/rosetta/482_const_f32_float/main.sars", "482\n");
     try assertJsMatrixStdout("demos/rosetta/483_impl_arith_float/main.sars", "483\n");
     try assertJsMatrixStdout("demos/rosetta/484_error_fallback_float/main.sars", "484\n");
-    try assertJsMatrixStdout("demos/rosetta/485_vtable_param_float/main.sars", "485\n");
     try assertJsMatrixStdout("demos/rosetta/486_diamond_shared_leaf/main.sars", "486\n");
     try assertJsMatrixStdout("demos/rosetta/487_four_level_chain/main.sars", "487\n");
     try assertJsMatrixStdout("demos/rosetta/488_sibling_cross_import/main.sars", "488\n");
@@ -640,9 +619,7 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/516_loop_fallible/main.sars", "516\n");
     try assertJsMatrixStdout("demos/rosetta/517_code_map/main.sars", "517\n");
     try assertJsMatrixStdout("demos/rosetta/518_nested3_fallible/main.sars", "518\n");
-    try assertJsMatrixStdout("demos/rosetta/519_vtable_fallible_split/main.sars", "519\n");
     try assertJsMatrixStdout("demos/rosetta/520_mem_fallible_split/main.sars", "520\n");
-    try assertJsMatrixStdout("demos/rosetta/521_callback_fallible_split/main.sars", "521\n");
     try assertJsMatrixStdout("demos/rosetta/522_codeval_encode/main.sars", "522\n");
     try assertJsMatrixStdout("demos/rosetta/523_codeval_error/main.sars", "523\n");
     try assertJsMatrixStdout("demos/rosetta/524_codeval_chain3/main.sars", "524\n");
@@ -651,7 +628,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/527_f32_codeval/main.sars", "527\n");
     try assertJsMatrixStdout("demos/rosetta/528_cmp_codes/main.sars", "528\n");
     try assertJsMatrixStdout("demos/rosetta/529_precision_code/main.sars", "529\n");
-    try assertJsMatrixStdout("demos/rosetta/530_vtable_codeval/main.sars", "530\n");
     try assertJsMatrixStdout("demos/rosetta/531_branchy_codeval/main.sars", "531\n");
     try assertJsMatrixStdout("demos/rosetta/532_chain3_codeval/main.sars", "532\n");
     try assertJsMatrixStdout("demos/rosetta/533_diamond_codeval/main.sars", "533\n");
@@ -659,8 +635,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/535_branchy_int_code/main.sars", "535\n");
     try assertJsMatrixStdout("demos/rosetta/536_loop_accum_code/main.sars", "536\n");
     try assertJsMatrixStdout("demos/rosetta/537_struct_codeval/main.sars", "537\n");
-    try assertJsMatrixStdout("demos/rosetta/538_vtable_pair_code/main.sars", "538\n");
-    try assertJsMatrixStdout("demos/rosetta/539_callback_codeval/main.sars", "539\n");
     try assertJsMatrixStdout("demos/rosetta/540_mem_spill_codeval/main.sars", "540\n");
     try assertJsMatrixStdout("demos/rosetta/541_fallible_codeval/main.sars", "541\n");
     try assertJsMatrixStdout("demos/rosetta/542_int_add_code/main.sars", "542\n");
@@ -669,8 +643,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/545_fcmp_gt_code/main.sars", "545\n");
     try assertJsMatrixStdout("demos/rosetta/546_struct_triple_code/main.sars", "546\n");
     try assertJsMatrixStdout("demos/rosetta/547_loop_sum_code/main.sars", "547\n");
-    try assertJsMatrixStdout("demos/rosetta/548_vtable_store_code/main.sars", "548\n");
-    try assertJsMatrixStdout("demos/rosetta/549_callback_add_code/main.sars", "549\n");
     try assertJsMatrixStdout("demos/rosetta/550_mem_pair_code/main.sars", "550\n");
     try assertJsMatrixStdout("demos/rosetta/551_branchy_fallible_code/main.sars", "551\n");
     try assertJsMatrixStdout("demos/rosetta/552_nested_call_code/main.sars", "552\n");
@@ -681,7 +653,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/557_and_chain_code/main.sars", "557\n");
     try assertJsMatrixStdout("demos/rosetta/558_struct_offset_code/main.sars", "558\n");
     try assertJsMatrixStdout("demos/rosetta/559_loop_break_code/main.sars", "559\n");
-    try assertJsMatrixStdout("demos/rosetta/560_vtable_dual_code/main.sars", "560\n");
     try assertJsMatrixStdout("demos/rosetta/561_fallible_chain_code/main.sars", "561\n");
     try assertJsMatrixStdout("demos/rosetta/562_slt_code/main.sars", "562\n");
     try assertJsMatrixStdout("demos/rosetta/563_float_eq_code/main.sars", "563\n");
@@ -689,8 +660,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/565_chain4_code/main.sars", "565\n");
     try assertJsMatrixStdout("demos/rosetta/566_struct_quad_code/main.sars", "566\n");
     try assertJsMatrixStdout("demos/rosetta/567_loop_step_code/main.sars", "567\n");
-    try assertJsMatrixStdout("demos/rosetta/568_vtable_calc_code/main.sars", "568\n");
-    try assertJsMatrixStdout("demos/rosetta/569_callback_pair_code/main.sars", "569\n");
     try assertJsMatrixStdout("demos/rosetta/570_mem_float_pair/main.sars", "570\n");
     try assertJsMatrixStdout("demos/rosetta/571_error_path_code/main.sars", "571\n");
     try assertJsMatrixStdout("demos/rosetta/572_int_add2_code/main.sars", "572\n");
@@ -699,8 +668,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/575_branchy_zero_code/main.sars", "575\n");
     try assertJsMatrixStdout("demos/rosetta/576_struct_two_code/main.sars", "576\n");
     try assertJsMatrixStdout("demos/rosetta/577_loop_countdown_code/main.sars", "577\n");
-    try assertJsMatrixStdout("demos/rosetta/578_vtable_add2_code/main.sars", "578\n");
-    try assertJsMatrixStdout("demos/rosetta/579_callback_const_code/main.sars", "579\n");
     try assertJsMatrixStdout("demos/rosetta/580_mem_f64_code/main.sars", "580\n");
     try assertJsMatrixStdout("demos/rosetta/581_guard_ok_code/main.sars", "581\n");
     try assertJsMatrixStdout("demos/rosetta/582_int_mul2_code/main.sars", "582\n");
@@ -709,8 +676,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/585_branchy_neg_code/main.sars", "585\n");
     try assertJsMatrixStdout("demos/rosetta/586_struct_sum_code/main.sars", "586\n");
     try assertJsMatrixStdout("demos/rosetta/587_loop_accum2_code/main.sars", "587\n");
-    try assertJsMatrixStdout("demos/rosetta/588_vtable_sub_code/main.sars", "588\n");
-    try assertJsMatrixStdout("demos/rosetta/589_callback_add3_code/main.sars", "589\n");
     try assertJsMatrixStdout("demos/rosetta/590_mem_i64_pair/main.sars", "590\n");
     try assertJsMatrixStdout("demos/rosetta/591_fallible_ok_code/main.sars", "591\n");
     try assertJsMatrixStdout("demos/rosetta/592_int_sub2_code/main.sars", "592\n");
@@ -719,8 +684,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/595_branchy_two_code/main.sars", "595\n");
     try assertJsMatrixStdout("demos/rosetta/596_struct_ptr_code/main.sars", "596\n");
     try assertJsMatrixStdout("demos/rosetta/597_loop_sum3_code/main.sars", "597\n");
-    try assertJsMatrixStdout("demos/rosetta/598_vtable_mul_code/main.sars", "598\n");
-    try assertJsMatrixStdout("demos/rosetta/599_callback_sub_code/main.sars", "599\n");
     try assertJsMatrixStdout("demos/rosetta/600_mem_struct_code/main.sars", "600\n");
     try assertJsMatrixStdout("demos/rosetta/601_chain_fallible_code/main.sars", "601\n");
     try assertJsMatrixStdout("demos/rosetta/602_int_add3_code/main.sars", "602\n");
@@ -729,8 +692,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/605_branchy_three_code/main.sars", "605\n");
     try assertJsMatrixStdout("demos/rosetta/606_struct_max_code/main.sars", "606\n");
     try assertJsMatrixStdout("demos/rosetta/607_loop_double_code/main.sars", "607\n");
-    try assertJsMatrixStdout("demos/rosetta/608_vtable_neg_code/main.sars", "608\n");
-    try assertJsMatrixStdout("demos/rosetta/609_callback_mul_code/main.sars", "609\n");
     try assertJsMatrixStdout("demos/rosetta/610_mem_zero_code/main.sars", "610\n");
     try assertJsMatrixStdout("demos/rosetta/611_step_ok_code/main.sars", "611\n");
     try assertJsMatrixStdout("demos/rosetta/612_int_add4_code/main.sars", "612\n");
@@ -739,8 +700,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/615_branchy_four_code/main.sars", "615\n");
     try assertJsMatrixStdout("demos/rosetta/616_struct_min_code/main.sars", "616\n");
     try assertJsMatrixStdout("demos/rosetta/617_loop_stride_code/main.sars", "617\n");
-    try assertJsMatrixStdout("demos/rosetta/618_vtable_id_code/main.sars", "618\n");
-    try assertJsMatrixStdout("demos/rosetta/619_callback_max_code/main.sars", "619\n");
     try assertJsMatrixStdout("demos/rosetta/620_mem_fill_code/main.sars", "620\n");
     try assertJsMatrixStdout("demos/rosetta/621_guard_chain_code/main.sars", "621\n");
     try assertJsMatrixStdout("demos/rosetta/622_int_add5_code/main.sars", "622\n");
@@ -749,8 +708,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/625_branchy_five_code/main.sars", "625\n");
     try assertJsMatrixStdout("demos/rosetta/626_struct_avg_code/main.sars", "626\n");
     try assertJsMatrixStdout("demos/rosetta/627_loop_prod_code/main.sars", "627\n");
-    try assertJsMatrixStdout("demos/rosetta/628_vtable_add3_code/main.sars", "628\n");
-    try assertJsMatrixStdout("demos/rosetta/629_callback_id_code/main.sars", "629\n");
     try assertJsMatrixStdout("demos/rosetta/630_mem_swap_code/main.sars", "630\n");
     try assertJsMatrixStdout("demos/rosetta/631_ok_chain4_code/main.sars", "631\n");
     try assertJsMatrixStdout("demos/rosetta/632_int_add6_code/main.sars", "632\n");
@@ -759,8 +716,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/635_branchy_six_code/main.sars", "635\n");
     try assertJsMatrixStdout("demos/rosetta/636_struct_diff_code/main.sars", "636\n");
     try assertJsMatrixStdout("demos/rosetta/637_loop_even_code/main.sars", "637\n");
-    try assertJsMatrixStdout("demos/rosetta/638_vtable_sub2_code/main.sars", "638\n");
-    try assertJsMatrixStdout("demos/rosetta/639_callback_div_code/main.sars", "639\n");
     try assertJsMatrixStdout("demos/rosetta/640_mem_copy2_code/main.sars", "640\n");
     try assertJsMatrixStdout("demos/rosetta/641_step_chain_code/main.sars", "641\n");
     try assertJsMatrixStdout("demos/rosetta/642_int_add7_code/main.sars", "642\n");
@@ -769,8 +724,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/645_branchy_seven_code/main.sars", "645\n");
     try assertJsMatrixStdout("demos/rosetta/646_struct_inc_code/main.sars", "646\n");
     try assertJsMatrixStdout("demos/rosetta/647_loop_squares_code/main.sars", "647\n");
-    try assertJsMatrixStdout("demos/rosetta/648_vtable_double_code/main.sars", "648\n");
-    try assertJsMatrixStdout("demos/rosetta/649_callback_neg_code/main.sars", "649\n");
     try assertJsMatrixStdout("demos/rosetta/650_mem_table_code/main.sars", "650\n");
     try assertJsMatrixStdout("demos/rosetta/651_mixed_chain_code/main.sars", "651\n");
     try assertJsMatrixStdout("demos/rosetta/652_shadow_fn_code/main.sars", "652\n");
@@ -779,8 +732,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/655_branchy_eight_code/main.sars", "655\n");
     try assertJsMatrixStdout("demos/rosetta/656_struct_swap_code/main.sars", "656\n");
     try assertJsMatrixStdout("demos/rosetta/657_loop_fib_code/main.sars", "657\n");
-    try assertJsMatrixStdout("demos/rosetta/658_vtable_load_code/main.sars", "658\n");
-    try assertJsMatrixStdout("demos/rosetta/659_callback_add4_code/main.sars", "659\n");
     try assertJsMatrixStdout("demos/rosetta/660_mem_grow_code/main.sars", "660\n");
     try assertJsMatrixStdout("demos/rosetta/661_allok_chain_code/main.sars", "661\n");
     try assertJsMatrixStdout("demos/rosetta/662_dollar_fn_code/main.sars", "662\n");
@@ -789,8 +740,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/665_branchy_nine_code/main.sars", "665\n");
     try assertJsMatrixStdout("demos/rosetta/666_struct_zero_code/main.sars", "666\n");
     try assertJsMatrixStdout("demos/rosetta/667_loop_collatz_code/main.sars", "667\n");
-    try assertJsMatrixStdout("demos/rosetta/668_vtable_pair2_code/main.sars", "668\n");
-    try assertJsMatrixStdout("demos/rosetta/669_callback_or_code/main.sars", "669\n");
     try assertJsMatrixStdout("demos/rosetta/670_mem_stack_code/main.sars", "670\n");
     try assertJsMatrixStdout("demos/rosetta/671_final_chain_code/main.sars", "671\n");
     try assertJsMatrixStdout("demos/rosetta/672_int_add8_code/main.sars", "672\n");
@@ -799,8 +748,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/675_branchy_ten_code/main.sars", "675\n");
     try assertJsMatrixStdout("demos/rosetta/676_struct_neg_code/main.sars", "676\n");
     try assertJsMatrixStdout("demos/rosetta/677_loop_sum4_code/main.sars", "677\n");
-    try assertJsMatrixStdout("demos/rosetta/678_vtable_zero_code/main.sars", "678\n");
-    try assertJsMatrixStdout("demos/rosetta/679_callback_add5_code/main.sars", "679\n");
     try assertJsMatrixStdout("demos/rosetta/680_mem_bulk_code/main.sars", "680\n");
     try assertJsMatrixStdout("demos/rosetta/681_guard5_chain_code/main.sars", "681\n");
     try assertJsMatrixStdout("demos/rosetta/682_int_sub3_code/main.sars", "682\n");
@@ -809,8 +756,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/685_branchy_elev_code/main.sars", "685\n");
     try assertJsMatrixStdout("demos/rosetta/686_struct_add3_code/main.sars", "686\n");
     try assertJsMatrixStdout("demos/rosetta/687_loop_tri_code/main.sars", "687\n");
-    try assertJsMatrixStdout("demos/rosetta/688_vtable_max2_code/main.sars", "688\n");
-    try assertJsMatrixStdout("demos/rosetta/689_callback_add6_code/main.sars", "689\n");
     try assertJsMatrixStdout("demos/rosetta/690_mem_pair3_code/main.sars", "690\n");
     try assertJsMatrixStdout("demos/rosetta/691_ok6_chain_code/main.sars", "691\n");
     try assertJsMatrixStdout("demos/rosetta/692_slt2_code/main.sars", "692\n");
@@ -819,8 +764,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/695_branchy_twelve_code/main.sars", "695\n");
     try assertJsMatrixStdout("demos/rosetta/696_struct_chain_code/main.sars", "696\n");
     try assertJsMatrixStdout("demos/rosetta/697_loop_pow2_code/main.sars", "697\n");
-    try assertJsMatrixStdout("demos/rosetta/698_vtable_add7_code/main.sars", "698\n");
-    try assertJsMatrixStdout("demos/rosetta/699_callback_sub2_code/main.sars", "699\n");
     try assertJsMatrixStdout("demos/rosetta/700_mem_clear_code/main.sars", "700\n");
     try assertJsMatrixStdout("demos/rosetta/701_milestone_chain_code/main.sars", "701\n");
     try assertJsMatrixStdout("demos/rosetta/702_callcc_code/main.sars", "702\n");
@@ -829,8 +772,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/705_branchy_13_code/main.sars", "705\n");
     try assertJsMatrixStdout("demos/rosetta/706_struct_prod_code/main.sars", "706\n");
     try assertJsMatrixStdout("demos/rosetta/707_loop_nest_code/main.sars", "707\n");
-    try assertJsMatrixStdout("demos/rosetta/708_vtable_cmp_code/main.sars", "708\n");
-    try assertJsMatrixStdout("demos/rosetta/709_callback_and_code/main.sars", "709\n");
     try assertJsMatrixStdout("demos/rosetta/710_mem_slab_code/main.sars", "710\n");
     try assertJsMatrixStdout("demos/rosetta/711_guard7_chain_code/main.sars", "711\n");
     try assertJsMatrixStdout("demos/rosetta/712_eq_chain_code/main.sars", "712\n");
@@ -839,8 +780,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/715_branchy_14_code/main.sars", "715\n");
     try assertJsMatrixStdout("demos/rosetta/716_struct_avg2_code/main.sars", "716\n");
     try assertJsMatrixStdout("demos/rosetta/717_loop_downto_code/main.sars", "717\n");
-    try assertJsMatrixStdout("demos/rosetta/718_vtable_wrap_code/main.sars", "718\n");
-    try assertJsMatrixStdout("demos/rosetta/719_callback_pick_code/main.sars", "719\n");
     try assertJsMatrixStdout("demos/rosetta/720_mem_arena_code/main.sars", "720\n");
     try assertJsMatrixStdout("demos/rosetta/721_guard8_chain_code/main.sars", "721\n");
     try assertJsMatrixStdout("demos/rosetta/722_andor_code/main.sars", "722\n");
@@ -849,8 +788,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/725_branchy_15_code/main.sars", "725\n");
     try assertJsMatrixStdout("demos/rosetta/726_struct_link_code/main.sars", "726\n");
     try assertJsMatrixStdout("demos/rosetta/727_loop_gcd_code/main.sars", "727\n");
-    try assertJsMatrixStdout("demos/rosetta/728_vtable_dispatch_code/main.sars", "728\n");
-    try assertJsMatrixStdout("demos/rosetta/729_callback_not_code/main.sars", "729\n");
     try assertJsMatrixStdout("demos/rosetta/730_mem_window_code/main.sars", "730\n");
     try assertJsMatrixStdout("demos/rosetta/731_guard9_chain_code/main.sars", "731\n");
     try assertJsMatrixStdout("demos/rosetta/732_xor_chain_code/main.sars", "732\n");
@@ -859,8 +796,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/735_branchy_16_code/main.sars", "735\n");
     try assertJsMatrixStdout("demos/rosetta/736_struct_flag_code/main.sars", "736\n");
     try assertJsMatrixStdout("demos/rosetta/737_loop_search_code/main.sars", "737\n");
-    try assertJsMatrixStdout("demos/rosetta/738_vtable_route_code/main.sars", "738\n");
-    try assertJsMatrixStdout("demos/rosetta/739_callback_sign_code/main.sars", "739\n");
     try assertJsMatrixStdout("demos/rosetta/740_mem_queue_code/main.sars", "740\n");
     try assertJsMatrixStdout("demos/rosetta/741_guard10_chain_code/main.sars", "741\n");
     try assertJsMatrixStdout("demos/rosetta/742_seq_add_code/main.sars", "742\n");
@@ -869,8 +804,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/745_branchy_17_code/main.sars", "745\n");
     try assertJsMatrixStdout("demos/rosetta/746_struct_pair4_code/main.sars", "746\n");
     try assertJsMatrixStdout("demos/rosetta/747_loop_bound_code/main.sars", "747\n");
-    try assertJsMatrixStdout("demos/rosetta/748_vtable_twice_code/main.sars", "748\n");
-    try assertJsMatrixStdout("demos/rosetta/749_callback_zero_code/main.sars", "749\n");
     try assertJsMatrixStdout("demos/rosetta/750_mem_ring_code/main.sars", "750\n");
     try assertJsMatrixStdout("demos/rosetta/751_chain11_code/main.sars", "751\n");
     try assertJsMatrixStdout("demos/rosetta/752_mixed_or_code/main.sars", "752\n");
@@ -879,8 +812,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/755_branchy_18_code/main.sars", "755\n");
     try assertJsMatrixStdout("demos/rosetta/756_struct_quad2_code/main.sars", "756\n");
     try assertJsMatrixStdout("demos/rosetta/757_loop_step3_code/main.sars", "757\n");
-    try assertJsMatrixStdout("demos/rosetta/758_vtable_min_code/main.sars", "758\n");
-    try assertJsMatrixStdout("demos/rosetta/759_callback_eq_code/main.sars", "759\n");
     try assertJsMatrixStdout("demos/rosetta/760_mem_deque_code/main.sars", "760\n");
     try assertJsMatrixStdout("demos/rosetta/761_chain12b_code/main.sars", "761\n");
     try assertJsMatrixStdout("demos/rosetta/762_bitand_code/main.sars", "762\n");
@@ -889,8 +820,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/765_branchy_19_code/main.sars", "765\n");
     try assertJsMatrixStdout("demos/rosetta/766_struct_sum5_code/main.sars", "766\n");
     try assertJsMatrixStdout("demos/rosetta/767_loop_skip_code/main.sars", "767\n");
-    try assertJsMatrixStdout("demos/rosetta/768_vtable_once_code/main.sars", "768\n");
-    try assertJsMatrixStdout("demos/rosetta/769_callback_gt_code/main.sars", "769\n");
     try assertJsMatrixStdout("demos/rosetta/770_mem_heap_code/main.sars", "770\n");
     try assertJsMatrixStdout("demos/rosetta/771_chain13_code/main.sars", "771\n");
     try assertJsMatrixStdout("demos/rosetta/772_or_and_code/main.sars", "772\n");
@@ -899,8 +828,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/775_branchy_20_code/main.sars", "775\n");
     try assertJsMatrixStdout("demos/rosetta/776_struct_cons_code/main.sars", "776\n");
     try assertJsMatrixStdout("demos/rosetta/777_loop_mod_code/main.sars", "777\n");
-    try assertJsMatrixStdout("demos/rosetta/778_vtable_self_code/main.sars", "778\n");
-    try assertJsMatrixStdout("demos/rosetta/779_callback_le_code/main.sars", "779\n");
     try assertJsMatrixStdout("demos/rosetta/780_mem_pool_code/main.sars", "780\n");
     try assertJsMatrixStdout("demos/rosetta/781_chain14_code/main.sars", "781\n");
     try assertJsMatrixStdout("demos/rosetta/782_deep_and_code/main.sars", "782\n");
@@ -909,8 +836,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/785_branchy_21_code/main.sars", "785\n");
     try assertJsMatrixStdout("demos/rosetta/786_struct_tree_code/main.sars", "786\n");
     try assertJsMatrixStdout("demos/rosetta/787_loop_collapse_code/main.sars", "787\n");
-    try assertJsMatrixStdout("demos/rosetta/788_vtable_chain_code/main.sars", "788\n");
-    try assertJsMatrixStdout("demos/rosetta/789_callback_min_code/main.sars", "789\n");
     try assertJsMatrixStdout("demos/rosetta/790_mem_slab2_code/main.sars", "790\n");
     try assertJsMatrixStdout("demos/rosetta/791_chain15_code/main.sars", "791\n");
     try assertJsMatrixStdout("demos/rosetta/792_not_chain_code/main.sars", "792\n");
@@ -919,8 +844,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/795_branchy_22_code/main.sars", "795\n");
     try assertJsMatrixStdout("demos/rosetta/796_struct_env_code/main.sars", "796\n");
     try assertJsMatrixStdout("demos/rosetta/797_loop_prime_code/main.sars", "797\n");
-    try assertJsMatrixStdout("demos/rosetta/798_vtable_apply_code/main.sars", "798\n");
-    try assertJsMatrixStdout("demos/rosetta/799_callback_ne_code/main.sars", "799\n");
     try assertJsMatrixStdout("demos/rosetta/800_mem_frame_code/main.sars", "800\n");
     try assertJsMatrixStdout("demos/rosetta/801_chain16_code/main.sars", "801\n");
     try assertJsMatrixStdout("demos/rosetta/802_nand_code/main.sars", "802\n");
@@ -929,8 +852,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/805_branchy_23_code/main.sars", "805\n");
     try assertJsMatrixStdout("demos/rosetta/806_struct_wrap_code/main.sars", "806\n");
     try assertJsMatrixStdout("demos/rosetta/807_loop_avg_code/main.sars", "807\n");
-    try assertJsMatrixStdout("demos/rosetta/808_vtable_pick3_code/main.sars", "808\n");
-    try assertJsMatrixStdout("demos/rosetta/809_callback_shl_code/main.sars", "809\n");
     try assertJsMatrixStdout("demos/rosetta/810_mem_blocks_code/main.sars", "810\n");
     try assertJsMatrixStdout("demos/rosetta/811_chain17_code/main.sars", "811\n");
     try assertJsMatrixStdout("demos/rosetta/812_nor_code/main.sars", "812\n");
@@ -939,8 +860,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/815_branchy_24_code/main.sars", "815\n");
     try assertJsMatrixStdout("demos/rosetta/816_struct_grid_code/main.sars", "816\n");
     try assertJsMatrixStdout("demos/rosetta/817_loop_sum5_code/main.sars", "817\n");
-    try assertJsMatrixStdout("demos/rosetta/818_vtable_alt_code/main.sars", "818\n");
-    try assertJsMatrixStdout("demos/rosetta/819_callback_nz_code/main.sars", "819\n");
     try assertJsMatrixStdout("demos/rosetta/820_mem_bank_code/main.sars", "820\n");
     try assertJsMatrixStdout("demos/rosetta/821_chain18_code/main.sars", "821\n");
     try assertJsMatrixStdout("demos/rosetta/822_demorgan_code/main.sars", "822\n");
@@ -949,8 +868,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/825_branchy_25_code/main.sars", "825\n");
     try assertJsMatrixStdout("demos/rosetta/826_struct_tuple_code/main.sars", "826\n");
     try assertJsMatrixStdout("demos/rosetta/827_loop_stride2_code/main.sars", "827\n");
-    try assertJsMatrixStdout("demos/rosetta/828_vtable_swap_code/main.sars", "828\n");
-    try assertJsMatrixStdout("demos/rosetta/829_callback_all_code/main.sars", "829\n");
     try assertJsMatrixStdout("demos/rosetta/830_mem_table2_code/main.sars", "830\n");
     try assertJsMatrixStdout("demos/rosetta/831_chain19_code/main.sars", "831\n");
     try assertJsMatrixStdout("demos/rosetta/832_implies_code/main.sars", "832\n");
@@ -959,8 +876,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/835_branchy_26_code/main.sars", "835\n");
     try assertJsMatrixStdout("demos/rosetta/836_struct_record_code/main.sars", "836\n");
     try assertJsMatrixStdout("demos/rosetta/837_loop_tally_code/main.sars", "837\n");
-    try assertJsMatrixStdout("demos/rosetta/838_vtable_pick4_code/main.sars", "838\n");
-    try assertJsMatrixStdout("demos/rosetta/839_callback_any_code/main.sars", "839\n");
     try assertJsMatrixStdout("demos/rosetta/840_mem_pages_code/main.sars", "840\n");
     try assertJsMatrixStdout("demos/rosetta/841_chain20_code/main.sars", "841\n");
     try assertJsMatrixStdout("demos/rosetta/842_iff_code/main.sars", "842\n");
@@ -969,8 +884,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/845_branchy_27_code/main.sars", "845\n");
     try assertJsMatrixStdout("demos/rosetta/846_struct_cell_code/main.sars", "846\n");
     try assertJsMatrixStdout("demos/rosetta/847_loop_harvest_code/main.sars", "847\n");
-    try assertJsMatrixStdout("demos/rosetta/848_vtable_fold_code/main.sars", "848\n");
-    try assertJsMatrixStdout("demos/rosetta/849_callback_both_code/main.sars", "849\n");
     try assertJsMatrixStdout("demos/rosetta/850_mem_shelf_code/main.sars", "850\n");
     try assertJsMatrixStdout("demos/rosetta/851_chain21_code/main.sars", "851\n");
     try assertJsMatrixStdout("demos/rosetta/852_equiv_code/main.sars", "852\n");
@@ -979,8 +892,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/855_branchy_28_code/main.sars", "855\n");
     try assertJsMatrixStdout("demos/rosetta/856_struct_block_code/main.sars", "856\n");
     try assertJsMatrixStdout("demos/rosetta/857_loop_sieve_code/main.sars", "857\n");
-    try assertJsMatrixStdout("demos/rosetta/858_vtable_bestof_code/main.sars", "858\n");
-    try assertJsMatrixStdout("demos/rosetta/859_callback_nor_code/main.sars", "859\n");
     try assertJsMatrixStdout("demos/rosetta/860_mem_chunks_code/main.sars", "860\n");
     try assertJsMatrixStdout("demos/rosetta/861_chain22_code/main.sars", "861\n");
     try assertJsMatrixStdout("demos/rosetta/862_biimp_code/main.sars", "862\n");
@@ -989,8 +900,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/865_branchy_29_code/main.sars", "865\n");
     try assertJsMatrixStdout("demos/rosetta/866_struct_pair5_code/main.sars", "866\n");
     try assertJsMatrixStdout("demos/rosetta/867_loop_range_code/main.sars", "867\n");
-    try assertJsMatrixStdout("demos/rosetta/868_vtable_or_code/main.sars", "868\n");
-    try assertJsMatrixStdout("demos/rosetta/869_callback_xor_code/main.sars", "869\n");
     try assertJsMatrixStdout("demos/rosetta/870_mem_crate_code/main.sars", "870\n");
     try assertJsMatrixStdout("demos/rosetta/871_chain23_code/main.sars", "871\n");
     try assertJsMatrixStdout("demos/rosetta/872_contra_code/main.sars", "872\n");
@@ -999,8 +908,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/875_branchy_30_code/main.sars", "875\n");
     try assertJsMatrixStdout("demos/rosetta/876_struct_union_code/main.sars", "876\n");
     try assertJsMatrixStdout("demos/rosetta/877_loop_product_code/main.sars", "877\n");
-    try assertJsMatrixStdout("demos/rosetta/878_vtable_multi_code/main.sars", "878\n");
-    try assertJsMatrixStdout("demos/rosetta/879_callback_nand_code/main.sars", "879\n");
     try assertJsMatrixStdout("demos/rosetta/880_mem_heap2_code/main.sars", "880\n");
     try assertJsMatrixStdout("demos/rosetta/881_chain24_code/main.sars", "881\n");
     try assertJsMatrixStdout("demos/rosetta/882_xor3_code/main.sars", "882\n");
@@ -1009,8 +916,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/885_branchy_31_code/main.sars", "885\n");
     try assertJsMatrixStdout("demos/rosetta/886_struct_stack_code/main.sars", "886\n");
     try assertJsMatrixStdout("demos/rosetta/887_loop_accum5_code/main.sars", "887\n");
-    try assertJsMatrixStdout("demos/rosetta/888_vtable_guard_code/main.sars", "888\n");
-    try assertJsMatrixStdout("demos/rosetta/889_callback_iff_code/main.sars", "889\n");
     try assertJsMatrixStdout("demos/rosetta/890_mem_store_code/main.sars", "890\n");
     try assertJsMatrixStdout("demos/rosetta/891_chain25_code/main.sars", "891\n");
     try assertJsMatrixStdout("demos/rosetta/892_majority_code/main.sars", "892\n");
@@ -1019,8 +924,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/895_branchy_32_code/main.sars", "895\n");
     try assertJsMatrixStdout("demos/rosetta/896_struct_tree2_code/main.sars", "896\n");
     try assertJsMatrixStdout("demos/rosetta/897_loop_sieve2_code/main.sars", "897\n");
-    try assertJsMatrixStdout("demos/rosetta/898_vtable_chain3_code/main.sars", "898\n");
-    try assertJsMatrixStdout("demos/rosetta/899_callback_majority_code/main.sars", "899\n");
     try assertJsMatrixStdout("demos/rosetta/900_mem_milestone_code/main.sars", "900\n");
     try assertJsMatrixStdout("demos/rosetta/901_chain26_code/main.sars", "901\n");
     try assertJsMatrixStdout("demos/rosetta/902_xnor_code/main.sars", "902\n");
@@ -1029,8 +932,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/905_branchy_33_code/main.sars", "905\n");
     try assertJsMatrixStdout("demos/rosetta/906_struct_cube_code/main.sars", "906\n");
     try assertJsMatrixStdout("demos/rosetta/907_loop_bump_code/main.sars", "907\n");
-    try assertJsMatrixStdout("demos/rosetta/908_vtable_round_code/main.sars", "908\n");
-    try assertJsMatrixStdout("demos/rosetta/909_callback_cond_code/main.sars", "909\n");
     try assertJsMatrixStdout("demos/rosetta/910_mem_slabs_code/main.sars", "910\n");
     try assertJsMatrixStdout("demos/rosetta/911_chain27_code/main.sars", "911\n");
     try assertJsMatrixStdout("demos/rosetta/912_distinct_code/main.sars", "912\n");
@@ -1039,8 +940,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/915_branchy_34_code/main.sars", "915\n");
     try assertJsMatrixStdout("demos/rosetta/916_struct_field_code/main.sars", "916\n");
     try assertJsMatrixStdout("demos/rosetta/917_loop_stride3_code/main.sars", "917\n");
-    try assertJsMatrixStdout("demos/rosetta/918_vtable_seq_code/main.sars", "918\n");
-    try assertJsMatrixStdout("demos/rosetta/919_callback_some_code/main.sars", "919\n");
     try assertJsMatrixStdout("demos/rosetta/920_mem_zone_code/main.sars", "920\n");
     try assertJsMatrixStdout("demos/rosetta/921_chain28_code/main.sars", "921\n");
     try assertJsMatrixStdout("demos/rosetta/922_affirm_code/main.sars", "922\n");
@@ -1049,8 +948,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/925_branchy_35_code/main.sars", "925\n");
     try assertJsMatrixStdout("demos/rosetta/926_struct_deck_code/main.sars", "926\n");
     try assertJsMatrixStdout("demos/rosetta/927_loop_stride4_code/main.sars", "927\n");
-    try assertJsMatrixStdout("demos/rosetta/928_vtable_step_code/main.sars", "928\n");
-    try assertJsMatrixStdout("demos/rosetta/929_callback_odd_code/main.sars", "929\n");
     try assertJsMatrixStdout("demos/rosetta/930_mem_rack_code/main.sars", "930\n");
     try assertJsMatrixStdout("demos/rosetta/931_chain29_code/main.sars", "931\n");
     try assertJsMatrixStdout("demos/rosetta/932_taut_code/main.sars", "932\n");
@@ -1059,8 +956,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/935_branchy_36_code/main.sars", "935\n");
     try assertJsMatrixStdout("demos/rosetta/936_struct_reg_code/main.sars", "936\n");
     try assertJsMatrixStdout("demos/rosetta/937_loop_clock_code/main.sars", "937\n");
-    try assertJsMatrixStdout("demos/rosetta/938_vtable_once2_code/main.sars", "938\n");
-    try assertJsMatrixStdout("demos/rosetta/939_callback_even_code/main.sars", "939\n");
     try assertJsMatrixStdout("demos/rosetta/940_mem_slab3_code/main.sars", "940\n");
     try assertJsMatrixStdout("demos/rosetta/941_chain30_code/main.sars", "941\n");
     try assertJsMatrixStdout("demos/rosetta/942_excluded_code/main.sars", "942\n");
@@ -1069,8 +964,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/945_branchy_37_code/main.sars", "945\n");
     try assertJsMatrixStdout("demos/rosetta/946_struct_header_code/main.sars", "946\n");
     try assertJsMatrixStdout("demos/rosetta/947_loop_stride5_code/main.sars", "947\n");
-    try assertJsMatrixStdout("demos/rosetta/948_vtable_wrap2_code/main.sars", "948\n");
-    try assertJsMatrixStdout("demos/rosetta/949_callback_and3_code/main.sars", "949\n");
     try assertJsMatrixStdout("demos/rosetta/950_mem_segment_code/main.sars", "950\n");
     try assertJsMatrixStdout("demos/rosetta/951_chain31_code/main.sars", "951\n");
     try assertJsMatrixStdout("demos/rosetta/952_noncontra_code/main.sars", "952\n");
@@ -1079,8 +972,6 @@ test "js backend rosetta demos match expected output under node" {
     try assertJsMatrixStdout("demos/rosetta/955_branchy_38_code/main.sars", "955\n");
     try assertJsMatrixStdout("demos/rosetta/956_struct_array_code/main.sars", "956\n");
     try assertJsMatrixStdout("demos/rosetta/957_loop_index_code/main.sars", "957\n");
-    try assertJsMatrixStdout("demos/rosetta/958_vtable_twice2_code/main.sars", "958\n");
-    try assertJsMatrixStdout("demos/rosetta/959_callback_all3_code/main.sars", "959\n");
     try assertJsMatrixStdout("demos/rosetta/960_mem_arena2_code/main.sars", "960\n");
     try assertJsMatrixStdout("demos/rosetta/961_chain32_code/main.sars", "961\n");
     try assertJsMatrixStdout("demos/support/sort_probe.sars", "sort ok\n");
@@ -1124,6 +1015,122 @@ test "js backend rejects intentional-fail demos like the native backend" {
     try assertJsBuildRejects("demos/rosetta/227_mod_shadowing_prevention/main.sars");
     try assertJsBuildRejects("demos/rosetta/243_contract_sig_mismatch_link/main.sars");
     try assertJsBuildRejects("demos/rosetta/502_bare_crossdir_import_reject/main.sars");
+}
+
+test "js backend rejects object-safety-violating vtable demos" {
+    // sci-rust P1.1a: vtable slot methods must take the receiver by borrow
+    // (`&self: ptr`). These callback/vtable demos predate the gate and are
+    // rejected by build-js exactly like the native backend; see the native
+    // baseline in docs/demos_sars_batch.md.
+    try assertJsBuildRejects("demos/rosetta/114_callback_from_c/main.sars");
+    try assertJsBuildRejects("demos/rosetta/183_signal_handling_setup/main.sars");
+    try assertJsBuildRejects("demos/rosetta/198_control_flow_guard_cfi/main.sars");
+    try assertJsBuildRejects("demos/rosetta/290_ffi_callback_thunk/main.sars");
+    try assertJsBuildRejects("demos/rosetta/334_indirect_import_shadow/main.sars");
+    try assertJsBuildRejects("demos/rosetta/458_vtable_two_impls/main.sars");
+    try assertJsBuildRejects("demos/rosetta/460_vtable_mem_spill/main.sars");
+    try assertJsBuildRejects("demos/rosetta/463_vtable_branchy_pick/main.sars");
+    try assertJsBuildRejects("demos/rosetta/466_callback_register_invoke/main.sars");
+    try assertJsBuildRejects("demos/rosetta/467_callback_accum_loop/main.sars");
+    try assertJsBuildRejects("demos/rosetta/468_callback_slot_write/main.sars");
+    try assertJsBuildRejects("demos/rosetta/469_callback_chain/main.sars");
+    try assertJsBuildRejects("demos/rosetta/470_callback_select/main.sars");
+    try assertJsBuildRejects("demos/rosetta/471_callback_int_float/main.sars");
+    try assertJsBuildRejects("demos/rosetta/472_callback_f32_double/main.sars");
+    try assertJsBuildRejects("demos/rosetta/473_callback_nested_invoke/main.sars");
+    try assertJsBuildRejects("demos/rosetta/474_callback_signed_branch/main.sars");
+    try assertJsBuildRejects("demos/rosetta/475_callback_const_producer/main.sars");
+    try assertJsBuildRejects("demos/rosetta/478_vtable_export_float/main.sars");
+    try assertJsBuildRejects("demos/rosetta/480_callback_reg_float/main.sars");
+    try assertJsBuildRejects("demos/rosetta/485_vtable_param_float/main.sars");
+    try assertJsBuildRejects("demos/rosetta/519_vtable_fallible_split/main.sars");
+    try assertJsBuildRejects("demos/rosetta/521_callback_fallible_split/main.sars");
+    try assertJsBuildRejects("demos/rosetta/530_vtable_codeval/main.sars");
+    try assertJsBuildRejects("demos/rosetta/538_vtable_pair_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/539_callback_codeval/main.sars");
+    try assertJsBuildRejects("demos/rosetta/548_vtable_store_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/549_callback_add_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/560_vtable_dual_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/568_vtable_calc_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/569_callback_pair_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/578_vtable_add2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/579_callback_const_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/588_vtable_sub_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/589_callback_add3_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/598_vtable_mul_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/599_callback_sub_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/608_vtable_neg_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/609_callback_mul_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/618_vtable_id_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/619_callback_max_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/628_vtable_add3_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/629_callback_id_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/638_vtable_sub2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/639_callback_div_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/648_vtable_double_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/649_callback_neg_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/658_vtable_load_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/659_callback_add4_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/668_vtable_pair2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/669_callback_or_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/678_vtable_zero_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/679_callback_add5_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/688_vtable_max2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/689_callback_add6_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/698_vtable_add7_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/699_callback_sub2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/708_vtable_cmp_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/709_callback_and_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/718_vtable_wrap_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/719_callback_pick_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/728_vtable_dispatch_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/729_callback_not_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/738_vtable_route_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/739_callback_sign_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/748_vtable_twice_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/749_callback_zero_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/758_vtable_min_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/759_callback_eq_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/768_vtable_once_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/769_callback_gt_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/778_vtable_self_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/779_callback_le_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/788_vtable_chain_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/789_callback_min_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/798_vtable_apply_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/799_callback_ne_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/808_vtable_pick3_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/809_callback_shl_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/818_vtable_alt_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/819_callback_nz_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/828_vtable_swap_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/829_callback_all_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/838_vtable_pick4_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/839_callback_any_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/848_vtable_fold_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/849_callback_both_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/858_vtable_bestof_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/859_callback_nor_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/868_vtable_or_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/869_callback_xor_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/878_vtable_multi_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/879_callback_nand_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/888_vtable_guard_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/889_callback_iff_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/898_vtable_chain3_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/899_callback_majority_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/908_vtable_round_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/909_callback_cond_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/918_vtable_seq_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/919_callback_some_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/928_vtable_step_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/929_callback_odd_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/938_vtable_once2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/939_callback_even_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/948_vtable_wrap2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/949_callback_and3_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/958_vtable_twice2_code/main.sars");
+    try assertJsBuildRejects("demos/rosetta/959_callback_all3_code/main.sars");
 }
 
 fn assertJsRuntimeTrap(path: []const u8, expected_stderr_substr: []const u8) !void {
