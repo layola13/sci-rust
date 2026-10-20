@@ -5,7 +5,7 @@ use crate::asm::{asm_inout_passthrough, asm_mov_copy, is_plain_local};
 use crate::mir::*;
 use crate::render::*;
 use crate::render_util::{assert_panic_code, assign_loud_const, build_constmap, call_sig_loud, const_needs_loud, diverging_panic_code, flat_comment, is_diverging_panic_call, is_overflow_assert, loud_const_kind, loud_operand_reason, render_call_arg, render_operand, sa_ident, sa_label, unreachable_panic_code};
-use crate::spill::{build_spill, spill_slot};
+use crate::spill::{build_spill_for, spill_slot};
 
 /// Placeholder bind for loud paths: an unbound dest gets `= 0` so
 /// downstream uses stay parseable (the function is already flagged loud).
@@ -33,7 +33,7 @@ pub fn spill_placeholder(
     if let Some(d) = dest {
         if let Some(ty) = spill.get(d) {
             let slot = crate::spill::spill_slot(d);
-            out.push(format!("    {} = alloc 8", slot));
+            out.push(format!("    {} = stack_alloc 8", slot));
             out.push(format!("    store {}+0, {} as {}", slot, d, ty));
         }
     }
@@ -76,7 +76,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
     );
     // Spill map for multi-use shared values (reload slots instead of
     // moving shared temps twice). Built over MIR statements once.
-    let spill = build_spill(&f.blocks);
+    let spill = build_spill_for(f);
     // Locals defined but never read: a byte-literal store into one of them
     // would allocate a payload nobody can free (see spill::dead_locals).
     let dead = crate::spill::dead_locals(&f.blocks, f.params.len());
@@ -129,6 +129,21 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                         let line = render_rvalue(rvalue, dest, dest_place.as_deref(), unsup, &b.id, &mut mv_idx, &cmap, &spill);
                         for l in line.split('\n') {
                             out.push(format!("    {}", l));
+                        }
+                        // Spilled dests need their slot allocated at the
+                        // definition. Most render arms already emit it; this
+                        // covers the remaining arms (BinOp/UnOp/Discriminant/
+                        // RawPtr/Repeat/...) without duplicating it.
+                        if let Some(ty) = spill.get(dest) {
+                            let slot = spill_slot(dest);
+                            let prefix = format!("{} = ", slot);
+                            let emitted = line
+                                .split('\n')
+                                .any(|l| l.trim_start().starts_with(&prefix));
+                            if !emitted {
+                                out.push(format!("    {} = stack_alloc 8", slot));
+                                out.push(format!("    store {}+0, {} as {}", slot, dest, ty));
+                            }
                         }
                     }
                     if unsup.len() > before && !dead_literal {
@@ -265,7 +280,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                         // Spilled call dests get their slot setup inline.
                         if let Some(ty) = spill.get(d) {
                             let slot = spill_slot(d);
-                            out.push(format!("    {} = alloc 8", slot));
+                            out.push(format!("    {} = stack_alloc 8", slot));
                             out.push(format!("    store {}+0, {} as {}", slot, d, ty));
                         }
                     }

@@ -16,6 +16,24 @@ pub fn spill_reg(op: &Operand, spill: &crate::spill::SpillMap) -> Option<String>
     Some(format!("load {}+0 as {}", crate::spill::spill_slot(place), t))
 }
 
+/// Slot setup lines for a spilled dest: its later Copy-uses reload from the
+/// slot instead of moving the register (a moved register traps
+/// UseAfterMove). Empty when the dest is not spilled.
+fn dest_slot_lines(dest: &str, spill: &crate::spill::SpillMap) -> Vec<String> {
+    match spill.get(dest) {
+        Some(t) => {
+            let s = crate::spill::spill_slot(dest);
+            vec![format!("{} = stack_alloc 8", s), format!("store {}+0, {} as {}", s, dest, t)]
+        }
+        None => vec![],
+    }
+}
+
+/// The same slot setup as one text blob (for single-line renderings).
+fn dest_slot_suffix(dest: &str, spill: &crate::spill::SpillMap) -> String {
+    dest_slot_lines(dest, spill).join("\n")
+}
+
 pub fn render_rvalue(
     rv: &Rvalue,
     dest: &str,
@@ -29,18 +47,8 @@ pub fn render_rvalue(
     match rv {
         Rvalue::Use { op } => {
             // Spilled shared values reload (never move the slot source).
-            if let Operand::Copy { place } = op {
-                if let Some(ty) = spill.get(place) {
-                    return format!(
-                        "{} = load {}+0 as {}",
-                        dest,
-                        crate::spill::spill_slot(place),
-                        ty
-                    );
-                }
-            }
             if let Some(t) = spill_reg(op, spill) {
-                return format!("{} = {}", dest, t);
+                return format!("{} = {}{}", dest, t, dest_slot_suffix(dest, spill));
             }
             // Const-propagated literals re-materialize instead of moving a
             // shared temp (a second move of the temp would trap UseAfterMove).
@@ -48,9 +56,9 @@ pub fn render_rvalue(
             match op {
                 Operand::Move { place } | Operand::Copy { place } => {
                     if let Some(lit) = cmap.get(place) {
-                        return format!("{} = {}", dest, lit);
+                        return format!("{} = {}{}", dest, lit, dest_slot_suffix(dest, spill));
                     }
-                    format!("{} = {}", dest, render_operand(op))
+                    format!("{} = {}{}", dest, render_operand(op), dest_slot_suffix(dest, spill))
                 }
                 // Byte-literal const in value position: inline the payload
                 // and bind its thin address (fat pointees stay loud).
@@ -63,7 +71,7 @@ pub fn render_rvalue(
                         // instead of moving the buffer address.
                         if let Some(t) = spill.get(dest) {
                             let s = crate::spill::spill_slot(dest);
-                            lines.push(format!("{} = alloc 8", s));
+                            lines.push(format!("{} = stack_alloc 8", s));
                             lines.push(format!("store {}+0, {} as {}", s, dest, t));
                         }
                         return lines.join("\n");
@@ -94,7 +102,7 @@ pub fn render_rvalue(
             // so the later `drop(b)` still finds `b` bound.
             if let Some(t) = spill.get(dest) {
                 let s = crate::spill::spill_slot(dest);
-                lines.push(format!("{} = alloc 8", s));
+                lines.push(format!("{} = stack_alloc 8", s));
                 lines.push(format!("store {}+0, {} as {}", s, dest, t));
             }
             lines.join("\n")
@@ -109,7 +117,7 @@ pub fn render_rvalue(
             // Spilled call dests get their slot setup inline.
             if let Some(ty) = spill.get(dest) {
                 let slot = crate::spill::spill_slot(dest);
-                s.push_str(&format!("\n{} = alloc 8\nstore {}+0, {} as {}", slot, slot, dest, ty));
+                s.push_str(&format!("\n{} = stack_alloc 8\nstore {}+0, {} as {}", slot, slot, dest, ty));
             }
             s
         }
@@ -191,7 +199,7 @@ pub fn render_rvalue(
             let slot = |pre: &mut Vec<String>| {
                 if let Some(t) = spill.get(dest) {
                     let s = crate::spill::spill_slot(dest);
-                    pre.push(format!("{} = alloc 8", s));
+                    pre.push(format!("{} = stack_alloc 8", s));
                     pre.push(format!("store {}+0, {} as {}", s, dest, t));
                 }
             };
@@ -253,7 +261,7 @@ pub fn render_rvalue(
                         let base = format!("_rep_{}", bid);
                         if let Some(ty) = spill.get(&base) {
                             let slot = crate::spill::spill_slot(&base);
-                            s.push_str(&format!("\n{} = alloc 8\nstore {}+0, {} as {}", slot, slot, base, ty));
+                            s.push_str(&format!("\n{} = stack_alloc 8\nstore {}+0, {} as {}", slot, slot, base, ty));
                         }
                         s
                     }

@@ -191,6 +191,9 @@ pub fn temp_frees(body_lines: &[Vec<String>]) -> BTreeMap<usize, Vec<String>> {
         let keep: Vec<String> = defined
             .into_iter()
             .filter(|r| !freed.contains(r))
+            // Spill slots are stack allocations: releasing them is a
+            // StackEscape trap, not a leak fix.
+            .filter(|r| !is_spill_slot(r))
             .filter(|r| where_.get(r).is_some_and(|bs| bs.len() == 1 && bs.contains(&bi)))
             // A temp consumed by a BRANCH must outlive the block: in an
             // `Assert` block the `br cond -> ..` sits mid-block (the fail arm
@@ -218,6 +221,12 @@ pub fn temp_frees(body_lines: &[Vec<String>]) -> BTreeMap<usize, Vec<String>> {
 /// a statement whose operands interleave with the free).
 fn is_compare_temp(reg: &str) -> bool {
     reg.starts_with("_as_") || reg.starts_with("_sw_")
+}
+
+/// Spill slots (`<reg>_spill`) are `stack_alloc`s: the frame owns them and
+/// an explicit `!` traps StackEscape, so they are never free candidates.
+fn is_spill_slot(reg: &str) -> bool {
+    reg.ends_with("_spill")
 }
 
 /// Compute per-Return-block free lists. `dom_sets` holds raw dominator sets
@@ -304,6 +313,9 @@ pub fn exit_frees(
             .filter(|(_, &n)| n == 1)
             .map(|(r, _)| r.clone())
             .filter(|r| r != "_0" && !r.starts_with("_0_v"))
+            // Spill slots are stack allocations: releasing them is a
+            // StackEscape trap, not a leak fix.
+            .filter(|r| !is_spill_slot(r))
             .filter(|r| {
                 def_blocks.get(r).is_some_and(|bis| bis.iter().all(|b| doms.contains(b)))
             })
@@ -440,6 +452,24 @@ mod drop_tests {
         let frees = &out[&0];
         assert!(frees.contains(&"_a".to_string()), "{:?}", frees);
         assert!(!frees.contains(&"_r".to_string()), "return consumes _r: {:?}", frees);
+    }
+
+    #[test]
+    fn spill_slot_not_exit_freed() {
+        // Spill slots are stack allocations: `!slot` is a StackEscape trap,
+        // so an exit free must never pick one up (the real `_a` still frees).
+        let body = vec![lines(&[
+            "_a = alloc 8",
+            "_a_spill = stack_alloc 8",
+            "store _a_spill+0, _a as ptr",
+            "_r = load _a_spill+0 as ptr",
+            "return 0",
+        ])];
+        let doms = vec![std::collections::HashSet::from([0])];
+        let out = exit_frees(&body, &doms, 0);
+        let frees = &out[&0];
+        assert!(!frees.contains(&"_a_spill".to_string()), "{:?}", frees);
+        assert!(frees.contains(&"_a".to_string()), "{:?}", frees);
     }
 
     #[test]

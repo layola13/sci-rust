@@ -21,6 +21,293 @@ use crate::mir::{Operand, Rvalue, Stmt, Term};
 /// Spill slots: base/dest reg -> SA store type (`ptr`, `u64`, `i32`, …).
 pub type SpillMap = BTreeMap<String, String>;
 
+/// MIR/SA type text -> SA value type (width-carrying). None when the type
+/// cannot be represented as an SA value (fat pointers, 128-bit ints, void).
+pub fn sa_type_of(ty: &str) -> Option<String> {
+    let t = ty.trim();
+    if t.is_empty() || t == "?" || t == "void" || t == "()" {
+        return None;
+    }
+    if t == "ptr" || t.starts_with('*') || t.starts_with('&') {
+        return Some("ptr".to_string());
+    }
+    match crate::asm::scalar_width_bits(t) {
+        Some(w) if w != 128 => Some(crate::const_util::sa_scalar_ty(t).to_string()),
+        _ => None,
+    }
+}
+
+/// Const operand type from the driver's Debug text
+/// (`Val(Scalar(0x00000001), i32)`) or the `-Zunpretty` text form (`1_i32`).
+/// None for fat pointers and zero-sized values (no SA value type).
+pub fn const_operand_ty(value: &str) -> Option<String> {
+    let v = value.trim();
+    if v.starts_with("Val(ZeroSized") {
+        return None;
+    }
+    if let Some((_, rest)) = v.rsplit_once(", ") {
+        let ty = rest.trim().trim_end_matches(')').trim();
+        return sa_type_of(ty);
+    }
+    if let Some((_, suf)) = v.rsplit_once('_') {
+        return sa_type_of(suf);
+    }
+    None
+}
+
+/// SA type of a place, when the MIR lets us infer it.
+///
+/// Params carry their SA type directly; locals are inferred from the rvalue
+/// that defines them (const / call / cast / ref / aggregate / discriminant).
+/// A place whose type cannot be inferred is absent from the map: callers
+/// then keep the place loud instead of guessing a width.
+pub fn place_types(f: &crate::mir::Function) -> BTreeMap<String, String> {
+    let mut types: BTreeMap<String, String> = BTreeMap::new();
+    for (i, t) in f.params.iter().enumerate() {
+        if let Some(sa) = sa_type_of(t) {
+            types.insert(format!("_{}", i + 1), sa);
+        }
+    }
+    // Definitions may chain (`_1 = Move(_3)`): iterate to a fixed point.
+    for _ in 0..16 {
+        let mut changed = false;
+        for b in &f.blocks {
+            for st in &b.statements {
+                if let Stmt::Assign { dest, rvalue, .. } = st {
+                    if types.contains_key(dest) {
+                        continue;
+                    }
+                    if let Some(t) = rvalue_type(rvalue, &types) {
+                        types.insert(dest.clone(), t);
+                        changed = true;
+                    }
+                }
+            }
+            if let Term::Call { dest: Some(d), sig, .. } = &b.terminator {
+                if !types.contains_key(d) {
+                    if let Some(s) = sig {
+                        if let Some(t) = sa_type_of(&s.ret) {
+                            types.insert(d.clone(), t);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    types
+}
+
+/// SA type of the value an rvalue defines (None when unknown).
+fn rvalue_type(rv: &Rvalue, types: &BTreeMap<String, String>) -> Option<String> {
+    match rv {
+        Rvalue::Use { op } => match op {
+            Operand::Const { value, str_bytes, .. } => {
+                if str_bytes.is_some() {
+                    // Byte-literal payload: the value is a buffer address.
+                    return Some("ptr".to_string());
+                }
+                const_operand_ty(value)
+            }
+            Operand::Copy { place } | Operand::Move { place } => types.get(place).cloned(),
+            _ => None,
+        },
+        Rvalue::Ref { .. } | Rvalue::RawPtr { .. } | Rvalue::Repeat { .. } => {
+            Some("ptr".to_string())
+        }
+        Rvalue::Call { sig, .. } => sig.as_ref().and_then(|s| sa_type_of(&s.ret)),
+        Rvalue::Cast { ty, .. } => {
+            let dst = crate::asm::cast_dst_short(ty);
+            if dst == "ptr" {
+                Some("ptr".to_string())
+            } else {
+                sa_type_of(&dst)
+            }
+        }
+        // Aggregates lower to a materialized buffer (pointer value).
+        Rvalue::Aggregate { .. } => Some("ptr".to_string()),
+        // The enum tag lives at offset 0 and is read as i64.
+        Rvalue::Discriminant { .. } => Some("i64".to_string()),
+        Rvalue::BinOp { left, .. } => match left.as_ref() {
+            Operand::Copy { place } | Operand::Move { place } => types.get(place).cloned(),
+            _ => None,
+        },
+        Rvalue::UnOp { operand, .. } => match operand.as_ref() {
+            Operand::Copy { place } | Operand::Move { place } => types.get(place).cloned(),
+            _ => None,
+        },
+        Rvalue::ThreadLocal { .. } => Some("ptr".to_string()),
+        _ => None,
+    }
+}
+
+/// Place name of a place operand (None for constants).
+fn operand_place(op: &Operand) -> Option<String> {
+    match op {
+        Operand::Move { place } | Operand::Copy { place } | Operand::Conflict { place } => {
+            Some(place.clone())
+        }
+        _ => None,
+    }
+}
+
+/// Rust `Copy` semantics: a place Rust copies stays valid after the read,
+/// but SA `=` CONSUMES its source, so the second copy of the same place
+/// traps UseAfterMove. Spill such places to a slot and reload at every use
+/// (the reload is a plain read: the source register stays live).
+///
+/// A place is spilled when it is copied AND either
+/// - copied more than once, or
+/// - copied and also used later (a use after the copy would read a
+///   consumed register), or
+/// - MIR-dropped (the drop glue releases the place: a consumed register
+///   cannot be released).
+///
+/// A place that is MOVED is owned, not copied: it keeps the direct move
+/// lowering (spilling it would drop the ownership transfer).
+pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>) -> SpillMap {
+    // Uses per place: (consuming, position). Position is the emission order
+    // (block index * 4096 + statement index) so "used after" is decidable.
+    let mut uses: BTreeMap<String, Vec<(bool, usize)>> = BTreeMap::new();
+    let mut dropped: BTreeSet<String> = BTreeSet::new();
+    let mut copied: BTreeSet<String> = BTreeSet::new();
+    let mut moved: BTreeSet<String> = BTreeSet::new();
+    let def_count = definition_counts(blocks);
+    for (bi, b) in blocks.iter().enumerate() {
+        for (si, st) in b.statements.iter().enumerate() {
+            let pos = bi * 4096 + si;
+            if let Stmt::Assign { rvalue, .. } = st {
+                match rvalue {
+                    Rvalue::Use { op } => {
+                        if let Some(p) = operand_place(op) {
+                            // A plain assign consumes its source register.
+                            note_use(&mut uses, &p, true, pos);
+                            match op {
+                                Operand::Copy { .. } => {
+                                    copied.insert(p);
+                                }
+                                Operand::Move { .. } => {
+                                    moved.insert(p);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    Rvalue::Cast { op, .. } => {
+                        if let Some(p) = operand_place(op) {
+                            note_use(&mut uses, &p, true, pos);
+                        }
+                    }
+                    Rvalue::RawPtr { place, .. } => {
+                        note_use(&mut uses, place, true, pos);
+                    }
+                    Rvalue::Aggregate { elems, .. } => {
+                        for e in elems {
+                            if let Some(p) = operand_place(e) {
+                                // A one-element aggregate lowers to a plain
+                                // assign (consuming); a multi-element one
+                                // stores into a buffer (only the explicitly
+                                // moved elements are consumed).
+                                note_use(&mut uses, &p, elems.len() == 1, pos);
+                            }
+                        }
+                    }
+                    Rvalue::BinOp { left, right, .. } => {
+                        for o in [left.as_ref(), right.as_ref()] {
+                            if let Some(p) = operand_place(o) {
+                                note_use(&mut uses, &p, false, pos);
+                            }
+                        }
+                    }
+                    Rvalue::UnOp { operand, .. } => {
+                        if let Some(p) = operand_place(operand) {
+                            note_use(&mut uses, &p, false, pos);
+                        }
+                    }
+                    Rvalue::Ref { place, .. } => {
+                        note_use(&mut uses, place, false, pos);
+                    }
+                    Rvalue::Discriminant { place } => {
+                        note_use(&mut uses, place, false, pos);
+                    }
+                    Rvalue::Repeat { op, .. } => {
+                        if let Some(p) = operand_place(op) {
+                            note_use(&mut uses, &p, false, pos);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        match &b.terminator {
+            Term::Call { args, .. } => {
+                let pos = bi * 4096 + 4095;
+                for a in args {
+                    if let Some(p) = operand_place(a) {
+                        note_use(&mut uses, &p, false, pos);
+                    }
+                }
+            }
+            Term::SwitchInt { discr, .. } => {
+                let pos = bi * 4096 + 4095;
+                if let Some(p) = operand_place(discr) {
+                    note_use(&mut uses, &p, false, pos);
+                }
+            }
+            Term::Assert { cond, .. } => {
+                let pos = bi * 4096 + 4095;
+                if let Some(p) = operand_place(cond) {
+                    note_use(&mut uses, &p, false, pos);
+                }
+            }
+            Term::Drop { place, .. } => {
+                dropped.insert(place.clone());
+                note_use(&mut uses, place, false, bi * 4096 + 4095);
+            }
+            _ => {}
+        }
+    }
+    let mut map = SpillMap::new();
+    for (place, sites) in &uses {
+        // Only Copy places qualify: a moved place is owned, not copied.
+        if !copied.contains(place) || moved.contains(place) {
+            continue;
+        }
+        // The slot setup is emitted at the definition site, so only
+        // single-def places can spill (params have no definition and
+        // multi-def locals would redefine the same slot).
+        if def_count.get(place).copied().unwrap_or(0) != 1 {
+            continue;
+        }
+        let first_consuming = sites.iter().find(|(c, _)| *c).map(|(_, p)| *p);
+        let used_after_copy = match first_consuming {
+            Some(p) => sites.iter().any(|(_, q)| *q > p),
+            None => false,
+        };
+        let needs = sites.len() > 1 || used_after_copy || dropped.contains(place);
+        if !needs {
+            continue;
+        }
+        if let Some(ty) = types.get(place) {
+            map.insert(place.clone(), ty.clone());
+        }
+    }
+    map
+}
+
+/// Record one use of a place.
+fn note_use(
+    uses: &mut BTreeMap<String, Vec<(bool, usize)>>,
+    place: &str,
+    consuming: bool,
+    pos: usize,
+) {
+    uses.entry(place.to_string()).or_default().push((consuming, pos));
+}
+
 /// SA store type for a call-result spill slot, from the callee sig ret.
 /// None when unmappable (caller goes loud through existing paths).
 pub fn call_spill_ty(ret: &str) -> Option<String> {
@@ -105,6 +392,34 @@ fn consuming_use_targets(st: &Stmt) -> Vec<String> {
         },
         _ => vec![],
     }
+}
+
+/// Definitions per register (Assign dests and call dests).
+fn definition_counts(blocks: &[crate::mir::Block]) -> BTreeMap<String, usize> {
+    let mut def_count: BTreeMap<String, usize> = BTreeMap::new();
+    for b in blocks {
+        for st in &b.statements {
+            if let Stmt::Assign { dest, .. } = st {
+                *def_count.entry(dest.clone()).or_insert(0) += 1;
+            }
+        }
+        if let Term::Call { dest: Some(d), .. } = &b.terminator {
+            *def_count.entry(d.clone()).or_insert(0) += 1;
+        }
+    }
+    def_count
+}
+
+/// Build the spill map for one function, including the general Copy-value
+/// spill (`copy_spill`). Existing typed spills win: they already cover
+/// call/cast/borrow/byte-literal shapes whose value type is known exactly.
+pub fn build_spill_for(f: &crate::mir::Function) -> SpillMap {
+    let mut map = build_spill(&f.blocks);
+    let types = place_types(f);
+    for (place, ty) in copy_spill(&f.blocks, &types) {
+        map.entry(place).or_insert(ty);
+    }
+    map
 }
 
 /// Build the spill map for one function: synth bases (`_agg_*`, `_rep_*`
@@ -341,7 +656,9 @@ pub fn spill_slot_lines(lines: &mut Vec<String>, bid: &str, spill: &SpillMap) {
     for base in [format!("_agg_{}", bid), format!("_rep_{}", bid)] {
         if let Some(ty) = spill.get(&base) {
             let slot = spill_slot(&base);
-            lines.push(format!("{} = alloc 8", slot));
+            // Stack slot: the slot's lifetime is the function frame, so the
+            // exit leak check does not see it (a heap slot would leak here).
+            lines.push(format!("{} = stack_alloc 8", slot));
             lines.push(format!("store {}+0, {} as {}", slot, base, ty));
         }
     }
@@ -530,8 +847,65 @@ mod spill_tests {
         assert_eq!(
             line,
             "_str_bb0_0 = alloc 3\nstore _str_bb0_0+0, 77 as u8\nstore _str_bb0_0+1, 97 as u8\n\
-             store _str_bb0_0+2, 110 as u8\n_1 = _str_bb0_0\n_1_spill = alloc 8\nstore _1_spill+0, _1 as ptr"
+             store _str_bb0_0+2, 110 as u8\n_1 = _str_bb0_0\n_1_spill = stack_alloc 8\nstore _1_spill+0, _1 as ptr"
         );
+    }
+
+    #[test]
+    fn copy_spill_spills_multi_copy_local() {
+        use crate::mir::{Block, Rvalue, Term};
+        let copy = |dest: &str| Stmt::Assign {
+            dest: dest.to_string(),
+            dest_place: Some(dest.to_string()),
+            rvalue: Rvalue::Use { op: Operand::Copy { place: "_2".to_string() } },
+        };
+        let blocks = vec![Block {
+            id: "bb0".to_string(),
+            statements: vec![
+                Stmt::Assign {
+                    dest: "_2".to_string(),
+                    dest_place: Some("_2".to_string()),
+                    rvalue: Rvalue::Use {
+                        op: Operand::Const {
+                            value: "42_u64".to_string(),
+                            str_bytes: None,
+                            str_len: None,
+                        },
+                    },
+                },
+                copy("_3"),
+                copy("_4"),
+            ],
+            terminator: Term::Return { ret: None },
+        }];
+        let mut types = BTreeMap::new();
+        types.insert("_2".to_string(), "u64".to_string());
+        assert_eq!(copy_spill(&blocks, &types).get("_2"), Some(&"u64".to_string()));
+    }
+
+    #[test]
+    fn copy_spill_skips_params_and_unknown_types() {
+        use crate::mir::{Block, Rvalue, Term};
+        let copy = |dest: &str, place: &str| Stmt::Assign {
+            dest: dest.to_string(),
+            dest_place: Some(dest.to_string()),
+            rvalue: Rvalue::Use { op: Operand::Copy { place: place.to_string() } },
+        };
+        let blocks = vec![Block {
+            id: "bb0".to_string(),
+            statements: vec![
+                copy("_2", "_1"),
+                copy("_3", "_1"),
+                copy("_4", "_9"),
+                copy("_5", "_9"),
+            ],
+            terminator: Term::Return { ret: None },
+        }];
+        let mut types = BTreeMap::new();
+        types.insert("_1".to_string(), "u64".to_string());
+        // `_1` is a param (zero defs): the header binds it, no slot setup
+        // exists. `_9` has no inferred type: cannot pick a slot width.
+        assert!(copy_spill(&blocks, &types).is_empty());
     }
 
     #[test]
