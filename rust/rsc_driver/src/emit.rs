@@ -151,6 +151,10 @@ fn vec_layout_info<'tcx>(
         "is_empty"
     } else if has("index") {
         "index"
+    } else if has("from") {
+        "from"
+    } else if has("push_str") {
+        "push_str"
     } else {
         return None;
     };
@@ -195,6 +199,14 @@ fn vec_layout_info<'tcx>(
         .ok()?;
     // The words are found by field name: `Vec` nests them
     // (`RawVec { inner: RawVecInner { ptr, cap }, .. }` plus `len`).
+    // `String::from` / `String::push_str` operate on the wrapped vector.
+    let kind = if has("from") && is_string_type(tcx, vec_ty) {
+        "str_from"
+    } else if has("push_str") && is_string_type(tcx, vec_ty) {
+        "str_push"
+    } else {
+        kind
+    };
     let offs = [
         field_offset_pub(tcx, env, vec_ty, &layout.layout, 0, "ptr")?,
         field_offset_pub(tcx, env, vec_ty, &layout.layout, 0, "cap")?,
@@ -240,6 +252,14 @@ pub fn field_offset_pub<'tcx>(
         }
     }
     None
+}
+
+/// True for `String` (a `Vec<u8>` wrapper).
+fn is_string_type(tcx: TyCtxt<'_>, ty: Ty<'_>) -> bool {
+    match ty.kind() {
+        TyKind::Adt(def, _) => tcx.item_name(def.did()).as_str() == "String",
+        _ => false,
+    }
 }
 
 /// A primitive method the backend can inline: `i32::abs`, `core::cmp::min`
