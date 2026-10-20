@@ -242,6 +242,9 @@ exit 0，无 broker）。
   解析出 `8/16`）构造 `Iter { ptr, end }`；`next` 比较 `cur < end`，产出
   当前元素指针（niche `Option<&T>`：0 = None），并按 `elem_size` 推进。
   已用 `iter_sum(&[i32])` / `iter_sum_vec(&Vec<i32>)` 端到端验证。
-- 仍未覆盖：`.step_by()`/`.take()` 等适配器，以及 `.iter()` 这类需要
-  `&self -> Iter` 适配层的调用。
+- `slice::iter(&[T])` / `Vec::iter()`：`iter` 按同一套数据/长度字构造
+  `Iter`；`Vec::iter()` 先经 `Deref::deref` 内联出 `&[T]` 胖指针
+  （`_deref_data_`/`_deref_len_`，字段名解析偏移），再走 `slice::iter`。
+  已用 `iter_ref_sum` / `iter_ref_sum_vec` 端到端验证。
+- 仍未覆盖：`.step_by()`/`.take()` 等适配器。
 

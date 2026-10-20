@@ -438,6 +438,22 @@ pub fn plan_vec_shim(
             lines.push(format!("{} = eq {}, 0", dest, tmp));
             Some(lines)
         }
+        "deref" => {
+            // `<Vec<T> as Deref>::deref`: a `&[T]` fat pointer over the
+            // vector's data/length words.
+            let v = arg_reg(0)?;
+            let data = format!("_deref_data_{}", bid);
+            let len = format!("_deref_len_{}", bid);
+            let slot = format!("_deref_off_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("{} = load {}+{} as ptr", data, v, sh.ptr_off));
+            lines.push(format!("{} = load {}+{} as u64", len, v, sh.len_off));
+            lines.push(format!("mut {} = alloc 16", slot));
+            lines.push(format!("store {}+0, {} as ptr", slot, data));
+            lines.push(format!("store {}+8, {} as u64", slot, len));
+            lines.push(format!("{} = {}", dest, slot));
+            Some(lines)
+        }
         "index" => {
             // `v[i]`: the element at `data + i * elem_size`. The MIR's
             // bounds check runs before this call, so the index is in range.

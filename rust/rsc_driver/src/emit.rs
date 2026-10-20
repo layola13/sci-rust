@@ -151,6 +151,8 @@ fn vec_layout_info<'tcx>(
         "is_empty"
     } else if has("index") {
         "index"
+    } else if has("deref") {
+        "deref"
     } else if has("from") {
         "from"
     } else if has("push_str") {
@@ -365,55 +367,59 @@ fn slice_iter_info<'tcx>(
         .ok()
         .map(|l| l.size.bytes())
     };
-    // `<std::slice::Iter<'_, T> as Iterator>::next`
-    if let TyKind::Adt(def, targs) = ty.kind() {
-        if tcx.def_path_str(def.did()).contains("slice::Iter") {
-            let elem = targs.iter().find_map(|a| a.as_type())?;
-            let elem_size = size_of(elem)?;
-            // std's `Iter` is `{ ptr, end }`: fixed word offsets.
-            return Some(format!(
-                "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 8}}",
-                elem_size
-            ));
+    let is_into_iter = fname.contains("IntoIterator_into_iter");
+    // `<std::slice::Iter<'_, T> as Iterator>::next` (a `&mut Iter` receiver).
+    if !is_into_iter {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if tcx.def_path_str(def.did()).contains("slice::Iter") {
+                let elem = targs.iter().find_map(|a| a.as_type())?;
+                let elem_size = size_of(elem)?;
+                // std's `Iter` is `{ ptr, end }`: fixed word offsets.
+                return Some(format!(
+                    "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 8}}",
+                    elem_size
+                ));
+            }
         }
     }
-    if !fname.contains("IntoIterator_into_iter") {
-        return None;
-    }
-    // `into_iter` on `&[T]`.
+    // `slice::iter(&[T]) -> Iter` and `into_iter` on `&[T]`.
     if let TyKind::Slice(elem) = ty.kind() {
-        let elem_size = size_of(*elem)?;
-        let layout = tcx
-            .layout_of(PseudoCanonicalInput {
-                typing_env: env,
-                value: recv_ty,
-            })
-            .ok()?;
-        return Some(format!(
-            "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
-            elem_size,
-            layout.fields.offset(0).bytes(),
-            layout.fields.offset(1).bytes()
-        ));
-    }
-    // `into_iter` on `&Vec<T>`: the words are found by field name (Vec nests
-    // them behind `RawVec`).
-    if let TyKind::Adt(def, targs) = ty.kind() {
-        if tcx.def_path_str(def.did()).contains("vec::Vec") {
-            let elem = targs.iter().find_map(|a| a.as_type())?;
-            let elem_size = size_of(elem)?;
+        if is_into_iter || (fname.ends_with("_iter") && !fname.ends_with("_iter_mut")) {
+            let elem_size = size_of(*elem)?;
             let layout = tcx
                 .layout_of(PseudoCanonicalInput {
                     typing_env: env,
-                    value: ty,
+                    value: recv_ty,
                 })
                 .ok()?;
-            let ptr_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "ptr")?;
-            let len_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "len")?;
             return Some(format!(
                 "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
-                elem_size, ptr_off, len_off
+                elem_size,
+                layout.fields.offset(0).bytes(),
+                layout.fields.offset(1).bytes()
             ));
+        }
+    }
+    // `into_iter` on `&Vec<T>`: the words are found by field name (Vec nests
+    // them behind `RawVec`).
+    if is_into_iter {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if tcx.def_path_str(def.did()).contains("vec::Vec") {
+                let elem = targs.iter().find_map(|a| a.as_type())?;
+                let elem_size = size_of(elem)?;
+                let layout = tcx
+                    .layout_of(PseudoCanonicalInput {
+                        typing_env: env,
+                        value: ty,
+                    })
+                    .ok()?;
+                let ptr_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "ptr")?;
+                let len_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "len")?;
+                return Some(format!(
+                    "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
+                    elem_size, ptr_off, len_off
+                ));
+            }
         }
     }
     None

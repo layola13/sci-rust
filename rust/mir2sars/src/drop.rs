@@ -223,6 +223,22 @@ fn is_compare_temp(reg: &str) -> bool {
     reg.starts_with("_as_") || reg.starts_with("_sw_")
 }
 
+/// Registers holding raw addresses loaded out of container words by an
+/// inlined shim (`slice::Iter` cursor/end, `Vec` data pointer). They neither
+/// own their pointee nor may be released at exit.
+fn is_shim_address_reg(reg: &str) -> bool {
+    [
+        "_slice_data_",
+        "_slice_end_",
+        "_slice_cur_",
+        "_slice_endp_",
+        "_slice_nxt_",
+        "_deref_data_",
+    ]
+    .iter()
+    .any(|p| reg.starts_with(p))
+}
+
 /// Spill slots (`<reg>_spill`) are `stack_alloc`s: the frame owns them and
 /// an explicit `!` traps StackEscape, so they are never free candidates.
 fn is_spill_slot(reg: &str) -> bool {
@@ -328,6 +344,10 @@ pub fn exit_frees(
             // Aliases of pointer params borrow caller storage: freeing them
             // would double-free (they are not owned allocations).
             .filter(|r| !ptr_params.contains(r))
+            // Shim loads of raw addresses (iterator state, container data
+            // words) are not owned allocations: releasing one would free
+            // storage the container still owns.
+            .filter(|r| !is_shim_address_reg(r))
             .collect();
         for p in &params {
             if !ptr_params.contains(p) && !moved.contains(p) && !freed_anywhere.contains(p) {

@@ -1692,21 +1692,22 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                     }
                     continue;
                 }
-                if is_into_iter_call(func) {
-                    let src = args
-                        .first()
-                        .map(|a| match a {
-                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
-                                place.clone()
-                            }
-                            _ => "0".to_string(),
-                        })
-                        .unwrap_or_else(|| "0".to_string());
-                    let d = dest.as_deref().unwrap_or("_0");
-                    if let Some(si) = slice_iter {
-                        // `into_iter` on `&[T]` / `&Vec<T>`: build a
-                        // `slice::Iter { ptr, end }` from the data word and
-                        // the length word.
+                // `slice::iter(&[T])` / `into_iter` on `&[T]` / `&Vec<T>`:
+                // build a `slice::Iter { ptr, end }` from the data word and
+                // the length word. (`next` carries the same info but is
+                // handled below.)
+                if let Some(si) = slice_iter {
+                    if !is_next_call(func) {
+                        let src = args
+                            .first()
+                            .map(|a| match a {
+                                Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                    place.clone()
+                                }
+                                _ => "0".to_string(),
+                            })
+                            .unwrap_or_else(|| "0".to_string());
+                        let d = dest.as_deref().unwrap_or("_0");
                         let it = format!("_slice_iter_{}", b.id);
                         let data = format!("_slice_data_{}", b.id);
                         let len = format!("_slice_len_{}", b.id);
@@ -1730,7 +1731,20 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         }
                         continue;
                     }
-                    // `into_iter(range)` is the identity for a range.
+                }
+                if is_into_iter_call(func) {
+                    // `into_iter(range)` and `into_iter(Iter)` are the
+                    // identity for a range / an already-built iterator.
+                    let src = args
+                        .first()
+                        .map(|a| match a {
+                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                place.clone()
+                            }
+                            _ => "0".to_string(),
+                        })
+                        .unwrap_or_else(|| "0".to_string());
+                    let d = dest.as_deref().unwrap_or("_0");
                     out.push(format!("    {} = {}", d, src));
                     bound.insert(d.to_string());
                     match target {
