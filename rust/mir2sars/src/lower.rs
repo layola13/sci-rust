@@ -58,7 +58,7 @@ pub fn param_agg_sizes(f: &Function) -> std::collections::BTreeMap<String, u64> 
                         Rvalue::Use { op } => match op {
                             Operand::Move { place, proj: None }
                             | Operand::Copy { place, proj: None } => Some(place.clone()),
-                            Operand::Conflict { place } => Some(place.clone()),
+                            Operand::Conflict { place, .. } => Some(place.clone()),
                             _ => None,
                         },
                         Rvalue::Ref { place, agg: true, .. } => Some(place.clone()),
@@ -694,19 +694,33 @@ struct JoinSlot {
     /// Use site (block index) replaced by a slot load.
     use_block: usize,
     local: String,
+    /// The projection the joined read had (a field read): the slot holds the
+    /// base address, so the read loads it before adding the offset.
+    proj: Option<PlaceProj>,
+    /// A discriminant read: the tag's byte offset and its SA type. The slot
+    /// holds the tag (computed per path), not the local's value.
+    discr: Option<(u64, String)>,
 }
 
 fn is_scalar_ty(t: &str) -> bool {
     matches!(
         t,
         "i8" | "i16" | "i32" | "i64" | "isize" | "u8" | "u16" | "u32" | "u64" | "usize"
-            | "f32" | "f64" | "char"
+            | "f32" | "f64" | "char" | "ptr"
     )
+}
+
+/// The projection a conflicted read had (a field read keeps its offset).
+fn conflict_proj(op: &Operand) -> Option<PlaceProj> {
+    match op {
+        Operand::Conflict { proj, .. } => proj.clone(),
+        _ => None,
+    }
 }
 
 fn op_if_conflict(op: &Operand) -> Option<&str> {
     match op {
-        Operand::Conflict { place } => Some(place),
+        Operand::Conflict { place, .. } => Some(place),
         _ => None,
     }
 }
@@ -850,24 +864,34 @@ fn plan_join_slots(f: &Function) -> Vec<JoinSlot> {
         }
     }
     let types = crate::spill::place_types(f);
-    let mut sites: Vec<(usize, String)> = Vec::new();
+    let mut sites: Vec<(usize, String, Option<PlaceProj>)> = Vec::new();
+    // Discriminant reads of a join-ambiguous local: the tag differs per
+    // path, so the read is routed through a slot holding the tag.
+    let mut discr_sites: Vec<(usize, String, u64, String)> = Vec::new();
     for (bi, b) in f.blocks.iter().enumerate() {
         for st in &b.statements {
+            if let Stmt::Assign { rvalue: Rvalue::Discriminant { place, offset, ty, niche, .. }, .. } = st {
+                if !*niche {
+                    if let (Some(local), Some(ty)) = (place.strip_suffix("__CONFLICT"), ty.as_ref()) {
+                        discr_sites.push((bi, local.to_string(), *offset, ty.clone()));
+                    }
+                }
+            }
             for op in conflict_ops(st) {
                 if let Some(p) = op_if_conflict(op) {
-                    sites.push((bi, p.to_string()));
+                    sites.push((bi, p.to_string(), conflict_proj(op)));
                 }
             }
         }
         for op in conflict_ops_term(&b.terminator) {
             if let Some(p) = op_if_conflict(op) {
-                sites.push((bi, p.to_string()));
+                sites.push((bi, p.to_string(), conflict_proj(op)));
             }
         }
     }
     let mut seen: HashSet<(usize, String)> = HashSet::new();
     let mut out = Vec::new();
-    for (u, local) in sites {
+    for (u, local, proj) in sites {
         if !seen.insert((u, local.clone())) {
             continue;
         }
@@ -902,6 +926,26 @@ fn plan_join_slots(f: &Function) -> Vec<JoinSlot> {
             frontier,
             use_block: u,
             local,
+            discr: None,
+            proj,
+        });
+    }
+    for (u, local, offset, tag_ty) in discr_sites {
+        if !seen.insert((u, local.clone())) {
+            continue;
+        }
+        let frontier = match join_frontier(&preds, &f.blocks, u, &local) {
+            Some(x) if !x.is_empty() => x,
+            _ => continue,
+        };
+        out.push(JoinSlot {
+            slot: format!("{}_dtag{}_spill", local, u),
+            ty: tag_ty.clone(),
+            frontier,
+            use_block: u,
+            local,
+            discr: Some((offset, tag_ty)),
+            proj: None,
         });
     }
     out
@@ -918,23 +962,48 @@ fn apply_join_slots(f: &mut Function, plans: &[JoinSlot]) {
         .collect();
     for bi in 0..f.blocks.len() {
         let mut rewrite = |op: &mut Operand| {
-            if let Operand::Conflict { place } = op {
+            if let Operand::Conflict { place, .. } = op {
                 if planned.contains(&(bi, place.clone())) {
                     let plan = by_site.get(&(bi, place.clone())).unwrap();
+                    // A field read of the joined value: the slot holds the
+                    // base address, so it is loaded before the offset.
+                    let pj = conflict_proj(op);
                     *op = Operand::Copy {
                         place: plan.slot.clone(),
-                        proj: Some(PlaceProj {
-                            offset: 0,
-                            ty: plan.ty.clone(),
-                            via: None,
-                            index: None,
-                            deref_base: false,
+                        proj: Some(match pj {
+                            Some(p) => PlaceProj {
+                                offset: p.offset,
+                                ty: p.ty.clone(),
+                                via: p.via.clone(),
+                                index: p.index.clone(),
+                                deref_base: true,
+                            },
+                            None => PlaceProj {
+                                offset: 0,
+                                ty: plan.ty.clone(),
+                                via: None,
+                                index: None,
+                                deref_base: false,
+                            },
                         }),
                     };
                 }
             }
         };
         for st in f.blocks[bi].statements.iter_mut() {
+            // A join-ambiguous discriminant reads the tag from the slot.
+            if let Stmt::Assign { rvalue: Rvalue::Discriminant { place, offset, ty, .. }, .. } = st {
+                if let Some(local) = place.strip_suffix("__CONFLICT") {
+                    if let Some(plan) = plans
+                        .iter()
+                        .find(|p| p.use_block == bi && p.local == local && p.discr.is_some())
+                    {
+                        *place = plan.slot.clone();
+                        *offset = 0;
+                        *ty = Some(plan.ty.clone());
+                    }
+                }
+            }
             for op in conflict_ops_mut(st) {
                 rewrite(op);
             }
@@ -1084,13 +1153,27 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     };
     let mut block_stores: std::collections::HashMap<usize, Vec<(String, String, String)>> =
         std::collections::HashMap::new();
+    // Discriminant slots hold the TAG (computed per path), not the local's
+    // value: the frontier loads the tag from the path's version first.
+    let mut discr_stores: std::collections::HashMap<usize, Vec<(String, String, u64, String)>> =
+        std::collections::HashMap::new();
     for p in &join_slots {
         out.push(format!("    mut {} = stack_alloc 8", p.slot));
         for (fb, ver) in &p.frontier {
-            block_stores
-                .entry(*fb)
-                .or_default()
-                .push((p.slot.clone(), ver.clone(), p.ty.clone()));
+            match p.discr.as_ref() {
+                Some((offset, tag_ty)) => {
+                    discr_stores
+                        .entry(*fb)
+                        .or_default()
+                        .push((p.slot.clone(), ver.clone(), *offset, tag_ty.clone()));
+                }
+                None => {
+                    block_stores
+                        .entry(*fb)
+                        .or_default()
+                        .push((p.slot.clone(), ver.clone(), p.ty.clone()));
+                }
+            }
         }
     }
     // RPO emission order (see order.rs): SA checks def-before-use textually.
@@ -1166,7 +1249,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                             Rvalue::Use { op } => match op {
                                 Operand::Move { place, proj: None }
                                 | Operand::Copy { place, proj: None } => Some(place.clone()),
-                                Operand::Conflict { place } => Some(place.clone()),
+                                Operand::Conflict { place, .. } => Some(place.clone()),
                                 _ => None,
                             },
                             Rvalue::Ref { place, agg: true, .. } => Some(place.clone()),
@@ -1330,6 +1413,13 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
         if let Some(list) = block_stores.get(&bi) {
             for (slot, ver, ty) in list {
                 out.push(format!("    store {}+0, {} as {}", slot, ver, ty));
+            }
+        }
+        if let Some(list) = discr_stores.get(&bi) {
+            for (slot, ver, offset, tag_ty) in list {
+                let tmp = format!("{}_tag", slot);
+                out.push(format!("    {} = load {}+{} as {}", tmp, ver, offset, tag_ty));
+                out.push(format!("    store {}+0, {} as {}", slot, tmp, tag_ty));
             }
         }
         match &b.terminator {
@@ -1953,7 +2043,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                                 crate::mir::Rvalue::Use { op } => match op {
                                     crate::mir::Operand::Move { place, .. }
                                     | crate::mir::Operand::Copy { place, .. }
-                                    | crate::mir::Operand::Conflict { place } => Some(place.clone()),
+                                    | crate::mir::Operand::Conflict { place, .. } => Some(place.clone()),
                                     _ => None,
                                 },
                                 // `agg` refs (`dest = place`) copy the pointer

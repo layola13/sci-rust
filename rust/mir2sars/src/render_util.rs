@@ -71,7 +71,7 @@ pub fn loud_const_kind(op: &Operand) -> Option<&'static str> {
 /// Loud reason text for one operand, `None` when it is fine.
 pub fn loud_operand_reason(op: &Operand) -> Option<String> {
     match op {
-        Operand::Conflict { place } => {
+        Operand::Conflict { place, .. } => {
             Some(format!("version conflict at join (multiple reaching defs of {})", place))
         }
         Operand::Const { value, .. } if const_needs_loud(op) => Some(format!(
@@ -125,7 +125,7 @@ pub fn assign_loud_const(rv: &Rvalue) -> Option<String> {
         _ => None,
     };
     hit.map(|op| match op {
-        Operand::Conflict { place } => {
+        Operand::Conflict { place, .. } => {
             format!("version conflict at join (multiple reaching defs of {})", place)
         }
         Operand::Const { value, .. } => format!("unresolvable const {}", value.chars().take(60).collect::<String>()),
@@ -213,7 +213,7 @@ pub fn render_operand(op: &Operand) -> String {
         Operand::Copy { place, .. } => place.clone(),
         // Conflict sentinels never reach here (intercepted loud upstream);
         // the fallback keeps rendering total.
-        Operand::Conflict { place } => place.clone(),
+        Operand::Conflict { place, .. } => place.clone(),
         // A constant aggregate is materialized by the caller.
         Operand::ConstAgg { .. } => "0".to_string(),
         Operand::Const { value, .. } => {

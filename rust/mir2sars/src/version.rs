@@ -189,7 +189,13 @@ fn rewrite_operand(
             }
         }
         Err(()) => {
-            *op = Operand::Conflict { place: local };
+            // Keep the projection: a field read of a joined value still
+            // knows its offset (the backend routes it through a slot).
+            let proj = match op {
+                Operand::Move { proj, .. } | Operand::Copy { proj, .. } => proj.clone(),
+                _ => None,
+            };
+            *op = Operand::Conflict { place: local, proj };
         }
         Ok(None) => {}
     }
@@ -339,15 +345,22 @@ pub fn version_function(f: &Function) -> Function {
                             rewrite_operand(op, bi, pos, &numbered, &inn)
                         }
                         Rvalue::ThreadLocal { .. } => {}
-                        Rvalue::Ref { place, .. }
-                        | Rvalue::Discriminant { place, .. }
-                        | Rvalue::RawPtr { place, .. } => {
+                        Rvalue::Ref { place, .. } | Rvalue::RawPtr { place, .. } => {
                             // Places have no sentinel shape: on conflict the
                             // whole rvalue goes loud (counted downstream).
                             if rewrite_place(place, bi, &numbered, &inn) {
                                 *rvalue = Rvalue::Unsupported {
                                     text: "version conflict at join (multiple reaching defs)".to_string(),
                                 };
+                            }
+                        }
+                        Rvalue::Discriminant { place, .. } => {
+                            // A join-ambiguous discriminant keeps its shape:
+                            // the place is marked so the backend can route
+                            // the read through a join slot (the tag is
+                            // computed per path and stored in the slot).
+                            if rewrite_place(place, bi, &numbered, &inn) {
+                                *place = format!("{}__CONFLICT", place);
                             }
                         }
                         Rvalue::Unsupported { .. } => {}

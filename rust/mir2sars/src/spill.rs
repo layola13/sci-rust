@@ -152,7 +152,7 @@ fn rvalue_type(rv: &Rvalue, types: &BTreeMap<String, String>) -> Option<String> 
 /// Place name of a place operand (None for constants).
 fn operand_place(op: &Operand) -> Option<String> {
     match op {
-        Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place } => {
+        Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place, .. } => {
             Some(place.clone())
         }
         _ => None,
@@ -654,7 +654,7 @@ pub fn dead_locals(blocks: &[crate::mir::Block], n_params: usize) -> BTreeSet<St
     let mut read: BTreeSet<String> = BTreeSet::new();
     let note = |op: &Operand, defined: &mut BTreeSet<String>, read: &mut BTreeSet<String>| {
         let place = match op {
-            Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place } => {
+            Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place, .. } => {
                 place.as_str()
             }
             _ => return,

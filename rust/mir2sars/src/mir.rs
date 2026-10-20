@@ -290,7 +290,12 @@ pub enum Operand {
     /// definitions with no dominance order (needs phi nodes, which SA lacks).
     /// Never renders to a real read: `const_needs_loud` maps it loud, and
     /// both lower and coverage count it through the shared predicate.
-    Conflict { place: String },
+    Conflict {
+        place: String,
+        /// The projection the read had (a field read keeps its offset).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        proj: Option<PlaceProj>,
+    },
 }
 
 impl Operand {
