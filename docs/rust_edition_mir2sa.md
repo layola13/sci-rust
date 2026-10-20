@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 181 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 1687 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -237,6 +237,11 @@ exit 0，无 broker）。
 - `.rev()` 适配器：`Range::rev()` 产生 `Rev<Range<T>>`（range 的 newtype，
   共享同一块存储）→ 退化为恒等；`Rev::next` 用降序游标（游标是上界，
   产出 `cursor - 1`）内联。
-- 仍未覆盖：`for` 遍历 **非 range** 迭代器（`Vec`/切片/`iter()`）与
-  `.step_by()`/`.take()` 等其他适配器——需要 std 的容器迭代器实现。
+- `for x in &slice` / `for x in &vec`（`std::slice::Iter`）：`into_iter`
+  用数据/长度字（偏移由 rustc layout 给出：切片 `0/8`，`Vec` 用字段名
+  解析出 `8/16`）构造 `Iter { ptr, end }`；`next` 比较 `cur < end`，产出
+  当前元素指针（niche `Option<&T>`：0 = None），并按 `elem_size` 推进。
+  已用 `iter_sum(&[i32])` / `iter_sum_vec(&Vec<i32>)` 端到端验证。
+- 仍未覆盖：`.step_by()`/`.take()` 等适配器，以及 `.iter()` 这类需要
+  `&self -> Iter` 适配层的调用。
 
