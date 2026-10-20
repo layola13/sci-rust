@@ -76,11 +76,22 @@ pub fn place_dynamic_index<'tcx>(
     None
 }
 
+/// A resolved place projection: the byte offset, the value type, the
+/// provenance text and whether the base register must be *loaded* first
+/// (a slice's data pointer lives in the fat pointer).
+#[derive(Clone)]
+pub struct PlaceProjInfo {
+    pub offset: u64,
+    pub ty: String,
+    pub via: String,
+    pub deref_base: bool,
+}
+
 pub fn place_proj<'tcx>(
     tcx: TyCtxt<'tcx>,
     body: &Body<'tcx>,
     p: &Place<'tcx>,
-) -> Option<(u64, String, String)> {
+) -> Option<PlaceProjInfo> {
     if p.projection.is_empty() {
         return None;
     }
@@ -92,6 +103,9 @@ pub fn place_proj<'tcx>(
     // the pointer register: it must keep its projection, or the deref is
     // dropped and the base register is read instead of its pointee.
     let mut has_deref = false;
+    // A slice's elements live behind the fat pointer's data word: the base
+    // register must be loaded before the offset is applied.
+    let mut deref_base = false;
     let mut leaf: Ty<'tcx> = cur;
     // Active enum variant introduced by `Downcast` (consumed by the following
     // `Field` to pick that variant's payload offset).
@@ -106,6 +120,9 @@ pub fn place_proj<'tcx>(
                 };
                 leaf = cur;
                 has_deref = true;
+                if matches!(cur.kind(), TyKind::Slice(_)) {
+                    deref_base = true;
+                }
                 variant = None;
             }
             ProjectionElem::Downcast(_, vi) => {
@@ -155,5 +172,10 @@ pub fn place_proj<'tcx>(
     if ty == "void" {
         return None;
     }
-    Some((off, ty, trunc(format!("{:?}", p), 80)))
+    Some(PlaceProjInfo {
+        offset: off,
+        ty,
+        via: trunc(format!("{:?}", p), 80),
+        deref_base,
+    })
 }

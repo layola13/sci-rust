@@ -95,21 +95,29 @@ pub fn render_rvalue(
             // about whole-register values.
             if let Some(pj) = op.proj() {
                 if let Operand::Move { place, .. } | Operand::Copy { place, .. } = op {
+                    // The base may be a fat pointer (a slice): load its data
+                    // word first, then apply the (dynamic) index.
+                    let (base, prelude) = if pj.deref_base {
+                        let bp = format!("{}_b", dest);
+                        (bp.clone(), format!("{} = load {}+0 as ptr\n", bp, place))
+                    } else {
+                        (place.clone(), String::new())
+                    };
                     if let Some((idx, size)) = &pj.index {
                         // A dynamic index (`a[i]`): the address is
                         // `base + index * elem_size`.
                         let ix = format!("{}_ix", dest);
                         let ptr = format!("{}_p", dest);
                         return format!(
-                            "{ix} = mul {idx}, {size}\n{ptr} = ptr_add {place}, {ix}\n{dest} = load {ptr}+{} as {}{}",
+                            "{prelude}{ix} = mul {idx}, {size}\n{ptr} = ptr_add {base}, {ix}\n{dest} = load {ptr}+{} as {}{}",
                             pj.offset,
                             pj.ty,
                             dest_slot_suffix(dest, spill)
                         );
                     }
                     return format!(
-                        "{} = load {}+{} as {}{}",
-                        dest, place, pj.offset, pj.ty, dest_slot_suffix(dest, spill)
+                        "{prelude}{} = load {}+{} as {}{}",
+                        dest, base, pj.offset, pj.ty, dest_slot_suffix(dest, spill)
                     );
                 }
             }
@@ -329,7 +337,20 @@ pub fn render_rvalue(
                 }
             }
         }
-        Rvalue::Cast { op, ty, castkind, src_ty } => {
+        Rvalue::Cast { op, ty, castkind, src_ty, coerce } => {
+            // An unsizing coercion `&[T; N]` -> `&[T]`: build the fat
+            // pointer (data word + length) the target expects.
+            if let Some(c) = coerce {
+                let (size, len_off, len) = (c.size, c.len_off, c.len);
+                let (pre, ot) = bind_move_operand(op, bid, mv_idx);
+                let mut lines = pre;
+                let fat = format!("{}_fat", dest);
+                lines.push(format!("    mut {} = alloc {}", fat, size));
+                lines.push(format!("    store {}+0, {} as ptr", fat, ot));
+                lines.push(format!("    store {}+{}, {} as u64", fat, len_off, len));
+                lines.push(format!("    {} = {}", dest, fat));
+                return lines.join("\n");
+            }
             let dst = cast_dst_short(ty);
             // Spilled sources reload instead of moving (pointer-copy chains
             // reuse one value 2-3 times, and a borrow temp must stay bound

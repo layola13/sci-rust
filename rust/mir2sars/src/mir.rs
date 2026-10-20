@@ -66,6 +66,15 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// An unsizing coercion to a fat pointer: the pointer's size, the offset of
+/// its length word and the source length.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CoerceInfo {
+    pub size: u64,
+    pub len_off: u64,
+    pub len: u64,
+}
+
 /// Niche-encoded enum construction: the niche value and its slot.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct NicheStore {
@@ -139,6 +148,10 @@ pub enum Rvalue {
         castkind: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         src_ty: Option<String>,
+        /// An unsizing coercion to a fat pointer: the pointer's size, the
+        /// offset of its length word and the source length.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        coerce: Option<CoerceInfo>,
     },
     Aggregate {
         elems: Vec<Operand>,
@@ -196,6 +209,10 @@ pub struct PlaceProj {
     /// A dynamic index (`a[i]`): the index register and the element size.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub index: Option<(String, u64)>,
+    /// The base register holds a fat pointer: load it before adding the
+    /// offset (a slice's elements live behind its data word).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub deref_base: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

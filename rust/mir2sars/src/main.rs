@@ -839,6 +839,7 @@ mod tests {
             ty: ty.to_string(),
             castkind: Some(kind.to_string()),
             src_ty: Some(src.to_string()),
+            coerce: None,
         };
         let mut idx = 0usize;
         let mut unsup = vec![];

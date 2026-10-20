@@ -811,6 +811,7 @@ mod spill_tests {
                 ty: ty.to_string(),
                 castkind: Some("PtrToPtr".to_string()),
                 src_ty: Some("*".to_string()),
+                coerce: None,
             },
         }
     }

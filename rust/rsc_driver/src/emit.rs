@@ -5,7 +5,7 @@ use crate::util::{bb_name, esc, local_name, sanitize, trunc};
 use rustc_ast::ast::InlineAsmTemplatePiece;
 use rustc_hir::def::DefKind;
 use rustc_middle::mir::{Body, BorrowKind, Const, ConstOperand, InlineAsmOperand, Local, Operand, Rvalue, StatementKind, TerminatorKind};
-use rustc_middle::ty::{ConstKind, TyCtxt, TyKind};
+use rustc_middle::ty::{ConstKind, PseudoCanonicalInput, Ty, TyCtxt, TyKind};
 use rustc_middle::ty;
 use std::fmt::Write as _;
 
@@ -21,16 +21,24 @@ fn write_proj_operand<'a>(
     into: &mut String,
 ) {
     match place_proj(tcx, body, p) {
-        Some((off, ty, via)) => {
+        Some(pi) => {
             into.push_str("{\"kind\": \"");
             into.push_str(kind);
             into.push_str("\", \"place\": \"");
             esc(s, into);
-            write!(into, "\", \"proj\": {{\"offset\": {}, \"ty\": \"", off).unwrap();
-            esc(&ty, into);
+            write!(
+                into,
+                "\", \"proj\": {{\"offset\": {}, \"ty\": \"",
+                pi.offset
+            )
+            .unwrap();
+            esc(&pi.ty, into);
             into.push_str("\", \"via\": \"");
-            esc(&via, into);
+            esc(&pi.via, into);
             into.push('"');
+            if pi.deref_base {
+                into.push_str(", \"deref_base\": true");
+            }
             if let Some((idx, size)) = crate::place::place_dynamic_index(tcx, body, p) {
                 write!(into, ", \"index\": [\"{}\", {}]", idx, size).unwrap();
             }
@@ -87,6 +95,40 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
             into.push_str("{\"kind\": \"Const\", \"value\": \"0 /*RuntimeChecks-unsupported*/\"}");
         }
     }
+}
+
+/// An unsizing coercion `&[T; N]` -> `&[T]`: the fat pointer's size, the
+/// offset of its length word and the source length.
+fn unsize_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    op: &Operand<'tcx>,
+    target: Ty<'tcx>,
+) -> Option<(u64, u64, u64)> {
+    use rustc_middle::ty::TypingEnv;
+    let src_ty = match op {
+        Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+        _ => return None,
+    };
+    let (elem_ty, len) = match src_ty.kind() {
+        TyKind::Ref(_, t, _) => match t.kind() {
+            TyKind::Array(e, l) => (*e, l),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let n = len.try_to_target_usize(tcx)?;
+    // The target's layout: a slice is a (data pointer, length) pair.
+    let env = TypingEnv::fully_monomorphized();
+    let layout = tcx
+        .layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: target,
+        })
+        .ok()?;
+    let len_off = layout.fields.offset(1).bytes();
+    let _ = elem_ty;
+    Some((layout.size.bytes(), len_off, n as u64))
 }
 
 /// SA types of an aggregate's elements (the ADT variant's field types).
@@ -234,7 +276,8 @@ pub fn rvalue_json<'tcx>(
             // Borrow of a projected place (`&(*p).f`, `&local.f`): the address
             // is the base plus the field offset, not the base register.
             match crate::place::place_proj(tcx, body, p) {
-                Some((off, ty, _via)) => {
+                Some(pi) => {
+                    let (off, ty) = (pi.offset, pi.ty);
                     write!(
                         into,
                         ", \"offset\": {}, \"projected\": true, \"ty\": \"{}\"",
@@ -306,7 +349,18 @@ pub fn rvalue_json<'tcx>(
             esc(&trunc(format!("{:?}", kind), 40), into);
             into.push_str("\", \"src_ty\": \"");
             esc(&operand_ty_short(tcx, body, op), into);
-            into.push_str("\"}");
+            into.push('"');
+            // An unsizing coercion `&[T; N]` -> `&[T]`: the target is a fat
+            // pointer (data word + length), built from the array's address.
+            if let Some((size, len_off, len)) = unsize_info(tcx, body, op, *ty) {
+                write!(
+                    into,
+                    ", \"coerce\": {{\"size\": {}, \"len_off\": {}, \"len\": {}}}",
+                    size, len_off, len
+                )
+                .unwrap();
+            }
+            into.push('}');
         }
         Rvalue::Aggregate(kind, ops) => {
             let elems_len = ops.len();
@@ -899,7 +953,8 @@ pub fn body_json<'tcx>(
                     // Field store (`_1.0 = ...`): carry the byte offset + SA type
                     // so lowering emits `store base+off, val as ty` instead of
                     // rebinding the base local.
-                    if let Some((off, ty, via)) = place_proj(tcx, body, place) {
+                    if let Some(pi) = place_proj(tcx, body, place) {
+                        let (off, ty, via) = (pi.offset, pi.ty, pi.via);
                         write!(into, ", \"dest_proj\": {{\"offset\": {}, \"ty\": \"", off).unwrap();
                         esc(&ty, into);
                         into.push_str("\", \"via\": \"");

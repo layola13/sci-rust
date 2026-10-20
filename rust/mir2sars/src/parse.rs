@@ -161,6 +161,7 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
             {
                 let ty = tail[..kp].trim();
                 return Rvalue::Cast {
+                    coerce: None,
                     op: Box::new(parse_operand(rhs[..as_pos].trim())),
                     ty: ty.chars().take(60).collect(),
                     castkind: None,
