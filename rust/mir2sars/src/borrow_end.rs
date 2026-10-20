@@ -97,7 +97,7 @@ fn reachable_from(succ: &[Vec<usize>], from: usize) -> HashSet<usize> {
 
 fn operand_place(op: &Operand) -> Option<&str> {
     match op {
-        Operand::Move { place } | Operand::Copy { place } | Operand::Conflict { place } => {
+        Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place } => {
             Some(place.as_str())
         }
         _ => None,
@@ -356,7 +356,8 @@ mod borrow_end_tests {
         Stmt::Assign {
             dest: dest.to_string(),
             dest_place: None,
-            rvalue: Rvalue::Ref { place: place.to_string(), mut_: false, via: None, zst: false },
+            dest_proj: None,
+            rvalue: Rvalue::Ref { place: place.to_string(), mut_: false, via: None, zst: false, agg: false },
         }
     }
 
@@ -369,7 +370,7 @@ mod borrow_end_tests {
         vec![
             blk("bb0", vec![rf("_2", "_1")], Term::Call {
                 func: "f".to_string(), func_raw: None,
-                args: vec![Operand::Move { place: "_2".to_string() }],
+                args: vec![Operand::Move { place: "_2".to_string(), proj: None }],
                 dest: Some("_3".to_string()), target: Some("bb1".to_string()),
                 sig: None,
             }),
@@ -398,7 +399,7 @@ mod borrow_end_tests {
         // Use _2 in bb3 via a call arg.
         blocks[3] = blk("bb3", vec![], Term::Call {
             func: "g".to_string(), func_raw: None,
-            args: vec![Operand::Copy { place: "_2".to_string() }],
+            args: vec![Operand::Copy { place: "_2".to_string(), proj: None }],
             dest: None, target: None, sig: None,
         });
         let plan = plan_drops(&blocks, &doms(&blocks));
@@ -461,7 +462,8 @@ mod borrow_end_tests {
         let blocks = vec![
             blk("bb0", vec![Stmt::Assign {
                 dest: "_2".to_string(), dest_place: None,
-                rvalue: Rvalue::Ref { place: "_1".to_string(), mut_: false, via: None, zst: true },
+                dest_proj: None,
+                rvalue: Rvalue::Ref { place: "_1".to_string(), mut_: false, via: None, zst: true, agg: false },
             }], Term::Goto { target: "bb1".to_string() }),
             blk("bb1", vec![], Term::Drop { place: "_1".to_string(), target: "bb2".to_string() }),
             blk("bb2", vec![], Term::Return { ret: None }),

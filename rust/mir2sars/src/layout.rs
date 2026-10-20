@@ -31,7 +31,7 @@ pub fn lower_array_init(bid: &str, dest_place: &str, elems: &[Operand]) -> Optio
     let base = format!("_agg_{}", bid);
     let mut lines = vec![
         format!("// aggregate {} init {}", dest_place.trim(), inner.trim()),
-        format!("{} = alloc {}", base, n * size),
+        format!("mut {} = alloc {}", base, n * size),
     ];
     for (i, v) in vals.iter().enumerate() {
         lines.push(format!("store {}+{}, {} as {}", base, i * size, v, sa_ty));
@@ -92,10 +92,10 @@ pub fn lower_adt_init(
                 };
                 plans.push(FieldPlan::Store { text: Some(rendered), sa_ty: sa_scalar_ty(ty), size });
             }
-            Operand::Move { place } => {
+            Operand::Move { place, .. } => {
                 plans.push(FieldPlan::Store { text: Some(format!("^{}", place)), sa_ty: "u64", size: 8 });
             }
-            Operand::Copy { place } => {
+            Operand::Copy { place, .. } => {
                 plans.push(FieldPlan::Store { text: Some(place.clone()), sa_ty: "u64", size: 8 });
             }
         }
@@ -139,7 +139,7 @@ pub fn lower_adt_init(
     let base = format!("_agg_{}", bid);
     let mut lines = vec![
         format!("// aggregate Adt init @ {} ({})", dest_place.trim(), origin),
-        format!("{} = alloc {}", base, total),
+        format!("mut {} = alloc {}", base, total),
     ];
     for (i, p) in plans.iter().enumerate() {
         match p {
@@ -150,7 +150,7 @@ pub fn lower_adt_init(
             FieldPlan::StrLit { bytes } => {
                 // Byte buffer + fat-pointer (ptr,len) per slice.sal layout.
                 let buf = format!("_str_{}_{}", bid, i);
-                lines.push(format!("{} = alloc {}", buf, bytes.len()));
+                lines.push(format!("mut {} = alloc {}", buf, bytes.len()));
                 for (j, b) in bytes.iter().enumerate() {
                     lines.push(format!("store {}+{}, {} as u8", buf, j, b));
                 }
@@ -230,7 +230,7 @@ pub fn plan_const_bytes(
         return None;
     }
     let buf = format!("_str_{}_{}", bid, idx);
-    let mut lines = vec![format!("{} = alloc {}", buf, bytes.len())];
+    let mut lines = vec![format!("mut {} = alloc {}", buf, bytes.len())];
     for (j, b) in bytes.iter().enumerate() {
         lines.push(format!("store {}+{}, {} as u8", buf, j, b));
     }

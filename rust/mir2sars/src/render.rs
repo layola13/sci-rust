@@ -9,9 +9,13 @@ use crate::render_util::*;
 /// operand is not a spilled register (constants, spills absent).
 pub fn spill_reg(op: &Operand, spill: &crate::spill::SpillMap) -> Option<String> {
     let place = match op {
-        Operand::Move { place } | Operand::Copy { place } => place,
+        Operand::Move { place, .. } | Operand::Copy { place, .. } => place,
         _ => return None,
     };
+    // A projected read is a field load, never a whole-register spill reload.
+    if op.proj().is_some() {
+        return None;
+    }
     let t = spill.get(place)?;
     Some(format!("load {}+0 as {}", crate::spill::spill_slot(place), t))
 }
@@ -23,7 +27,7 @@ fn dest_slot_lines(dest: &str, spill: &crate::spill::SpillMap) -> Vec<String> {
     match spill.get(dest) {
         Some(t) => {
             let s = crate::spill::spill_slot(dest);
-            vec![format!("{} = stack_alloc 8", s), format!("store {}+0, {} as {}", s, dest, t)]
+            vec![format!("mut {} = stack_alloc 8", s), format!("store {}+0, {} as {}", s, dest, t)]
         }
         None => vec![],
     }
@@ -46,6 +50,18 @@ pub fn render_rvalue(
 ) -> String {
     match rv {
         Rvalue::Use { op } => {
+            // Aggregate field projection: read through the base register with a
+            // typed load (`load base+off as ty`) instead of reusing the base
+            // pointer. Must run before the spill/const-map paths, which reason
+            // about whole-register values.
+            if let Some(pj) = op.proj() {
+                if let Operand::Move { place, .. } | Operand::Copy { place, .. } = op {
+                    return format!(
+                        "{} = load {}+{} as {}{}",
+                        dest, place, pj.offset, pj.ty, dest_slot_suffix(dest, spill)
+                    );
+                }
+            }
             // Spilled shared values reload (never move the slot source).
             if let Some(t) = spill_reg(op, spill) {
                 return format!("{} = {}{}", dest, t, dest_slot_suffix(dest, spill));
@@ -54,7 +70,7 @@ pub fn render_rvalue(
             // shared temp (a second move of the temp would trap UseAfterMove).
             // Sound: literals carry no control or ownership dependence.
             match op {
-                Operand::Move { place } | Operand::Copy { place } => {
+                Operand::Move { place, .. } | Operand::Copy { place, .. } => {
                     if let Some(lit) = cmap.get(place) {
                         return format!("{} = {}{}", dest, lit, dest_slot_suffix(dest, spill));
                     }
@@ -71,7 +87,7 @@ pub fn render_rvalue(
                         // instead of moving the buffer address.
                         if let Some(t) = spill.get(dest) {
                             let s = crate::spill::spill_slot(dest);
-                            lines.push(format!("{} = stack_alloc 8", s));
+                            lines.push(format!("mut {} = stack_alloc 8", s));
                             lines.push(format!("store {}+0, {} as {}", s, dest, t));
                         }
                         return lines.join("\n");
@@ -83,7 +99,7 @@ pub fn render_rvalue(
                 _ => format!("{} = {}", dest, render_operand(op)),
             }
         }
-        Rvalue::Ref { place, mut_, via, zst } => {
+        Rvalue::Ref { place, mut_, via, zst, agg } => {
             // Zero-sized borrows carry no data: null marker (exact).
             // Trailing `//` is ForbiddenSyntax: provenance goes full-line
             // (the Assign arm indents each line of multi-line returns).
@@ -97,12 +113,19 @@ pub fn render_rvalue(
             if let Some(v) = via {
                 lines.push(format!("// via {}", flat_comment(v)));
             }
-            lines.push(format!("{} = &{}", dest, place));
+            // Memory-resident aggregate local: `place` already names the
+            // storage address, so `&place` is `place` (a `&place` would take
+            // the address of the register holding the pointer).
+            if *agg {
+                lines.push(format!("{} = {}", dest, place));
+            } else {
+                lines.push(format!("{} = &{}", dest, place));
+            }
             // Spilled borrow temps keep a slot: their MIR Copy-uses reload,
             // so the later `drop(b)` still finds `b` bound.
             if let Some(t) = spill.get(dest) {
                 let s = crate::spill::spill_slot(dest);
-                lines.push(format!("{} = stack_alloc 8", s));
+                lines.push(format!("mut {} = stack_alloc 8", s));
                 lines.push(format!("store {}+0, {} as {}", s, dest, t));
             }
             lines.join("\n")
@@ -117,7 +140,7 @@ pub fn render_rvalue(
             // Spilled call dests get their slot setup inline.
             if let Some(ty) = spill.get(dest) {
                 let slot = crate::spill::spill_slot(dest);
-                s.push_str(&format!("\n{} = stack_alloc 8\nstore {}+0, {} as {}", slot, slot, dest, ty));
+                s.push_str(&format!("\nmut {} = stack_alloc 8\nstore {}+0, {} as {}", slot, slot, dest, ty));
             }
             s
         }
@@ -199,7 +222,7 @@ pub fn render_rvalue(
             let slot = |pre: &mut Vec<String>| {
                 if let Some(t) = spill.get(dest) {
                     let s = crate::spill::spill_slot(dest);
-                    pre.push(format!("{} = stack_alloc 8", s));
+                    pre.push(format!("mut {} = stack_alloc 8", s));
                     pre.push(format!("store {}+0, {} as {}", s, dest, t));
                 }
             };
@@ -261,7 +284,7 @@ pub fn render_rvalue(
                         let base = format!("_rep_{}", bid);
                         if let Some(ty) = spill.get(&base) {
                             let slot = crate::spill::spill_slot(&base);
-                            s.push_str(&format!("\n{} = stack_alloc 8\nstore {}+0, {} as {}", slot, slot, base, ty));
+                            s.push_str(&format!("\nmut {} = stack_alloc 8\nstore {}+0, {} as {}", slot, slot, base, ty));
                         }
                         s
                     }

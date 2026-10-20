@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use crate::asm::{asm_inout_passthrough, asm_mov_copy, is_plain_local};
 use crate::mir::*;
 use crate::render::*;
-use crate::render_util::{assert_panic_code, assign_loud_const, build_constmap, call_sig_loud, const_needs_loud, diverging_panic_code, flat_comment, is_diverging_panic_call, is_overflow_assert, loud_const_kind, loud_operand_reason, render_call_arg, render_operand, sa_ident, sa_label, unreachable_panic_code};
+use crate::render_util::{assert_panic_code, assign_loud_const, build_constmap, call_sig_loud, checked_arith_helper, const_needs_loud, diverging_panic_code, flat_comment, is_diverging_panic_call, is_overflow_assert, loud_const_kind, loud_operand_reason, render_call_arg, render_operand, sa_ident, sa_label, unreachable_panic_code};
 use crate::spill::{build_spill_for, spill_slot};
 
 /// Placeholder bind for loud paths: an unbound dest gets `= 0` so
@@ -33,7 +33,7 @@ pub fn spill_placeholder(
     if let Some(d) = dest {
         if let Some(ty) = spill.get(d) {
             let slot = crate::spill::spill_slot(d);
-            out.push(format!("    {} = stack_alloc 8", slot));
+            out.push(format!("    mut {} = stack_alloc 8", slot));
             out.push(format!("    store {}+0, {} as {}", slot, d, ty));
         }
     }
@@ -86,6 +86,10 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
     // Referee reports as a leak as soon as a register holds a real
     // allocation). Opening here keeps the range closable after a `continue`.
     let mut open_block: Option<usize> = None;
+    // Checked `*WithOverflow` dests hold a bare scalar: the `EXPAND` macro
+    // already traps on overflow, so the (value, flag) tuple's projections
+    // (`_d.0`, `_d.1`) must collapse back onto `_d`, never `load _d+off`.
+    let mut scalarized: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut block_start = vec![0usize; f.blocks.len()];
     for bi in order {
         let b = &f.blocks[bi];
@@ -102,7 +106,39 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
         let mut mv_idx = 0usize;
         for st in &b.statements {
             match st {
-                Stmt::Assign { dest, dest_place, rvalue } => {
+                Stmt::Assign { dest, dest_place, dest_proj, rvalue } => {
+                    // Field store (`_1.0 = <val>`): write through the base
+                    // register's storage as a typed `store`; the base local is
+                    // not rebound.
+                    if let Some(pj) = dest_proj {
+                        let val: String = match rvalue {
+                            Rvalue::Use { op } => match op {
+                                Operand::Move { place, proj } | Operand::Copy { place, proj } => {
+                                    if proj.is_some() && !scalarized.contains(place) {
+                                        // Read the source field first, then store.
+                                        let t = format!("{}_fs", dest);
+                                        out.push(format!("    {} = load {}+{} as {}", t, place, proj.as_ref().map(|p| p.offset).unwrap_or(0), proj.as_ref().map(|p| p.ty.clone()).unwrap_or_else(|| "i64".to_string())));
+                                        t
+                                    } else {
+                                        render_operand(op)
+                                    }
+                                }
+                                Operand::Const { .. } => render_operand(op),
+                                _ => render_operand(op),
+                            },
+                            _ => {
+                                // Compound rvalue: materialize into `dest`, then store.
+                                let line = render_rvalue(rvalue, dest, dest_place.as_deref(), unsup, &b.id, &mut mv_idx, &cmap, &spill);
+                                for l in line.split('\n') {
+                                    out.push(format!("    {}", l));
+                                }
+                                dest.clone()
+                            }
+                        };
+                        out.push(format!("    store {}+{}, {} as {}", dest, pj.offset, val, pj.ty));
+                        bound.insert(dest.clone());
+                        continue;
+                    }
                     // Trailing `//` is ForbiddenSyntax: the Assign arm never
                     // appends provenance comments (they live in mir.json).
                     if bound.contains(dest) {
@@ -126,7 +162,37 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                         unsup.push(format!("{}:{} ConstValue", b.id, dest));
                         out.push(format!("    // UNSUPPORTED const-value -> {}: {}", dest, flat_comment(&why)));
                     } else {
-                        let line = render_rvalue(rvalue, dest, dest_place.as_deref(), unsup, &b.id, &mut mv_idx, &cmap, &spill);
+                        // A projected read of a checked-arithmetic dest is a
+                        // read of its bare scalar, not a field load.
+                        let collapsed;
+                        let rvalue_eff: &Rvalue = match rvalue {
+                            Rvalue::Use { op } if op.proj().is_some() => {
+                                let base = match op {
+                                    Operand::Move { place, .. } | Operand::Copy { place, .. } => place,
+                                    _ => "",
+                                };
+                                if scalarized.contains(base) {
+                                    let op2 = match op {
+                                        Operand::Move { place, .. } => Operand::Move { place: place.clone(), proj: None },
+                                        Operand::Copy { place, .. } => Operand::Copy { place: place.clone(), proj: None },
+                                        other => other.clone(),
+                                    };
+                                    collapsed = Rvalue::Use { op: op2 };
+                                    &collapsed
+                                } else {
+                                    rvalue
+                                }
+                            }
+                            _ => rvalue,
+                        };
+                        let line = render_rvalue(rvalue_eff, dest, dest_place.as_deref(), unsup, &b.id, &mut mv_idx, &cmap, &spill);
+                        // Record the scalarized dest so later blocks collapse
+                        // its tuple projections too.
+                        if let Rvalue::BinOp { op, .. } = rvalue {
+                            if checked_arith_helper(op).is_some() {
+                                scalarized.insert(dest.clone());
+                            }
+                        }
                         for l in line.split('\n') {
                             out.push(format!("    {}", l));
                         }
@@ -141,7 +207,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                                 .split('\n')
                                 .any(|l| l.trim_start().starts_with(&prefix));
                             if !emitted {
-                                out.push(format!("    {} = stack_alloc 8", slot));
+                                out.push(format!("    mut {} = stack_alloc 8", slot));
                                 out.push(format!("    store {}+0, {} as {}", slot, dest, ty));
                             }
                         }
@@ -280,7 +346,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                         // Spilled call dests get their slot setup inline.
                         if let Some(ty) = spill.get(d) {
                             let slot = spill_slot(d);
-                            out.push(format!("    {} = stack_alloc 8", slot));
+                            out.push(format!("    mut {} = stack_alloc 8", slot));
                             out.push(format!("    store {}+0, {} as {}", slot, d, ty));
                         }
                     }
@@ -337,7 +403,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                     continue;
                 }
                 let d = match discr.as_ref() {
-                    Operand::Move { place } => {
+                    Operand::Move { place, .. } => {
                         let tmp = format!("_sw_{}", b.id);
                         out.push(format!("    {} = {}", tmp, place));
                         tmp
@@ -392,7 +458,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
                     continue;
                 }
                 let c = match cond.as_ref() {
-                    Operand::Move { place } => {
+                    Operand::Move { place, .. } => {
                         let tmp = format!("_as_{}", b.id);
                         out.push(format!("    {} = {}", tmp, place));
                         tmp
@@ -490,7 +556,46 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
             lines_by_orig[*bi] = out[*s..*e].to_vec();
             range_by_orig[*bi] = (*s, *e);
         }
-        let mut frees = crate::drop::exit_frees(&lines_by_orig, &doms, f.params.len());
+        let mut ptr_params: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        for (i, t) in f.params.iter().enumerate() {
+            if t == "ptr" {
+                ptr_params.insert(format!("_{}", i + 1));
+            }
+        }
+        // Registers that merely alias a pointer param (`_3 = _1` when a
+        // by-value aggregate is forwarded) borrow the caller's storage; they
+        // must not be exit-freed (double-free → InvalidAddress). Propagate
+        // transitively over plain `dest = src` copies.
+        {
+            let mut changed = true;
+            while changed {
+                changed = false;
+                for b in &f.blocks {
+                    for st in &b.statements {
+                        if let crate::mir::Stmt::Assign { dest, rvalue, .. } = st {
+                            let src = match rvalue {
+                                crate::mir::Rvalue::Use { op } => match op {
+                                    crate::mir::Operand::Move { place, .. }
+                                    | crate::mir::Operand::Copy { place, .. }
+                                    | crate::mir::Operand::Conflict { place } => Some(place.clone()),
+                                    _ => None,
+                                },
+                                // `agg` refs (`dest = place`) copy the pointer
+                                // rather than taking a new borrow.
+                                crate::mir::Rvalue::Ref { place, agg: true, .. } => Some(place.clone()),
+                                _ => None,
+                            };
+                            if let Some(src) = src {
+                                if ptr_params.contains(&src) && ptr_params.insert(dest.clone()) {
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let mut frees = crate::drop::exit_frees(&lines_by_orig, &doms, f.params.len(), &ptr_params);
         let mut tfrees = crate::drop::temp_frees(&lines_by_orig);
         // A temp already released at an exit keeps that release (the exit list
         // is dominance-verified, the block-local one is heuristic). Filter in

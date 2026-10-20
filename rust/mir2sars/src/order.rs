@@ -116,12 +116,13 @@ mod order_tests {
                 .map(|d| Stmt::Assign {
                     dest: d.to_string(),
                     dest_place: Some(d.to_string()),
-                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_9".to_string() } },
+                    dest_proj: None,
+                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_9".to_string(), proj: None } },
                 })
                 .into_iter()
                 .collect(),
             terminator: Term::SwitchInt {
-                discr: Box::new(Operand::Copy { place: "_9".to_string() }),
+                discr: Box::new(Operand::Copy { place: "_9".to_string(), proj: None }),
                 targets: targets.into_iter().map(|t| ("0".to_string(), t)).collect(),
                 otherwise: otherwise.to_string(),
             },

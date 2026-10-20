@@ -46,7 +46,7 @@ pub fn default_return() -> Term {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "kind")]
 pub enum Stmt {
-    Assign { dest: String, #[serde(default)] dest_place: Option<String>, rvalue: Rvalue },
+    Assign { dest: String, #[serde(default)] dest_place: Option<String>, #[serde(default, skip_serializing_if = "Option::is_none")] dest_proj: Option<PlaceProj>, rvalue: Rvalue },
     StorageLive { local: String },
     StorageDead { local: String },
     Nop { text: String },
@@ -84,6 +84,10 @@ pub enum Rvalue {
         #[serde(rename = "mut", default, skip_serializing_if = "is_false")] mut_: bool,
         #[serde(default, skip_serializing_if = "Option::is_none")] via: Option<String>,
         #[serde(default, skip_serializing_if = "is_false")] zst: bool,
+        /// The referenced local is memory-resident in this ABI (ADT/tuple/
+        /// array storage holds an address): `&place` is the address already in
+        /// `place`, so lowering emits `dest = place` instead of `dest = &place`.
+        #[serde(default, skip_serializing_if = "is_false")] agg: bool,
     },
     Call {
         func: String,
@@ -112,11 +116,34 @@ pub enum Rvalue {
     Unsupported { text: String },
 }
 
+/// Constant field projection for an aggregate place operand (`_1.0`,
+/// `(*_2).b`, ...). `rsc_driver` collapses a projected place to its base
+/// local in `place` (so other passes keep a real register); `proj` carries the
+/// byte offset and SA value type so lowering can emit a `load base+off as ty`
+/// instead of reusing the base aggregate pointer. Absent for plain locals and
+/// pure-deref places (old fixtures stay byte-compatible).
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PlaceProj {
+    pub offset: u64,
+    pub ty: String,
+    /// Full projected place text for provenance (comment only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub via: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "kind")]
 pub enum Operand {
-    Move { place: String },
-    Copy { place: String },
+    Move {
+        place: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        proj: Option<PlaceProj>,
+    },
+    Copy {
+        place: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        proj: Option<PlaceProj>,
+    },
     Const {
         value: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -129,6 +156,17 @@ pub enum Operand {
     /// Never renders to a real read: `const_needs_loud` maps it loud, and
     /// both lower and coverage count it through the shared predicate.
     Conflict { place: String },
+}
+
+impl Operand {
+    /// Field-projection metadata when this operand reads through an aggregate
+    /// place (see [`PlaceProj`]); `None` for constants, joins and plain locals.
+    pub fn proj(&self) -> Option<&PlaceProj> {
+        match self {
+            Operand::Move { proj, .. } | Operand::Copy { proj, .. } => proj.as_ref(),
+            _ => None,
+        }
+    }
 }
 
 /// Max string-literal bytes materialized inline per `&str` field (byte-wise

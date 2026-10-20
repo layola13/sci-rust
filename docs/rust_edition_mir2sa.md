@@ -14,6 +14,11 @@
 | `trait` 方法（`&self`） | vtable slot 首参 `&self: ptr` | 否则 `VTableSignatureMismatch (1024)` |
 | `dyn Trait` fat object | `sa_std/dyn.sars`：16B `[data][vtable]` + `DYN_NEW/DYN_FREE` | `TRAIT_DISPATCH` 宏做 slot 分发 |
 | `drop(x)` | `!x` | Copy 标量在 edition 下可省略 |
+| 聚合字段读 `_1.0` | `_d = load _1+off as ty` | driver `place_proj` 出 layout offset |
+| 聚合字段写 `_1.0 = v` | `store _1+off, v as ty` | 透写 storage，不改绑 base local |
+| 检查算术 dest `(_d.0,_d.1)` | 折叠回 `_d` | `EXPAND` 宏已 trap，无元组实体 |
+| 后端 alloc / stack_alloc | 一律 `mut …` | edition 默认不可变，否则 ConstMutation |
+| ptr 参数 / 指针别名拷贝 | 不 exit-free | 否则跨帧 double-free（InvalidAddress） |
 
 `sars` 二进制（原 `sa`）用法：
 
@@ -53,8 +58,15 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 跨 crate + `#[derive(Clone, Copy)]`，`sars check` 181 instr / `sars run`
 exit 0，无 broker）。
 
-已知 gap（lower 质量，非宏展开）：聚合参数的字段投影在
-`rsc_driver/src/place.rs` 仍折叠到 root local（`_1.0`/`_1.1` → `_1`），
-因此 demo 的**被调用面**保持标量；derive 生成的其它 impl（如
-`PartialEq`/`Default`）会命中这一投影/聚合 gap，暂不在运行路径内。
+已知 gap（lower 质量，非宏展开）：
+- 聚合**字段投影**已实现：`rsc_driver/src/place.rs::place_proj` 输出
+  `(offset, ty, via)`，mir2sars 读侧降为 `_d = load base+off as ty`、
+  写侧降为 `store base+off, val as ty`（`dest_proj`）。聚合参数/局部字段
+  读写、派生 `PartialEq`（同 crate `@eq` 解析）均可运行。
+- 指针别名安全：`ptr` 参数与其别名拷贝（`_3 = _1`、`agg` ref）不参与
+  exit-free，避免释放调用方 storage。
+- 仍未覆盖：**按值聚合“返回一个来自参数的值”**会与调用方 local 共享
+  storage，调用方对 result 与 local 各释放一次 → double-free
+  （`fn f(p: Pair) -> Pair { p }`）。被调用方返回**自有 local** 的聚合
+  则正常（`fn make() -> Pair { Pair{..} }`）。枚举 `Downcast` 投影仍折叠。
 

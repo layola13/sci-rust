@@ -209,8 +209,8 @@ pub fn render_operand(op: &Operand) -> String {
     // (`_x = ^_y` is UnknownRegister); `^` is legal only in call args
     // (render_call_arg) and store values. See sala 03_sa_asm/02_sa_syntax.
     match op {
-        Operand::Move { place } => place.clone(),
-        Operand::Copy { place } => place.clone(),
+        Operand::Move { place, .. } => place.clone(),
+        Operand::Copy { place, .. } => place.clone(),
         // Conflict sentinels never reach here (intercepted loud upstream);
         // the fallback keeps rendering total.
         Operand::Conflict { place } => place.clone(),
@@ -231,7 +231,7 @@ pub fn render_operand(op: &Operand) -> String {
 /// Uses render_operand directly; this alias documents the rule.
 pub fn render_call_arg(op: &Operand) -> String {
     match op {
-        Operand::Move { place } => place.clone(),
+        Operand::Move { place, .. } => place.clone(),
         _ => render_operand(op),
     }
 }
@@ -295,7 +295,7 @@ pub fn unop_needs_loud(op: &str) -> bool {
 /// Returns (preamble lines, operand text).
 pub fn bind_move_operand(op: &Operand, bid: &str, idx: &mut usize) -> (Vec<String>, String) {
     match op {
-        Operand::Move { place } => {
+        Operand::Move { place, .. } => {
             let tmp = format!("_mv_{}_{}", bid, idx);
             *idx += 1;
             (vec![format!("{} = {}", tmp, place)], tmp)
@@ -340,7 +340,7 @@ pub fn build_constmap<'a>(
                             map.remove(dest);
                         }
                     }
-                    Operand::Move { place } | Operand::Copy { place } => {
+                    Operand::Move { place, .. } | Operand::Copy { place, .. } => {
                         if let Some(v) = map.get(place).cloned() {
                             map.insert(dest.clone(), v);
                         } else {

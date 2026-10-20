@@ -50,16 +50,16 @@ pub fn base_local(place: &str) -> Option<String> {
 pub fn parse_operand(s: &str) -> Operand {
     let s = s.trim();
     if let Some(rest) = s.strip_prefix("move ") {
-        return Operand::Move { place: base_local(rest).unwrap_or_else(|| rest.to_string()) };
+        return Operand::Move { place: base_local(rest).unwrap_or_else(|| rest.to_string()), proj: None };
     }
     if let Some(rest) = s.strip_prefix("copy ") {
-        return Operand::Copy { place: base_local(rest).unwrap_or_else(|| rest.to_string()) };
+        return Operand::Copy { place: base_local(rest).unwrap_or_else(|| rest.to_string()), proj: None };
     }
     if let Some(rest) = s.strip_prefix("const ") {
         return Operand::Const { value: rest.chars().take(60).collect(), str_bytes: None, str_len: None };
     }
     if s.starts_with('_') && base_local(s).as_deref() == Some(s) {
-        return Operand::Copy { place: s.to_string() };
+        return Operand::Copy { place: s.to_string(), proj: None };
     }
     let v: String = s.chars().take(60).collect();
     Operand::Const { value: v, str_bytes: None, str_len: None }
@@ -146,11 +146,11 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
     let rhs = rhs.trim();
     if let Some(rest) = rhs.strip_prefix("&mut ") {
         let p = rest.trim();
-        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: true, via: None, zst: false };
+        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: true, via: None, zst: false, agg: false };
     }
     if let Some(rest) = rhs.strip_prefix('&') {
         let p = rest.trim();
-        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: false, via: None, zst: false };
+        return Rvalue::Ref { place: base_local(p).unwrap_or_else(|| p.to_string()), mut_: false, via: None, zst: false, agg: false };
     }
     // Cast before plain Use so `copy X as T (Kind)` is not swallowed.
     if let Some(as_pos) = rhs.find(" as ") {
@@ -176,7 +176,7 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
     }
     if let Some(inner) = rhs.strip_prefix("no_retag copy ") {
         let inner = inner.trim();
-        return Rvalue::Use { op: Operand::Copy { place: base_local(inner).unwrap_or_else(|| inner.chars().take(40).collect()) } };
+        return Rvalue::Use { op: Operand::Copy { place: base_local(inner).unwrap_or_else(|| inner.chars().take(40).collect()), proj: None } };
     }
     if rhs.ends_with(')') {
         if let Some(pi) = rhs.find('(') {
@@ -304,6 +304,7 @@ pub fn parse_block(lines: &[String]) -> (Vec<Stmt>, Term, usize) {
                         stmts.push(Stmt::Assign {
                             dest: "_0".to_string(),
                             dest_place: Some("_0".to_string()),
+                            dest_proj: None,
                             rvalue: Rvalue::Call { func, args, sig: None },
                         });
                         term = Some(Term::Unreachable);
@@ -323,7 +324,7 @@ pub fn parse_block(lines: &[String]) -> (Vec<Stmt>, Term, usize) {
                 unsup += 1;
             }
             let dest = sanitize_dest(d);
-            stmts.push(Stmt::Assign { dest_place: Some(d.chars().take(80).collect()), dest, rvalue: rv });
+            stmts.push(Stmt::Assign { dest_place: Some(d.chars().take(80).collect()), dest, dest_proj: None, rvalue: rv });
             continue;
         }
         unsup += 1;

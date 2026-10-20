@@ -112,7 +112,7 @@ fn rvalue_type(rv: &Rvalue, types: &BTreeMap<String, String>) -> Option<String> 
                 }
                 const_operand_ty(value)
             }
-            Operand::Copy { place } | Operand::Move { place } => types.get(place).cloned(),
+            Operand::Copy { place, .. } | Operand::Move { place, .. } => types.get(place).cloned(),
             _ => None,
         },
         Rvalue::Ref { .. } | Rvalue::RawPtr { .. } | Rvalue::Repeat { .. } => {
@@ -132,11 +132,11 @@ fn rvalue_type(rv: &Rvalue, types: &BTreeMap<String, String>) -> Option<String> 
         // The enum tag lives at offset 0 and is read as i64.
         Rvalue::Discriminant { .. } => Some("i64".to_string()),
         Rvalue::BinOp { left, .. } => match left.as_ref() {
-            Operand::Copy { place } | Operand::Move { place } => types.get(place).cloned(),
+            Operand::Copy { place, .. } | Operand::Move { place, .. } => types.get(place).cloned(),
             _ => None,
         },
         Rvalue::UnOp { operand, .. } => match operand.as_ref() {
-            Operand::Copy { place } | Operand::Move { place } => types.get(place).cloned(),
+            Operand::Copy { place, .. } | Operand::Move { place, .. } => types.get(place).cloned(),
             _ => None,
         },
         Rvalue::ThreadLocal { .. } => Some("ptr".to_string()),
@@ -147,7 +147,7 @@ fn rvalue_type(rv: &Rvalue, types: &BTreeMap<String, String>) -> Option<String> 
 /// Place name of a place operand (None for constants).
 fn operand_place(op: &Operand) -> Option<String> {
     match op {
-        Operand::Move { place } | Operand::Copy { place } | Operand::Conflict { place } => {
+        Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place } => {
             Some(place.clone())
         }
         _ => None,
@@ -353,15 +353,15 @@ fn copy_use_targets(st: &Stmt) -> Vec<String> {
     match st {
         Stmt::Assign { rvalue, .. } => match rvalue {
             Rvalue::Use { op } => match op {
-                Operand::Copy { place } => vec![place.clone()],
+                Operand::Copy { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
             Rvalue::Aggregate { elems, .. } if elems.len() == 1 => match &elems[0] {
-                Operand::Copy { place } => vec![place.clone()],
+                Operand::Copy { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
             Rvalue::Cast { op, .. } => match op.as_ref() {
-                Operand::Copy { place } => vec![place.clone()],
+                Operand::Copy { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
             _ => vec![],
@@ -377,15 +377,15 @@ fn consuming_use_targets(st: &Stmt) -> Vec<String> {
     match st {
         Stmt::Assign { rvalue, .. } => match rvalue {
             Rvalue::Use { op } => match op {
-                Operand::Move { place } => vec![place.clone()],
+                Operand::Move { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
             Rvalue::Aggregate { elems, .. } if elems.len() == 1 => match &elems[0] {
-                Operand::Move { place } => vec![place.clone()],
+                Operand::Move { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
             Rvalue::Cast { op, .. } => match op.as_ref() {
-                Operand::Move { place } => vec![place.clone()],
+                Operand::Move { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
             _ => vec![],
@@ -399,7 +399,9 @@ fn definition_counts(blocks: &[crate::mir::Block]) -> BTreeMap<String, usize> {
     let mut def_count: BTreeMap<String, usize> = BTreeMap::new();
     for b in blocks {
         for st in &b.statements {
-            if let Stmt::Assign { dest, .. } = st {
+            // A field store (`dest_proj`) writes through the base local's
+            // storage; it does not (re)define the base register.
+            if let Stmt::Assign { dest, dest_proj: None, .. } = st {
                 *def_count.entry(dest.clone()).or_insert(0) += 1;
             }
         }
@@ -451,7 +453,9 @@ pub fn build_spill(blocks: &[crate::mir::Block]) -> SpillMap {
     let mut def_count: BTreeMap<String, usize> = BTreeMap::new();
     for b in blocks {
         for st in &b.statements {
-            if let Stmt::Assign { dest, .. } = st {
+            // A field store (`dest_proj`) writes through the base local's
+            // storage; it does not (re)define the base register.
+            if let Stmt::Assign { dest, dest_proj: None, .. } = st {
                 *def_count.entry(dest.clone()).or_insert(0) += 1;
             }
         }
@@ -563,7 +567,7 @@ pub fn dead_locals(blocks: &[crate::mir::Block], n_params: usize) -> BTreeSet<St
     let mut read: BTreeSet<String> = BTreeSet::new();
     let note = |op: &Operand, defined: &mut BTreeSet<String>, read: &mut BTreeSet<String>| {
         let place = match op {
-            Operand::Move { place } | Operand::Copy { place } | Operand::Conflict { place } => {
+            Operand::Move { place, .. } | Operand::Copy { place, .. } | Operand::Conflict { place } => {
                 place.as_str()
             }
             _ => return,
@@ -575,7 +579,7 @@ pub fn dead_locals(blocks: &[crate::mir::Block], n_params: usize) -> BTreeSet<St
     for b in blocks {
         for st in &b.statements {
             match st {
-                Stmt::Assign { dest, rvalue, .. } => {
+                Stmt::Assign { dest, dest_proj, rvalue, .. } => {
                     match rvalue {
                         Rvalue::Use { op } => note(op, &mut defined, &mut read),
                         Rvalue::Repeat { op, .. } => note(op, &mut defined, &mut read),
@@ -605,7 +609,11 @@ pub fn dead_locals(blocks: &[crate::mir::Block], n_params: usize) -> BTreeSet<St
                         }
                         _ => {}
                     }
-                    defined.insert(dest.clone());
+                    // A field store writes through the base storage; it does
+                    // not define the base register.
+                    if dest_proj.is_none() {
+                        defined.insert(dest.clone());
+                    }
                 }
                 Stmt::SetDisc { place, .. } => {
                     if defined.contains(place.as_str()) {
@@ -658,7 +666,7 @@ pub fn spill_slot_lines(lines: &mut Vec<String>, bid: &str, spill: &SpillMap) {
             let slot = spill_slot(&base);
             // Stack slot: the slot's lifetime is the function frame, so the
             // exit leak check does not see it (a heap slot would leak here).
-            lines.push(format!("{} = stack_alloc 8", slot));
+            lines.push(format!("mut {} = stack_alloc 8", slot));
             lines.push(format!("store {}+0, {} as {}", slot, base, ty));
         }
     }
@@ -683,7 +691,8 @@ mod spill_tests {
         let use_agg = Stmt::Assign {
             dest: "_3".to_string(),
             dest_place: Some("_3".to_string()),
-            rvalue: Rvalue::Use { op: Operand::Copy { place: "_agg_bb0".to_string() } },
+            dest_proj: None,
+            rvalue: Rvalue::Use { op: Operand::Copy { place: "_agg_bb0".to_string(), proj: None } },
         };
         let blocks = vec![Block {
             id: "bb0".to_string(),
@@ -709,8 +718,9 @@ mod spill_tests {
         Stmt::Assign {
             dest: dest.to_string(),
             dest_place: Some(dest.to_string()),
+            dest_proj: None,
             rvalue: Rvalue::Cast {
-                op: Box::new(Operand::Copy { place: place.to_string() }),
+                op: Box::new(Operand::Copy { place: place.to_string(), proj: None }),
                 ty: ty.to_string(),
                 castkind: Some("PtrToPtr".to_string()),
                 src_ty: Some("*".to_string()),
@@ -722,11 +732,13 @@ mod spill_tests {
         Stmt::Assign {
             dest: dest.to_string(),
             dest_place: Some(dest.to_string()),
+            dest_proj: None,
             rvalue: Rvalue::Ref {
                 place: place.to_string(),
                 mut_: false,
                 via: None,
                 zst: false,
+                agg: false,
             },
         }
     }
@@ -771,8 +783,9 @@ mod spill_tests {
                 Stmt::Assign {
                     dest: "_77".to_string(),
                     dest_place: Some("_77".to_string()),
+                    dest_proj: None,
                     rvalue: Rvalue::Aggregate {
-                        elems: vec![Operand::Move { place: "_78".to_string() }],
+                        elems: vec![Operand::Move { place: "_78".to_string(), proj: None }],
                         layout: None,
                     },
                 },
@@ -792,7 +805,7 @@ mod spill_tests {
             terminator: Term::Call {
                 func: "f".to_string(),
                 func_raw: None,
-                args: vec![Operand::Move { place: "_5".to_string() }],
+                args: vec![Operand::Move { place: "_5".to_string(), proj: None }],
                 dest: Some("_7".to_string()),
                 target: Some("bb1".to_string()),
                 sig: None,
@@ -818,17 +831,20 @@ mod spill_tests {
                 Stmt::Assign {
                     dest: "_1".to_string(),
                     dest_place: Some("_1".to_string()),
+                    dest_proj: None,
                     rvalue: Rvalue::Use { op: konst.clone() },
                 },
                 Stmt::Assign {
                     dest: "_4".to_string(),
                     dest_place: Some("_4".to_string()),
-                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_1".to_string() } },
+                    dest_proj: None,
+                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_1".to_string(), proj: None } },
                 },
                 Stmt::Assign {
                     dest: "_11".to_string(),
                     dest_place: Some("_11".to_string()),
-                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_1".to_string() } },
+                    dest_proj: None,
+                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_1".to_string(), proj: None } },
                 },
             ],
             terminator: Term::Return { ret: None },
@@ -846,8 +862,8 @@ mod spill_tests {
         assert!(unsup.is_empty());
         assert_eq!(
             line,
-            "_str_bb0_0 = alloc 3\nstore _str_bb0_0+0, 77 as u8\nstore _str_bb0_0+1, 97 as u8\n\
-             store _str_bb0_0+2, 110 as u8\n_1 = _str_bb0_0\n_1_spill = stack_alloc 8\nstore _1_spill+0, _1 as ptr"
+            "mut _str_bb0_0 = alloc 3\nstore _str_bb0_0+0, 77 as u8\nstore _str_bb0_0+1, 97 as u8\n\
+             store _str_bb0_0+2, 110 as u8\n_1 = _str_bb0_0\nmut _1_spill = stack_alloc 8\nstore _1_spill+0, _1 as ptr"
         );
     }
 
@@ -857,7 +873,8 @@ mod spill_tests {
         let copy = |dest: &str| Stmt::Assign {
             dest: dest.to_string(),
             dest_place: Some(dest.to_string()),
-            rvalue: Rvalue::Use { op: Operand::Copy { place: "_2".to_string() } },
+            dest_proj: None,
+            rvalue: Rvalue::Use { op: Operand::Copy { place: "_2".to_string(), proj: None } },
         };
         let blocks = vec![Block {
             id: "bb0".to_string(),
@@ -865,6 +882,7 @@ mod spill_tests {
                 Stmt::Assign {
                     dest: "_2".to_string(),
                     dest_place: Some("_2".to_string()),
+                    dest_proj: None,
                     rvalue: Rvalue::Use {
                         op: Operand::Const {
                             value: "42_u64".to_string(),
@@ -889,7 +907,8 @@ mod spill_tests {
         let copy = |dest: &str, place: &str| Stmt::Assign {
             dest: dest.to_string(),
             dest_place: Some(dest.to_string()),
-            rvalue: Rvalue::Use { op: Operand::Copy { place: place.to_string() } },
+            dest_proj: None,
+            rvalue: Rvalue::Use { op: Operand::Copy { place: place.to_string(), proj: None } },
         };
         let blocks = vec![Block {
             id: "bb0".to_string(),
@@ -919,6 +938,7 @@ mod spill_tests {
                 Stmt::Assign {
                     dest: "_1".to_string(),
                     dest_place: Some("_1".to_string()),
+                    dest_proj: None,
                     rvalue: Rvalue::Use {
                         op: Operand::Const {
                             value: "Val(Slice { alloc_id: alloc1, meta: 3 }, &'{erased} str)".to_string(),
@@ -930,7 +950,8 @@ mod spill_tests {
                 Stmt::Assign {
                     dest: "_4".to_string(),
                     dest_place: Some("_4".to_string()),
-                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_1".to_string() } },
+                    dest_proj: None,
+                    rvalue: Rvalue::Use { op: Operand::Copy { place: "_1".to_string(), proj: None } },
                 },
             ],
             terminator: Term::Return { ret: None },
@@ -947,11 +968,13 @@ mod spill_tests {
                 Stmt::Assign {
                     dest: "_6".to_string(),
                     dest_place: Some("_6".to_string()),
+                    dest_proj: None,
                     rvalue: Rvalue::Ref {
                         place: "_1".to_string(),
                         mut_: false,
                         via: None,
                         zst: true,
+                        agg: false,
                     },
                 },
                 cast_copy("_7", "_6", "usize"),

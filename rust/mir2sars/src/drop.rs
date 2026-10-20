@@ -231,7 +231,11 @@ fn is_spill_slot(reg: &str) -> bool {
 
 /// Compute per-Return-block free lists. `dom_sets` holds raw dominator sets
 /// (each incl. self) keyed by original block index; `body_lines` aligns by
-/// the same index. `param_count` seeds params as pre-bound.
+/// the same index. `param_count` seeds params as pre-bound; `ptr_params` names
+/// the params that are addresses (`ptr`) and must never be exit-freed — the
+/// caller owns their storage (a borrowed `&T`, or a by-value aggregate passed
+/// as its address), so releasing one frees memory the callee does not own
+/// (double-free/InvalidAddress once the caller drops it).
 ///
 /// Soundness regime (all verified against `sa check` probes):
 /// - DEFS count only from unconditional prefixes (block lines before the
@@ -248,6 +252,7 @@ pub fn exit_frees(
     body_lines: &[Vec<String>],
     dom_sets: &[std::collections::HashSet<usize>],
     param_count: usize,
+    ptr_params: &BTreeSet<String>,
 ) -> BTreeMap<usize, Vec<String>> {
     // Split each block into unconditional prefix vs conditional rest.
     let is_label = |l: &str| {
@@ -320,9 +325,12 @@ pub fn exit_frees(
                 def_blocks.get(r).is_some_and(|bis| bis.iter().all(|b| doms.contains(b)))
             })
             .filter(|r| !moved.contains(r) && !freed_anywhere.contains(r))
+            // Aliases of pointer params borrow caller storage: freeing them
+            // would double-free (they are not owned allocations).
+            .filter(|r| !ptr_params.contains(r))
             .collect();
         for p in &params {
-            if !moved.contains(p) && !freed_anywhere.contains(p) {
+            if !ptr_params.contains(p) && !moved.contains(p) && !freed_anywhere.contains(p) {
                 // Param must be defined (bound by header) — count it only if
                 // it never appears as a def (params have no def lines).
                 if !def_count.contains_key(p) {
@@ -448,7 +456,7 @@ mod drop_tests {
             "return _r",
         ])];
         let doms = vec![std::collections::HashSet::from([0])];
-        let out = exit_frees(&body, &doms, 0);
+        let out = exit_frees(&body, &doms, 0, &BTreeSet::new());
         let frees = &out[&0];
         assert!(frees.contains(&"_a".to_string()), "{:?}", frees);
         assert!(!frees.contains(&"_r".to_string()), "return consumes _r: {:?}", frees);
@@ -466,7 +474,7 @@ mod drop_tests {
             "return 0",
         ])];
         let doms = vec![std::collections::HashSet::from([0])];
-        let out = exit_frees(&body, &doms, 0);
+        let out = exit_frees(&body, &doms, 0, &BTreeSet::new());
         let frees = &out[&0];
         assert!(!frees.contains(&"_a_spill".to_string()), "{:?}", frees);
         assert!(frees.contains(&"_a".to_string()), "{:?}", frees);
@@ -477,7 +485,7 @@ mod drop_tests {
         // _b borrows _a: borrower freed first.
         let body = vec![lines(&["_a = alloc 8", "_b = &_a", "_r = 0", "return _r"])];
         let doms = vec![std::collections::HashSet::from([0])];
-        let out = exit_frees(&body, &doms, 0);
+        let out = exit_frees(&body, &doms, 0, &BTreeSet::new());
         let frees = &out[&0];
         let pb = frees.iter().position(|r| r == "_b").unwrap();
         let pa = frees.iter().position(|r| r == "_a").unwrap();
@@ -489,7 +497,7 @@ mod drop_tests {
         // _v moved into _w: _v must NOT be freed (would be UseAfterMove).
         let body = vec![lines(&["_v = 7", "_w = _v", "_r = 0", "return _r"])];
         let doms = vec![std::collections::HashSet::from([0])];
-        let out = exit_frees(&body, &doms, 0);
+        let out = exit_frees(&body, &doms, 0, &BTreeSet::new());
         let frees = &out[&0];
         assert!(!frees.contains(&"_v".to_string()), "{:?}", frees);
         assert!(frees.contains(&"_w".to_string()), "{:?}", frees);
@@ -512,7 +520,7 @@ mod drop_tests {
             std::collections::HashSet::from([0, 2]),
             std::collections::HashSet::from([0, 3]),
         ];
-        let out = exit_frees(&body, &doms, 0);
+        let out = exit_frees(&body, &doms, 0, &BTreeSet::new());
         // No candidates left (return consumes _r) -> no entry at all.
         let frees = out.get(&3).cloned().unwrap_or_default();
         assert!(!frees.contains(&"_x".to_string()), "{:?}", frees);
@@ -526,7 +534,7 @@ mod drop_tests {
         // from candidates even when defined once and never moved.
         let body = vec![lines(&["_3 = add _1, _2", "_0 = _3", "return _0"])];
         let doms = vec![std::collections::HashSet::from([0])];
-        let out = exit_frees(&body, &doms, 2);
+        let out = exit_frees(&body, &doms, 2, &BTreeSet::new());
         let frees = out.get(&0).cloned().unwrap_or_default();
         assert!(!frees.contains(&"_0".to_string()), "{:?}", frees);
     }
@@ -538,7 +546,7 @@ mod drop_tests {
         // too, or the same garbage-return regression returns.
         let body = vec![lines(&["_3 = add _1, _2", "_0_v1 = _3", "return _0_v1"])];
         let doms = vec![std::collections::HashSet::from([0])];
-        let out = exit_frees(&body, &doms, 2);
+        let out = exit_frees(&body, &doms, 2, &BTreeSet::new());
         let frees = out.get(&0).cloned().unwrap_or_default();
         assert!(!frees.contains(&"_0_v1".to_string()), "{:?}", frees);
     }
