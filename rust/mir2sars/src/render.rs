@@ -155,7 +155,7 @@ pub fn render_rvalue(
                     unsup.push(format!("{}:{} ConstAggregate", bid, dest));
                     return format!("// UNSUPPORTED const aggregate -> {}\n{} = 0", dest, dest);
                 }
-                Operand::Const { value, str_bytes, str_len, agg } => {
+                Operand::Const { value, str_bytes, str_len, agg, str_fat } => {
                     // A constant aggregate is materialized like an inline one.
                     if let Some(rv) = agg {
                         if let Rvalue::Aggregate { elems, layout, tag, niche_store, elem_tys } = rv.as_ref() {
@@ -177,7 +177,7 @@ pub fn render_rvalue(
                         }
                     }
                     if let Some(mut lines) = crate::layout::plan_const_bytes(
-                        dest, bid, *mv_idx, value, str_bytes.as_ref(), *str_len,
+                        dest, bid, *mv_idx, value, str_bytes.as_ref(), *str_len, *str_fat,
                     ) {
                         *mv_idx += 1;
                         // Spilled dests keep a slot so their Copy-uses reload

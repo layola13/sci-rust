@@ -92,7 +92,7 @@ pub fn const_needs_loud_value(op: &Operand) -> bool {
     match op {
         Operand::Const { value, str_bytes, str_len, .. } => {
             let inlineable = crate::layout::plan_const_bytes(
-                "_probe", "bb", 0, value, str_bytes.as_ref(), *str_len,
+                "_probe", "bb", 0, value, str_bytes.as_ref(), *str_len, false,
             )
             .is_some();
             !inlineable && const_needs_loud(op)

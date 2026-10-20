@@ -251,6 +251,9 @@ pub enum Operand {
         /// construction, materialized like an inline aggregate.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         agg: Option<Box<Rvalue>>,
+        /// A string/slice literal is a fat pointer (data word + length).
+        #[serde(default, skip_serializing_if = "is_false")]
+        str_fat: bool,
     },
     /// Join-ambiguous use inserted by `version.rs`: two or more reaching
     /// definitions with no dominance order (needs phi nodes, which SA lacks).

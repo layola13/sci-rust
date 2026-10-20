@@ -334,11 +334,11 @@ mod tests {
     use crate::render::render_rvalue;
 
     fn c(v: &str) -> Operand {
-        Operand::Const { value: v.to_string(), str_bytes: None, str_len: None, agg: None }
+        Operand::Const { value: v.to_string(), str_bytes: None, str_len: None, agg: None, str_fat: false }
     }
 
     fn sc(v: &str, bytes: &[u64]) -> Operand {
-        Operand::Const { value: v.to_string(), str_bytes: Some(bytes.to_vec()), str_len: Some(bytes.len() as u64), agg: None }
+        Operand::Const { value: v.to_string(), str_bytes: Some(bytes.to_vec()), str_len: Some(bytes.len() as u64), agg: None, str_fat: false }
     }
 
     #[test]
@@ -648,6 +648,7 @@ mod tests {
                 str_bytes: Some(vec![71, 69]),
                 str_len: Some(3),
                 agg: None,
+            str_fat: false,
             },
             c("Val(Scalar(0x00000001), i32)"),
         ];
@@ -802,6 +803,7 @@ mod tests {
             str_bytes: None,
             str_len: None,
             agg: None,
+            str_fat: false,
         };
         let f = blank_fn("f_loudblk", vec![
             Block {

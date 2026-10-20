@@ -268,15 +268,16 @@ pub fn plan_const_bytes(
     value: &str,
     str_bytes: Option<&Vec<u64>>,
     str_len: Option<u64>,
+    fat: bool,
 ) -> Option<Vec<String>> {
     let bytes = str_bytes?;
     let len = str_len?;
     if len == 0 || len > STR_INLINE_MAX || bytes.len() as u64 != len {
         return None;
     }
-    // Sized byte array pointee: `[u8; 12]`, `[u8; 4]` (Debug spacing varies).
+    // A sized byte array pointee (`[u8; 12]`) or a str/slice literal.
     let tight: String = value.chars().filter(|c| !c.is_whitespace()).collect();
-    if !tight.contains("[u8;") {
+    if !tight.contains("[u8;") && !tight.contains("str") {
         return None;
     }
     let buf = format!("_str_{}_{}", bid, idx);
@@ -284,7 +285,17 @@ pub fn plan_const_bytes(
     for (j, b) in bytes.iter().enumerate() {
         lines.push(format!("store {}+{}, {} as u8", buf, j, b));
     }
-    lines.push(format!("{} = {}", dest, buf));
+    if fat {
+        // A fat pointer (data word + length word), the `&str` / `&[u8]`
+        // shape the callee dereferences.
+        let fatreg = format!("_fat_{}_{}", bid, idx);
+        lines.push(format!("mut {} = alloc 16", fatreg));
+        lines.push(format!("store {}+0, {} as ptr", fatreg, buf));
+        lines.push(format!("store {}+8, {} as u64", fatreg, len));
+        lines.push(format!("{} = {}", dest, fatreg));
+    } else {
+        lines.push(format!("{} = {}", dest, buf));
+    }
     Some(lines)
 }
 

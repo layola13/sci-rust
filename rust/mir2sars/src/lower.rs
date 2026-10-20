@@ -1377,6 +1377,31 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
             Term::Call { func, func_raw, args, dest, target, sig } => {
                 // `for i in a..b`: std's iterator protocol is inlined here
                 // (the SA runtime has no std `Iterator::next`).
+                if func.contains("core_str_impl_str_as_bytes") {
+                    // `str::as_bytes` reinterprets the fat pointer: the
+                    // identity here (the callee dereferences the same
+                    // data/length pair).
+                    let src = args
+                        .first()
+                        .map(|a| match a {
+                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                place.clone()
+                            }
+                            _ => "0".to_string(),
+                        })
+                        .unwrap_or_else(|| "0".to_string());
+                    let d = dest.as_deref().unwrap_or("_0");
+                    out.push(format!("    {} = {}", d, src));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
+                }
                 if func.contains("as_std_iter_Iterator_rev") {
                     // `Range::rev()` builds a `Rev<Range<T>>`, a newtype over
                     // the range: it shares the range's storage, so it is the
@@ -1911,6 +1936,30 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
             }
             if let Some(v) = tfrees.get(&bi) {
                 fs.extend(v.iter());
+            }
+            // Synthesized string/slice buffers (`_str_*`) are heap
+            // allocations the drop planner cannot see (they are not MIR
+            // registers): release them with the other exit frees. The fat
+            // pointer (`_fat_*`) is moved into the call that consumes it, so
+            // it must NOT be released here.
+            let extra: Vec<String> = {
+                let (s, e) = range_by_orig[bi];
+                let mut extra: Vec<String> = Vec::new();
+                for line in out[s..e].iter() {
+                    for tok in line.split(|c: char| !(c.is_alphanumeric() || c == '_')) {
+                        if tok.starts_with("_str_")
+                            && !extra.iter().any(|x| x == tok)
+                        {
+                            extra.push(tok.to_string());
+                        }
+                    }
+                }
+                extra
+            };
+            for r in &extra {
+                if !fs.iter().any(|x| x.as_str() == r.as_str()) {
+                    fs.push(r);
+                }
             }
             if fs.is_empty() {
                 continue;

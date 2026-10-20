@@ -628,7 +628,7 @@ pub fn build_spill(blocks: &[crate::mir::Block]) -> SpillMap {
         for st in &b.statements {
             if let Stmt::Assign { dest, rvalue: Rvalue::Use { op: Operand::Const { value, str_bytes, str_len, .. } }, .. } = st {
                 let inlineable =
-                    crate::layout::plan_const_bytes(dest, "bb", 0, value, str_bytes.as_ref(), *str_len)
+                    crate::layout::plan_const_bytes(dest, "bb", 0, value, str_bytes.as_ref(), *str_len, false)
                         .is_some();
                 let used = copies.contains(dest) || consuming.contains(dest);
                 if inlineable && used && single(dest) && !map.contains_key(dest) {
@@ -919,6 +919,7 @@ mod spill_tests {
             str_bytes: Some(bytes),
             str_len: Some(3),
             agg: None,
+        str_fat: false,
         };
         let blocks = vec![Block {
             id: "bb0".to_string(),
@@ -983,7 +984,7 @@ mod spill_tests {
                             value: "42_u64".to_string(),
                             str_bytes: None,
                             str_len: None,
-            agg: None,
+            agg: None, str_fat: false,
                         },
                     },
                 },
@@ -1024,10 +1025,11 @@ mod spill_tests {
     }
 
     #[test]
-    fn fat_byte_const_dest_does_not_spill() {
+    fn fat_byte_const_dest_spills_as_ptr() {
         use crate::mir::{Block, Rvalue, Term};
-        // A `&str` pointee is a fat pointer: value position cannot represent
-        // it, so the dest stays loud and gets no slot.
+        // A `&str` literal is a fat pointer (data + length), materialized into
+        // a buffer: the dest holds a pointer, so it spills like any other
+        // pointer-valued dest (its uses reload instead of moving it).
         let blocks = vec![Block {
             id: "bb0".to_string(),
             statements: vec![
@@ -1041,6 +1043,7 @@ mod spill_tests {
                             str_bytes: Some(vec![104, 105, 33]),
                             str_len: Some(3),
                             agg: None,
+                            str_fat: false,
                         },
                     },
                 },
@@ -1053,7 +1056,7 @@ mod spill_tests {
             ],
             terminator: Term::Return { ret: None },
         }];
-        assert!(!build_spill(&blocks).contains_key("_1"));
+        assert!(build_spill(&blocks).contains_key("_1"));
     }
 
     #[test]

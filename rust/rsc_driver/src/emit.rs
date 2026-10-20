@@ -78,6 +78,15 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
             // String-literal payload rides along only when resolvable;
             // absent fields keep old fixtures byte-compatible.
             if let Some((bytes, len)) = str_const_bytes(tcx, &c.const_) {
+                // `&str` / `&[u8]` are fat pointers (data + length);
+                // `&[u8; N]` is a thin pointer to the buffer.
+                let fat = matches!(
+                    c.const_.ty().kind(),
+                    TyKind::Ref(_, inner, _) if matches!(inner.kind(), TyKind::Str | TyKind::Slice(_))
+                );
+                if fat {
+                    into.push_str(", \"str_fat\": true");
+                }
                 into.push_str(", \"str_bytes\": [");
                 for (i, b) in bytes.iter().enumerate() {
                     if i > 0 {
