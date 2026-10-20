@@ -38,3 +38,42 @@ pub struct Pair {
     pub a: i32,
     pub b: i32,
 }
+
+/// An enum with a payload: exercised end-to-end (construction, `match`, and
+/// the discriminant) across the crate boundary.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Shape {
+    Circle(i32),
+    Rect(i32, i32),
+    Empty,
+}
+
+pub fn shape_area(s: &Shape) -> i32 {
+    match s {
+        Shape::Circle(r) => *r * 2,
+        Shape::Rect(w, h) => *w * *h,
+        Shape::Empty => 0,
+    }
+}
+
+/// A slice parameter: the fat pointer plus dynamic indexing.
+pub fn slice_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    let mut i = 0;
+    while i < xs.len() {
+        total += xs[i];
+        i += 1;
+    }
+    total
+}
+
+/// `Option::is_some` on a parameter: the discriminant test is inlined by the
+/// backend (std's symbols cannot run here).
+pub fn option_is_some(v: Option<i32>) -> bool {
+    v.is_some()
+}
+
+/// `Option::unwrap_or` on a parameter.
+pub fn option_or(v: Option<i32>, default: i32) -> i32 {
+    v.unwrap_or(default)
+}

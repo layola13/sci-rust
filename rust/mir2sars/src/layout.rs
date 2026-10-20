@@ -337,10 +337,16 @@ pub fn plan_option_shim(
             };
             let payload = format!("_opt_val_{}", bid);
             let sel = format!("_opt_sel_{}", bid);
+            let slot = format!("_opt_defslot_{}", bid);
             let lbl_some = format!("L_opt_some_{}", bid);
             let lbl_none = format!("L_opt_none_{}", bid);
             let lbl_end = format!("L_opt_end_{}", bid);
             lines.push(format!("{} = eq {}, {}", sel, tag, sh.present));
+            // The default is read (not moved) on both paths: a plain copy
+            // would consume the register on one path only, and the join would
+            // see mismatched states. A frame slot keeps it readable.
+            lines.push(format!("mut {} = stack_alloc 8", slot));
+            lines.push(format!("store {}+0, {} as u64", slot, dflt));
             lines.push(format!("br {} -> {}, {}", sel, lbl_some, lbl_none));
             lines.push(format!("{}:", lbl_some));
             lines.push(format!(
@@ -350,7 +356,7 @@ pub fn plan_option_shim(
             lines.push(format!("{} = {}", dest, payload));
             lines.push(format!("jmp {}", lbl_end));
             lines.push(format!("{}:", lbl_none));
-            lines.push(format!("{} = {}", dest, dflt));
+            lines.push(format!("{} = load {}+0 as u64", dest, slot));
             lines.push(format!("jmp {}", lbl_end));
             lines.push(format!("{}:", lbl_end));
             Some(lines)
