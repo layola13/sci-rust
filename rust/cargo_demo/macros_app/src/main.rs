@@ -2,7 +2,7 @@
 //! boundary. `sars run` must resolve the callees via `@import "macros_lib.sars"`
 //! (not `@extern`), and `panic!` folds to native `panic(code)` — so the
 //! program runs with no broker.
-use macros_lib::{double, plus_two, first_byte, first_or, iter_ref_sum, iter_ref_sum_vec, iter_rev_sum, iter_enum_sum, iter_step_sum, iter_take_sum, iter_zip_sum, slice_opt_sum, vec_ends_sum, vec_pop_sum, vec_u8_pop_sum, iter_map_sum, iter_filter_sum, iter_sum, iter_sum_vec, option_is_some, option_or, range_sum, shape_area, slice_sum, sum, sum_vec, total, weight, Kind, Shape};
+use macros_lib::{double, plus_two, first_byte, first_or, iter_ref_sum, iter_ref_sum_vec, iter_rev_sum, iter_enum_sum, iter_step_sum, iter_take_sum, iter_zip_sum, slice_opt_sum, vec_ends_sum, vec_pop_sum, vec_u8_pop_sum, iter_map_sum, iter_filter_sum, iter_map_capture_sum, iter_filter_capture_sum, iter_sum, iter_sum_vec, option_is_some, option_or, range_sum, shape_area, slice_sum, sum, sum_vec, total, weight, Kind, Shape};
 
 fn main() {
     let x = double(20);
@@ -52,6 +52,12 @@ fn main() {
     }
     if iter_filter_sum(&xs) != 6 {
         panic!("bad iter filter sum");
+    }
+    if iter_map_capture_sum(&xs) != 30 {
+        panic!("bad iter map capture sum");
+    }
+    if iter_filter_capture_sum(&xs, 2) != 6 {
+        panic!("bad iter filter capture sum");
     }
     if vec_ends_sum(&vs) != 10 {
         panic!("bad vec ends sum");

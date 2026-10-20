@@ -243,6 +243,25 @@ pub fn iter_filter_sum(xs: &[i32]) -> i32 {
     total
 }
 
+/// `.map()` with a captured scalar.
+pub fn iter_map_capture_sum(xs: &[i32]) -> i32 {
+    let k = 3;
+    let mut total = 0;
+    for x in xs.iter().map(|v| *v * k) {
+        total += x;
+    }
+    total
+}
+
+/// `.filter()` with a captured modulus.
+pub fn iter_filter_capture_sum(xs: &[i32], m: i32) -> i32 {
+    let mut total = 0;
+    for x in xs.iter().filter(|v| **v % m == 0) {
+        total += *x;
+    }
+    total
+}
+
 /// Pop every element (`Vec::pop`).
 pub fn vec_pop_sum(v: &mut Vec<i32>) -> i32 {
     let mut total = 0;

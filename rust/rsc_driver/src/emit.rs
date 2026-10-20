@@ -420,32 +420,38 @@ fn slice_iter_info<'tcx>(
     let info_adapter = |elem_size: u64,
                         iter_off: u64,
                         size: u64,
+                        closure_off: u64,
+                        closure_size: u64,
                         adapter: &str,
                         closure: &str| {
         format!(
-            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"adapter\": \"{}\", \"closure\": \"{}\"}}",
-            elem_size, iter_off, size, adapter, closure
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"closure_off\": {}, \"closure_size\": {}, \"adapter\": \"{}\", \"closure\": \"{}\"}}",
+            elem_size, iter_off, size, closure_off, closure_size, adapter, closure
         )
     };
     let info_map_next = |elem_size: u64,
                          iter_off: u64,
                          size: u64,
+                         closure_off: u64,
+                         closure_size: u64,
                          closure: &str,
                          out_ty: &str,
                          out_size: u64| {
         format!(
-            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"adapter\": \"map_next\", \"closure\": \"{}\", \"out_ty\": \"{}\", \"out_size\": {}, \"opt_tag_off\": 0, \"opt_payload_off\": {}, \"opt_size\": {}}}",
-            elem_size, iter_off, size, closure, out_ty, out_size, out_size, 2 * out_size
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"closure_off\": {}, \"closure_size\": {}, \"adapter\": \"map_next\", \"closure\": \"{}\", \"out_ty\": \"{}\", \"out_size\": {}, \"opt_tag_off\": 0, \"opt_payload_off\": {}, \"opt_size\": {}}}",
+            elem_size, iter_off, size, closure_off, closure_size, closure, out_ty, out_size, out_size, 2 * out_size
         )
     };
     let info_filter_next = |elem_size: u64,
                             iter_off: u64,
                             size: u64,
+                            closure_off: u64,
+                            closure_size: u64,
                             closure: &str,
                             niche_off: u64| {
         format!(
-            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"adapter\": \"filter_next\", \"closure\": \"{}\", \"niche_off\": {}}}",
-            elem_size, iter_off, size, closure, niche_off
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"closure_off\": {}, \"closure_size\": {}, \"adapter\": \"filter_next\", \"closure\": \"{}\", \"niche_off\": {}}}",
+            elem_size, iter_off, size, closure_off, closure_size, closure, niche_off
         )
     };
     let adapter_of = |t: Ty<'tcx>| -> Option<(&'static str, Ty<'tcx>, Ty<'tcx>)> {
@@ -505,6 +511,8 @@ fn slice_iter_info<'tcx>(
                 let layout = layout_of(ty)?;
                 let iter_off =
                     field_offset_pub(tcx, env, ty, &layout.layout, 0, "iter")?;
+                let closure_off = layout.layout.fields.offset(1).bytes();
+                let closure_size = layout_of(clo)?.size.bytes();
                 let closure = closure_name(clo)?;
                 if kind == "map" {
                     let opt = dest_ty?;
@@ -524,6 +532,8 @@ fn slice_iter_info<'tcx>(
                         elem_size,
                         iter_off,
                         layout.size.bytes(),
+                        closure_off,
+                        closure_size,
                         &closure,
                         &out_ty,
                         out_size,
@@ -535,6 +545,8 @@ fn slice_iter_info<'tcx>(
                         elem_size,
                         iter_off,
                         layout.size.bytes(),
+                        closure_off,
+                        closure_size,
                         &closure,
                         niche.0,
                     ));
@@ -556,11 +568,15 @@ fn slice_iter_info<'tcx>(
                         0,
                         "iter",
                     )?;
+                    let closure_off = layout.layout.fields.offset(1).bytes();
+                    let closure_size = layout_of(clo)?.size.bytes();
                     if args.len() < 2 {
                         return Some(info_adapter(
                             elem_size,
                             iter_off,
                             layout.size.bytes(),
+                            closure_off,
+                            closure_size,
                             "adapter_identity",
                             "",
                         ));
@@ -574,6 +590,8 @@ fn slice_iter_info<'tcx>(
                         elem_size,
                         iter_off,
                         layout.size.bytes(),
+                        closure_off,
+                        closure_size,
                         key,
                         &closure,
                     ));

@@ -138,6 +138,11 @@ pub struct SliceIter {
     /// Local function name of the closure stored in a `Map`/`Filter`.
     #[serde(default)]
     pub closure: Option<String>,
+    /// Offset and size of the captured closure value inside the adapter.
+    #[serde(default)]
+    pub closure_off: u64,
+    #[serde(default)]
+    pub closure_size: u64,
     /// SA type of `Map`'s output item.
     #[serde(default)]
     pub out_ty: Option<String>,

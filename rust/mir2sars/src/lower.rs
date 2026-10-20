@@ -1947,6 +1947,24 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                                 si.iter_off + 8,
                                 end
                             ));
+                            if si.closure_size > 0 {
+                                if let Some(cs) = args.get(1).and_then(|a| match a {
+                                    Operand::Move { place, .. }
+                                    | Operand::Copy { place, .. } => Some(place.clone()),
+                                    _ => None,
+                                }) {
+                                    let ct = match si.closure_size {
+                                        1 => "u8",
+                                        2 => "u16",
+                                        4 => "u32",
+                                        _ => "u64",
+                                    };
+                                    out.push(format!(
+                                        "    store {}+{}, {} as {}",
+                                        it, si.closure_off, cs, ct
+                                    ));
+                                }
+                            }
                             out.push(format!("    {} = {}", d, it));
                             bound.insert(d.to_string());
                             match target {
@@ -2183,6 +2201,16 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                                 })
                                 .unwrap_or_else(|| iter.clone());
                             let closure = si.closure.clone().unwrap_or_default();
+                            let env = if si.closure_size > 0 {
+                                let r = format!("_adapter_env_{}", b.id);
+                                out.push(format!(
+                                    "    {} = ptr_add {}, {}",
+                                    r, recv, si.closure_off
+                                ));
+                                r
+                            } else {
+                                "0".to_string()
+                            };
                             if kind == "map_next" {
                                 let val = format!("_map_val_{}", b.id);
                                 let tag_ty = match si.out_size {
@@ -2207,8 +2235,8 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                                 ));
                                 out.push(format!("{}:", lbl_some));
                                 out.push(format!(
-                                    "    {} = call @{}(0, {})",
-                                    val, closure, cur
+                                    "    {} = call @{}({}, {})",
+                                    val, closure, env, cur
                                 ));
                                 out.push(format!(
                                     "    store {}+{}, 1 as {}",
@@ -2279,8 +2307,8 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                                 out.push(format!("    mut {} = alloc 8", arg));
                                 out.push(format!("    store {}+0, {} as ptr", arg, elem));
                                 out.push(format!(
-                                    "    {} = call @{}(0, {})",
-                                    keep, closure, arg
+                                    "    {} = call @{}({}, {})",
+                                    keep, closure, env, arg
                                 ));
                                 out.push(format!(
                                     "    br {} -> {}, {}",
