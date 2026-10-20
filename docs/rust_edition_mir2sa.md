@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2938 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 3208 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -265,9 +265,14 @@ exit 0，无 broker）。
 - `.enumerate()`：构造 `Enumerate { iter, count }`；`next` 产出
   `(count, &T)`（`Option` 的 niche 指针仍在 payload 的 +8），计数自增。
   已用 `iter_enum_sum` 端到端验证。
+- `.zip(other)`：构造 `Zip { a, b, .. }`，拷贝两个 `Iter` 的两字状态；
+  `next` 先推进 `a`、再推进 `b`，两者都有元素时产出 `(&A, &B)`，
+  否则 None（`a` 已消耗的元素不回退，与 std 一致）。已用
+  `iter_zip_sum` 覆盖等长与短第二序列。
 - niche 判别式偏移改为读取未标记变体字段的 `largest_niche.offset`，
-  从而支持 `Option<(usize, &T)>` 这类 niche 嵌在 payload 元组内的情况。
+  从而支持 `Option<(usize, &T)>` / `Option<(&A, &B)>` 这类 niche
+  嵌在 payload 元组内的情况。
 - 退出释放不再释放 niche 判别式读出的 `<reg>_n` 载荷指针（它指向调用方
   存储，不拥有该分配）。
-- 仍未覆盖：`.zip()` 等组合适配器。
+- 仍未覆盖：`.map()`/`.filter()` 等闭包适配器。
 

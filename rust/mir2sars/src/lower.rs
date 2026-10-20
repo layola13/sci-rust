@@ -569,7 +569,11 @@ struct IterNextCtx {
 
 /// True for std's `IntoIterator::into_iter` on a range.
 fn is_into_iter_call(func: &str) -> bool {
+    // Long adapter names can be truncated after `IntoIterator_`, so accept
+    // that suffix as well: `into_iter` on an already-built iterator is the
+    // identity either way.
     func.contains("as_std_iter_IntoIterator_into_iter")
+        || func.ends_with("as_std_iter_IntoIterator_")
 }
 
 /// True for std's `Iterator::next` on a range.
@@ -1713,6 +1717,75 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         let len = format!("_slice_len_{}", b.id);
                         let off = format!("_slice_off_{}", b.id);
                         let end = format!("_slice_end_{}", b.id);
+                        if let Some(iter2_off) = si.iter2_off {
+                            // `Iterator::zip(other)`: copy both inner `Iter`
+                            // word pairs into the `Zip` value.
+                            let src2 = args
+                                .get(1)
+                                .map(|a| match a {
+                                    Operand::Move { place, .. }
+                                    | Operand::Copy { place, .. } => place.clone(),
+                                    _ => "0".to_string(),
+                                })
+                                .unwrap_or_else(|| "0".to_string());
+                            let data2 = format!("_slice_data2_{}", b.id);
+                            let end2 = format!("_slice_end2_{}", b.id);
+                            let size = if si.size == 0 { iter2_off + 16 } else { si.size };
+                            out.push(format!("    mut {} = alloc {}", it, size));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                data,
+                                src,
+                                si.iter_off
+                            ));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                end,
+                                src,
+                                si.iter_off + 8
+                            ));
+                            out.push(format!(
+                                "    {} = load {}+0 as ptr",
+                                data2, src2
+                            ));
+                            out.push(format!(
+                                "    {} = load {}+8 as ptr",
+                                end2, src2
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it, si.iter_off, data
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it,
+                                si.iter_off + 8,
+                                end
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it, iter2_off, data2
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it,
+                                iter2_off + 8,
+                                end2
+                            ));
+                            out.push(format!("    {} = {}", d, it));
+                            bound.insert(d.to_string());
+                            match target {
+                                Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                                None => {
+                                    out.push("    // diverging call".to_string());
+                                    out.push(format!(
+                                        "    panic({})",
+                                        unreachable_panic_code(&b.id)
+                                    ));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(count_off) = si.count_off {
                             // `Iterator::enumerate()`: copy the inner `Iter`
                             // words and zero the running count.
@@ -2039,6 +2112,80 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                             iter,
                             si.iter_off + 8
                         ));
+                        if let Some(iter2_off) = si.iter2_off {
+                            // `Zip::next`: advance `a` first, then `b`; the
+                            // item exists only when both still have elements.
+                            let cur2 = format!("_slice_cur2_{}", b.id);
+                            let endp2 = format!("_slice_endp2_{}", b.id);
+                            let nxt2 = format!("_slice_nxt2_{}", b.id);
+                            let elem2_size = si.elem2_size;
+                            let lbl_a = format!("L_slice_zip_a_{}", b.id);
+                            let lbl_b = format!("L_slice_zip_b_{}", b.id);
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                cur2,
+                                iter,
+                                iter2_off
+                            ));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                endp2,
+                                iter,
+                                iter2_off + 8
+                            ));
+                            out.push(format!("    {} = ult {}, {}", cmp, cur, endp));
+                            out.push(format!("    mut {} = alloc 16", ret));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                cmp, lbl_a, lbl_none
+                            ));
+                            out.push(format!("{}:", lbl_a));
+                            out.push(format!("    {} = ptr_add {}, {}", nxt, cur, elem_size));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                iter,
+                                si.iter_off,
+                                nxt
+                            ));
+                            out.push(format!("    {} = ult {}, {}", cmp, cur2, endp2));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                cmp, lbl_b, lbl_none
+                            ));
+                            out.push(format!("{}:", lbl_b));
+                            out.push(format!("    store {}+0, {} as ptr", ret, cur));
+                            out.push(format!("    store {}+8, {} as ptr", ret, cur2));
+                            out.push(format!(
+                                "    {} = ptr_add {}, {}",
+                                nxt2, cur2, elem2_size
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                iter,
+                                iter2_off,
+                                nxt2
+                            ));
+                            out.push(format!("    jmp {}", lbl_end));
+                            out.push(format!("{}:", lbl_none));
+                            out.push(format!(
+                                "    store {}+{}, 0 as ptr",
+                                ret, si.niche_off
+                            ));
+                            out.push(format!("{}:", lbl_end));
+                            out.push(format!("    {} = {}", d, ret));
+                            bound.insert(d.to_string());
+                            match target {
+                                Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                                None => {
+                                    out.push("    // diverging call".to_string());
+                                    out.push(format!(
+                                        "    panic({})",
+                                        unreachable_panic_code(&b.id)
+                                    ));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(count_off) = si.count_off {
                             // `Enumerate::next`: yield `(count, elem)` and
                             // bump the count. The Option payload is a pair

@@ -122,6 +122,15 @@ pub struct SliceIter {
     /// Offset of the running count inside `Enumerate<Iter>`.
     #[serde(default)]
     pub count_off: Option<u64>,
+    /// Offset of the second iterator inside `Zip<A, B>`.
+    #[serde(default)]
+    pub iter2_off: Option<u64>,
+    /// Element size of `Zip`'s second iterator.
+    #[serde(default)]
+    pub elem2_size: u64,
+    /// Offset of the niche pointer in `Option<(&A, &B)>`.
+    #[serde(default)]
+    pub niche_off: u64,
 }
 
 /// A slice accessor returning `Option<&T>` (`first`/`last`/`get`).

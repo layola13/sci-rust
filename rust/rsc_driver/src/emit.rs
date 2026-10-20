@@ -395,6 +395,17 @@ fn slice_iter_info<'tcx>(
             elem_size, iter_off, count_off, size
         )
     };
+    let info_zip = |elem_size: u64,
+                    elem2_size: u64,
+                    iter_off: u64,
+                    iter2_off: u64,
+                    size: u64,
+                    niche_off: u64| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"iter2_off\": {}, \"elem2_size\": {}, \"size\": {}, \"niche_off\": {}}}",
+            elem_size, iter_off, iter2_off, elem2_size, size, niche_off
+        )
+    };
     let slice_iter_elem = |def: rustc_middle::ty::AdtDef<'tcx>,
                            targs: &rustc_middle::ty::GenericArgsRef<'tcx>| {
         tcx.def_path_str(def.did())
@@ -402,9 +413,45 @@ fn slice_iter_info<'tcx>(
             .then(|| targs.iter().find_map(|a| a.as_type()))
             .flatten()
     };
+    let elem_of_iter = |t: Ty<'tcx>| match t.kind() {
+        TyKind::Adt(d, a) => slice_iter_elem(*d, a),
+        _ => None,
+    };
     let is_into_iter = fname.contains("IntoIterator_into_iter");
     let is_next = fname.contains("Iterator_next");
     let is_rev = fname.contains("Iterator_rev");
+    // `Iterator::zip(other)` on two `slice::Iter`s: build `Zip { a, b, .. }`.
+    if !is_into_iter && fname.contains("Iterator_zip") {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if slice_iter_elem(*def, targs).is_some() {
+                let zip_ty = dest_ty?;
+                let layout = layout_of(zip_ty)?;
+                let mut elems = Vec::new();
+                if let TyKind::Adt(_, zargs) = zip_ty.kind() {
+                    for a in zargs.iter().filter_map(|a| a.as_type()) {
+                        if let Some(e) = elem_of_iter(a) {
+                            elems.push(e);
+                        }
+                    }
+                }
+                if elems.len() < 2 {
+                    return None;
+                }
+                let elem_size = layout_of(elems[0])?.size.bytes();
+                let elem2_size = layout_of(elems[1])?.size.bytes();
+                let iter_off = field_offset_pub(tcx, env, zip_ty, &layout.layout, 0, "a")?;
+                let iter2_off = field_offset_pub(tcx, env, zip_ty, &layout.layout, 0, "b")?;
+                return Some(info_zip(
+                    elem_size,
+                    elem2_size,
+                    iter_off,
+                    iter2_off,
+                    layout.size.bytes(),
+                    8,
+                ));
+            }
+        }
+    }
     // `Iterator::take(n)` on `slice::Iter`: build `Take { iter, n }`.
     if !is_into_iter && fname.contains("Iterator_take") {
         if let TyKind::Adt(def, targs) = ty.kind() {
@@ -497,6 +544,34 @@ fn slice_iter_info<'tcx>(
                         ));
                     }
                 }
+            }
+            if tcx.def_path_str(def.did()).contains("iter::Zip") {
+                let mut elems = Vec::new();
+                for t in targs.iter().filter_map(|a| a.as_type()) {
+                    if let Some(e) = elem_of_iter(t) {
+                        elems.push(e);
+                    }
+                }
+                if elems.len() < 2 {
+                    return None;
+                }
+                let elem_size = layout_of(elems[0])?.size.bytes();
+                let elem2_size = layout_of(elems[1])?.size.bytes();
+                let layout = layout_of(ty)?;
+                let iter_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "a")?;
+                let iter2_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "b")?;
+                let niche_off = dest_ty
+                    .and_then(|t| niche_info_ty(tcx, t))
+                    .map(|(off, _, _)| off)
+                    .unwrap_or(8);
+                return Some(info_zip(
+                    elem_size,
+                    elem2_size,
+                    iter_off,
+                    iter2_off,
+                    layout.size.bytes(),
+                    niche_off,
+                ));
             }
             if tcx.def_path_str(def.did()).contains("iter::Enumerate") {
                 let inner = targs.iter().find_map(|a| a.as_type())?;
@@ -1430,13 +1505,17 @@ fn niche_info<'tcx>(
     body: &Body<'tcx>,
     p: &rustc_middle::mir::Place<'tcx>,
 ) -> Option<(u64, u32, u32)> {
+    niche_info_ty(tcx, p.ty(&body.local_decls, tcx).ty)
+}
+
+fn niche_info_ty<'tcx>(tcx: TyCtxt<'tcx>, ty: Ty<'tcx>) -> Option<(u64, u32, u32)> {
     use rustc_abi::{TagEncoding, Variants};
     use rustc_middle::ty::TypingEnv;
     let env = TypingEnv::fully_monomorphized();
     let layout = tcx
         .layout_of(rustc_middle::ty::PseudoCanonicalInput {
             typing_env: env,
-            value: p.ty(&body.local_decls, tcx).ty,
+            value: ty,
         })
         .ok()?;
     let (untagged, niche_variants, niche_start, tag_field) = match &layout.variants {
@@ -1470,7 +1549,6 @@ fn niche_info<'tcx>(
     // The niche field must be a pointer (null is the niche value). It can
     // be nested inside the payload (e.g. `Option<(usize, &T)>`), so look up
     // the untagged variant's field and read *its* largest niche.
-    let ty = p.ty(&body.local_decls, tcx).ty;
     let (def, args) = match ty.kind() {
         TyKind::Adt(def, args) => (*def, args),
         _ => return None,
