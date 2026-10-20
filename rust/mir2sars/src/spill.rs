@@ -350,14 +350,37 @@ pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>
     }
     let mut map = SpillMap::new();
     for (place, sites) in &uses {
+        // A Rust `Copy` value stays valid after a copy, but an SA assign
+        // consumes its source: a copy on one path only would leave the
+        // register consumed there and active elsewhere, and the join would
+        // reject it. Spilling the value makes every copy a reload (no
+        // consumption), which matches Rust's `Copy` semantics. A scalar
+        // local is `Copy` in Rust even when the MIR moves it.
+        let scalar = types
+            .get(place)
+            .map(|t| {
+                matches!(
+                    t.as_str(),
+                    "i8" | "i16" | "i32" | "i64" | "isize" | "u8" | "u16" | "u32" | "u64"
+                        | "usize" | "f32" | "f64" | "char" | "bool"
+                )
+            })
+            .unwrap_or(false);
+        let copy_like = (copied.contains(place) && !moved.contains(place))
+            || (moved.contains(place) && scalar);
         // Only Copy places qualify: a moved place is owned, not copied.
-        if !copied.contains(place) || moved.contains(place) {
+        if !copied.contains(place) && !copy_like {
+            continue;
+        }
+        if moved.contains(place) && !copy_like {
             continue;
         }
         // The slot setup is emitted at the definition site, so only
-        // single-def places can spill (params have no definition and
-        // multi-def locals would redefine the same slot).
-        if def_count.get(place).copied().unwrap_or(0) != 1 {
+        // single-def places can spill (multi-def locals would redefine the
+        // same slot). A parameter has no definition: its slot is set up in
+        // the function prologue.
+        let defs = def_count.get(place).copied().unwrap_or(0);
+        if defs != 1 && defs != 0 {
             continue;
         }
         let first_consuming = sites.iter().find(|(c, _)| *c).map(|(_, p)| *p);
@@ -369,7 +392,16 @@ pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>
         // the loop body would consume the register, and the next iteration
         // would read a moved value (or the join would see mismatched states).
         let loop_carried = sites.iter().any(|(_, p)| in_loop.contains(&(p / 4096)));
-        let needs = sites.len() > 1 || used_after_copy || dropped.contains(place) || loop_carried;
+        // A Rust `Copy` value stays valid after a copy, but an SA assign
+        // consumes its source: a copy on one path only would leave the
+        // register consumed there and active elsewhere, and the join would
+        // reject it. Spilling the value makes every copy a reload (no
+        // consumption), which matches Rust's `Copy` semantics.
+        let needs = sites.len() > 1
+            || used_after_copy
+            || dropped.contains(place)
+            || loop_carried
+            || copy_like;
         if !needs {
             continue;
         }
@@ -1024,9 +1056,12 @@ mod spill_tests {
         }];
         let mut types = BTreeMap::new();
         types.insert("_1".to_string(), "u64".to_string());
-        // `_1` is a param (zero defs): the header binds it, no slot setup
-        // exists. `_9` has no inferred type: cannot pick a slot width.
-        assert!(copy_spill(&blocks, &types).is_empty());
+        // `_1` is a scalar param: it is spilled (a copy must not consume the
+        // source register; its slot is set up in the function prologue).
+        // `_9` has no inferred type: cannot pick a slot width.
+        let map = copy_spill(&blocks, &types);
+        assert!(map.contains_key("_1"));
+        assert!(!map.contains_key("_9"));
     }
 
     #[test]

@@ -211,6 +211,10 @@ exit 0，无 broker）。
 - `Vec` 布局按**字段名递归**解析（现代 rustc 的 `Vec` 把字藏在
   `RawVec { inner: RawVecInner { ptr, cap, .. } }` 里，且布局会重排字段，
   所以不能按字段下标匹配）。
+- **Rust `Copy` 语义**：SA 的赋值会消耗源寄存器，而 Rust 的 `Copy` 值复制后
+  仍然有效；「只在一条路径上复制」会让 join 处看到「已消耗 vs 仍存活」的
+  状态冲突。因此标量（含被 MIR 当作 move 的标量）现在会被溢出到槽，
+  复制变成重载（不消耗）；参数的槽在函数序言里初始化。
 - 仍未覆盖：`println!`/`format!` 的**格式化栈**（`Argument::new_display`、
   `Arguments::new`、`io::_print` 都是 std 符号）——`panic!` 路径已折叠为
   原生 `panic(code)` ✓，但主动打印仍需 std 符号。

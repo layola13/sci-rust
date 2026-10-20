@@ -1198,9 +1198,27 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     // Spill map for multi-use shared values (reload slots instead of
     // moving shared temps twice). Built over MIR statements once.
     let spill = build_spill_for(f);
+    // A spilled parameter has no definition site: its slot is set up in the
+    // function prologue (before the entry block's statements).
+    let param_slots: Vec<(String, String)> = f
+        .params
+        .iter()
+        .enumerate()
+        .filter_map(|(i, ty)| {
+            let name = format!("_{}", i + 1);
+            spill.get(&name).map(|t| (name, t.clone()))
+        })
+        .collect();
     // Locals defined but never read: a byte-literal store into one of them
     // would allocate a payload nobody can free (see spill::dead_locals).
-    let dead = crate::spill::dead_locals(&f.blocks, f.params.len());
+    let mut dead = crate::spill::dead_locals(&f.blocks, f.params.len());
+    // A version used by a join slot is not dead: the slot's frontier store
+    // reads it (the definition must be materialized).
+    for p in &join_slots {
+        for (_, ver) in &p.frontier {
+            dead.remove(ver);
+        }
+    }
     // Block ranges close when the NEXT block starts, never inside the loop:
     // a loud terminator arm `continue`s, and its lines still define registers
     // that drop.rs must see (missing them under-freed every exit, which the
@@ -1228,6 +1246,14 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
         // (skip the line). Exclusive-branch joins stay legal (never seeded).
         let mut bound = seeds[bi].clone();
         let mut mv_idx = 0usize;
+        // The entry block sets up the spilled parameters' slots.
+        if bi == 0 {
+            for (name, ty) in &param_slots {
+                let slot = crate::spill::spill_slot(name);
+                out.push(format!("    mut {} = stack_alloc 8", slot));
+                out.push(format!("    store {}+0, {} as {}", slot, name, ty));
+            }
+        }
         for (si, st) in b.statements.iter().enumerate() {
             match st {
                 Stmt::Assign { dest, dest_place, dest_proj, rvalue } => {

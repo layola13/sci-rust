@@ -77,3 +77,51 @@ pub fn option_is_some(v: Option<i32>) -> bool {
 pub fn option_or(v: Option<i32>, default: i32) -> i32 {
     v.unwrap_or(default)
 }
+
+/// A small "report" pipeline: builds a vector, walks a range, and folds an
+/// enum. Exercises the container/enum/match/loop surface end to end.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Kind {
+    Small,
+    Medium,
+    Large,
+}
+
+pub fn weight(k: Kind) -> i32 {
+    match k {
+        Kind::Small => 1,
+        Kind::Medium => 10,
+        Kind::Large => 100,
+    }
+}
+
+/// Sum of the weights of the given kinds.
+pub fn total(kinds: &[Kind]) -> i32 {
+    let mut sum = 0;
+    let mut i = 0;
+    while i < kinds.len() {
+        sum += weight(kinds[i]);
+        i += 1;
+    }
+    sum
+}
+
+/// A vector built by the caller; the library reads it back.
+pub fn sum_vec(v: &Vec<i32>) -> i32 {
+    let mut sum = 0;
+    let mut i = 0;
+    while i < v.len() {
+        sum += v[i];
+        i += 1;
+    }
+    sum
+}
+
+/// `Option` handling: `is_some` / `unwrap_or` are inlined by the backend.
+pub fn first_or(v: &Vec<i32>, default: i32) -> i32 {
+    if v.is_empty() {
+        default
+    } else {
+        v[0]
+    }
+}

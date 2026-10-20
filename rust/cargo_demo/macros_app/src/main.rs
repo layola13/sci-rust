@@ -2,7 +2,7 @@
 //! boundary. `sars run` must resolve the callees via `@import "macros_lib.sars"`
 //! (not `@extern`), and `panic!` folds to native `panic(code)` — so the
 //! program runs with no broker.
-use macros_lib::{double, plus_two, shape_area, slice_sum, option_is_some, option_or, sum, Shape};
+use macros_lib::{double, plus_two, first_or, option_is_some, option_or, shape_area, slice_sum, sum, sum_vec, total, weight, Kind, Shape};
 
 fn main() {
     let x = double(20);
