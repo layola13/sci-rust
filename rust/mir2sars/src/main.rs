@@ -107,10 +107,10 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
                                     Operand::Const { value, .. } => repeat_plan(value, len).is_none(),
                                     _ => true,
                                 },
-                                Rvalue::Aggregate { elems, layout, tag, niche_store } if elems.len() > 1 || tag.is_some() || niche_store.is_some() => match dest_place {
+                                Rvalue::Aggregate { elems, layout, tag, niche_store, elem_tys } if elems.len() > 1 || tag.is_some() || niche_store.is_some() => match dest_place {
                                     Some(p) => {
                                         lower_array_init(&b.id, p, elems).is_none()
-                                            && lower_adt_init(&b.id, dest, p, elems, layout.as_ref(), tag.as_ref(), niche_store.as_ref()).is_none()
+                                            && lower_adt_init(&b.id, dest, p, elems, layout.as_ref(), tag.as_ref(), niche_store.as_ref(), elem_tys.as_deref()).is_none()
                                     }
                                     None => true,
                                 },
@@ -334,11 +334,11 @@ mod tests {
     use crate::render::render_rvalue;
 
     fn c(v: &str) -> Operand {
-        Operand::Const { value: v.to_string(), str_bytes: None, str_len: None }
+        Operand::Const { value: v.to_string(), str_bytes: None, str_len: None, agg: None }
     }
 
     fn sc(v: &str, bytes: &[u64]) -> Operand {
-        Operand::Const { value: v.to_string(), str_bytes: Some(bytes.to_vec()), str_len: Some(bytes.len() as u64) }
+        Operand::Const { value: v.to_string(), str_bytes: Some(bytes.to_vec()), str_len: Some(bytes.len() as u64), agg: None }
     }
 
     #[test]
@@ -385,7 +385,7 @@ mod tests {
             c("Val(Scalar(0x00000000), i32)"),
             c("Val(Scalar(0x00000004), i32)"),
         ];
-        let lines = lower_adt_init("bb10", "_19", "_19", &elems, None, None, None).expect("range must lower");
+        let lines = lower_adt_init("bb10", "_19", "_19", &elems, None, None, None, None).expect("range must lower");
         assert_eq!(lines[1], "mut _agg_bb10 = alloc 8");
         assert_eq!(lines[2], "store _agg_bb10+0, 0 as i32");
         assert_eq!(lines[3], "store _agg_bb10+4, 4 as i32");
@@ -401,7 +401,7 @@ mod tests {
             Operand::Move { place: "_38".to_string(), proj: None },
             c("Val(Scalar(0x01), bool)"),
         ];
-        let lines = lower_adt_init("bb13", "_37", "_37", &elems, None, None, None).expect("mixed tuple must lower");
+        let lines = lower_adt_init("bb13", "_37", "_37", &elems, None, None, None, None).expect("mixed tuple must lower");
         assert_eq!(lines[1], "mut _agg_bb13 = alloc 17");
         assert_eq!(lines[2], "store _agg_bb13+0, 1 as i32");
         assert_eq!(lines[3], "store _agg_bb13+8, ^_38 as u64");
@@ -416,7 +416,7 @@ mod tests {
             Operand::Move { place: "_2".to_string(), proj: None },
             Operand::Move { place: "_4".to_string(), proj: None },
         ];
-        let lines = lower_adt_init("bb2", "_0", "_0", &elems, None, None, None).expect("generic tuple must lower");
+        let lines = lower_adt_init("bb2", "_0", "_0", &elems, None, None, None, None).expect("generic tuple must lower");
         assert_eq!(lines[1], "mut _agg_bb2 = alloc 16");
         assert_eq!(lines[2], "store _agg_bb2+0, ^_2 as u64");
         assert_eq!(lines[3], "store _agg_bb2+8, ^_4 as u64");
@@ -550,7 +550,7 @@ mod tests {
             c("Val(Scalar(0x00000008), i32)"),
             c("Val(ZeroSized, std::marker::PhantomPinned)"),
         ];
-        let lines = lower_adt_init("bb0", "_2", "_2", &elems, None, None, None).expect("zst pair must lower");
+        let lines = lower_adt_init("bb0", "_2", "_2", &elems, None, None, None, None).expect("zst pair must lower");
         assert_eq!(lines[1], "mut _agg_bb0 = alloc 4");
         assert_eq!(lines[2], "store _agg_bb0+0, 8 as i32");
         assert_eq!(lines[3], "_2 = _agg_bb0");
@@ -570,7 +570,7 @@ mod tests {
             c("Val(Scalar(0x01), bool)"),
         ];
         let layout = adt_layout(32, &[24, 0, 28]);
-        let lines = lower_adt_init("bb13", "_37", "_37", &elems, Some(&layout), None, None)
+        let lines = lower_adt_init("bb13", "_37", "_37", &elems, Some(&layout), None, None, None)
             .expect("v2 layout must lower");
         assert_eq!(lines[1], "mut _agg_bb13 = alloc 32");
         assert_eq!(lines[2], "store _agg_bb13+24, 1 as i32");
@@ -588,7 +588,7 @@ mod tests {
             c("Val(Scalar(0x00000002), i32)"),
         ];
         let layout = adt_layout(12, &[4, 8]);
-        let lines = lower_adt_init("bb0", "_6", "_6", &elems, Some(&layout), None, None)
+        let lines = lower_adt_init("bb0", "_6", "_6", &elems, Some(&layout), None, None, None)
             .expect("enum payload must lower");
         assert_eq!(lines[1], "mut _agg_bb0 = alloc 12");
         assert_eq!(lines[2], "store _agg_bb0+4, 1 as i32");
@@ -603,7 +603,7 @@ mod tests {
             c("Val(Scalar(0x00000004), i32)"),
         ];
         let layout = adt_layout(8, &[0]);
-        let lines = lower_adt_init("bb10", "_19", "_19", &elems, Some(&layout), None, None)
+        let lines = lower_adt_init("bb10", "_19", "_19", &elems, Some(&layout), None, None, None)
             .expect("mismatch must fall back to v1");
         assert!(lines[0].contains("p_layout v1"));
         assert_eq!(lines[1], "mut _agg_bb10 = alloc 8");
@@ -618,7 +618,7 @@ mod tests {
             sc("Val(Slice { alloc_id: alloc2, meta: 1 }, &'erased str)", &[47]),
         ];
         let layout = adt_layout(32, &[0, 16]);
-        let lines = lower_adt_init("bb0", "_0", "_0", &elems, Some(&layout), None, None)
+        let lines = lower_adt_init("bb0", "_0", "_0", &elems, Some(&layout), None, None, None)
             .expect("str pair must lower");
         assert_eq!(lines[1], "mut _agg_bb0 = alloc 32");
         assert_eq!(lines[2], "mut _str_bb0_0 = alloc 3");
@@ -640,17 +640,18 @@ mod tests {
             sc("Val(Slice { alloc_id: alloc9, meta: 65 }, &'erased str)", &big),
             c("Val(Scalar(0x00000001), i32)"),
         ];
-        assert!(lower_adt_init("bb0", "_1", "_1", &elems, None, None, None).is_none());
+        assert!(lower_adt_init("bb0", "_1", "_1", &elems, None, None, None, None).is_none());
         // Driver/bytes count mismatch (2 bytes, len 3) stays loud.
         let elems = vec![
             Operand::Const {
                 value: "Val(Slice { alloc_id: alloc1, meta: 3 }, &'erased str)".to_string(),
                 str_bytes: Some(vec![71, 69]),
                 str_len: Some(3),
+                agg: None,
             },
             c("Val(Scalar(0x00000001), i32)"),
         ];
-        assert!(lower_adt_init("bb0", "_1", "_1", &elems, None, None, None).is_none());
+        assert!(lower_adt_init("bb0", "_1", "_1", &elems, None, None, None, None).is_none());
     }
 
     fn blank_fn(name: &str, blocks: Vec<Block>) -> Function {
@@ -800,6 +801,7 @@ mod tests {
             value: "Unevaluated(UnevaluatedConst { def: DefId(0:1 })".to_string(),
             str_bytes: None,
             str_len: None,
+            agg: None,
         };
         let f = blank_fn("f_loudblk", vec![
             Block {

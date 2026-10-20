@@ -78,7 +78,27 @@ pub fn render_rvalue(
                 }
                 // Byte-literal const in value position: inline the payload
                 // and bind its thin address (fat pointees stay loud).
-                Operand::Const { value, str_bytes, str_len } => {
+                Operand::Const { value, str_bytes, str_len, agg } => {
+                    // A constant aggregate is materialized like an inline one.
+                    if let Some(rv) = agg {
+                        if let Rvalue::Aggregate { elems, layout, tag, niche_store, elem_tys } = rv.as_ref() {
+                            if let Some(mut lines) = crate::layout::lower_adt_init(
+                                bid,
+                                dest,
+                                dest_place.unwrap_or(dest),
+                                elems,
+                                layout.as_ref(),
+                                tag.as_ref(),
+                                niche_store.as_ref(),
+                                elem_tys.as_deref(),
+                            ) {
+                                crate::spill::spill_slot_lines(&mut lines, bid, spill);
+                                return lines.join("\n");
+                            }
+                            unsup.push(format!("{}:{} ConstAggregate", bid, dest));
+                            return format!("// UNSUPPORTED const aggregate -> {}\n{} = 0", dest, dest);
+                        }
+                    }
                     if let Some(mut lines) = crate::layout::plan_const_bytes(
                         dest, bid, *mv_idx, value, str_bytes.as_ref(), *str_len,
                     ) {
@@ -99,7 +119,7 @@ pub fn render_rvalue(
                 _ => format!("{} = {}", dest, render_operand(op)),
             }
         }
-        Rvalue::Ref { place, mut_, via, zst, agg, offset, projected, .. } => {
+        Rvalue::Ref { place, mut_, via, zst, agg, offset, projected, ty } => {
             // Zero-sized borrows carry no data: null marker (exact).
             // Trailing `//` is ForbiddenSyntax: provenance goes full-line
             // (the Assign arm indents each line of multi-line returns).
@@ -119,6 +139,17 @@ pub fn render_rvalue(
             if *projected {
                 // `&(*p).f` (or `&local.f`): interior address via ptr_add.
                 lines.push(format!("{} = ptr_add {}, {}", dest, place, offset));
+            } else if !*mut_ && ty.as_deref() != Some("ptr") {
+                // A shared reference to a plain value: SA's `&x` reborrows the
+                // POINTER in `x`, so a scalar reference needs the value in
+                // memory. Copy it into a buffer and hand out its address
+                // (the buffer is released with the borrow). A pointer-valued
+                // place is already an address: `&x` is a reborrow of it.
+                let sty = ty.clone().unwrap_or_else(|| "u64".to_string());
+                let buf = format!("{}_refbuf", dest);
+                lines.push(format!("mut {} = alloc 8", buf));
+                lines.push(format!("store {}+0, {} as {}", buf, place, sty));
+                lines.push(format!("{} = {}", dest, buf));
             } else if *agg {
                 // Memory-resident aggregate: `place` already names the
                 // storage address. Reload it from the owner's spill slot
@@ -340,7 +371,7 @@ pub fn render_rvalue(
             // Lowered to the shared registry (sci/sa_std/thread_local.sai).
             format!("// thread-local registry slot\n{} = call @sa_thread_local_slot({})", dest, tls_key(def))
         }
-        Rvalue::Aggregate { elems, layout, tag, niche_store } => {
+        Rvalue::Aggregate { elems, layout, tag, niche_store, elem_tys } => {
             if elems.is_empty() && tag.is_none() && niche_store.is_none() {
                 format!("// zero-elem aggregate (unit/niche; tag via SetDisc when present)\n{} = 0", dest)
             } else if elems.len() == 1 && tag.is_none() && niche_store.is_none() && layout.is_none() {
@@ -357,7 +388,7 @@ pub fn render_rvalue(
                 if let Some(mut lines) = lower_array_init(bid, place, elems) {
                     crate::spill::spill_slot_lines(&mut lines, bid, spill);
                     lines.join("\n")
-                } else if let Some(mut lines) = lower_adt_init(bid, dest, place, elems, layout.as_ref(), tag.as_ref(), niche_store.as_ref()) {
+                } else if let Some(mut lines) = lower_adt_init(bid, dest, place, elems, layout.as_ref(), tag.as_ref(), niche_store.as_ref(), elem_tys.as_deref()) {
                     crate::spill::spill_slot_lines(&mut lines, bid, spill);
                     lines.join("\n")
                 } else {

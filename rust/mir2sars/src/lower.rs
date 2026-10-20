@@ -144,6 +144,46 @@ fn term_uses(t: &Term) -> Vec<String> {
     out
 }
 
+/// Registers a statement reads, with whether the read consumes the register
+/// (a Move/take ends the register's life: releasing it afterwards would
+/// double-release).
+fn stmt_uses_moves(st: &Stmt) -> Vec<(String, bool)> {
+    let mut out: Vec<(String, bool)> = Vec::new();
+    let mut push_op = |op: &Operand, consuming: bool| {
+        match op {
+            Operand::Move { place, .. } => out.push((place.clone(), consuming)),
+            Operand::Copy { place, .. } => out.push((place.clone(), false)),
+            _ => {}
+        }
+    };
+    match st {
+        Stmt::Assign { dest_place, dest_proj, rvalue, .. } => {
+            match rvalue {
+                Rvalue::Use { op } => push_op(op, true),
+                Rvalue::Aggregate { elems, .. } => {
+                    for e in elems {
+                        push_op(e, true);
+                    }
+                }
+                Rvalue::Cast { op, .. } => push_op(op, true),
+                Rvalue::Ref { place, .. } | Rvalue::RawPtr { place, .. } => {
+                    out.push((place.clone(), false))
+                }
+                Rvalue::Discriminant { place, .. } => out.push((place.clone(), false)),
+                _ => {}
+            }
+            if dest_proj.is_some() {
+                if let Some(dp) = dest_place {
+                    out.push((dp.clone(), false));
+                }
+            }
+        }
+        Stmt::SetDisc { place, .. } => out.push((place.clone(), false)),
+        _ => {}
+    }
+    out
+}
+
 /// Borrow temporaries (`Rvalue::Ref` of a non-aggregate place) hold a live
 /// borrow. Rust ends a borrow at its last use; SA has no scopes, so the
 /// borrow is released explicitly. Without the release the borrowed register
@@ -180,10 +220,14 @@ fn plan_borrow_releases(
     // terminator uses use `usize::MAX` (nothing may follow a terminator, so
     // the release goes right after the terminator's call line).
     let mut uses: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
+    let mut consuming: HashMap<String, bool> = HashMap::new();
     for (bi, b) in f.blocks.iter().enumerate() {
         for (si, st) in b.statements.iter().enumerate() {
-            for u in stmt_uses(st) {
-                uses.entry(u).or_default().push((bi, si));
+            for (u, c) in stmt_uses_moves(st) {
+                uses.entry(u.clone()).or_default().push((bi, si));
+                if c {
+                    consuming.insert(u, true);
+                }
             }
         }
         for u in term_uses(&b.terminator) {
@@ -197,6 +241,11 @@ fn plan_borrow_releases(
             continue;
         }
         let sites = uses.get(dest).cloned().unwrap_or_default();
+        // A borrow whose last use consumes it (a take/move) is already
+        // finished: releasing it again would double-release the register.
+        if consuming.get(dest).copied().unwrap_or(false) {
+            continue;
+        }
         let site = match sites.iter().max().cloned() {
             Some(s) => s,
             // Never read: release right where it was created.

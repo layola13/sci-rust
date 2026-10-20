@@ -136,6 +136,18 @@ exit 0，无 broker）。
   跨 crate 调用仍用短名（与 `--dep` 导入一致）。
 - 聚合借用（`&local`）从属主的 spill 槽重载，不再把聚合存储的所有权
   转给借用方：同一聚合被借用两次不再 UseAfterMove。
-- 仍未覆盖：`&Enum::Variant(..)` 这类**常量聚合**的引用（`Const::
-  Unevaluated`）仍是 loud（值为 0 占位，调用方会读到空指针）。
+- 共享引用（`&x`）：SA 的 `&x` 语义是「重借用 x 里的指针」，标量不能直接
+  取地址。因此 `&scalar` 降为「把值复制进缓冲区 + 传缓冲区地址」
+  （`alloc` + `store`，借用结束时释放）；指针值的借用仍是 reborrow。
+  `fn deref(x: &i32) -> i32 { *x }` 因此可运行。
+- 聚合元素类型：driver 按 ADT 字段类型输出 `elem_tys`，mir2sars 据此给
+  每个字段 `store` 定型（`&i32` 字段存 `ptr`，不再当 `u64` 槽）。
+- 常量聚合（`&Enum::Variant(..)`）：driver 取该常量自身的 MIR，把它的
+  构造（`Aggregate`）输出为 `ConstAgg`，mir2sars 像内联聚合一样物化。
+- 借用释放不再重复释放：借用的最后一次使用若是**消耗性**的（take/move），
+  借用已随取走结束，不再额外 `!`（否则双重释放）。
+- 仍未覆盖：**提升常量**（promoted const）的引用仍是 loud（值为 0 占位，
+  调用方会读到空指针）。
+- 仍未覆盖：`for` 循环（std 迭代器协议 `IntoIterator`/`Iterator::next`）
+  ——std 函数无法在 SA 中按值提供聚合返回，需要在 driver 侧脱糖。
 

@@ -62,6 +62,7 @@ pub fn lower_adt_init(
     layout: Option<&AdtLayout>,
     tag: Option<&EnumTag>,
     niche_store: Option<&NicheStore>,
+    elem_tys: Option<&[String]>,
 ) -> Option<Vec<String>> {
     if elems.len() < 2 && tag.is_none() && niche_store.is_none() && layout.is_none() {
         return None;
@@ -73,7 +74,7 @@ pub fn lower_adt_init(
             Operand::Const { value, .. } if value.trim_start().starts_with("Val(ZeroSized") => {
                 plans.push(FieldPlan::Store { text: None, sa_ty: "u8", size: 0 });
             }
-            Operand::Const { value, str_bytes, str_len } => {
+            Operand::Const { value, str_bytes, str_len, .. } => {
                 if str_bytes.is_some() {
                     plans.push(plan_str_field(value, str_bytes.as_ref(), *str_len)?);
                     continue;
@@ -95,10 +96,12 @@ pub fn lower_adt_init(
                 plans.push(FieldPlan::Store { text: Some(rendered), sa_ty: sa_scalar_ty(ty), size });
             }
             Operand::Move { place, .. } => {
-                plans.push(FieldPlan::Store { text: Some(format!("^{}", place)), sa_ty: "u64", size: 8 });
+                let (sa_ty, size) = elem_ty(elem_tys, plans.len());
+                plans.push(FieldPlan::Store { text: Some(format!("^{}", place)), sa_ty, size });
             }
             Operand::Copy { place, .. } => {
-                plans.push(FieldPlan::Store { text: Some(place.clone()), sa_ty: "u64", size: 8 });
+                let (sa_ty, size) = elem_ty(elem_tys, plans.len());
+                plans.push(FieldPlan::Store { text: Some(place.clone()), sa_ty, size });
             }
         }
     }
@@ -185,6 +188,28 @@ pub fn lower_adt_init(
     }
     lines.push(format!("{} = {}", dest, base));
     Some(lines)
+}
+
+/// SA type and byte size of an element (from the driver-reported field
+/// types; unknown types fall back to an 8-byte `u64` slot).
+fn elem_ty(elem_tys: Option<&[String]>, idx: usize) -> (&'static str, usize) {
+    let t = match elem_tys {
+        Some(ts) => match ts.get(idx) {
+            Some(t) => t.as_str(),
+            None => return ("u64", 8),
+        },
+        None => return ("u64", 8),
+    };
+    match t {
+        "i8" | "u8" => ("u8", 1),
+        "i16" | "u16" => ("u16", 2),
+        "i32" | "u32" => ("u32", 4),
+        "i64" | "u64" | "usize" | "isize" => ("u64", 8),
+        "f32" => ("f32", 4),
+        "f64" => ("f64", 8),
+        "ptr" => ("ptr", 8),
+        _ => ("u64", 8),
+    }
 }
 
 /// One aggregate field's lowering plan.

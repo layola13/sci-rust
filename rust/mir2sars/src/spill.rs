@@ -556,7 +556,7 @@ pub fn build_spill(blocks: &[crate::mir::Block]) -> SpillMap {
     // borrow-end release) would then read a reg the Referee dropped.
     for b in blocks {
         for st in &b.statements {
-            if let Stmt::Assign { dest, rvalue: Rvalue::Use { op: Operand::Const { value, str_bytes, str_len } }, .. } = st {
+            if let Stmt::Assign { dest, rvalue: Rvalue::Use { op: Operand::Const { value, str_bytes, str_len, .. } }, .. } = st {
                 let inlineable =
                     crate::layout::plan_const_bytes(dest, "bb", 0, value, str_bytes.as_ref(), *str_len)
                         .is_some();
@@ -809,6 +809,7 @@ mod spill_tests {
                         layout: None,
                         tag: None,
                         niche_store: None,
+                        elem_tys: None,
                     },
                 },
             ],
@@ -846,6 +847,7 @@ mod spill_tests {
             value: "Val(Scalar(alloc1), &'{erased} [u8; 3_usize])".to_string(),
             str_bytes: Some(bytes),
             str_len: Some(3),
+            agg: None,
         };
         let blocks = vec![Block {
             id: "bb0".to_string(),
@@ -910,6 +912,7 @@ mod spill_tests {
                             value: "42_u64".to_string(),
                             str_bytes: None,
                             str_len: None,
+            agg: None,
                         },
                     },
                 },
@@ -966,6 +969,7 @@ mod spill_tests {
                             value: "Val(Slice { alloc_id: alloc1, meta: 3 }, &'{erased} str)".to_string(),
                             str_bytes: Some(vec![104, 105, 33]),
                             str_len: Some(3),
+                            agg: None,
                         },
                     },
                 },

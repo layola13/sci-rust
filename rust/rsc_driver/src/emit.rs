@@ -53,6 +53,12 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
             write_proj_operand("Move", &s, tcx, body, p, into);
         }
         Operand::Constant(c) => {
+            // A constant aggregate (`&Enum::Variant(..)`) is emitted as its
+            // own construction so the backend can materialize it.
+            if let Some(agg) = const_agg_json(tcx, c, into) {
+                let _ = agg;
+                return;
+            }
             let v = trunc(format!("{:?}", c.const_), 60);
             into.push_str("{\"kind\": \"Const\", \"value\": \"");
             esc(&v, into);
@@ -77,6 +83,80 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
             into.push_str("{\"kind\": \"Const\", \"value\": \"0 /*RuntimeChecks-unsupported*/\"}");
         }
     }
+}
+
+/// SA types of an aggregate's elements (the ADT variant's field types).
+fn agg_elem_tys<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    place: &rustc_middle::mir::Place<'tcx>,
+    kind: &rustc_middle::mir::AggregateKind<'tcx>,
+    n: usize,
+) -> Option<Vec<String>> {
+    use rustc_middle::mir::AggregateKind;
+    use rustc_middle::ty::TypingEnv;
+    let (def, vi, args) = match kind {
+        AggregateKind::Adt(def, vi, args, ..) => (*def, *vi, args),
+        _ => return None,
+    };
+    let env = TypingEnv::fully_monomorphized();
+    let variant = tcx.adt_def(def).variant(vi);
+    if variant.fields.len() != n {
+        return None;
+    }
+    let mut out = Vec::with_capacity(n);
+    for f in variant.fields.iter() {
+        let fty = tcx.normalize_erasing_regions(env, f.ty(tcx, args));
+        out.push(crate::tyinfo::ty_sa_sig_opt(fty)?);
+    }
+    let _ = place;
+    Some(out)
+}
+
+/// Emit a constant aggregate's construction (the const's own MIR), so the
+/// backend materializes it like an inline aggregate. Returns None when the
+/// const is not an aggregate the driver can describe.
+fn const_agg_json<'tcx>(tcx: TyCtxt<'tcx>, c: &ConstOperand<'tcx>, into: &mut String) -> Option<()> {
+    use rustc_hir::def::DefKind;
+    let rustc_middle::mir::Const::Unevaluated(uv, _) = &c.const_ else {
+        return None;
+    };
+    // Only a plain (non-promoted) const has an inspectable body.
+    if uv.promoted.is_some() {
+        return None;
+    }
+    if !matches!(
+        tcx.def_kind(uv.def),
+        DefKind::Const | DefKind::AssocConst | DefKind::AnonConst | DefKind::Ctor(..)
+    ) {
+        return None;
+    }
+    let ctfe = tcx.mir_for_ctfe(uv.def);
+    // The const's body assigns its value to `_0`.
+    let mut agg: Option<(&rustc_middle::mir::Place<'tcx>, &Rvalue<'tcx>)> = None;
+    'outer: for b in ctfe.basic_blocks.iter() {
+        for st in b.statements.iter() {
+            if let rustc_middle::mir::StatementKind::Assign(assign) = &st.kind {
+                let (p, rvalue) = &**assign;
+                if matches!(rvalue, Rvalue::Aggregate(..)) {
+                    agg = Some((p, rvalue));
+                    break 'outer;
+                }
+            }
+        }
+    }
+    let (place, rv) = agg?;
+    let layout = match rv {
+        Rvalue::Aggregate(kind, ops) => {
+            aggregate_layout(tcx, tcx.param_env(uv.def), &ctfe, kind, &place, ops.len())
+        }
+        _ => None,
+    };
+    let mut buf = String::new();
+    rvalue_json(rv, tcx, &ctfe, &place, layout.as_ref(), None, &mut buf);
+    let relabeled = buf.replace("\"kind\": \"Aggregate\"", "\"kind\": \"ConstAgg\"");
+    into.push_str(&relabeled);
+    Some(())
 }
 
 /// Short scalar name for a cast operand's type (int/uint/float/bool/char,
@@ -122,13 +202,23 @@ pub fn rvalue_json<'tcx>(
             }
             // Borrow of a projected place (`&(*p).f`, `&local.f`): the address
             // is the base plus the field offset, not the base register.
-            if let Some((off, ty, _via)) = crate::place::place_proj(tcx, body, p) {
-                write!(
-                    into,
-                    ", \"offset\": {}, \"projected\": true, \"ty\": \"{}\"",
-                    off, ty
-                )
-                .unwrap();
+            match crate::place::place_proj(tcx, body, p) {
+                Some((off, ty, _via)) => {
+                    write!(
+                        into,
+                        ", \"offset\": {}, \"projected\": true, \"ty\": \"{}\"",
+                        off, ty
+                    )
+                    .unwrap();
+                }
+                None => {
+                    // A plain borrow's value type (the backend copies the
+                    // borrowed value into a buffer for a shared reference).
+                    let pty = p.ty(&body.local_decls, tcx).ty;
+                    if let Some(t) = crate::tyinfo::ty_sa_sig_opt(pty) {
+                        write!(into, ", \"ty\": \"{}\"", t).unwrap();
+                    }
+                }
             }
             into.push('}');
         }
@@ -188,6 +278,7 @@ pub fn rvalue_json<'tcx>(
             into.push_str("\"}");
         }
         Rvalue::Aggregate(kind, ops) => {
+            let elems_len = ops.len();
             into.push_str("{\"kind\": \"Aggregate\", \"elems\": [");
             for (i, o) in ops.iter().enumerate() {
                 if i > 0 {
@@ -216,6 +307,20 @@ pub fn rvalue_json<'tcx>(
                     )
                     .unwrap();
                 }
+            }
+            // Element types (from the variant's field types): the backend
+            // needs them to type the stores (a pointer field is not a u64).
+            if let Some(tys) = agg_elem_tys(tcx, body, place, kind, elems_len) {
+                into.push_str(", \"elem_tys\": [");
+                for (i, t) in tys.iter().enumerate() {
+                    if i > 0 {
+                        into.push_str(", ");
+                    }
+                    into.push('"');
+                    into.push_str(t);
+                    into.push('"');
+                }
+                into.push(']');
             }
             // Niche construction: the niche variant stores the niche value.
             if let Some((noff, nval, nty)) = niche_store {

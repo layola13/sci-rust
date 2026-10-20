@@ -150,6 +150,10 @@ pub enum Rvalue {
         /// niche slot (the niche variant has no payload).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         niche_store: Option<NicheStore>,
+        /// SA types of the elements (from the ADT's field types): a pointer
+        /// field is stored as `ptr`, not as a `u64` slot.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        elem_tys: Option<Vec<String>>,
     },
     Discriminant {
         place: String,
@@ -210,6 +214,10 @@ pub enum Operand {
         str_bytes: Option<Vec<u64>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         str_len: Option<u64>,
+        /// A constant aggregate (`&Enum::Variant(..)`): the const's own
+        /// construction, materialized like an inline aggregate.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        agg: Option<Box<Rvalue>>,
     },
     /// Join-ambiguous use inserted by `version.rs`: two or more reaching
     /// definitions with no dominance order (needs phi nodes, which SA lacks).

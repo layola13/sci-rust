@@ -56,13 +56,13 @@ pub fn parse_operand(s: &str) -> Operand {
         return Operand::Copy { place: base_local(rest).unwrap_or_else(|| rest.to_string()), proj: None };
     }
     if let Some(rest) = s.strip_prefix("const ") {
-        return Operand::Const { value: rest.chars().take(60).collect(), str_bytes: None, str_len: None };
+        return Operand::Const { value: rest.chars().take(60).collect(), str_bytes: None, str_len: None, agg: None };
     }
     if s.starts_with('_') && base_local(s).as_deref() == Some(s) {
         return Operand::Copy { place: s.to_string(), proj: None };
     }
     let v: String = s.chars().take(60).collect();
-    Operand::Const { value: v, str_bytes: None, str_len: None }
+    Operand::Const { value: v, str_bytes: None, str_len: None, agg: None }
 }
 
 pub fn sanitize_func(raw: &str) -> String {
@@ -196,7 +196,7 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
     if (rhs.starts_with('[') && rhs.ends_with(']')) || (rhs.starts_with('(') && rhs.ends_with(')')) {
         let inner = rhs[1..rhs.len() - 1].trim().trim_end_matches(',').trim();
         if !inner.is_empty() {
-            return Rvalue::Aggregate { elems: split_top(inner).into_iter().map(|e| parse_operand(&e)).collect(), layout: None, tag: None, niche_store: None };
+            return Rvalue::Aggregate { elems: split_top(inner).into_iter().map(|e| parse_operand(&e)).collect(), layout: None, tag: None, niche_store: None, elem_tys: None };
         }
     }
     Rvalue::Unsupported { text: rhs.chars().take(120).collect() }
