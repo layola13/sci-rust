@@ -186,8 +186,11 @@ exit 0，无 broker）。
   `unwrap_or`），全部经 `cargo -> MIR -> .sars -> sars run` 跑通。
 - `unwrap_or` 的默认值放在**帧槽**里读（而不是拷贝）：拷贝会在一条路径上
   消耗寄存器，join 处两条路径的状态就不一致（`PhiStateConflict`）。
-- 仍未覆盖：**在分支里赋值、随后按位置读取**（`match`/借用）的值——版本
-  阶段只能把这类读取标成 loud（`Operand::Conflict` 只覆盖按值读取）。
+- **在分支里赋值、随后读取**的值（`let o = if c { Some(x) } else { None };`
+  之后 `match o`）：版本阶段保留冲突信息（`Operand::Conflict` 带上投影），
+  join 槽机制按路径计算**判别式**（各分支把 tag 写进槽）与**基址**
+  （字段读先从槽里取地址再加偏移）。因此分支里造出的 `Option`/枚举
+  之后可以 `match`。
 - 仍未覆盖：**泛型函数/泛型枚举**里的 `T: PartialEq`（泛型 MIR 的类型未知，
   字段偏移依赖具体类型）。
 - 仍未覆盖：`!=`（`PartialEq::ne` 是 std 的默认方法，转发到 `eq`）；把它
