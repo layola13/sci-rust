@@ -65,8 +65,11 @@ exit 0，无 broker）。
   读写、派生 `PartialEq`（同 crate `@eq` 解析）均可运行。
 - 指针别名安全：`ptr` 参数与其别名拷贝（`_3 = _1`、`agg` ref）不参与
   exit-free，避免释放调用方 storage。
-- 仍未覆盖：**按值聚合“返回一个来自参数的值”**会与调用方 local 共享
-  storage，调用方对 result 与 local 各释放一次 → double-free
-  （`fn f(p: Pair) -> Pair { p }`）。被调用方返回**自有 local** 的聚合
-  则正常（`fn make() -> Pair { Pair{..} }`）。枚举 `Downcast` 投影仍折叠。
+- 按值聚合返回：`rsc_driver` 为每个函数输出 `param_aggs`（按值聚合参数
+  的字节数）；被调用方在 `_0 = <来自参数的聚合>` 处改为 `_0 = alloc N` +
+  `call @sa_mem_copy(&_0, &src, N)`，复制出一份独立分配。因此
+  `fn f(p: Pair) -> Pair { p }`、`fn f(p) -> Pair { let q = p; q }`、
+  `fn make() -> Pair { Pair{..} }` 均可 check+run（caller 只释放自己的
+  local 与结果各一次）。
+- 仍未覆盖：枚举 `Downcast` 投影仍折叠到 root local。
 

@@ -39,6 +39,46 @@ pub fn spill_placeholder(
     }
 }
 
+/// Map each register that is (or is a plain copy of) a by-value aggregate
+/// param to that aggregate's byte size. A `_0 = <such reg>` return would
+/// otherwise hand the caller a pointer to the caller's own argument storage,
+/// which the caller then frees twice (once as the local, once as the result).
+pub fn param_agg_sizes(f: &Function) -> std::collections::BTreeMap<String, u64> {
+    let mut m: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+    for (i, _) in f.params.iter().enumerate() {
+        m.insert(format!("_{}", i + 1), f.param_aggs.get(i).copied().unwrap_or(0));
+    }
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for b in &f.blocks {
+            for st in &b.statements {
+                if let Stmt::Assign { dest, rvalue, dest_proj: None, .. } = st {
+                    let src = match rvalue {
+                        Rvalue::Use { op } => match op {
+                            Operand::Move { place, proj: None }
+                            | Operand::Copy { place, proj: None } => Some(place.clone()),
+                            Operand::Conflict { place } => Some(place.clone()),
+                            _ => None,
+                        },
+                        Rvalue::Ref { place, agg: true, .. } => Some(place.clone()),
+                        _ => None,
+                    };
+                    if let Some(src) = src {
+                        if let Some(&sz) = m.get(&src) {
+                            if sz > 0 && !m.contains_key(dest) {
+                                m.insert(dest.clone(), sz);
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    m
+}
+
 pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // Typed header: MIR arg locals `_1..` bind here (bare `@f()` would leave
     // them unbound: UnknownRegister). Ret defaults to i32 (old fixtures).
     let mut head = format!("@{}(", sa_ident(&f.name));
@@ -90,6 +130,9 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
     // already traps on overflow, so the (value, flag) tuple's projections
     // (`_d.0`, `_d.1`) must collapse back onto `_d`, never `load _d+off`.
     let mut scalarized: std::collections::HashSet<String> = std::collections::HashSet::new();
+    // Aggregate param/alias byte sizes: a `_0 = <alias>` return copies out
+    // instead of sharing the caller's argument storage.
+    let param_aggs = param_agg_sizes(f);
     let mut block_start = vec![0usize; f.blocks.len()];
     for bi in order {
         let b = &f.blocks[bi];
@@ -107,6 +150,32 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {    // T
         for st in &b.statements {
             match st {
                 Stmt::Assign { dest, dest_place, dest_proj, rvalue } => {
+                    // Return of a by-value aggregate that is (a copy of) a
+                    // param: copy it out so the caller owns a distinct
+                    // allocation (otherwise the result aliases the caller's
+                    // argument local and both get freed -> double-free).
+                    if dest == "_0" {
+                        let src = match rvalue {
+                            Rvalue::Use { op } => match op {
+                                Operand::Move { place, proj: None }
+                                | Operand::Copy { place, proj: None } => Some(place.clone()),
+                                Operand::Conflict { place } => Some(place.clone()),
+                                _ => None,
+                            },
+                            Rvalue::Ref { place, agg: true, .. } => Some(place.clone()),
+                            _ => None,
+                        };
+                        if let Some(src) = src {
+                            if let Some(&sz) = param_aggs.get(&src) {
+                                if sz > 0 {
+                                    out.push(format!("    _0 = alloc {}", sz));
+                                    out.push(format!("    call @sa_mem_copy(&_0, &{}, {})", src, sz));
+                                    bound.insert("_0".to_string());
+                                    continue;
+                                }
+                            }
+                        }
+                    }
                     // Field store (`_1.0 = <val>`): write through the base
                     // register's storage as a typed `store`; the base local is
                     // not rebound.
@@ -755,6 +824,15 @@ pub fn cmd_lower(args: &[String]) -> ExitCode {
         exts.insert(
             "sa_mem_set".to_string(),
             Some((vec!["ptr".to_string(), "u8".to_string(), "u64".to_string()], "void".to_string())),
+        );
+    }
+    if bodies.iter().any(|b| b.contains("sa_mem_copy")) {
+        // Return-copy of a param-derived aggregate emits `call @sa_mem_copy`.
+        // Signature mirrors `sa_std/core/mem.sars` (`&dst: ptr, &src: ptr,
+        // count: u64 -> void`).
+        exts.insert(
+            "sa_mem_copy".to_string(),
+            Some((vec!["ptr".to_string(), "ptr".to_string(), "u64".to_string()], "void".to_string())),
         );
     }
     if bodies.iter().any(|b| b.contains("sa_thread_local_slot")) {

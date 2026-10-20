@@ -19,6 +19,11 @@ pub struct Function {
     pub locals: Vec<serde_json::Value>,
     #[serde(default)]
     pub params: Vec<String>,
+    /// Byte size of each by-value aggregate param (0 for scalars/pointers).
+    /// A callee returning a param-derived aggregate copies it out so the
+    /// caller does not share (and double-free) the argument's storage.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub param_aggs: Vec<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ret: Option<String>,
     #[serde(default = "default_sig_ok")]

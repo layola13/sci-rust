@@ -317,6 +317,21 @@ fn name_from_def(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> (String,
     (clean, trunc(full, 100))
 }
 
+/// Byte size of a by-value aggregate type (Adt/tuple/array), else 0. Used for
+/// `param_aggs` so a callee can copy a param-derived aggregate on return.
+fn ty_agg_size<'tcx>(tcx: TyCtxt<'tcx>, ty: ty::Ty<'tcx>) -> u64 {
+    use rustc_middle::ty::{PseudoCanonicalInput, TypingEnv};
+    match ty.kind() {
+        TyKind::Adt(..) | TyKind::Tuple(..) | TyKind::Array(..) => {
+            let typing_env = TypingEnv::fully_monomorphized();
+            tcx.layout_of(PseudoCanonicalInput { typing_env, value: ty })
+                .map(|l| l.size.bytes())
+                .unwrap_or(0)
+        }
+        _ => 0,
+    }
+}
+
 pub fn body_json<'tcx>(
     tcx: TyCtxt<'tcx>,
     param_env: ty::ParamEnv<'tcx>,
@@ -350,6 +365,17 @@ pub fn body_json<'tcx>(
     let ret = ty_sa_sig_opt(ret_ty);
     if ret.is_none() {
         sig_ok = false;
+    }
+    // Byte size of each by-value aggregate param (0 = scalar/pointer). A
+    // callee that returns a param-derived aggregate must copy it out so the
+    // caller does not share (and double-free) the argument's storage.
+    into.push_str("], \"param_aggs\": [");
+    for i in 1..=body.arg_count {
+        if i > 1 {
+            into.push_str(", ");
+        }
+        let ty = body.local_decls[Local::from_u32(i as u32)].ty;
+        write!(into, "{}", ty_agg_size(tcx, ty)).unwrap();
     }
     write!(into, "], \"ret\": \"{}\"", ret.unwrap_or_else(|| "ptr".to_string())).unwrap();
     write!(into, ", \"sig_ok\": {}", sig_ok).unwrap();

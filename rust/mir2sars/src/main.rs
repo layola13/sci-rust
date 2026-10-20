@@ -304,7 +304,7 @@ fn cmd_parse(args: &[String]) -> ExitCode {
         total_uns += u;
     }
     let nstmt: usize = blocks.iter().map(|b| b.statements.len()).sum();
-    let mir = MirFile { source: Some("rustc -Zunpretty=mir (real compiler output)".to_string()), functions: vec![Function { name: fname, locals: vec![], params: vec![], ret: None, sig_ok: true, blocks }] };
+    let mir = MirFile { source: Some("rustc -Zunpretty=mir (real compiler output)".to_string()), functions: vec![Function { name: fname, locals: vec![], params: vec![], param_aggs: vec![], ret: None, sig_ok: true, blocks }] };
     let json = serde_json::to_string_pretty(&mir).unwrap();
     if std::fs::write(&out, json).is_err() {
         eprintln!("write {}", out);
@@ -654,7 +654,7 @@ mod tests {
     }
 
     fn blank_fn(name: &str, blocks: Vec<Block>) -> Function {
-        Function { name: name.to_string(), locals: vec![], params: vec![], ret: None, sig_ok: true, blocks }
+        Function { name: name.to_string(), locals: vec![], params: vec![], param_aggs: vec![], ret: None, sig_ok: true, blocks }
     }
 
     fn blank_block(id: &str, term: Term) -> Block {
