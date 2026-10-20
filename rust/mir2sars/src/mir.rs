@@ -211,6 +211,19 @@ pub enum Operand {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         proj: Option<PlaceProj>,
     },
+    /// A constant aggregate (`&Enum::Variant(..)`): the const's own
+    /// construction, materialized like an inline aggregate.
+    ConstAgg {
+        elems: Vec<Operand>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        layout: Option<AdtLayout>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tag: Option<EnumTag>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        niche_store: Option<NicheStore>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        elem_tys: Option<Vec<String>>,
+    },
     Const {
         value: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]

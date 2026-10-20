@@ -70,6 +70,7 @@ pub fn lower_adt_init(
     let mut plans: Vec<FieldPlan> = Vec::with_capacity(elems.len());
     for e in elems {
         match e {
+            Operand::ConstAgg { .. } => return None, // a nested const aggregate: loud.
             Operand::Conflict { .. } => return None, // join-ambiguous: loud.
             Operand::Const { value, .. } if value.trim_start().starts_with("Val(ZeroSized") => {
                 plans.push(FieldPlan::Store { text: None, sa_ty: "u8", size: 0 });

@@ -146,13 +146,23 @@ fn const_agg_json<'tcx>(tcx: TyCtxt<'tcx>, c: &ConstOperand<'tcx>, into: &mut St
     };
     // A promoted const (`&Enum::Variant(..)`) still has an inspectable
     // body: the anonymous const's MIR holds the promotion.
-    if !matches!(
-        tcx.def_kind(uv.def),
-        DefKind::Const | DefKind::AssocConst | DefKind::AnonConst | DefKind::Ctor(..)
-    ) {
-        return None;
-    }
-    let ctfe = tcx.mir_for_ctfe(uv.def);
+    // A promoted const (`&Enum::Variant(..)`) lives in the enclosing
+    // function's promoted bodies; a plain const has its own MIR.
+    let ctfe: &Body = if uv.promoted.is_some() {
+        let promoted = tcx.promoted_mir(uv.def);
+        match promoted.raw.first() {
+            Some(b) => b,
+            None => return None,
+        }
+    } else {
+        if !matches!(
+            tcx.def_kind(uv.def),
+            DefKind::Const | DefKind::AssocConst | DefKind::AnonConst | DefKind::Ctor(..)
+        ) {
+            return None;
+        }
+        tcx.mir_for_ctfe(uv.def)
+    };
     // The const's body assigns its value to `_0`.
     let mut agg: Option<(&rustc_middle::mir::Place<'tcx>, &Rvalue<'tcx>)> = None;
     'outer: for b in ctfe.basic_blocks.iter() {

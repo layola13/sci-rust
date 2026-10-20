@@ -129,6 +129,24 @@ pub fn render_rvalue(
                 }
                 // Byte-literal const in value position: inline the payload
                 // and bind its thin address (fat pointees stay loud).
+                Operand::ConstAgg { elems, layout, tag, niche_store, elem_tys } => {
+                    // A constant aggregate is materialized like an inline one.
+                    if let Some(mut lines) = crate::layout::lower_adt_init(
+                        bid,
+                        dest,
+                        dest_place.unwrap_or(dest),
+                        elems,
+                        layout.as_ref(),
+                        tag.as_ref(),
+                        niche_store.as_ref(),
+                        elem_tys.as_deref(),
+                    ) {
+                        crate::spill::spill_slot_lines(&mut lines, bid, spill);
+                        return lines.join("\n");
+                    }
+                    unsup.push(format!("{}:{} ConstAggregate", bid, dest));
+                    return format!("// UNSUPPORTED const aggregate -> {}\n{} = 0", dest, dest);
+                }
                 Operand::Const { value, str_bytes, str_len, agg } => {
                     // A constant aggregate is materialized like an inline one.
                     if let Some(rv) = agg {

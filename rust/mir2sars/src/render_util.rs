@@ -214,6 +214,8 @@ pub fn render_operand(op: &Operand) -> String {
         // Conflict sentinels never reach here (intercepted loud upstream);
         // the fallback keeps rendering total.
         Operand::Conflict { place } => place.clone(),
+        // A constant aggregate is materialized by the caller.
+        Operand::ConstAgg { .. } => "0".to_string(),
         Operand::Const { value, .. } => {
             // Zero-sized values carry no data: bind a null marker (exact).
             if value.trim_start().starts_with("Val(ZeroSized") {
@@ -337,6 +339,9 @@ pub fn build_constmap<'a>(
         if let Stmt::Assign { dest, rvalue, .. } = st {
             match rvalue {
                 Rvalue::Use { op } => match op {
+                    Operand::ConstAgg { .. } => {
+                        map.remove(dest);
+                    }
                     Operand::Conflict { .. } => {
                         map.remove(dest);
                     }

@@ -157,8 +157,9 @@ exit 0，无 broker）。
 - 调用实参若是**溢出(spill)过的值**，现在从槽重载到临时量再传入
   （`load` 表达式不是合法实参位）；否则实参会「移动」属主，调用方再借用
   同一属主就会 UseAfterMove / join 状态冲突。
-- 仍未覆盖：**提升常量**（promoted const）的引用仍是 loud（值为 0 占位，
-  调用方会读到空指针）。
+- **提升常量**（promoted const，如 `&Enum::Variant(..)`）：driver 从
+  `tcx.promoted_mir` 取出该提升体的 MIR，把它的构造输出为 `ConstAgg`，
+  mir2sars 像内联聚合一样物化（此前是 loud，调用方会读到空指针）。
 - **数组下标** `a[i]`：driver 解析 `Index` 投影（索引局部量 + 元素大小），
   mir2sars 降为 `mul index, size` + `ptr_add base, off` + `load`（ISA 的
   `ptr_add` 接受寄存器偏移 ✓）。MIR 的 `BoundsCheck` 断言折叠成 panic ✓。
