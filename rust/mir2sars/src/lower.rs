@@ -2105,6 +2105,16 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         }
                     }
                 }
+                // A buffer whose address was *copied* into a register is owned
+                // by that copy now (an SA assign consumes its source):
+                // releasing it again would be a double free. A buffer that is
+                // only stored into (a fat pointer) keeps its ownership.
+                extra.retain(|r| {
+                    let moved = out[s..e].iter().any(|l| {
+                        l.contains(&format!("= {}", r))
+                    });
+                    !moved
+                });
                 extra
             };
             for r in &extra {
