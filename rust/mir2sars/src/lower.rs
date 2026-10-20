@@ -613,7 +613,9 @@ fn find_iter_ctx(f: &Function) -> Option<(IterNextCtx, std::collections::HashSet
         }
     }
     let (tag_off, tag_ty) = tag?;
-    let (payload_off, payload_ty) = payload?;
+    // The payload read is absent when the loop body ignores the value
+    // (`for _ in 0..n`): the shim still stores the cursor (harmless).
+    let (payload_off, payload_ty) = payload.unwrap_or((tag_off + 4, elem_ty.clone()));
     // The `next` call's argument: a `&mut self` borrow temp over the
     // iterator local. The borrow temp is skipped (its copy would consume the
     // loop-carried iterator) and the iterator register is used directly.
