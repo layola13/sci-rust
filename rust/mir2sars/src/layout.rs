@@ -301,6 +301,99 @@ pub fn plan_const_bytes(
 
 /// An `Option` method inlined: the discriminant test (and the payload for
 /// `unwrap_or`).
+/// A primitive method inlined: `abs`, `min`, `max`.
+///
+/// The operands are read from a frame slot, so no register is consumed on
+/// only one path (a join would see mismatched states).
+pub fn plan_prim_shim(
+    dest: &str,
+    bid: &str,
+    args: &[Operand],
+    sh: &crate::mir::PrimShim,
+) -> Option<Vec<String>> {
+    let arg_reg = |i: usize| -> Option<String> {
+        match args.get(i)? {
+            Operand::Move { place, .. } | Operand::Copy { place, .. } => Some(place.clone()),
+            // A constant argument renders as its literal value.
+            Operand::Const { value, .. } => crate::render_util::const_scalar_text(value),
+            _ => None,
+        }
+    };
+    let ty = |i: usize| -> String { sh.tys.get(i).cloned().unwrap_or_else(|| "i64".to_string()) };
+    match sh.kind.as_str() {
+        "abs" => {
+            let x = arg_reg(0)?;
+            let slot = format!("_prim_slot_{}", bid);
+            let neg = format!("_prim_neg_{}", bid);
+            let val = format!("_prim_v_{}", bid);
+            let abs = format!("_prim_abs_{}", bid);
+            let lbl_neg = format!("L_prim_neg_{}", bid);
+            let lbl_pos = format!("L_prim_pos_{}", bid);
+            let lbl_end = format!("L_prim_end_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("mut {} = stack_alloc 8", slot));
+            lines.push(format!("store {}+0, {} as {}", slot, x, ty(0)));
+            lines.push(format!(
+                "{} = {} {}, 0",
+                neg,
+                if ty(0).starts_with('u') { "ult" } else { "slt" },
+                x
+            ));
+            lines.push(format!("br {} -> {}, {}", neg, lbl_neg, lbl_pos));
+            lines.push(format!("{}:", lbl_neg));
+            lines.push(format!("{} = load {}+0 as {}", val, slot, ty(0)));
+            lines.push(format!("{} = sub 0, {}", abs, val));
+            lines.push(format!("{} = {}", dest, abs));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_pos));
+            lines.push(format!("{} = load {}+0 as {}", dest, slot, ty(0)));
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_end));
+            Some(lines)
+        }
+        "min" | "max" => {
+            let a = arg_reg(0)?;
+            let b = arg_reg(1)?;
+            let slot_a = format!("_prim_sa_{}", bid);
+            let slot_b = format!("_prim_sb_{}", bid);
+            let lbl_a = format!("L_prim_a_{}", bid);
+            let lbl_b = format!("L_prim_b_{}", bid);
+            let lbl_end = format!("L_prim_end_{}", bid);
+            let cmp = format!("_prim_cmp_{}", bid);
+            let mut lines = Vec::new();
+            lines.push(format!("mut {} = stack_alloc 8", slot_a));
+            lines.push(format!("mut {} = stack_alloc 8", slot_b));
+            lines.push(format!("store {}+0, {} as {}", slot_a, a, ty(0)));
+            lines.push(format!("store {}+0, {} as {}", slot_b, b, ty(1)));
+            lines.push(format!(
+                "{} = {} {}, {}",
+                cmp,
+                if ty(0).starts_with('u') { "ult" } else { "slt" },
+                a,
+                b
+            ));
+            lines.push(format!("br {} -> {}, {}", cmp, lbl_a, lbl_b));
+            lines.push(format!("{}:", lbl_a));
+            if sh.kind == "min" {
+                lines.push(format!("{} = load {}+0 as {}", dest, slot_a, ty(0)));
+            } else {
+                lines.push(format!("{} = load {}+0 as {}", dest, slot_b, ty(1)));
+            }
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_b));
+            if sh.kind == "min" {
+                lines.push(format!("{} = load {}+0 as {}", dest, slot_b, ty(1)));
+            } else {
+                lines.push(format!("{} = load {}+0 as {}", dest, slot_a, ty(0)));
+            }
+            lines.push(format!("jmp {}", lbl_end));
+            lines.push(format!("{}:", lbl_end));
+            Some(lines)
+        }
+        _ => None,
+    }
+}
+
 pub fn plan_option_shim(
     dest: &str,
     bid: &str,

@@ -127,6 +127,47 @@ fn partial_eq_ne_name<'tcx>(
     Some(sanitize(&tcx.def_path_str(eq)))
 }
 
+/// A primitive method the backend can inline: `i32::abs`, `core::cmp::min`
+/// and `core::cmp::max` (std symbols that cannot run here).
+fn primitive_op_shim<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    fname: &str,
+    args: &[rustc_middle::mir::Operand<'tcx>],
+) -> Option<String> {
+    // The mangled std names carry the method as a component
+    // (`std_cmp_min_i32`, `i32_as_std_num_..._abs`).
+    let has = |m: &str| fname.split('_').any(|c| c == m);
+    let kind = if has("abs") {
+        "abs"
+    } else if has("min") {
+        "min"
+    } else if has("max") {
+        "max"
+    } else {
+        return None;
+    };
+    // The operand types decide the comparison's signedness.
+    let mut tys: Vec<String> = Vec::new();
+    for a in args {
+        let t = match a {
+            Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+            Operand::Constant(c) => match &c.const_ {
+                Const::Val(_, ty) => *ty,
+                _ => return None,
+            },
+            _ => return None,
+        };
+        let sa = crate::tyinfo::ty_sa_sig_opt(t)?;
+        tys.push(sa);
+    }
+    Some(format!(
+        "{{\"kind\": \"{}\", \"tys\": [{}]}}",
+        kind,
+        tys.iter().map(|t| format!("\"{}\"", t)).collect::<Vec<_>>().join(", ")
+    ))
+}
+
 /// `slice::len` / `str::len`: the fat pointer's length word.
 fn slice_len_info<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -1247,6 +1288,10 @@ pub fn body_json<'tcx>(
                 // `slice::len` / `str::len`: the fat pointer's length word.
                 if let Some(shim) = slice_len_info(tcx, body, &fname, &arg_nodes) {
                     write!(into, ", \"slice_len\": {}", shim).unwrap();
+                }
+                // `i32::abs`, `core::cmp::min`/`max`: inlined arithmetic.
+                if let Some(shim) = primitive_op_shim(tcx, body, &fname, &arg_nodes) {
+                    write!(into, ", \"prim_shim\": {}", shim).unwrap();
                 }
                 // NOTE: `PartialEq::ne` is left as a std symbol: the
                 // derived `eq` itself compares payloads with `!=`, so

@@ -66,6 +66,13 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// A primitive method inlined by the backend: the kind and the operand types.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PrimShim {
+    pub kind: String,
+    pub tys: Vec<String>,
+}
+
 /// `slice::len` / `str::len`: the fat pointer's length word offset.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SliceLen {
@@ -347,6 +354,9 @@ pub enum Term {
         /// A `PartialEq::ne` call: the local `eq` to call instead, negated.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         negate_eq: Option<String>,
+        /// A primitive method inlined by the backend (`abs`, `min`, `max`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        prim_shim: Option<PrimShim>,
     },
     Drop { place: String, target: String },
     SwitchInt { discr: Box<Operand>, #[serde(default)] targets: Vec<(String, String)>, otherwise: String },

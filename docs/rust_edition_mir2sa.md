@@ -198,6 +198,9 @@ exit 0，无 broker）。
 - 字符串缓冲的所有权：字节缓冲（`_str_*`）若被**拷贝**进寄存器，所有权随之转移
   （SA 的赋值消耗源），出口不能再释放（否则双重释放）；只被存进胖指针的缓冲
   仍归自己所有，出口释放。
+- **原始数值方法**（`i32::abs`、`core::cmp::min`/`max`）内联为 SA 代码：
+  操作数放进帧槽再比较（避免只在一条路径上消耗寄存器），有符号性由
+  driver 按操作数类型给出（`slt`/`ult`）。
 - 仍未覆盖：`println!`/`format!` 的**格式化栈**（`Argument::new_display`、
   `Arguments::new`、`io::_print` 都是 std 符号）——`panic!` 路径已折叠为
   原生 `panic(code)` ✓，但主动打印仍需 std 符号。
