@@ -379,6 +379,16 @@ fn slice_iter_info<'tcx>(
             elem_size, iter_off, take_off, size
         )
     };
+    let info_step = |elem_size: u64,
+                     iter_off: u64,
+                     step_off: u64,
+                     first_off: u64,
+                     size: u64| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"step_off\": {}, \"first_off\": {}, \"size\": {}}}",
+            elem_size, iter_off, step_off, first_off, size
+        )
+    };
     let slice_iter_elem = |def: rustc_middle::ty::AdtDef<'tcx>,
                            targs: &rustc_middle::ty::GenericArgsRef<'tcx>| {
         tcx.def_path_str(def.did())
@@ -407,7 +417,29 @@ fn slice_iter_info<'tcx>(
             }
         }
     }
-    // `Iterator::next` on `slice::Iter` / `Rev<slice::Iter>` / `Take<Iter>`.
+    // `Iterator::step_by(n)` on `slice::Iter`: build `StepBy { iter, n, first }`.
+    if !is_into_iter && fname.contains("Iterator_step_by") {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if let Some(elem) = slice_iter_elem(*def, targs) {
+                let elem_size = layout_of(elem)?.size.bytes();
+                let step_ty = dest_ty?;
+                let layout = layout_of(step_ty)?;
+                let iter_off = field_offset_pub(tcx, env, step_ty, &layout.layout, 0, "iter")?;
+                let step_off =
+                    field_offset_pub(tcx, env, step_ty, &layout.layout, 0, "step_minus_one")?;
+                let first_off =
+                    field_offset_pub(tcx, env, step_ty, &layout.layout, 0, "first_take")?;
+                return Some(info_step(
+                    elem_size,
+                    iter_off,
+                    step_off,
+                    first_off,
+                    layout.size.bytes(),
+                ));
+            }
+        }
+    }
+    // `Iterator::next` on `slice::Iter` / `Rev<slice::Iter>` / adapters.
     if !is_into_iter && is_next {
         if let TyKind::Adt(def, targs) = ty.kind() {
             if let Some(elem) = slice_iter_elem(*def, targs) {
@@ -436,6 +468,33 @@ fn slice_iter_info<'tcx>(
                             elem_size,
                             iter_off,
                             take_off,
+                            layout.size.bytes(),
+                        ));
+                    }
+                }
+            }
+            if tcx.def_path_str(def.did()).contains("iter::StepBy") {
+                let inner = targs.iter().find_map(|a| a.as_type())?;
+                if let TyKind::Adt(idef, itargs) = inner.kind() {
+                    if let Some(elem) = slice_iter_elem(*idef, itargs) {
+                        let elem_size = layout_of(elem)?.size.bytes();
+                        let layout = layout_of(ty)?;
+                        let iter_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "iter")?;
+                        let step_off = field_offset_pub(
+                            tcx,
+                            env,
+                            ty,
+                            &layout.layout,
+                            0,
+                            "step_minus_one",
+                        )?;
+                        let first_off =
+                            field_offset_pub(tcx, env, ty, &layout.layout, 0, "first_take")?;
+                        return Some(info_step(
+                            elem_size,
+                            iter_off,
+                            step_off,
+                            first_off,
                             layout.size.bytes(),
                         ));
                     }

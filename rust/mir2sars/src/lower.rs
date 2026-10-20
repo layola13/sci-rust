@@ -1713,6 +1713,78 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         let len = format!("_slice_len_{}", b.id);
                         let off = format!("_slice_off_{}", b.id);
                         let end = format!("_slice_end_{}", b.id);
+                        if let Some(step_off) = si.step_off {
+                            // `Iterator::step_by(n)`: copy the inner `Iter`
+                            // words and store the stride plus the first flag.
+                            let n = args
+                                .get(1)
+                                .and_then(|a| match a {
+                                    Operand::Move { place, .. }
+                                    | Operand::Copy { place, .. } => Some(place.clone()),
+                                    Operand::Const { value, .. } => {
+                                        crate::render_util::const_scalar_text(value)
+                                    }
+                                    _ => None,
+                                })
+                                .unwrap_or_else(|| "1".to_string());
+                            let first_off = si.first_off.unwrap_or(step_off + 8);
+                            let size = if si.size == 0 { first_off + 8 } else { si.size };
+                            // `step_by(0)` panics in std; keep that behavior
+                            // instead of underflowing `n - 1`.
+                            let zero = format!("_slice_zero_{}", b.id);
+                            let lbl_bad = format!("L_slice_step_bad_{}", b.id);
+                            let lbl_ok = format!("L_slice_step_ok_{}", b.id);
+                            out.push(format!("    {} = eq {}, 0", zero, n));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                zero, lbl_bad, lbl_ok
+                            ));
+                            out.push(format!("{}:", lbl_bad));
+                            out.push(format!(
+                                "    panic({})",
+                                1800 + (b.id.trim_start_matches(|c: char| !c.is_ascii_digit()).parse::<u32>().unwrap_or(0) % 100)
+                            ));
+                            out.push(format!("{}:", lbl_ok));
+                            out.push(format!("    mut {} = alloc {}", it, size));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                data,
+                                src,
+                                si.iter_off
+                            ));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                end,
+                                src,
+                                si.iter_off + 8
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it, si.iter_off, data
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it,
+                                si.iter_off + 8,
+                                end
+                            ));
+                            out.push(format!("    {} = sub {}, 1", off, n));
+                            out.push(format!("    store {}+{}, {} as u64", it, step_off, off));
+                            out.push(format!("    store {}+{}, 1 as u8", it, first_off));
+                            out.push(format!("    {} = {}", d, it));
+                            bound.insert(d.to_string());
+                            match target {
+                                Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                                None => {
+                                    out.push("    // diverging call".to_string());
+                                    out.push(format!(
+                                        "    panic({})",
+                                        unreachable_panic_code(&b.id)
+                                    ));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(take_off) = si.take_off {
                             // `Iterator::take(n)`: copy the inner `Iter`
                             // words and store the remaining count.
@@ -1925,6 +1997,85 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                             iter,
                             si.iter_off + 8
                         ));
+                        if let Some(step_off) = si.step_off {
+                            // `StepBy::next`: the first call yields the head;
+                            // later calls jump `step - 1` elements ahead.
+                            let first_off = si.first_off.unwrap_or(step_off + 8);
+                            let first = format!("_slice_first_{}", b.id);
+                            let is_first = format!("_slice_is_first_{}", b.id);
+                            let k = format!("_slice_k_{}", b.id);
+                            let off = format!("_slice_off2_{}", b.id);
+                            let cand = format!("_slice_cand_{}", b.id);
+                            let lbl_first = format!("L_slice_first_{}", b.id);
+                            let lbl_rest = format!("L_slice_rest_{}", b.id);
+                            let lbl_some1 = format!("L_slice_some1_{}", b.id);
+                            let lbl_some2 = format!("L_slice_some2_{}", b.id);
+                            out.push(format!(
+                                "    {} = load {}+{} as u8",
+                                first, iter, first_off
+                            ));
+                            out.push(format!("    {} = ne {}, 0", is_first, first));
+                            out.push(format!("    mut {} = alloc 8", ret));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                is_first, lbl_first, lbl_rest
+                            ));
+                            out.push(format!("{}:", lbl_first));
+                            out.push(format!("    store {}+{}, 0 as u8", iter, first_off));
+                            out.push(format!("    {} = ult {}, {}", cmp, cur, endp));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                cmp, lbl_some1, lbl_none
+                            ));
+                            out.push(format!("{}:", lbl_rest));
+                            out.push(format!(
+                                "    {} = load {}+{} as u64",
+                                k, iter, step_off
+                            ));
+                            out.push(format!("    {} = mul {}, {}", off, k, elem_size));
+                            out.push(format!("    {} = ptr_add {}, {}", cand, cur, off));
+                            out.push(format!("    {} = ult {}, {}", cmp, cand, endp));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                cmp, lbl_some2, lbl_none
+                            ));
+                            out.push(format!("{}:", lbl_some1));
+                            out.push(format!("    store {}+0, {} as ptr", ret, cur));
+                            out.push(format!("    {} = ptr_add {}, {}", nxt, cur, elem_size));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                iter,
+                                si.iter_off,
+                                nxt
+                            ));
+                            out.push(format!("    jmp {}", lbl_end));
+                            out.push(format!("{}:", lbl_some2));
+                            out.push(format!("    store {}+0, {} as ptr", ret, cand));
+                            out.push(format!("    {} = ptr_add {}, {}", nxt, cand, elem_size));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                iter,
+                                si.iter_off,
+                                nxt
+                            ));
+                            out.push(format!("    jmp {}", lbl_end));
+                            out.push(format!("{}:", lbl_none));
+                            out.push(format!("    store {}+0, 0 as ptr", ret));
+                            out.push(format!("{}:", lbl_end));
+                            out.push(format!("    {} = {}", d, ret));
+                            bound.insert(d.to_string());
+                            match target {
+                                Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                                None => {
+                                    out.push("    // diverging call".to_string());
+                                    out.push(format!(
+                                        "    panic({})",
+                                        unreachable_panic_code(&b.id)
+                                    ));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(take_off) = si.take_off {
                             // `Take::next`: decrement the remaining count and
                             // advance the inner iterator.

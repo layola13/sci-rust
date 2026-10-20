@@ -110,9 +110,15 @@ pub struct SliceIter {
     /// Offset of the remaining-count word inside `Take<Iter>`.
     #[serde(default)]
     pub take_off: Option<u64>,
-    /// Size of the `Take<Iter>` value (`Take` construction only).
+    /// Size of the `Take<Iter>` / `StepBy<Iter>` value (construction only).
     #[serde(default)]
     pub size: u64,
+    /// Offset of the stride word inside `StepBy<Iter>`.
+    #[serde(default)]
+    pub step_off: Option<u64>,
+    /// Offset of the `first_take` flag inside `StepBy<Iter>`.
+    #[serde(default)]
+    pub first_off: Option<u64>,
 }
 
 /// A slice accessor returning `Option<&T>` (`first`/`last`/`get`).

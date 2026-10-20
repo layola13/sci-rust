@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2543 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2762 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -257,7 +257,12 @@ exit 0，无 broker）。
 - `.take(n)`：构造 `Take { iter, n }`（拷贝内层 `Iter` 两字 + 计数，
   偏移/大小取自 rustc layout）；`Take::next` 同时判 `n != 0` 与
   `cur < end`，产出后计数减一。已用 `iter_take_sum` 端到端验证。
+- `.step_by(n)`：构造 `StepBy { iter, step_minus_one, first_take }`；
+  首次 `next` 产出头元素，之后按 `step_minus_one * elem_size` 直接跳到
+  下一个目标（切片可随机访问，无需逐元素走），越界即 None。
+  `n == 0` 保持 std 的 panic 行为。已用 `iter_step_sum` 在 `n=1/2/10`
+  下端到端验证。
 - 退出释放不再释放 niche 判别式读出的 `<reg>_n` 载荷指针（它指向调用方
   存储，不拥有该分配）。
-- 仍未覆盖：`.step_by()` 等适配器。
+- 仍未覆盖：`.zip()`/`.enumerate()` 等组合适配器。
 
