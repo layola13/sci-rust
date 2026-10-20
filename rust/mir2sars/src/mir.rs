@@ -193,6 +193,9 @@ pub struct PlaceProj {
     /// Full projected place text for provenance (comment only).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub via: Option<String>,
+    /// A dynamic index (`a[i]`): the index register and the element size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<(String, u64)>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

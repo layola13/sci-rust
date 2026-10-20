@@ -927,6 +927,7 @@ fn apply_join_slots(f: &mut Function, plans: &[JoinSlot]) {
                             offset: 0,
                             ty: plan.ty.clone(),
                             via: None,
+                            index: None,
                         }),
                     };
                 }

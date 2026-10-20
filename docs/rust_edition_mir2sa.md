@@ -159,8 +159,14 @@ exit 0，无 broker）。
   同一属主就会 UseAfterMove / join 状态冲突。
 - 仍未覆盖：**提升常量**（promoted const）的引用仍是 loud（值为 0 占位，
   调用方会读到空指针）。
-- 仍未覆盖：**数组下标** `a[i]`（动态偏移：后端的 `ptr_add` 只接受静态
-  偏移）与**泛型函数**里的 `T: PartialEq`（泛型 MIR 的类型未知）。
+- **数组下标** `a[i]`：driver 解析 `Index` 投影（索引局部量 + 元素大小），
+  mir2sars 降为 `mul index, size` + `ptr_add base, off` + `load`（ISA 的
+  `ptr_add` 接受寄存器偏移 ✓）。MIR 的 `BoundsCheck` 断言折叠成 panic ✓。
+- **循环携带的局部量**：在循环里被读取的局部量（数组、结构体地址等）现在
+  会被溢出(spill)到槽，使用点重载：否则循环体里的拷贝会「移动」属主，
+  下一轮迭代就变成 UseAfterMove / join 状态冲突。
+- 仍未覆盖：**泛型函数/泛型枚举**里的 `T: PartialEq`（泛型 MIR 的类型未知，
+  字段偏移依赖具体类型）。
 - 仍未覆盖：**泛型枚举**的字段比较：泛型函数的 MIR 里局部类型仍是 `T`，
   字段偏移依赖具体类型（无法静态解析），派生 `PartialEq` 的字段比较因此
   仍是 loud。

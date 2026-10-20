@@ -159,6 +159,71 @@ fn operand_place(op: &Operand) -> Option<String> {
     }
 }
 
+/// Blocks that are part of a loop (a block that can reach itself). A local
+/// read inside a loop is carried across iterations: its copies must not
+/// consume the register, or the next iteration reads a moved value.
+fn loop_blocks(blocks: &[crate::mir::Block]) -> BTreeSet<usize> {
+    use std::collections::{HashMap, HashSet};
+    let idx: HashMap<&str, usize> = blocks
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b.id.as_str(), i))
+        .collect();
+    let mut succs: Vec<Vec<usize>> = vec![Vec::new(); blocks.len()];
+    for (i, b) in blocks.iter().enumerate() {
+        let mut add = |t: &str| {
+            if let Some(&ti) = idx.get(t) {
+                succs[i].push(ti);
+            }
+        };
+        match &b.terminator {
+            crate::mir::Term::Goto { target } => add(target),
+            crate::mir::Term::SwitchInt { targets, otherwise, .. } => {
+                for (_, t) in targets {
+                    add(t);
+                }
+                add(otherwise);
+            }
+            crate::mir::Term::Call { target: Some(t), .. } => add(t),
+            crate::mir::Term::Assert { target, .. } => add(target),
+            crate::mir::Term::Drop { target, .. } => add(target),
+            crate::mir::Term::InlineAsm { target: Some(t), .. } => add(t),
+            _ => {}
+        }
+    }
+    // A block is in a loop when it can reach itself (transitively).
+    let mut in_loop = BTreeSet::new();
+    for start in 0..blocks.len() {
+        let mut seen: HashSet<usize> = HashSet::new();
+        let mut stack: Vec<usize> = succs[start].clone();
+        let mut reaches_self = false;
+        while let Some(b) = stack.pop() {
+            if b == start {
+                reaches_self = true;
+                break;
+            }
+            if !seen.insert(b) {
+                continue;
+            }
+            stack.extend(succs[b].iter().copied());
+        }
+        if reaches_self {
+            in_loop.insert(start);
+            // Every block reachable from it is part of the same loop.
+            let mut seen2: HashSet<usize> = HashSet::new();
+            let mut st2: Vec<usize> = vec![start];
+            while let Some(b) = st2.pop() {
+                if !seen2.insert(b) {
+                    continue;
+                }
+                in_loop.insert(b);
+                st2.extend(succs[b].iter().copied());
+            }
+        }
+    }
+    in_loop
+}
+
 /// Rust `Copy` semantics: a place Rust copies stays valid after the read,
 /// but SA `=` CONSUMES its source, so the second copy of the same place
 /// traps UseAfterMove. Spill such places to a slot and reload at every use
@@ -181,6 +246,7 @@ pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>
     let mut copied: BTreeSet<String> = BTreeSet::new();
     let mut moved: BTreeSet<String> = BTreeSet::new();
     let def_count = definition_counts(blocks);
+    let in_loop = loop_blocks(blocks);
     for (bi, b) in blocks.iter().enumerate() {
         for (si, st) in b.statements.iter().enumerate() {
             let pos = bi * 4096 + si;
@@ -299,7 +365,11 @@ pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>
             Some(p) => sites.iter().any(|(_, q)| *q > p),
             None => false,
         };
-        let needs = sites.len() > 1 || used_after_copy || dropped.contains(place);
+        // A place read inside a loop is carried across iterations: a copy in
+        // the loop body would consume the register, and the next iteration
+        // would read a moved value (or the join would see mismatched states).
+        let loop_carried = sites.iter().any(|(_, p)| in_loop.contains(&(p / 4096)));
+        let needs = sites.len() > 1 || used_after_copy || dropped.contains(place) || loop_carried;
         if !needs {
             continue;
         }

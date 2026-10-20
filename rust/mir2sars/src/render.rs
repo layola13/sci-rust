@@ -69,7 +69,12 @@ fn dest_slot_lines(dest: &str, spill: &crate::spill::SpillMap) -> Vec<String> {
 
 /// The same slot setup as one text blob (for single-line renderings).
 fn dest_slot_suffix(dest: &str, spill: &crate::spill::SpillMap) -> String {
-    dest_slot_lines(dest, spill).join("\n")
+    let lines = dest_slot_lines(dest, spill);
+    if lines.is_empty() {
+        String::new()
+    } else {
+        format!("\n{}", lines.join("\n"))
+    }
 }
 
 pub fn render_rvalue(
@@ -90,6 +95,18 @@ pub fn render_rvalue(
             // about whole-register values.
             if let Some(pj) = op.proj() {
                 if let Operand::Move { place, .. } | Operand::Copy { place, .. } = op {
+                    if let Some((idx, size)) = &pj.index {
+                        // A dynamic index (`a[i]`): the address is
+                        // `base + index * elem_size`.
+                        let ix = format!("{}_ix", dest);
+                        let ptr = format!("{}_p", dest);
+                        return format!(
+                            "{ix} = mul {idx}, {size}\n{ptr} = ptr_add {place}, {ix}\n{dest} = load {ptr}+{} as {}{}",
+                            pj.offset,
+                            pj.ty,
+                            dest_slot_suffix(dest, spill)
+                        );
+                    }
                     return format!(
                         "{} = load {}+{} as {}{}",
                         dest, place, pj.offset, pj.ty, dest_slot_suffix(dest, spill)

@@ -39,6 +39,43 @@ pub fn place_via(p: &Place<'_>) -> Option<String> {
 /// `None` for plain locals, pure-deref places (the pointer value itself, which
 /// the collapse already renders correctly) and any layout we cannot resolve —
 /// unsupported shapes keep the old collapse and go loud downstream.
+/// A dynamic index in a place projection (`a[i]`): the index local's name
+/// and the element size in bytes. The index is a runtime value, so the
+/// backend computes `base + index * size`.
+pub fn place_dynamic_index<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    p: &Place<'tcx>,
+) -> Option<(String, u64)> {
+    // The base local's type (the place's own type is the element's).
+    let mut cur: Ty<'tcx> = body.local_decls[p.local].ty;
+    for elem in p.projection.iter() {
+        match elem {
+            ProjectionElem::Deref => {
+                cur = match cur.kind() {
+                    TyKind::Ref(_, t, _) => *t,
+                    TyKind::RawPtr(t, _) => *t,
+                    _ => return None,
+                };
+            }
+            ProjectionElem::Index(local) => {
+                let elem_ty = match cur.kind() {
+                    TyKind::Array(t, _) => *t,
+                    TyKind::Slice(t) => *t,
+                    _ => return None,
+                };
+                let env = TypingEnv::fully_monomorphized();
+                let layout = tcx
+                    .layout_of(PseudoCanonicalInput { typing_env: env, value: elem_ty })
+                    .ok()?;
+                return Some((local_name(local), layout.size.bytes()));
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 pub fn place_proj<'tcx>(
     tcx: TyCtxt<'tcx>,
     body: &Body<'tcx>,
@@ -93,7 +130,20 @@ pub fn place_proj<'tcx>(
                 cur = fty;
                 leaf = fty;
             }
-            // Index/ConstantIndex/Subslice/OpaqueCast carry no constant byte
+            ProjectionElem::Index(local) => {
+                // A dynamic index (`a[i]`): the byte offset is not static, but
+                // the element type is known, so the place still projects.
+                has_field = true;
+                let elem_ty = match cur.kind() {
+                    TyKind::Array(t, _) => *t,
+                    TyKind::Slice(t) => *t,
+                    _ => return None,
+                };
+                cur = elem_ty;
+                leaf = elem_ty;
+                let _ = local;
+            }
+            // ConstantIndex/Subslice/OpaqueCast carry no constant byte
             // offset here; leave them to the collapse path.
             _ => return None,
         }

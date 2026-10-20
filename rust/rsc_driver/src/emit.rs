@@ -30,7 +30,11 @@ fn write_proj_operand<'a>(
             esc(&ty, into);
             into.push_str("\", \"via\": \"");
             esc(&via, into);
-            into.push_str("\"}}");
+            into.push('"');
+            if let Some((idx, size)) = crate::place::place_dynamic_index(tcx, body, p) {
+                write!(into, ", \"index\": [\"{}\", {}]", idx, size).unwrap();
+            }
+            into.push_str("}}");
         }
         None => {
             into.push_str("{\"kind\": \"");
