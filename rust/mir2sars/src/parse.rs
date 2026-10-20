@@ -185,7 +185,7 @@ pub fn parse_rvalue(rhs: &str) -> Rvalue {
             if BINOPS.contains(&name) {
                 let parts = split_top(inner);
                 if parts.len() == 2 {
-                    return Rvalue::BinOp { op: name.to_string(), left: Box::new(parse_operand(&parts[0])), right: Box::new(parse_operand(&parts[1])) };
+                    return Rvalue::BinOp { op: name.to_string(), left: Box::new(parse_operand(&parts[0])), right: Box::new(parse_operand(&parts[1])) , signed: None };
                 }
             }
             if name == "Not" {

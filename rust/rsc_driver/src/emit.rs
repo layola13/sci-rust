@@ -160,6 +160,13 @@ pub fn rvalue_json<'tcx>(
             operand_json(&box_ops.0, tcx, body, into);
             into.push_str(", \"right\": ");
             operand_json(&box_ops.1, tcx, body, into);
+            // Ordered comparisons, division and shifts depend on the
+            // operand's signedness: the SA ISA has separate signed and
+            // unsigned mnemonics (`slt`/`ult`, `sdiv`/`udiv`, ...).
+            let ty = operand_ty_short(tcx, body, &box_ops.0);
+            let signed = ty.starts_with('i') || ty.starts_with('f');
+            into.push_str(", \"signed\": ");
+            into.push_str(if signed { "true" } else { "false" });
             into.push('}');
         }
         Rvalue::UnaryOp(op, o) => {
@@ -348,9 +355,22 @@ pub fn fn_operand_name<'a>(tcx: TyCtxt<'a>, op: &Operand<'a>) -> (String, String
 }
 
 /// `(short, full)` for a named item: last path segment, sanitized for SA.
+///
+/// A method or associated function can share its short name with another
+/// impl (`Shape::eq` and `Point::eq` are both `eq`): the caller would then
+/// not resolve to a unique local function, so those use the full path.
 fn name_from_def(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> (String, String) {
     let full = tcx.def_path_str(def_id);
-    let short = full.rsplit("::").next().unwrap_or(&full).to_string();
+    // An associated function (an impl method, e.g. a derived `Shape::eq`)
+    // can share its short name with another impl: use the full path so
+    // callers resolve to a unique local function. Plain functions keep the
+    // short name (a cross-crate callee is imported under that name).
+    let is_assoc = matches!(tcx.def_kind(def_id), DefKind::AssocFn);
+    let short = if is_assoc {
+        full.clone()
+    } else {
+        full.rsplit("::").next().unwrap_or(&full).to_string()
+    };
     let clean: String = {
         let mut s = String::new();
         let mut sep = true;
@@ -609,6 +629,11 @@ fn ty_agg_size<'tcx>(tcx: TyCtxt<'tcx>, ty: ty::Ty<'tcx>) -> u64 {
         }
         _ => 0,
     }
+}
+
+/// Unique SA name of a local function (definition and call sites agree).
+pub fn local_fn_name(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> String {
+    name_from_def(tcx, def_id).0
 }
 
 pub fn body_json<'tcx>(

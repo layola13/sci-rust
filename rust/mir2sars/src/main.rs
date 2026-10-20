@@ -93,8 +93,8 @@ fn cmd_coverage(args: &[String]) -> ExitCode {
                                 Rvalue::Unsupported { .. } => true,
                                 // ThreadLocal lowers to sa_thread_local_slot (sci registry).
                                 // `*WithOverflow` expands to the sa_std/num.sal checked macro.
-                                Rvalue::BinOp { op, .. } => {
-                                    binop_mnemonic(op).is_none() && checked_arith_helper(op).is_none()
+                                Rvalue::BinOp { op, signed, .. } => {
+                                    binop_mnemonic(op, signed.unwrap_or(true)).is_none() && checked_arith_helper(op).is_none()
                                 }
                                 Rvalue::UnOp { op, .. } => unop_needs_loud(op),
                                 Rvalue::Cast { castkind, src_ty, ty, .. } => {
@@ -872,6 +872,7 @@ mod tests {
                     op: op.to_string(),
                     left: Box::new(Operand::Copy { place: "_1".to_string(), proj: None }),
                     right: Box::new(Operand::Copy { place: "_2".to_string(), proj: None }),
+                    signed: None,
                 },
                 "_3", Some("_3"), &mut unsup, "bb0", &mut idx,
                 &std::collections::HashMap::new(), &std::collections::BTreeMap::new(),

@@ -123,4 +123,19 @@ exit 0，无 broker）。
 - 单字段 ADT 聚合（`struct W(i32)`、niche 枚举）现在也按聚合物化
   （`alloc` + `store`），局部量持有聚合地址（与 `agg: true` 借用一致），
   按值传参/返回因此正确。
+- 解引用投影（`*p`）：driver 的 `place_proj` 之前只保留含字段的投影，
+  纯解引用被丢掉（读到的是基址寄存器而非其指向的值）。现在保留
+  （offset 0 + 被指类型），`match` 分支里的 `*w * *h` 因此正确。
+- 值位置上的投影读（算术/调用实参）先物化成临时量
+  （`materialize_projected_operands`）：SA 的值位置不能嵌套 load。
+- 有序比较/除法/移位按**有符号性**分派：driver 输出操作数的有符号性，
+  mir2sars 选 `slt/ult`、`sdiv/udiv`、`ashr/lshr` 等 ISA 助记符，
+  `while i < n` 这类循环因此可运行（之前 loud）。
+- 关联函数（impl 方法、派生 `Shape::eq`）用完整路径命名
+  （`Shape_as_std_cmp_PartialEq_eq`）：不同 impl 的同名方法不再互相混淆，
+  跨 crate 调用仍用短名（与 `--dep` 导入一致）。
+- 聚合借用（`&local`）从属主的 spill 槽重载，不再把聚合存储的所有权
+  转给借用方：同一聚合被借用两次不再 UseAfterMove。
+- 仍未覆盖：`&Enum::Variant(..)` 这类**常量聚合**的引用（`Const::
+  Unevaluated`）仍是 loud（值为 0 占位，调用方会读到空指针）。
 

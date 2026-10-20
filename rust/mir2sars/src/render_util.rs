@@ -239,7 +239,7 @@ pub fn render_call_arg(op: &Operand) -> String {
 /// MIR BinOp name -> SA mnemonic for the sign-agnostic subset.
 /// Div/Rem/Shr/ordered-comparisons need signedness (driver-supplied);
 /// anything else returns None (caller stays loud).
-pub fn binop_mnemonic(op: &str) -> Option<&'static str> {
+pub fn binop_mnemonic(op: &str, signed: bool) -> Option<&'static str> {
     match op {
         "Add" => Some("add"),
         "Sub" => Some("sub"),
@@ -250,6 +250,15 @@ pub fn binop_mnemonic(op: &str) -> Option<&'static str> {
         "Shl" => Some("shl"),
         "Eq" => Some("eq"),
         "Ne" => Some("ne"),
+        // Ordered comparisons, division and shifts have separate signed and
+        // unsigned ISA forms; the driver reports the operand signedness.
+        "Lt" => Some(if signed { "slt" } else { "ult" }),
+        "Le" => Some(if signed { "sle" } else { "ule" }),
+        "Gt" => Some(if signed { "sgt" } else { "ugt" }),
+        "Ge" => Some(if signed { "sge" } else { "uge" }),
+        "Div" => Some(if signed { "sdiv" } else { "udiv" }),
+        "Rem" => Some(if signed { "srem" } else { "urem" }),
+        "Shr" => Some(if signed { "ashr" } else { "lshr" }),
         _ => None,
     }
 }

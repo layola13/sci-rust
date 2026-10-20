@@ -379,6 +379,114 @@ fn plan_inline_eq(
     (calls, skip)
 }
 
+/// Materialize projected reads inside composite rvalues.
+///
+/// SA has no nested load expressions in value positions, so a field read used
+/// by an arithmetic op or a call argument (`*w * *h`) must be loaded into a
+/// temp first. Plain assignments already lower a projected read to a load.
+fn materialize_projected_operands(f: &Function) -> Function {
+    let mut out = f.clone();
+    for bi in 0..out.blocks.len() {
+        let mut stmts: Vec<Stmt> = Vec::with_capacity(out.blocks[bi].statements.len());
+        let mut counter = 0usize;
+        for st in out.blocks[bi].statements.drain(..) {
+            let dest = match &st {
+                Stmt::Assign { dest, .. } => dest.clone(),
+                _ => String::new(),
+            };
+            let mut prelude: Vec<Stmt> = Vec::new();
+            let mut st2 = st;
+            if let Stmt::Assign { rvalue, .. } = &mut st2 {
+                let mut ops: Vec<&mut Operand> = match rvalue {
+                    Rvalue::BinOp { left, right, .. } => vec![left.as_mut(), right.as_mut()],
+                    Rvalue::UnOp { operand, .. } => vec![operand.as_mut()],
+                    Rvalue::Cast { op, .. } => vec![op.as_mut()],
+                    Rvalue::Call { args, .. } => args.iter_mut().collect(),
+                    Rvalue::Aggregate { elems, .. } => elems.iter_mut().collect(),
+                    _ => vec![],
+                };
+                for op in ops.into_iter() {
+                    let pj = match op.proj() {
+                        Some(p) => p.clone(),
+                        None => continue,
+                    };
+                    let base = match op {
+                        Operand::Move { place, .. } | Operand::Copy { place, .. } => place.clone(),
+                        _ => continue,
+                    };
+                    let tmp = format!("{}_p{}", dest, counter);
+                    counter += 1;
+                    prelude.push(Stmt::Assign {
+                        dest: tmp.clone(),
+                        dest_place: None,
+                        dest_proj: None,
+                        rvalue: Rvalue::Use {
+                            op: Operand::Copy {
+                                place: base,
+                                proj: Some(pj),
+                            },
+                        },
+                    });
+                    *op = Operand::Copy {
+                        place: tmp,
+                        proj: None,
+                    };
+                }
+            }
+            stmts.extend(prelude);
+            stmts.push(st2);
+        }
+        // Terminator operands (switch discriminant, call args, assert cond).
+        let mut prelude: Vec<Stmt> = Vec::new();
+        let mut counter = 0usize;
+        {
+            let mut ops: Vec<&mut Operand> = match &mut out.blocks[bi].terminator {
+                Term::SwitchInt { discr, .. } => vec![discr.as_mut()],
+                Term::Call { args, .. } => args.iter_mut().collect(),
+                // An overflow assert is folded (the checked macro traps), so
+                // its condition is never read: materializing it would copy
+                // the checked-arithmetic result and consume it.
+                Term::Assert { cond, msg, .. }
+                    if !crate::render_util::is_overflow_assert(msg.as_deref().unwrap_or("")) =>
+                {
+                    vec![cond.as_mut()]
+                }
+                _ => vec![],
+            };
+            for op in ops.into_iter() {
+                let pj = match op.proj() {
+                    Some(p) => p.clone(),
+                    None => continue,
+                };
+                let base = match op {
+                    Operand::Move { place, .. } | Operand::Copy { place, .. } => place.clone(),
+                    _ => continue,
+                };
+                let tmp = format!("_t{}_p{}", bi, counter);
+                counter += 1;
+                prelude.push(Stmt::Assign {
+                    dest: tmp.clone(),
+                    dest_place: None,
+                    dest_proj: None,
+                    rvalue: Rvalue::Use {
+                        op: Operand::Copy {
+                            place: base,
+                            proj: Some(pj),
+                        },
+                    },
+                });
+                *op = Operand::Copy {
+                    place: tmp,
+                    proj: None,
+                };
+            }
+        }
+        stmts.extend(prelude);
+        out.blocks[bi].statements = stmts;
+    }
+    out
+}
+
 /// A join-ambiguous local (`Operand::Conflict`) lowered through a stack slot:
 /// versions are stored on the incoming frontier, the use site loads the slot.
 struct JoinSlot {
@@ -725,6 +833,35 @@ fn plan_return_phi(
     (joins, pred_ret)
 }
 
+trait DebugStmt {
+    fn dest_str(&self) -> &str;
+    fn debug_str(&self) -> String;
+}
+
+impl DebugStmt for Stmt {
+    fn dest_str(&self) -> &str {
+        match self {
+            Stmt::Assign { dest, .. } => dest,
+            _ => "",
+        }
+    }
+    fn debug_str(&self) -> String {
+        match self {
+            Stmt::Assign { dest, rvalue, .. } => {
+                let kind = match rvalue {
+                    Rvalue::Use { op } => match op.proj() {
+                        Some(pj) => format!("Use(proj off={} ty={})", pj.offset, pj.ty),
+                        None => "Use".to_string(),
+                    },
+                    _ => "other".to_string(),
+                };
+                format!("{} = {}", dest, kind)
+            }
+            _ => String::new(),
+        }
+    }
+}
+
 pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     // Join-ambiguous scalar locals (`Operand::Conflict` from version.rs) are
     // routed through a per-use stack slot: versions stored on the frontier,
@@ -733,6 +870,17 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
     let mut owned = f.clone();
     if !join_slots.is_empty() {
         apply_join_slots(&mut owned, &join_slots);
+    }
+    // Projected reads in value positions become loads into temps.
+    let owned = materialize_projected_operands(&owned);
+    if std::env::var("SA_DEBUG_MAT").is_ok() {
+        for b in owned.blocks.iter() {
+            for st in b.statements.iter() {
+                if st.dest_str().starts_with("_t") {
+                    eprintln!("[mat] {} {}", b.id, st.debug_str());
+                }
+            }
+        }
     }
     let f = &owned;
     // Typed header: MIR arg locals `_1..` bind here (bare `@f()` would leave

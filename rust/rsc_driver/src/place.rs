@@ -51,6 +51,10 @@ pub fn place_proj<'tcx>(
     let mut cur: Ty<'tcx> = body.local_decls[p.local].ty;
     let mut off: u64 = 0;
     let mut has_field = false;
+    // A dereference-only projection (`*x`) is a memory read at offset 0 of
+    // the pointer register: it must keep its projection, or the deref is
+    // dropped and the base register is read instead of its pointee.
+    let mut has_deref = false;
     let mut leaf: Ty<'tcx> = cur;
     // Active enum variant introduced by `Downcast` (consumed by the following
     // `Field` to pick that variant's payload offset).
@@ -64,6 +68,7 @@ pub fn place_proj<'tcx>(
                     _ => return None,
                 };
                 leaf = cur;
+                has_deref = true;
                 variant = None;
             }
             ProjectionElem::Downcast(_, vi) => {
@@ -90,7 +95,7 @@ pub fn place_proj<'tcx>(
             _ => return None,
         }
     }
-    if !has_field {
+    if !has_field && !has_deref {
         return None;
     }
     let ty = crate::tyinfo::ty_sa_sig_opt(leaf)?;

@@ -232,8 +232,15 @@ pub fn copy_spill(blocks: &[crate::mir::Block], types: &BTreeMap<String, String>
                             note_use(&mut uses, &p, false, pos);
                         }
                     }
-                    Rvalue::Ref { place, .. } => {
+                    Rvalue::Ref { place, agg, .. } => {
                         note_use(&mut uses, place, false, pos);
+                        // Borrowing a memory-resident aggregate reads its
+                        // address without consuming the owner: a copy-like
+                        // use, so the owner can spill (and be borrowed
+                        // again) instead of being moved by the first borrow.
+                        if *agg {
+                            copied.insert(place.clone());
+                        }
                     }
                     Rvalue::Discriminant { place, .. } => {
                         note_use(&mut uses, place, false, pos);
@@ -369,6 +376,11 @@ fn copy_use_targets(st: &Stmt) -> Vec<String> {
                 Operand::Copy { place, .. } => vec![place.clone()],
                 _ => vec![],
             },
+            // Borrowing a memory-resident aggregate (`&local`) reads its
+            // address without consuming the owner. Reloading it from the
+            // owner's spill slot keeps the owner alive (a plain `= place`
+            // would transfer the allocation's ownership).
+            Rvalue::Ref { place, agg: true, .. } => vec![place.clone()],
             _ => vec![],
         },
         _ => vec![],

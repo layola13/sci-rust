@@ -123,7 +123,14 @@ pub enum Rvalue {
         #[serde(default)] args: Vec<Operand>,
         #[serde(default, skip_serializing_if = "Option::is_none")] sig: Option<CallSig>,
     },
-    BinOp { op: String, left: Box<Operand>, right: Box<Operand> },
+    BinOp {
+        op: String,
+        left: Box<Operand>,
+        right: Box<Operand>,
+        /// Operand signedness (ordered comparisons, division, shifts).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        signed: Option<bool>,
+    },
     UnOp { op: String, operand: Box<Operand> },
     Cast {
         op: Box<Operand>,

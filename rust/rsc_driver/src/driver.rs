@@ -68,13 +68,12 @@ impl Callbacks for RscCallbacks {
                 DefKind::GlobalAsm => continue,
                 _ => tcx.optimized_mir(did),
             };
-            let path = tcx.def_path_str(did);
-            let short = path.rsplit("::").next().unwrap_or(&path);
+            let short = crate::emit::local_fn_name(tcx, did);
             if !first {
                 out.push_str(", ");
             }
             first = false;
-            body_json(tcx, tcx.param_env(did), short, body, &mut out);
+            body_json(tcx, tcx.param_env(did), &short, body, &mut out);
         }
         out.push_str("]}");
         let approx = out.matches("RuntimeChecks-unsupported").count();

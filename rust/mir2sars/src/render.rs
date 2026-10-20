@@ -120,7 +120,20 @@ pub fn render_rvalue(
                 // `&(*p).f` (or `&local.f`): interior address via ptr_add.
                 lines.push(format!("{} = ptr_add {}, {}", dest, place, offset));
             } else if *agg {
-                lines.push(format!("{} = {}", dest, place));
+                // Memory-resident aggregate: `place` already names the
+                // storage address. Reload it from the owner's spill slot
+                // when there is one: a plain copy would transfer the
+                // allocation's ownership, so a second borrow of the same
+                // owner would use a moved value.
+                match spill.get(place) {
+                    Some(t) => lines.push(format!(
+                        "{} = load {}+0 as {}",
+                        dest,
+                        crate::spill::spill_slot(place),
+                        t
+                    )),
+                    None => lines.push(format!("{} = {}", dest, place)),
+                }
             } else {
                 lines.push(format!("{} = &{}", dest, place));
             }
@@ -147,7 +160,7 @@ pub fn render_rvalue(
             }
             s
         }
-        Rvalue::BinOp { op, left, right } => {
+        Rvalue::BinOp { op, left, right, signed } => {
             // `*WithOverflow` yields a (value, flag) PAIR, which this backend
             // cannot hold in one register. rustc always follows it with an
             // `Assert(Overflow(..))` on the flag, so the value alone is what
@@ -165,7 +178,7 @@ pub fn render_rvalue(
             }
             let (pl, lt) = bind_move_operand(left, bid, mv_idx);
             let (pr, rt) = bind_move_operand(right, bid, mv_idx);
-            match binop_mnemonic(op) {
+            match binop_mnemonic(op, signed.unwrap_or(true)) {
                 Some(m) => {
                     let mut lines = pl;
                     lines.extend(pr);
