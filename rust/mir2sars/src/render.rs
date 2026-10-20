@@ -254,7 +254,31 @@ pub fn render_rvalue(
             }
             lines.join("\n")
         }
-        Rvalue::Call { func, args, sig, opt_shim } => {
+        Rvalue::Call { func, args, sig, opt_shim, slice_len, negate_eq } => {
+            // `PartialEq::ne`: call the local `eq` and negate.
+            if let Some(eq_name) = negate_eq {
+                let a: Vec<String> = args.iter().map(render_call_arg).collect();
+                let tmp = format!("{}_ne", dest);
+                return format!(
+                    "{} = call @{}({})\n{} = ne {}, 0",
+                    tmp,
+                    eq_name,
+                    a.join(", "),
+                    dest,
+                    tmp
+                );
+            }
+            // `slice::len` / `str::len`: the fat pointer's length word.
+            if let Some(sl) = slice_len {
+                let recv = args
+                    .first()
+                    .map(|a| match a {
+                        Operand::Move { place, .. } | Operand::Copy { place, .. } => place.clone(),
+                        _ => "0".to_string(),
+                    })
+                    .unwrap_or_else(|| "0".to_string());
+                return format!("{} = load {}+{} as u64", dest, recv, sl.len_off);
+            }
             // `Option::is_some` / `is_none` / `unwrap_or`: inline the
             // discriminant test (std's symbol cannot run here).
             if let Some(sh) = opt_shim {

@@ -904,6 +904,8 @@ mod spill_tests {
                 target: Some("bb1".to_string()),
                 sig: None,
             opt_shim: None,
+            slice_len: None,
+            negate_eq: None,
             },
         }];
         assert!(!build_spill(&blocks).contains_key("_5"));

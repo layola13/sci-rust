@@ -179,8 +179,12 @@ exit 0，无 broker）。
   偏移/类型）并输出 `opt_shim`，mir2sars 内联为「读判别式 + 比较」
   （`unwrap_or` 用分支实现，ISA 没有 `select`）。这些 std 符号不再需要
   broker。
+- `slice::len` / `str::len`：胖指针的长度字（driver 给出偏移，mir2sars 内联
+  为一次 load）——循环里按切片长度迭代的常见写法因此可运行。
 - 仍未覆盖：**泛型函数/泛型枚举**里的 `T: PartialEq`（泛型 MIR 的类型未知，
   字段偏移依赖具体类型）。
+- 仍未覆盖：`!=`（`PartialEq::ne` 是 std 的默认方法，转发到 `eq`）；把它
+  改写成本地 `eq` 会与派生 `eq` 内部的 `!=` 递归，故仍保留为 std 符号。
 - 仍未覆盖：**泛型枚举**的字段比较：泛型函数的 MIR 里局部类型仍是 `T`，
   字段偏移依赖具体类型（无法静态解析），派生 `PartialEq` 的字段比较因此
   仍是 loud。

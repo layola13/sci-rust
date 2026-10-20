@@ -1374,7 +1374,50 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                 out.push("    // MIR Resume (cleanup path)".to_string());
                 out.push("    panic(\"unwind-resume\")".to_string());
             }
-            Term::Call { func, func_raw, args, dest, target, sig, opt_shim } => {
+            Term::Call { func, func_raw, args, dest, target, sig, opt_shim, slice_len, negate_eq } => {
+                // `PartialEq::ne`: call the local `eq` and negate.
+                if let Some(eq_name) = negate_eq {
+                    let d = dest.as_deref().unwrap_or("_0");
+                    let (pre, a) = crate::render::render_call_args(args, &spill, d);
+                    let tmp = format!("{}_ne", d);
+                    for l in pre {
+                        out.push(l);
+                    }
+                    out.push(format!("    {} = call @{}({})", tmp, eq_name, a.join(", ")));
+                    out.push(format!("    {} = ne {}, 0", d, tmp));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
+                }
+                // `slice::len` / `str::len`: the fat pointer's length word.
+                if let Some(sl) = slice_len {
+                    let d = dest.as_deref().unwrap_or("_0");
+                    let recv = args
+                        .first()
+                        .map(|a| match a {
+                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                place.clone()
+                            }
+                            _ => "0".to_string(),
+                        })
+                        .unwrap_or_else(|| "0".to_string());
+                    out.push(format!("    {} = load {}+{} as u64", d, recv, sl.len_off));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
+                }
                 // `Option::is_some` / `is_none` / `unwrap_or`: inline the
                 // discriminant test (std's symbol cannot run here).
                 if let Some(sh) = opt_shim {
@@ -2035,13 +2078,13 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
     for f in &mir.functions {
         for b in &f.blocks {
             for st in &b.statements {
-                if let Stmt::Assign { rvalue: Rvalue::Call { func, sig, opt_shim, .. }, .. } = st {
+                if let Stmt::Assign { rvalue: Rvalue::Call { func, sig, opt_shim, slice_len, .. }, .. } = st {
                     let name = sa_ident(func);
                     if defined.contains(&name) {
                         continue;
                     }
-                    // An inlined `Option` method is not an extern.
-                    if opt_shim.is_some() {
+                    // An inlined `Option`/`slice` method is not an extern.
+                    if opt_shim.is_some() || slice_len.is_some() {
                         continue;
                     }
                     set.entry(name).or_insert_with(|| {
@@ -2049,13 +2092,13 @@ pub fn collect_externs(mir: &MirFile) -> std::collections::BTreeMap<String, Opti
                     });
                 }
             }
-            if let Term::Call { func, func_raw, sig, target, opt_shim, .. } = &b.terminator {
+            if let Term::Call { func, func_raw, sig, target, opt_shim, slice_len, .. } = &b.terminator {
                 let name = sa_ident(func);
                 if defined.contains(&name) {
                     continue;
                 }
-                // An inlined `Option` method is not an extern.
-                if opt_shim.is_some() {
+                // An inlined `Option`/`slice` method is not an extern.
+                if opt_shim.is_some() || slice_len.is_some() {
                     continue;
                 }
                 // Diverging panic calls lower to native `panic(code)` (see

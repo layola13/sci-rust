@@ -106,6 +106,62 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
     }
 }
 
+/// A `PartialEq::ne` call: std's default method delegates to `eq`, so the
+/// call is resolved to the local derived `eq` and the result negated.
+fn partial_eq_ne_name<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    func: &rustc_middle::mir::Operand<'tcx>,
+) -> Option<String> {
+    let rustc_middle::mir::Operand::Constant(c) = func else {
+        return None;
+    };
+    let (def_id, args) = match fn_item_of(tcx, &c.const_) {
+        Some(x) => x,
+        None => return None,
+    };
+    let path = tcx.def_path_str(def_id);
+    if !(path.contains("PartialEq") && path.ends_with("ne")) {
+        return None;
+    }
+    let eq = local_partial_eq_impl(tcx, def_id, args?)?;
+    Some(sanitize(&tcx.def_path_str(eq)))
+}
+
+/// `slice::len` / `str::len`: the fat pointer's length word.
+fn slice_len_info<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    body: &Body<'tcx>,
+    fname: &str,
+    args: &[rustc_middle::mir::Operand<'tcx>],
+) -> Option<String> {
+    if !(fname.ends_with("_len") && (fname.contains("slice") || fname.contains("str"))) {
+        return None;
+    }
+    let recv = args.first()?;
+    let recv_ty = match recv {
+        Operand::Copy(p) | Operand::Move(p) => p.ty(&body.local_decls, tcx).ty,
+        _ => return None,
+    };
+    let pointee = match recv_ty.kind() {
+        TyKind::Ref(_, t, _) => *t,
+        _ => return None,
+    };
+    if !matches!(pointee.kind(), TyKind::Slice(_) | TyKind::Str) {
+        return None;
+    }
+    use rustc_middle::ty::TypingEnv;
+    let env = TypingEnv::fully_monomorphized();
+    let layout = tcx
+        .layout_of(PseudoCanonicalInput {
+            typing_env: env,
+            value: recv_ty,
+        })
+        .ok()?;
+    // A slice/str fat pointer: the length is the second word.
+    let len_off = layout.fields.offset(1).bytes();
+    Some(format!("{{\"len_off\": {}}}", len_off))
+}
+
 /// An `Option` method the backend can inline: the discriminant's offset and
 /// type plus the payload's offset and type.
 fn option_shim_info<'tcx>(
@@ -619,9 +675,11 @@ fn local_partial_eq_impl<'tcx>(
         return None;
     }
     let self_ty = args.first()?.as_type()?;
+    // The Self type may be `T` (a trait call on the value) or `&T` (the
+    // blanket `impl PartialEq for &T`).
     let pointee = match self_ty.kind() {
         TyKind::Ref(_, t, _) => *t,
-        _ => return None,
+        _ => self_ty,
     };
     let adt = match pointee.kind() {
         TyKind::Adt(d, _) => *d,
@@ -1186,6 +1244,14 @@ pub fn body_json<'tcx>(
                 if let Some(shim) = option_shim_info(tcx, body, &fname, &arg_nodes) {
                     write!(into, ", \"opt_shim\": {}", shim).unwrap();
                 }
+                // `slice::len` / `str::len`: the fat pointer's length word.
+                if let Some(shim) = slice_len_info(tcx, body, &fname, &arg_nodes) {
+                    write!(into, ", \"slice_len\": {}", shim).unwrap();
+                }
+                // NOTE: `PartialEq::ne` is left as a std symbol: the
+                // derived `eq` itself compares payloads with `!=`, so
+                // rewriting `ne` to the local `eq` would recurse into the
+                // very comparison being inlined.
                 let (ds, _) = place_name(destination);
                 write!(into, ", \"dest\": \"{}\"", ds).unwrap();
                 match target {

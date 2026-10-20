@@ -300,6 +300,8 @@ pub fn parse_block(lines: &[String]) -> (Vec<Stmt>, Term, usize) {
                             target,
                             sig: None,
                             opt_shim: None,
+                            slice_len: None,
+                            negate_eq: None,
                         });
                     }
                     None => {
@@ -307,7 +309,7 @@ pub fn parse_block(lines: &[String]) -> (Vec<Stmt>, Term, usize) {
                             dest: "_0".to_string(),
                             dest_place: Some("_0".to_string()),
                             dest_proj: None,
-                            rvalue: Rvalue::Call { func, args, sig: None, opt_shim: None },
+                            rvalue: Rvalue::Call { func, args, sig: None, opt_shim: None, slice_len: None, negate_eq: None },
                         });
                         term = Some(Term::Unreachable);
                     }

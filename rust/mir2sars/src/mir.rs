@@ -66,6 +66,12 @@ pub struct AdtLayout {
     pub offsets: Vec<u64>,
 }
 
+/// `slice::len` / `str::len`: the fat pointer's length word offset.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SliceLen {
+    pub len_off: u64,
+}
+
 /// An `Option` method inlined by the backend: the discriminant's offset and
 /// type plus the payload's offset and type.
 #[derive(Serialize, Deserialize, Clone)]
@@ -149,6 +155,13 @@ pub enum Rvalue {
         /// discriminant layout).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         opt_shim: Option<OptShim>,
+        /// `slice::len` / `str::len`: the fat pointer's length word.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        slice_len: Option<SliceLen>,
+        /// A `PartialEq::ne` call: the named local `eq` to call instead, and
+        /// negate its result.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        negate_eq: Option<String>,
     },
     BinOp {
         op: String,
@@ -323,6 +336,12 @@ pub enum Term {
         /// discriminant layout).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         opt_shim: Option<OptShim>,
+        /// `slice::len` / `str::len`: the fat pointer's length word.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        slice_len: Option<SliceLen>,
+        /// A `PartialEq::ne` call: the local `eq` to call instead, negated.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        negate_eq: Option<String>,
     },
     Drop { place: String, target: String },
     SwitchInt { discr: Box<Operand>, #[serde(default)] targets: Vec<(String, String)>, otherwise: String },
