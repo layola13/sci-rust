@@ -59,7 +59,7 @@ pub fn operand_json<'a>(op: &Operand<'a>, tcx: TyCtxt<'a>, body: &Body<'a>, into
                 let _ = agg;
                 return;
             }
-            let v = trunc(format!("{:?}", c.const_), 60);
+            let v = const_value_text(c);
             into.push_str("{\"kind\": \"Const\", \"value\": \"");
             esc(&v, into);
             into.push('"');
@@ -111,6 +111,25 @@ fn agg_elem_tys<'tcx>(
     }
     let _ = place;
     Some(out)
+}
+
+/// A constant as the backend's `Val(Scalar(..), ty)` text. A typed const
+/// (`Ty(usize, 3_usize)`) carries its value separately; the Debug text of the
+/// const alone is not a value the backend can use.
+fn const_value_text(c: &ConstOperand<'_>) -> String {
+    use rustc_middle::ty::ConstKind;
+    if let rustc_middle::mir::Const::Ty(ty, ct) = &c.const_ {
+        if let ConstKind::Value(val) = ct.kind() {
+            if let Some(s) = val.try_to_scalar() {
+                // The backend parses `Val(Scalar(0x..), ty)`.
+                if let rustc_middle::mir::interpret::Scalar::Int(i) = s {
+                    return format!("Val(Scalar(0x{:016x}), {})", i, ty);
+                }
+                return format!("Val({}, {})", s, ty);
+            }
+        }
+    }
+    trunc(format!("{:?}", c.const_), 60)
 }
 
 /// Emit a constant aggregate's construction (the const's own MIR), so the

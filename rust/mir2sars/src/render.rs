@@ -7,6 +7,40 @@ use crate::render_util::*;
 
 /// Operand text for a spilled source: a `load` from its slot. None when the
 /// operand is not a spilled register (constants, spills absent).
+/// Call arguments: a spilled value reloads from its slot into a temp (a
+/// plain copy would move the register; a reload expression is not a valid
+/// argument position).
+pub fn render_call_args(
+    args: &[Operand],
+    spill: &crate::spill::SpillMap,
+    prefix: &str,
+) -> (Vec<String>, Vec<String>) {
+    let mut prelude = Vec::new();
+    let mut out = Vec::new();
+    for (i, op) in args.iter().enumerate() {
+        let mut plain = true;
+        if op.proj().is_none() {
+            if let Operand::Move { place, .. } | Operand::Copy { place, .. } = op {
+                if let Some(t) = spill.get(place) {
+                    let tmp = format!("{}_ca{}", prefix, i);
+                    prelude.push(format!(
+                        "{} = load {}+0 as {}",
+                        tmp,
+                        crate::spill::spill_slot(place),
+                        t
+                    ));
+                    out.push(tmp);
+                    plain = false;
+                }
+            }
+        }
+        if plain {
+            out.push(crate::render_util::render_call_arg(op));
+        }
+    }
+    (prelude, out)
+}
+
 pub fn spill_reg(op: &Operand, spill: &crate::spill::SpillMap) -> Option<String> {
     let place = match op {
         Operand::Move { place, .. } | Operand::Copy { place, .. } => place,
@@ -190,8 +224,13 @@ pub fn render_rvalue(
                 unsup.push(format!("{}:{} CallNoSig", bid, dest));
                 return format!("// UNSUPPORTED call-sig -> {}: unresolvable callee signature", dest);
             }
-            let a: Vec<String> = args.iter().map(render_call_arg).collect();
-            let mut s = format!("{} = call @{}({})", dest, sa_ident(func), a.join(", "));
+            let (prelude, a) = render_call_args(args, spill, dest);
+            let mut s = if prelude.is_empty() {
+                String::new()
+            } else {
+                format!("{}\n", prelude.join("\n"))
+            };
+            s.push_str(&format!("{} = call @{}({})", dest, sa_ident(func), a.join(", ")));
             // Spilled call dests get their slot setup inline.
             if let Some(ty) = spill.get(dest) {
                 let slot = crate::spill::spill_slot(dest);

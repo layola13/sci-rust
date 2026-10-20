@@ -1599,7 +1599,10 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                     }
                     continue;
                 }
-                let a: Vec<String> = args.iter().map(render_call_arg).collect();
+                let (prelude, a) = crate::render::render_call_args(args, &spill, dest.as_deref().unwrap_or("_0"));
+                for l in prelude {
+                    out.push(l);
+                }
                 // Void calls bind nothing (`_x = call @void()` is InvalidSyntax):
                 // the unit dest gets an exact `0` marker (unit carries no data).
                 let is_void = sig.as_ref().is_some_and(|s| s.ret == "void");
