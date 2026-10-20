@@ -178,6 +178,14 @@ pub fn render_rvalue(
             lines.join("\n")
         }
         Rvalue::Call { func, args, sig } => {
+            // `Range::rev()` builds a `Rev<Range<T>>`, a newtype over the
+            // range: the adapter shares the range's storage, so it is the
+            // identity here (the iteration direction is handled by the
+            // `next` shim).
+            if func.contains("as_std_iter_Iterator_rev") {
+                let a: Vec<String> = args.iter().map(render_call_arg).collect();
+                return format!("{} = {}", dest, a.first().cloned().unwrap_or_else(|| "0".to_string()));
+            }
             if call_sig_loud(sig, args) {
                 unsup.push(format!("{}:{} CallNoSig", bid, dest));
                 return format!("// UNSUPPORTED call-sig -> {}: unresolvable callee signature", dest);

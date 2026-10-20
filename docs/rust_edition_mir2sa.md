@@ -162,6 +162,9 @@ exit 0，无 broker）。
   MIR：range 字段偏移、判别式偏移与类型、payload 偏移）。`&mut self`
   借用临时量被跳过（它的拷贝会消耗循环携带的迭代器）。
   `for _ in 0..n`（循环体不读值）也支持（payload 偏移可缺省）。
+- `.rev()` 适配器：`Range::rev()` 产生 `Rev<Range<T>>`（range 的 newtype，
+  共享同一块存储）→ 退化为恒等；`Rev::next` 用降序游标（游标是上界，
+  产出 `cursor - 1`）内联。
 - 仍未覆盖：`for` 遍历 **非 range** 迭代器（`Vec`/切片/`iter()`）与
-  `.rev()`/`.step_by()` 等适配器——需要 std 的容器迭代器实现。
+  `.step_by()`/`.take()` 等其他适配器——需要 std 的容器迭代器实现。
 

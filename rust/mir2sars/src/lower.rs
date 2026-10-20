@@ -563,6 +563,9 @@ struct IterNextCtx {
     payload_off: u64,
     payload_ty: String,
     signed: bool,
+    /// `Rev<Range<T>>` iterates downwards: the cursor is the upper bound and
+    /// the payload is `cursor - 1`.
+    descending: bool,
 }
 
 /// True for std's `IntoIterator::into_iter` on a range.
@@ -637,11 +640,13 @@ fn find_iter_ctx(f: &Function) -> Option<(IterNextCtx, std::collections::HashSet
     // loop-carried iterator) and the iterator register is used directly.
     let mut skip = std::collections::HashSet::new();
     let mut iter_reg = String::new();
+    let mut descending = false;
     for b in &f.blocks {
         if let Term::Call { func, args, .. } = &b.terminator {
             if !is_next_call(func) {
                 continue;
             }
+            descending = func.contains("Rev") || func.contains("rev");
             let arg_place = match args.first() {
                 Some(Operand::Move { place, .. }) | Some(Operand::Copy { place, .. }) => {
                     place.clone()
@@ -672,6 +677,7 @@ fn find_iter_ctx(f: &Function) -> Option<(IterNextCtx, std::collections::HashSet
             payload_off,
             payload_ty,
             signed: elem_ty.starts_with('i'),
+            descending,
         },
         skip,
         iter_reg,
@@ -1369,6 +1375,31 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
             Term::Call { func, func_raw, args, dest, target, sig } => {
                 // `for i in a..b`: std's iterator protocol is inlined here
                 // (the SA runtime has no std `Iterator::next`).
+                if func.contains("as_std_iter_Iterator_rev") {
+                    // `Range::rev()` builds a `Rev<Range<T>>`, a newtype over
+                    // the range: it shares the range's storage, so it is the
+                    // identity here (the direction is handled by `next`).
+                    let src = args
+                        .first()
+                        .map(|a| match a {
+                            Operand::Move { place, .. } | Operand::Copy { place, .. } => {
+                                place.clone()
+                            }
+                            _ => "0".to_string(),
+                        })
+                        .unwrap_or_else(|| "0".to_string());
+                    let d = dest.as_deref().unwrap_or("_0");
+                    out.push(format!("    {} = {}", d, src));
+                    bound.insert(d.to_string());
+                    match target {
+                        Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                        None => {
+                            out.push("    // diverging call".to_string());
+                            out.push(format!("    panic({})", unreachable_panic_code(&b.id)));
+                        }
+                    }
+                    continue;
+                }
                 if is_into_iter_call(func) {
                     // `into_iter(range)` is the identity for a range.
                     let src = args
@@ -1415,12 +1446,26 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         let cmp = format!("_iter_cmp_{}", b.id);
                         let ret = format!("_iter_ret_{}", b.id);
                         let inc = format!("_iter_inc_{}", b.id);
-                        out.push(format!("    {} = load {}+{} as {}", cur, iter, ctx.cur_off, ctx.payload_ty));
-                        out.push(format!("    {} = load {}+{} as {}", end, iter, ctx.end_off, ctx.payload_ty));
+                        // Ascending: the cursor is the lower bound, the
+                        // payload is the cursor and it advances. Descending
+                        // (`Rev`): the cursor is the upper bound, the payload
+                        // is `cursor - 1` and it retreats.
+                        let (cur_off, bound_off) = if ctx.descending {
+                            (ctx.end_off, ctx.cur_off)
+                        } else {
+                            (ctx.cur_off, ctx.end_off)
+                        };
+                        out.push(format!("    {} = load {}+{} as {}", cur, iter, cur_off, ctx.payload_ty));
+                        out.push(format!("    {} = load {}+{} as {}", end, iter, bound_off, ctx.payload_ty));
                         out.push(format!(
                             "    {} = {} {}, {}",
                             cmp,
-                            if ctx.signed { "slt" } else { "ult" },
+                            match (ctx.descending, ctx.signed) {
+                                (false, true) => "slt",
+                                (false, false) => "ult",
+                                (true, true) => "sgt",
+                                (true, false) => "ugt",
+                            },
                             cur,
                             end
                         ));
@@ -1428,15 +1473,31 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         out.push(format!("    br {} -> {}, {}", cmp, lbl_some, lbl_none));
                         out.push(format!("{}:", lbl_some));
                         out.push(format!("    store {}+{}, 1 as {}", ret, ctx.tag_off, ctx.tag_ty));
-                        out.push(format!(
-                            "    store {}+{}, {} as {}",
-                            ret, ctx.payload_off, cur, ctx.payload_ty
-                        ));
-                        out.push(format!("    {} = add {}, 1", inc, cur));
-                        out.push(format!(
-                            "    store {}+{}, {} as {}",
-                            iter, ctx.cur_off, inc, ctx.payload_ty
-                        ));
+                        if ctx.descending {
+                            out.push(format!(
+                                "    {} = sub {}, 1",
+                                inc,
+                                cur
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as {}",
+                                ret, ctx.payload_off, inc, ctx.payload_ty
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as {}",
+                                iter, cur_off, inc, ctx.payload_ty
+                            ));
+                        } else {
+                            out.push(format!(
+                                "    store {}+{}, {} as {}",
+                                ret, ctx.payload_off, cur, ctx.payload_ty
+                            ));
+                            out.push(format!("    {} = add {}, 1", inc, cur));
+                            out.push(format!(
+                                "    store {}+{}, {} as {}",
+                                iter, cur_off, inc, ctx.payload_ty
+                            ));
+                        }
                         out.push(format!("    jmp {}", lbl_end));
                         out.push(format!("{}:", lbl_none));
                         out.push(format!("    store {}+{}, 0 as {}", ret, ctx.tag_off, ctx.tag_ty));

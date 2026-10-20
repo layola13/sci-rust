@@ -121,10 +121,8 @@ fn const_agg_json<'tcx>(tcx: TyCtxt<'tcx>, c: &ConstOperand<'tcx>, into: &mut St
     let rustc_middle::mir::Const::Unevaluated(uv, _) = &c.const_ else {
         return None;
     };
-    // Only a plain (non-promoted) const has an inspectable body.
-    if uv.promoted.is_some() {
-        return None;
-    }
+    // A promoted const (`&Enum::Variant(..)`) still has an inspectable
+    // body: the anonymous const's MIR holds the promotion.
     if !matches!(
         tcx.def_kind(uv.def),
         DefKind::Const | DefKind::AssocConst | DefKind::AnonConst | DefKind::Ctor(..)
