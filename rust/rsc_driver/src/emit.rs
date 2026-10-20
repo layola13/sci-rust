@@ -348,6 +348,7 @@ fn slice_iter_info<'tcx>(
     body: &Body<'tcx>,
     fname: &str,
     args: &[rustc_middle::mir::Operand<'tcx>],
+    dest_ty: Option<Ty<'tcx>>,
 ) -> Option<String> {
     use rustc_middle::ty::TypingEnv;
     let recv_ty = match args.first()? {
@@ -372,6 +373,12 @@ fn slice_iter_info<'tcx>(
             elem_size, ptr_off, len_off, descending
         )
     };
+    let info_take = |elem_size: u64, iter_off: u64, take_off: u64, size: u64| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"take_off\": {}, \"size\": {}}}",
+            elem_size, iter_off, take_off, size
+        )
+    };
     let slice_iter_elem = |def: rustc_middle::ty::AdtDef<'tcx>,
                            targs: &rustc_middle::ty::GenericArgsRef<'tcx>| {
         tcx.def_path_str(def.did())
@@ -382,7 +389,25 @@ fn slice_iter_info<'tcx>(
     let is_into_iter = fname.contains("IntoIterator_into_iter");
     let is_next = fname.contains("Iterator_next");
     let is_rev = fname.contains("Iterator_rev");
-    // `Iterator::next` on `slice::Iter` / `Rev<slice::Iter>`.
+    // `Iterator::take(n)` on `slice::Iter`: build `Take { iter, n }`.
+    if !is_into_iter && fname.contains("Iterator_take") {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if let Some(elem) = slice_iter_elem(*def, targs) {
+                let elem_size = layout_of(elem)?.size.bytes();
+                let take_ty = dest_ty?;
+                let layout = layout_of(take_ty)?;
+                let iter_off = field_offset_pub(tcx, env, take_ty, &layout.layout, 0, "iter")?;
+                let take_off = field_offset_pub(tcx, env, take_ty, &layout.layout, 0, "n")?;
+                return Some(info_take(
+                    elem_size,
+                    iter_off,
+                    take_off,
+                    layout.size.bytes(),
+                ));
+            }
+        }
+    }
+    // `Iterator::next` on `slice::Iter` / `Rev<slice::Iter>` / `Take<Iter>`.
     if !is_into_iter && is_next {
         if let TyKind::Adt(def, targs) = ty.kind() {
             if let Some(elem) = slice_iter_elem(*def, targs) {
@@ -396,6 +421,23 @@ fn slice_iter_info<'tcx>(
                     if let Some(elem) = slice_iter_elem(*idef, itargs) {
                         let elem_size = layout_of(elem)?.size.bytes();
                         return Some(info(elem_size, 0, 8, true));
+                    }
+                }
+            }
+            if tcx.def_path_str(def.did()).contains("iter::Take") {
+                let inner = targs.iter().find_map(|a| a.as_type())?;
+                if let TyKind::Adt(idef, itargs) = inner.kind() {
+                    if let Some(elem) = slice_iter_elem(*idef, itargs) {
+                        let elem_size = layout_of(elem)?.size.bytes();
+                        let layout = layout_of(ty)?;
+                        let iter_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "iter")?;
+                        let take_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "n")?;
+                        return Some(info_take(
+                            elem_size,
+                            iter_off,
+                            take_off,
+                            layout.size.bytes(),
+                        ));
                     }
                 }
             }
@@ -1578,7 +1620,7 @@ pub fn body_json<'tcx>(
                     write!(into, ", \"slice_len\": {}", shim).unwrap();
                 }
                 // `&[T]` / `&Vec<T>` iteration: element size plus word offsets.
-                if let Some(shim) = slice_iter_info(tcx, body, &fname, &arg_nodes) {
+                if let Some(shim) = slice_iter_info(tcx, body, &fname, &arg_nodes, Some(destination.ty(&body.local_decls, tcx).ty)) {
                     write!(into, ", \"slice_iter\": {}", shim).unwrap();
                 }
                 // `slice::first`/`last`/`get`: inline the niche `Option<&T>`.

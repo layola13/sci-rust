@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2397 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2543 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -250,5 +250,14 @@ exit 0，无 broker）。
   `first` 判 `len != 0` 取 data，`last` 取 `data + (len-1)*elem_size`，
   `get` 先做 `idx < len` 再取地址。已用 `slice_opt_sum`（含越界 `get(99)`）
   端到端验证。
-- 仍未覆盖：`.step_by()`/`.take()` 等适配器。
+- `slice::Iter::rev()`：`rev` 把 `Iter { ptr, end }` 换成
+  `{ ptr: end, end: ptr }`；`Rev::next` 从末尾前移（`sub cur, elem_size`，
+  `ugt cur, base`），复用 niche `Option<&T>`。已用 `iter_rev_sum`
+  端到端验证。
+- `.take(n)`：构造 `Take { iter, n }`（拷贝内层 `Iter` 两字 + 计数，
+  偏移/大小取自 rustc layout）；`Take::next` 同时判 `n != 0` 与
+  `cur < end`，产出后计数减一。已用 `iter_take_sum` 端到端验证。
+- 退出释放不再释放 niche 判别式读出的 `<reg>_n` 载荷指针（它指向调用方
+  存储，不拥有该分配）。
+- 仍未覆盖：`.step_by()` 等适配器。
 

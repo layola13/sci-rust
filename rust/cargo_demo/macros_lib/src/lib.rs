@@ -189,6 +189,15 @@ pub fn iter_rev_sum(xs: &[i32]) -> i32 {
     total
 }
 
+/// `for` over the first few elements (`Iterator::take`).
+pub fn iter_take_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    for x in xs.iter().take(2) {
+        total += *x;
+    }
+    total
+}
+
 /// A `for` loop over a range, and a string literal read by byte.
 pub fn range_sum(n: i32) -> i32 {
     let mut total = 0;

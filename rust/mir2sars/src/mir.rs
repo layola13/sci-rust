@@ -104,6 +104,15 @@ pub struct SliceIter {
     /// `Rev<slice::Iter>`: the cursor walks backwards from the end.
     #[serde(default)]
     pub descending: bool,
+    /// Offset of the inner `Iter` inside `Take<Iter>` (0 for a bare `Iter`).
+    #[serde(default)]
+    pub iter_off: u64,
+    /// Offset of the remaining-count word inside `Take<Iter>`.
+    #[serde(default)]
+    pub take_off: Option<u64>,
+    /// Size of the `Take<Iter>` value (`Take` construction only).
+    #[serde(default)]
+    pub size: u64,
 }
 
 /// A slice accessor returning `Option<&T>` (`first`/`last`/`get`).

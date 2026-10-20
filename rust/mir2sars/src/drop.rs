@@ -455,6 +455,16 @@ mod drop_tests {
     }
 
     #[test]
+    fn niche_temp_predicate() {
+        assert!(is_niche_temp("_4_n"));
+        assert!(is_niche_temp("_10_n"));
+        assert!(!is_niche_temp("_n"));
+        assert!(!is_niche_temp("_x_n"));
+        assert!(!is_niche_temp("_4_nn"));
+        assert!(!is_niche_temp("_slice_data_bb1"));
+    }
+
+    #[test]
     fn classify_shapes() {
         let u = classify("    _x = _y");
         assert_eq!(u.def, Some("_x".to_string()));
