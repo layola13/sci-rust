@@ -181,9 +181,12 @@ exit 0，无 broker）。
   `select`；`unwrap` 失败时 panic 只带代码，消息需要格式化栈）。
 - `slice::len` / `str::len`：胖指针的长度字（driver 给出偏移，mir2sars 内联
   为一次 load）——循环里按切片长度迭代的常见写法因此可运行。
-- cargo 演示工程（`rust/cargo_demo`）现在覆盖：跨 crate 的**枚举 + match**、
-  **切片**（胖指针 + 动态下标 + `len`）与 **`Option` 方法**（`is_some`/
-  `unwrap_or`），全部经 `cargo -> MIR -> .sars -> sars run` 跑通。
+- cargo 演示工程（`rust/cargo_demo`）现在覆盖：`macro_rules!` 宏 ✓、跨 crate
+  调用 ✓、**枚举 + match** ✓、**切片**（胖指针 + 动态下标 + `len`）✓、
+  **`Vec`**（`new`/`push`/`len`/`is_empty`/下标）✓、**`Option` 方法**
+  （`is_some`/`unwrap_or`/`unwrap`）✓、**`for` 循环** ✓、**字符串字面量**
+  （胖指针 + `as_bytes()[0]`）✓，全部经 `cargo -> MIR -> .sars -> sars run`
+  跑通。
 - `unwrap_or` 的默认值放在**帧槽**里读（而不是拷贝）：拷贝会在一条路径上
   消耗寄存器，join 处两条路径的状态就不一致（`PhiStateConflict`）。
 - **在分支里赋值、随后读取**的值（`let o = if c { Some(x) } else { None };`

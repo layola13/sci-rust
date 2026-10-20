@@ -125,3 +125,16 @@ pub fn first_or(v: &Vec<i32>, default: i32) -> i32 {
         v[0]
     }
 }
+
+/// A `for` loop over a range, and a string literal read by byte.
+pub fn range_sum(n: i32) -> i32 {
+    let mut total = 0;
+    for i in 0..n {
+        total += i;
+    }
+    total
+}
+
+pub fn first_byte(s: &str) -> u8 {
+    s.as_bytes()[0]
+}
