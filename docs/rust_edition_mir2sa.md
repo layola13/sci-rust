@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2266 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2397 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：

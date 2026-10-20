@@ -239,6 +239,14 @@ fn is_shim_address_reg(reg: &str) -> bool {
     .any(|p| reg.starts_with(p))
 }
 
+/// `<reg>_n` is the value loaded by a niche discriminant (`Option<&T>`):
+/// a borrowed payload pointer, not an allocation.
+fn is_niche_temp(reg: &str) -> bool {
+    reg.strip_prefix('_')
+        .and_then(|rest| rest.strip_suffix("_n"))
+        .is_some_and(|mid| !mid.is_empty() && mid.bytes().all(|b| b.is_ascii_digit()))
+}
+
 /// Spill slots (`<reg>_spill`) are `stack_alloc`s: the frame owns them and
 /// an explicit `!` traps StackEscape, so they are never free candidates.
 fn is_spill_slot(reg: &str) -> bool {
@@ -348,6 +356,9 @@ pub fn exit_frees(
             // words) are not owned allocations: releasing one would free
             // storage the container still owns.
             .filter(|r| !is_shim_address_reg(r))
+            // The niche discriminant read leaves the payload pointer in
+            // `<reg>_n`; it is a borrowed view, never an owned allocation.
+            .filter(|r| !is_niche_temp(r))
             .collect();
         for p in &params {
             if !ptr_params.contains(p) && !moved.contains(p) && !freed_anywhere.contains(p) {

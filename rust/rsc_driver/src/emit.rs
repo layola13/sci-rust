@@ -359,44 +359,67 @@ fn slice_iter_info<'tcx>(
         ty = *inner;
     }
     let env = TypingEnv::fully_monomorphized();
-    let size_of = |t: Ty<'tcx>| {
+    let layout_of = |t: Ty<'tcx>| {
         tcx.layout_of(PseudoCanonicalInput {
             typing_env: env,
             value: t,
         })
         .ok()
-        .map(|l| l.size.bytes())
+    };
+    let info = |elem_size: u64, ptr_off: u64, len_off: u64, descending: bool| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}, \"descending\": {}}}",
+            elem_size, ptr_off, len_off, descending
+        )
+    };
+    let slice_iter_elem = |def: rustc_middle::ty::AdtDef<'tcx>,
+                           targs: &rustc_middle::ty::GenericArgsRef<'tcx>| {
+        tcx.def_path_str(def.did())
+            .contains("slice::Iter")
+            .then(|| targs.iter().find_map(|a| a.as_type()))
+            .flatten()
     };
     let is_into_iter = fname.contains("IntoIterator_into_iter");
-    // `<std::slice::Iter<'_, T> as Iterator>::next` (a `&mut Iter` receiver).
-    if !is_into_iter {
+    let is_next = fname.contains("Iterator_next");
+    let is_rev = fname.contains("Iterator_rev");
+    // `Iterator::next` on `slice::Iter` / `Rev<slice::Iter>`.
+    if !is_into_iter && is_next {
         if let TyKind::Adt(def, targs) = ty.kind() {
-            if tcx.def_path_str(def.did()).contains("slice::Iter") {
-                let elem = targs.iter().find_map(|a| a.as_type())?;
-                let elem_size = size_of(elem)?;
+            if let Some(elem) = slice_iter_elem(*def, targs) {
+                let elem_size = layout_of(elem)?.size.bytes();
                 // std's `Iter` is `{ ptr, end }`: fixed word offsets.
-                return Some(format!(
-                    "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 8}}",
-                    elem_size
-                ));
+                return Some(info(elem_size, 0, 8, false));
+            }
+            if tcx.def_path_str(def.did()).contains("iter::Rev") {
+                let inner = targs.iter().find_map(|a| a.as_type())?;
+                if let TyKind::Adt(idef, itargs) = inner.kind() {
+                    if let Some(elem) = slice_iter_elem(*idef, itargs) {
+                        let elem_size = layout_of(elem)?.size.bytes();
+                        return Some(info(elem_size, 0, 8, true));
+                    }
+                }
+            }
+        }
+    }
+    // `Iterator::rev` on `slice::Iter`: swap the cursor to the end.
+    if !is_into_iter && is_rev {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if let Some(elem) = slice_iter_elem(*def, targs) {
+                let elem_size = layout_of(elem)?.size.bytes();
+                return Some(info(elem_size, 0, 8, true));
             }
         }
     }
     // `slice::iter(&[T]) -> Iter` and `into_iter` on `&[T]`.
     if let TyKind::Slice(elem) = ty.kind() {
         if is_into_iter || (fname.ends_with("_iter") && !fname.ends_with("_iter_mut")) {
-            let elem_size = size_of(*elem)?;
-            let layout = tcx
-                .layout_of(PseudoCanonicalInput {
-                    typing_env: env,
-                    value: recv_ty,
-                })
-                .ok()?;
-            return Some(format!(
-                "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
+            let elem_size = layout_of(*elem)?.size.bytes();
+            let layout = layout_of(recv_ty)?;
+            return Some(info(
                 elem_size,
                 layout.fields.offset(0).bytes(),
-                layout.fields.offset(1).bytes()
+                layout.fields.offset(1).bytes(),
+                false,
             ));
         }
     }
@@ -406,19 +429,11 @@ fn slice_iter_info<'tcx>(
         if let TyKind::Adt(def, targs) = ty.kind() {
             if tcx.def_path_str(def.did()).contains("vec::Vec") {
                 let elem = targs.iter().find_map(|a| a.as_type())?;
-                let elem_size = size_of(elem)?;
-                let layout = tcx
-                    .layout_of(PseudoCanonicalInput {
-                        typing_env: env,
-                        value: ty,
-                    })
-                    .ok()?;
+                let elem_size = layout_of(elem)?.size.bytes();
+                let layout = layout_of(ty)?;
                 let ptr_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "ptr")?;
                 let len_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "len")?;
-                return Some(format!(
-                    "{{\"elem_size\": {}, \"ptr_off\": {}, \"len_off\": {}}}",
-                    elem_size, ptr_off, len_off
-                ));
+                return Some(info(elem_size, ptr_off, len_off, false));
             }
         }
     }

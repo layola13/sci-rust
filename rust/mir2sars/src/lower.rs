@@ -1667,7 +1667,7 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                     }
                     continue;
                 }
-                if func.contains("as_std_iter_Iterator_rev") {
+                if func.contains("as_std_iter_Iterator_rev") && slice_iter.is_none() {
                     // `Range::rev()` builds a `Rev<Range<T>>`, a newtype over
                     // the range: it shares the range's storage, so it is the
                     // identity here (the direction is handled by `next`).
@@ -1715,11 +1715,22 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         let end = format!("_slice_end_{}", b.id);
                         out.push(format!("    mut {} = alloc 16", it));
                         out.push(format!("    {} = load {}+{} as ptr", data, src, si.ptr_off));
-                        out.push(format!("    {} = load {}+{} as u64", len, src, si.len_off));
-                        out.push(format!("    {} = mul {}, {}", off, len, si.elem_size));
-                        out.push(format!("    {} = ptr_add {}, {}", end, data, off));
-                        out.push(format!("    store {}+0, {} as ptr", it, data));
-                        out.push(format!("    store {}+8, {} as ptr", it, end));
+                        if si.descending {
+                            // `Rev`: the cursor starts at the end; the base
+                            // pointer moves to the second word.
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                end, src, si.len_off
+                            ));
+                            out.push(format!("    store {}+0, {} as ptr", it, end));
+                            out.push(format!("    store {}+8, {} as ptr", it, data));
+                        } else {
+                            out.push(format!("    {} = load {}+{} as u64", len, src, si.len_off));
+                            out.push(format!("    {} = mul {}, {}", off, len, si.elem_size));
+                            out.push(format!("    {} = ptr_add {}, {}", end, data, off));
+                            out.push(format!("    store {}+0, {} as ptr", it, data));
+                            out.push(format!("    store {}+8, {} as ptr", it, end));
+                        }
                         out.push(format!("    {} = {}", d, it));
                         bound.insert(d.to_string());
                         match target {
@@ -1854,13 +1865,25 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         let nxt = format!("_slice_nxt_{}", b.id);
                         out.push(format!("    {} = load {}+0 as ptr", cur, iter));
                         out.push(format!("    {} = load {}+8 as ptr", endp, iter));
-                        out.push(format!("    {} = ult {}, {}", cmp, cur, endp));
-                        out.push(format!("    mut {} = alloc 8", ret));
-                        out.push(format!("    br {} -> {}, {}", cmp, lbl_some, lbl_none));
-                        out.push(format!("{}:", lbl_some));
-                        out.push(format!("    store {}+0, {} as ptr", ret, cur));
-                        out.push(format!("    {} = ptr_add {}, {}", nxt, cur, elem_size));
-                        out.push(format!("    store {}+0, {} as ptr", iter, nxt));
+                        if si.descending {
+                            // Cursor starts past the last element: yield
+                            // `cur - elem_size`, then retreat.
+                            out.push(format!("    {} = ugt {}, {}", cmp, cur, endp));
+                            out.push(format!("    mut {} = alloc 8", ret));
+                            out.push(format!("    br {} -> {}, {}", cmp, lbl_some, lbl_none));
+                            out.push(format!("{}:", lbl_some));
+                            out.push(format!("    {} = sub {}, {}", nxt, cur, elem_size));
+                            out.push(format!("    store {}+0, {} as ptr", ret, nxt));
+                            out.push(format!("    store {}+0, {} as ptr", iter, nxt));
+                        } else {
+                            out.push(format!("    {} = ult {}, {}", cmp, cur, endp));
+                            out.push(format!("    mut {} = alloc 8", ret));
+                            out.push(format!("    br {} -> {}, {}", cmp, lbl_some, lbl_none));
+                            out.push(format!("{}:", lbl_some));
+                            out.push(format!("    store {}+0, {} as ptr", ret, cur));
+                            out.push(format!("    {} = ptr_add {}, {}", nxt, cur, elem_size));
+                            out.push(format!("    store {}+0, {} as ptr", iter, nxt));
+                        }
                         out.push(format!("    jmp {}", lbl_end));
                         out.push(format!("{}:", lbl_none));
                         out.push(format!("    store {}+0, 0 as ptr", ret));

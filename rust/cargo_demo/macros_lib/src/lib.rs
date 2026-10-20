@@ -180,6 +180,15 @@ pub fn slice_opt_sum(xs: &[i32]) -> i32 {
     total
 }
 
+/// `for` over a reversed slice iterator (`Rev<slice::Iter>`).
+pub fn iter_rev_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    for x in xs.iter().rev() {
+        total += *x;
+    }
+    total
+}
+
 /// A `for` loop over a range, and a string literal read by byte.
 pub fn range_sum(n: i32) -> i32 {
     let mut total = 0;

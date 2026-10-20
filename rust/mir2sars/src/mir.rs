@@ -101,6 +101,9 @@ pub struct SliceIter {
     pub elem_size: u64,
     pub ptr_off: u64,
     pub len_off: u64,
+    /// `Rev<slice::Iter>`: the cursor walks backwards from the end.
+    #[serde(default)]
+    pub descending: bool,
 }
 
 /// A slice accessor returning `Option<&T>` (`first`/`last`/`get`).
