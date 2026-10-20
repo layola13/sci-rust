@@ -119,6 +119,9 @@ pub struct SliceIter {
     /// Offset of the `first_take` flag inside `StepBy<Iter>`.
     #[serde(default)]
     pub first_off: Option<u64>,
+    /// Offset of the running count inside `Enumerate<Iter>`.
+    #[serde(default)]
+    pub count_off: Option<u64>,
 }
 
 /// A slice accessor returning `Option<&T>` (`first`/`last`/`get`).

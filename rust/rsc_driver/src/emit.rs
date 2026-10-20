@@ -389,6 +389,12 @@ fn slice_iter_info<'tcx>(
             elem_size, iter_off, step_off, first_off, size
         )
     };
+    let info_enum = |elem_size: u64, iter_off: u64, count_off: u64, size: u64| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"count_off\": {}, \"size\": {}}}",
+            elem_size, iter_off, count_off, size
+        )
+    };
     let slice_iter_elem = |def: rustc_middle::ty::AdtDef<'tcx>,
                            targs: &rustc_middle::ty::GenericArgsRef<'tcx>| {
         tcx.def_path_str(def.did())
@@ -412,6 +418,25 @@ fn slice_iter_info<'tcx>(
                     elem_size,
                     iter_off,
                     take_off,
+                    layout.size.bytes(),
+                ));
+            }
+        }
+    }
+    // `Iterator::enumerate()` on `slice::Iter`: build `Enumerate { iter, 0 }`.
+    if !is_into_iter && fname.contains("Iterator_enumerate") {
+        if let TyKind::Adt(def, targs) = ty.kind() {
+            if let Some(elem) = slice_iter_elem(*def, targs) {
+                let elem_size = layout_of(elem)?.size.bytes();
+                let enum_ty = dest_ty?;
+                let layout = layout_of(enum_ty)?;
+                let iter_off = field_offset_pub(tcx, env, enum_ty, &layout.layout, 0, "iter")?;
+                let count_off =
+                    field_offset_pub(tcx, env, enum_ty, &layout.layout, 0, "count")?;
+                return Some(info_enum(
+                    elem_size,
+                    iter_off,
+                    count_off,
                     layout.size.bytes(),
                 ));
             }
@@ -468,6 +493,24 @@ fn slice_iter_info<'tcx>(
                             elem_size,
                             iter_off,
                             take_off,
+                            layout.size.bytes(),
+                        ));
+                    }
+                }
+            }
+            if tcx.def_path_str(def.did()).contains("iter::Enumerate") {
+                let inner = targs.iter().find_map(|a| a.as_type())?;
+                if let TyKind::Adt(idef, itargs) = inner.kind() {
+                    if let Some(elem) = slice_iter_elem(*idef, itargs) {
+                        let elem_size = layout_of(elem)?.size.bytes();
+                        let layout = layout_of(ty)?;
+                        let iter_off = field_offset_pub(tcx, env, ty, &layout.layout, 0, "iter")?;
+                        let count_off =
+                            field_offset_pub(tcx, env, ty, &layout.layout, 0, "count")?;
+                        return Some(info_enum(
+                            elem_size,
+                            iter_off,
+                            count_off,
                             layout.size.bytes(),
                         ));
                     }
@@ -1424,18 +1467,27 @@ fn niche_info<'tcx>(
     let nv = niche_variants.start.as_u32();
     let uv_idx = untagged;
     let uv = untagged.as_u32();
-    // The niche field must be a pointer (null is the niche value).
+    // The niche field must be a pointer (null is the niche value). It can
+    // be nested inside the payload (e.g. `Option<(usize, &T)>`), so look up
+    // the untagged variant's field and read *its* largest niche.
     let ty = p.ty(&body.local_decls, tcx).ty;
     let (def, args) = match ty.kind() {
         TyKind::Adt(def, args) => (*def, args),
         _ => return None,
     };
-    let fld = def.variants()[uv_idx].fields.raw.first()?;
+    let fld = def.variants()[uv_idx].fields.raw.get(tag_field.as_usize())?;
     let fty = tcx.normalize_erasing_regions(env, fld.ty(tcx, args));
-    if !matches!(fty.kind(), TyKind::Ref(..) | TyKind::RawPtr(..)) {
+    let fl = tcx
+        .layout_of(rustc_middle::ty::PseudoCanonicalInput {
+            typing_env: env,
+            value: fty,
+        })
+        .ok()?;
+    let niche = fl.largest_niche?;
+    if !matches!(niche.value, rustc_abi::Primitive::Pointer(_)) {
         return None;
     }
-    let off = layout.fields.offset(tag_field.as_usize()).bytes();
+    let off = niche.offset.bytes();
     Some((off, nv, uv))
 }
 

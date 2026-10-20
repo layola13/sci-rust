@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2762 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 2938 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -262,7 +262,12 @@ exit 0，无 broker）。
   下一个目标（切片可随机访问，无需逐元素走），越界即 None。
   `n == 0` 保持 std 的 panic 行为。已用 `iter_step_sum` 在 `n=1/2/10`
   下端到端验证。
+- `.enumerate()`：构造 `Enumerate { iter, count }`；`next` 产出
+  `(count, &T)`（`Option` 的 niche 指针仍在 payload 的 +8），计数自增。
+  已用 `iter_enum_sum` 端到端验证。
+- niche 判别式偏移改为读取未标记变体字段的 `largest_niche.offset`，
+  从而支持 `Option<(usize, &T)>` 这类 niche 嵌在 payload 元组内的情况。
 - 退出释放不再释放 niche 判别式读出的 `<reg>_n` 载荷指针（它指向调用方
   存储，不拥有该分配）。
-- 仍未覆盖：`.zip()`/`.enumerate()` 等组合适配器。
+- 仍未覆盖：`.zip()` 等组合适配器。
 

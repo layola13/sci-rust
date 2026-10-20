@@ -207,6 +207,15 @@ pub fn iter_step_sum(xs: &[i32], n: usize) -> i32 {
     total
 }
 
+/// `for (i, x)` over a slice (`Iterator::enumerate`).
+pub fn iter_enum_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    for (i, x) in xs.iter().enumerate() {
+        total += i as i32 + *x;
+    }
+    total
+}
+
 /// A `for` loop over a range, and a string literal read by byte.
 pub fn range_sum(n: i32) -> i32 {
     let mut total = 0;

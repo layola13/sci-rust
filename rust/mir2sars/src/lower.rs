@@ -1713,6 +1713,48 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                         let len = format!("_slice_len_{}", b.id);
                         let off = format!("_slice_off_{}", b.id);
                         let end = format!("_slice_end_{}", b.id);
+                        if let Some(count_off) = si.count_off {
+                            // `Iterator::enumerate()`: copy the inner `Iter`
+                            // words and zero the running count.
+                            let size = if si.size == 0 { count_off + 8 } else { si.size };
+                            out.push(format!("    mut {} = alloc {}", it, size));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                data,
+                                src,
+                                si.iter_off
+                            ));
+                            out.push(format!(
+                                "    {} = load {}+{} as ptr",
+                                end,
+                                src,
+                                si.iter_off + 8
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it, si.iter_off, data
+                            ));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                it,
+                                si.iter_off + 8,
+                                end
+                            ));
+                            out.push(format!("    store {}+{}, 0 as u64", it, count_off));
+                            out.push(format!("    {} = {}", d, it));
+                            bound.insert(d.to_string());
+                            match target {
+                                Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                                None => {
+                                    out.push("    // diverging call".to_string());
+                                    out.push(format!(
+                                        "    panic({})",
+                                        unreachable_panic_code(&b.id)
+                                    ));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(step_off) = si.step_off {
                             // `Iterator::step_by(n)`: copy the inner `Iter`
                             // words and store the stride plus the first flag.
@@ -1997,6 +2039,55 @@ pub fn lower_function(f: &Function, unsup: &mut Vec<String>) -> String {
                             iter,
                             si.iter_off + 8
                         ));
+                        if let Some(count_off) = si.count_off {
+                            // `Enumerate::next`: yield `(count, elem)` and
+                            // bump the count. The Option payload is a pair
+                            // `{ count@0, ptr@8 }`; null at +8 means None.
+                            let cnt = format!("_slice_cnt_{}", b.id);
+                            let cnt2 = format!("_slice_cnt2_{}", b.id);
+                            out.push(format!("    {} = ult {}, {}", cmp, cur, endp));
+                            out.push(format!("    mut {} = alloc 16", ret));
+                            out.push(format!(
+                                "    br {} -> {}, {}",
+                                cmp, lbl_some, lbl_none
+                            ));
+                            out.push(format!("{}:", lbl_some));
+                            out.push(format!(
+                                "    {} = load {}+{} as u64",
+                                cnt, iter, count_off
+                            ));
+                            out.push(format!("    store {}+0, {} as u64", ret, cnt));
+                            out.push(format!("    store {}+8, {} as ptr", ret, cur));
+                            out.push(format!("    {} = add {}, 1", cnt2, cnt));
+                            out.push(format!(
+                                "    store {}+{}, {} as u64",
+                                iter, count_off, cnt2
+                            ));
+                            out.push(format!("    {} = ptr_add {}, {}", nxt, cur, elem_size));
+                            out.push(format!(
+                                "    store {}+{}, {} as ptr",
+                                iter,
+                                si.iter_off,
+                                nxt
+                            ));
+                            out.push(format!("    jmp {}", lbl_end));
+                            out.push(format!("{}:", lbl_none));
+                            out.push(format!("    store {}+8, 0 as ptr", ret));
+                            out.push(format!("{}:", lbl_end));
+                            out.push(format!("    {} = {}", d, ret));
+                            bound.insert(d.to_string());
+                            match target {
+                                Some(t) => out.push(format!("    jmp {}", sa_label(t))),
+                                None => {
+                                    out.push("    // diverging call".to_string());
+                                    out.push(format!(
+                                        "    panic({})",
+                                        unreachable_panic_code(&b.id)
+                                    ));
+                                }
+                            }
+                            continue;
+                        }
                         if let Some(step_off) = si.step_off {
                             // `StepBy::next`: the first call yields the head;
                             // later calls jump `step - 1` elements ahead.
