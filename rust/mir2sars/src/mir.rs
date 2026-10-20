@@ -131,6 +131,25 @@ pub struct SliceIter {
     /// Offset of the niche pointer in `Option<(&A, &B)>`.
     #[serde(default)]
     pub niche_off: u64,
+    /// Adapter operation: `map_build`, `filter_build`, `adapter_identity`,
+    /// `map_next`, or `filter_next`.
+    #[serde(default)]
+    pub adapter: Option<String>,
+    /// Local function name of the closure stored in a `Map`/`Filter`.
+    #[serde(default)]
+    pub closure: Option<String>,
+    /// SA type of `Map`'s output item.
+    #[serde(default)]
+    pub out_ty: Option<String>,
+    /// Size of `Map`'s output item (also the `Option` tag width).
+    #[serde(default)]
+    pub out_size: u64,
+    #[serde(default)]
+    pub opt_tag_off: u64,
+    #[serde(default)]
+    pub opt_payload_off: u64,
+    #[serde(default)]
+    pub opt_size: u64,
 }
 
 /// A slice accessor returning `Option<&T>` (`first`/`last`/`get`).

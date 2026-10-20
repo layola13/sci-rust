@@ -55,7 +55,7 @@ sars run   --edition rust --project-root <repo> <out>/macros_app.sars
 ```
 
 一键回归：`rust/cargo_demo/run.sh`（2 crate workspace：`macro_rules!`
-跨 crate + `#[derive(Clone, Copy)]`，`sars check` 3714 instr / `sars run`
+跨 crate + `#[derive(Clone, Copy)]`，`sars check` 4076 instr / `sars run`
 exit 0，无 broker）。
 
 已知 gap（lower 质量，非宏展开）：
@@ -284,5 +284,14 @@ exit 0，无 broker）。
 - 退出释放不再释放 niche 判别式读出的 `<reg>_n` 载荷指针（它指向调用方
   存储，不拥有该分配），也不释放容器 shim 读出的 `_vec_data_`（缓冲基址）
   与 `_vec_addr_`（元素内部地址）。
-- 仍未覆盖：`.map()`/`.filter()` 等闭包适配器。
+- `.map(closure)`：构造 `Map { iter, .. }`，拷贝内层 `Iter` 两字，闭包为
+  ZST；`next` 先判内层游标，再以 `(env=0, elem_ptr)` 调用闭包，把结果写成
+  `Option<Output>`（无 niche 标量：`tag@0` 宽度同输出大小，payload 紧随）。
+  闭包函数名按 `DefId` 去重（`closure_0__25` 这类），避免同名冲突。
+  已用 `iter_map_sum` 端到端验证。
+- `.filter(predicate)`：构造 `Filter { iter, .. }`；`next` 循环推进内层
+  `Iter`，把当前元素指针的地址作为 `&&T` 传给谓词（临时 8 字节槽），
+  为真时产出 `Option<&T>`（niche 指针），否则继续。已用
+  `iter_filter_sum` 端到端验证。
+- 仍未覆盖：其它闭包适配器（如 `filter_map`/`flat_map`/`map_while`）。
 

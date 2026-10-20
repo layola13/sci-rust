@@ -225,6 +225,24 @@ pub fn iter_zip_sum(xs: &[i32], ys: &[i32]) -> i32 {
     total
 }
 
+/// `.map()` with a non-capturing closure.
+pub fn iter_map_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    for x in xs.iter().map(|v| *v * 2) {
+        total += x;
+    }
+    total
+}
+
+/// `.filter()` with a non-capturing predicate.
+pub fn iter_filter_sum(xs: &[i32]) -> i32 {
+    let mut total = 0;
+    for x in xs.iter().filter(|v| **v % 2 == 0) {
+        total += *x;
+    }
+    total
+}
+
 /// Pop every element (`Vec::pop`).
 pub fn vec_pop_sum(v: &mut Vec<i32>) -> i32 {
     let mut total = 0;

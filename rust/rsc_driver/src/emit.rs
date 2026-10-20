@@ -417,6 +417,70 @@ fn slice_iter_info<'tcx>(
             elem_size, iter_off, iter2_off, elem2_size, size, niche_off
         )
     };
+    let info_adapter = |elem_size: u64,
+                        iter_off: u64,
+                        size: u64,
+                        adapter: &str,
+                        closure: &str| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"adapter\": \"{}\", \"closure\": \"{}\"}}",
+            elem_size, iter_off, size, adapter, closure
+        )
+    };
+    let info_map_next = |elem_size: u64,
+                         iter_off: u64,
+                         size: u64,
+                         closure: &str,
+                         out_ty: &str,
+                         out_size: u64| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"adapter\": \"map_next\", \"closure\": \"{}\", \"out_ty\": \"{}\", \"out_size\": {}, \"opt_tag_off\": 0, \"opt_payload_off\": {}, \"opt_size\": {}}}",
+            elem_size, iter_off, size, closure, out_ty, out_size, out_size, 2 * out_size
+        )
+    };
+    let info_filter_next = |elem_size: u64,
+                            iter_off: u64,
+                            size: u64,
+                            closure: &str,
+                            niche_off: u64| {
+        format!(
+            "{{\"elem_size\": {}, \"ptr_off\": 0, \"len_off\": 0, \"descending\": false, \"iter_off\": {}, \"size\": {}, \"adapter\": \"filter_next\", \"closure\": \"{}\", \"niche_off\": {}}}",
+            elem_size, iter_off, size, closure, niche_off
+        )
+    };
+    let adapter_of = |t: Ty<'tcx>| -> Option<(&'static str, Ty<'tcx>, Ty<'tcx>)> {
+        let (def, targs) = match t.kind() {
+            TyKind::Adt(d, a) => (d, *a),
+            _ => return None,
+        };
+        let path = tcx.def_path_str(def.did());
+        let kind = if path.contains("iter::Map") {
+            "map"
+        } else if path.contains("iter::Filter") {
+            "filter"
+        } else {
+            return None;
+        };
+        let inner = targs.iter().find_map(|a| a.as_type())?;
+        let closure = targs.iter().filter_map(|a| a.as_type()).nth(1)?;
+        Some((kind, inner, closure))
+    };
+    let closure_name = |t: Ty<'tcx>| -> Option<String> {
+        match t.kind() {
+            TyKind::Closure(id, _) => Some(local_fn_name(tcx, *id)),
+            _ => None,
+        }
+    };
+    let closure_arg_name = |op: &rustc_middle::mir::Operand<'tcx>| -> Option<String> {
+        if let Operand::Constant(c) = op {
+            if let rustc_middle::mir::Const::Val(_, ty) = &c.const_ {
+                if let TyKind::Closure(id, _) = ty.kind() {
+                    return Some(local_fn_name(tcx, *id));
+                }
+            }
+        }
+        None
+    };
     let slice_iter_elem = |def: rustc_middle::ty::AdtDef<'tcx>,
                            targs: &rustc_middle::ty::GenericArgsRef<'tcx>| {
         tcx.def_path_str(def.did())
@@ -431,6 +495,92 @@ fn slice_iter_info<'tcx>(
     let is_into_iter = fname.contains("IntoIterator_into_iter");
     let is_next = fname.contains("Iterator_next");
     let is_rev = fname.contains("Iterator_rev");
+    // `Map` / `Filter` adapters. The receiver of `next` is `&mut Adapter`;
+    // `into_iter` on the adapter is the identity; the build call takes the
+    // inner iterator and a zero-sized closure.
+    if matches!(recv_ty.kind(), TyKind::Ref(..)) {
+        if let Some((kind, inner, clo)) = adapter_of(ty) {
+            if let Some(elem) = elem_of_iter(inner) {
+                let elem_size = layout_of(elem)?.size.bytes();
+                let layout = layout_of(ty)?;
+                let iter_off =
+                    field_offset_pub(tcx, env, ty, &layout.layout, 0, "iter")?;
+                let closure = closure_name(clo)?;
+                if kind == "map" {
+                    let opt = dest_ty?;
+                    let out = match opt.kind() {
+                        TyKind::Adt(def, targs)
+                            if tcx
+                                .def_path_str(def.did())
+                                .contains("option::Option") =>
+                        {
+                            targs.iter().find_map(|a| a.as_type())?
+                        }
+                        _ => return None,
+                    };
+                    let out_ty = ty_sa_sig_opt(out)?;
+                    let out_size = layout_of(out)?.size.bytes();
+                    return Some(info_map_next(
+                        elem_size,
+                        iter_off,
+                        layout.size.bytes(),
+                        &closure,
+                        &out_ty,
+                        out_size,
+                    ));
+                }
+                if kind == "filter" {
+                    let niche = niche_info_ty(tcx, dest_ty?)?;
+                    return Some(info_filter_next(
+                        elem_size,
+                        iter_off,
+                        layout.size.bytes(),
+                        &closure,
+                        niche.0,
+                    ));
+                }
+            }
+        }
+    }
+    if !matches!(recv_ty.kind(), TyKind::Ref(..)) {
+        if let Some(adapter_ty) = dest_ty {
+            if let Some((kind, inner, clo)) = adapter_of(adapter_ty) {
+                if let Some(elem) = elem_of_iter(inner) {
+                    let elem_size = layout_of(elem)?.size.bytes();
+                    let layout = layout_of(adapter_ty)?;
+                    let iter_off = field_offset_pub(
+                        tcx,
+                        env,
+                        adapter_ty,
+                        &layout.layout,
+                        0,
+                        "iter",
+                    )?;
+                    if args.len() < 2 {
+                        return Some(info_adapter(
+                            elem_size,
+                            iter_off,
+                            layout.size.bytes(),
+                            "adapter_identity",
+                            "",
+                        ));
+                    }
+                    let closure = args
+                        .get(1)
+                        .and_then(closure_arg_name)
+                        .or_else(|| closure_name(clo))?;
+                    let key = if kind == "map" { "map_build" } else { "filter_build" };
+                    return Some(info_adapter(
+                        elem_size,
+                        iter_off,
+                        layout.size.bytes(),
+                        key,
+                        &closure,
+                    ));
+                }
+            }
+        }
+    }
     // `Iterator::zip(other)` on two `slice::Iter`s: build `Zip { a, b, .. }`.
     if !is_into_iter && fname.contains("Iterator_zip") {
         if let TyKind::Adt(def, targs) = ty.kind() {
@@ -1318,10 +1468,18 @@ fn name_from_def(tcx: TyCtxt<'_>, def_id: rustc_span::def_id::DefId) -> (String,
     // callers resolve to a unique local function. Plain functions keep the
     // short name (a cross-crate callee is imported under that name).
     let is_assoc = matches!(tcx.def_kind(def_id), DefKind::AssocFn);
+    let is_closure = matches!(tcx.def_kind(def_id), DefKind::Closure);
     let short = if is_assoc {
         full.clone()
     } else {
         full.rsplit("::").next().unwrap_or(&full).to_string()
+    };
+    // Closures all share the short name `{{closure}}`; append the def index
+    // so distinct bodies (map/filter predicates) get distinct functions.
+    let short = if is_closure {
+        format!("{}_{}", short, def_id.index.as_usize())
+    } else {
+        short
     };
     let clean: String = {
         let mut s = String::new();
